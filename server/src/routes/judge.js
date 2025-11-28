@@ -5,7 +5,7 @@
 
 const express = require('express');
 const { deliberate } = require('../lib/judgeEngine');
-const { isOpenAIConfigured } = require('../lib/openai');
+const { isOpenRouterConfigured } = require('../lib/openrouter');
 
 const router = express.Router();
 
@@ -25,12 +25,12 @@ router.post('/deliberate', async (req, res) => {
         console.log('[Judge API] Received deliberation request');
 
         // Check if API key is configured
-        if (!isOpenAIConfigured()) {
+        if (!isOpenRouterConfigured()) {
             return res.status(503).json({
                 verdictId: null,
                 timestamp: new Date().toISOString(),
                 status: 'error',
-                error: 'Judge Mittens is sleeping. OpenAI API key not configured.',
+                error: 'Judge Mittens is sleeping. OpenRouter API key not configured.',
             });
         }
 
@@ -58,19 +58,77 @@ router.post('/deliberate', async (req, res) => {
 });
 
 /**
+ * POST /api/judge/addendum
+ * 
+ * Submit an addendum to an existing case for reconsideration.
+ * This triggers a new verdict that considers the additional context.
+ * 
+ * @body {object} originalCase - The original case data
+ * @body {object} participants - { userA: {name, id}, userB: {name, id} }
+ * @body {object} submissions - Original submissions
+ * @body {string} addendumText - The new information to consider
+ * @body {string} addendumFrom - Who submitted: 'userA' or 'userB'
+ * @body {object} previousVerdict - The previous verdict for context
+ * 
+ * @returns {object} New verdict response with updated ruling
+ */
+router.post('/addendum', async (req, res) => {
+    try {
+        console.log('[Judge API] Received addendum request');
+
+        if (!isOpenRouterConfigured()) {
+            return res.status(503).json({
+                verdictId: null,
+                timestamp: new Date().toISOString(),
+                status: 'error',
+                error: 'Judge Mittens is sleeping. OpenRouter API key not configured.',
+            });
+        }
+
+        const { addendumText, addendumFrom, previousVerdict, ...caseData } = req.body;
+
+        if (!addendumText || !addendumFrom) {
+            return res.status(400).json({
+                status: 'error',
+                error: 'Addendum requires addendumText and addendumFrom fields.',
+            });
+        }
+
+        const result = await deliberate(caseData, {
+            addendumText,
+            addendumFrom,
+            previousVerdict,
+        });
+
+        if (result.status === 'error') {
+            return res.status(400).json(result);
+        }
+
+        return res.status(200).json(result);
+    } catch (error) {
+        console.error('[Judge API] Addendum error:', error);
+        return res.status(500).json({
+            status: 'error',
+            error: 'An unexpected error occurred during addendum processing.',
+        });
+    }
+});
+
+/**
  * GET /api/judge/health
  * 
  * Health check endpoint for the Judge Engine
  */
 router.get('/health', (req, res) => {
-    const hasApiKey = isOpenAIConfigured();
+    const hasApiKey = isOpenRouterConfigured();
     
     res.json({
         status: hasApiKey ? 'ready' : 'unconfigured',
         service: 'Judge Mittens Court',
+        model: 'moonshotai/kimi-k2-thinking',
         message: hasApiKey 
-            ? 'Judge Mittens is awake and ready to preside.' 
-            : 'Judge Mittens requires an OpenAI API key to function.',
+            ? 'Judge Mittens is awake and ready to preside (via OpenRouter).' 
+            : 'Judge Mittens requires an OpenRouter API key to function.',
         timestamp: new Date().toISOString(),
     });
 });

@@ -7,7 +7,27 @@ export default {
     theme: {
         extend: {
             colors: {
-                // Soft pastel palette
+                // Premium Court Palette - Inspired by Judge Whiskers
+                'court': {
+                    // Primary Gold/Amber (gavel, badge)
+                    'gold': '#C9A227',
+                    'goldLight': '#E5C76B',
+                    'goldDark': '#8B7019',
+                    // Warm Browns (robe, wood)
+                    'brown': '#4A3728',
+                    'brownLight': '#6B5344',
+                    'brownDark': '#2D221A',
+                    // Cream/Tan (cat fur, background)
+                    'cream': '#F5EDE0',
+                    'tan': '#D4C4A8',
+                    'ivory': '#FAF7F2',
+                    // Deep Maroon (chair, accents)
+                    'maroon': '#722F37',
+                    'maroonLight': '#8B4049',
+                    // Neutral grays
+                    'slate': '#4A4A4A',
+                },
+                // Soft pastel palette (legacy support)
                 'blush': {
                     50: '#fef7f8',
                     100: '#fdeef0',

@@ -88,20 +88,22 @@ export default function EconomyPage() {
                 <p className="text-neutral-500 text-sm">Spend your treats wisely 🐱</p>
             </motion.div>
 
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="grid grid-cols-2 gap-3">
-                <div className={`glass-card p-4 ${currentUser?.name?.includes('User A') ? 'bg-gradient-to-br from-pink-50/80 to-white/60 ring-2 ring-pink-200' : 'bg-gradient-to-br from-violet-50/80 to-white/60 ring-2 ring-violet-200'}`}>
-                    <p className="text-xs font-bold uppercase tracking-wider text-neutral-500 mb-1">{currentUser?.name} (You)</p>
-                    <div className="flex items-baseline gap-1">
-                        <span className="text-3xl font-bold text-neutral-800">{currentUser?.kibbleBalance || 0}</span>
-                        <span className="text-neutral-500 text-xs">🪙</span>
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="glass-card p-5 bg-gradient-to-br from-amber-50/80 to-white/60">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <p className="text-xs font-bold uppercase tracking-wider text-neutral-500 mb-1">Your Kibble Balance</p>
+                        <div className="flex items-baseline gap-2">
+                            <span className="text-4xl font-bold text-neutral-800">{currentUser?.kibbleBalance || 0}</span>
+                            <span className="text-neutral-500 text-lg">🪙</span>
+                        </div>
                     </div>
-                </div>
-                <div className="glass-card p-4 bg-gradient-to-br from-amber-50/80 to-white/60">
-                    <p className="text-xs font-bold uppercase tracking-wider text-neutral-500 mb-1">{partner?.name}</p>
-                    <div className="flex items-baseline gap-1">
-                        <span className="text-3xl font-bold text-neutral-800">{partner?.kibbleBalance || 0}</span>
-                        <span className="text-neutral-500 text-xs">🪙</span>
-                    </div>
+                    <motion.div 
+                        animate={{ rotate: [0, 10, -10, 0] }}
+                        transition={{ duration: 2, repeat: Infinity }}
+                        className="text-5xl"
+                    >
+                        🐱
+                    </motion.div>
                 </div>
             </motion.div>
 

@@ -223,15 +223,28 @@ Analyze this conflict using the Gottman Method framework. Identify the dynamic, 
 
 
 // --- Helper function to build the judge prompt with data ---
-const buildJudgeUserPrompt = (input, analysis) => {
+/**
+ * Build the judge user prompt
+ * 
+ * @param {object} input - The validated deliberation input
+ * @param {object} analysis - The psychological analysis
+ * @param {string} historicalContext - Optional formatted historical context from RAG
+ * @returns {string} The formatted prompt
+ */
+const buildJudgeUserPrompt = (input, analysis, historicalContext = '') => {
     const a = analysis.analysis;
     
     // Get the recommended repair from the analysis (with fallback)
     const recommendedRepair = a.recommendedRepair || 'The 20-Second Hug';
     
+    // Build historical context section if available
+    const contextSection = historicalContext 
+        ? `\n${historicalContext}\n` 
+        : '';
+    
     return `You are presiding over a conflict between ${input.participants.userA.name} and ${input.participants.userB.name}.
-
-## THE ORIGINAL CONFLICT
+${contextSection}
+## THE CURRENT CONFLICT
 
 ### ${input.participants.userA.name}'s Experience
 - **What happened**: "${input.submissions.userA.cameraFacts}"
@@ -277,6 +290,7 @@ Now deliver your verdict as Judge Mittens, the Therapist Cat. Remember:
 - NEVER assign blame percentages
 - NEVER trivialize their pain
 - USE THE PRESCRIBED REPAIR: "${recommendedRepair}" — no alternatives
+${historicalContext ? '- Reference historical patterns when relevant to provide personalized insights' : ''}
 - Output ONLY the JSON verdict object.`;
 };
 

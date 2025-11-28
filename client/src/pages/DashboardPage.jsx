@@ -6,8 +6,12 @@ import useAppStore from '../store/useAppStore';
 
 const DashboardPage = () => {
     const navigate = useNavigate();
-    const { currentUser, logGoodDeed, caseHistory } = useAppStore();
+    const { currentUser, users, logGoodDeed, caseHistory } = useAppStore();
     const [showGoodDeedModal, setShowGoodDeedModal] = useState(false);
+    
+    // Get partner name for good deed display
+    const partner = users?.find(u => u.id !== currentUser?.id);
+    const partnerName = partner?.name || 'your partner';
     const [goodDeedText, setGoodDeedText] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
@@ -33,11 +37,11 @@ const DashboardPage = () => {
     };
 
     const goodDeedSuggestions = [
-        "Made breakfast ☕",
+        "Made me breakfast ☕",
         "Did the dishes 🍽️", 
-        "Gave a massage 💆",
-        "Said something nice 💕",
-        "Planned a surprise 🎁",
+        "Gave me a massage 💆",
+        "Said something sweet 💕",
+        "Surprised me 🎁",
     ];
 
     return (
@@ -175,8 +179,8 @@ const DashboardPage = () => {
                         <div className="w-10 h-10 bg-white/80 rounded-xl flex items-center justify-center shadow-soft mb-2">
                             <Star className="w-5 h-5 text-amber-500" />
                         </div>
-                        <div className="font-bold text-neutral-800 text-sm">Log Good Deed</div>
-                        <div className="text-xs text-neutral-500">Earn +10 Kibble</div>
+                        <div className="font-bold text-neutral-800 text-sm">Give Kibble</div>
+                        <div className="text-xs text-neutral-500">Reward partner</div>
                     </motion.button>
                     <motion.button
                         whileTap={{ scale: 0.97 }}
@@ -251,13 +255,13 @@ const DashboardPage = () => {
                                     >
                                         <Check className="w-8 h-8 text-green-500" />
                                     </motion.div>
-                                    <h3 className="font-bold text-neutral-800 text-lg">+10 Kibble Earned! 🎉</h3>
-                                    <p className="text-neutral-500 text-sm">Good job being a great partner!</p>
+                                    <h3 className="font-bold text-neutral-800 text-lg">{partnerName} got +10 Kibble! 🎉</h3>
+                                    <p className="text-neutral-500 text-sm">Thanks for recognizing their effort!</p>
                                 </motion.div>
                             ) : (
                                 <>
                                     <div className="flex items-center justify-between">
-                                        <h3 className="font-bold text-neutral-800 text-lg">Log Good Deed ✨</h3>
+                                        <h3 className="font-bold text-neutral-800 text-lg">Reward {partnerName} ✨</h3>
                                         <button
                                             onClick={() => setShowGoodDeedModal(false)}
                                             className="w-8 h-8 bg-neutral-100 rounded-full flex items-center justify-center"
@@ -266,10 +270,14 @@ const DashboardPage = () => {
                                         </button>
                                     </div>
 
+                                    <p className="text-neutral-500 text-sm -mt-2">
+                                        What nice thing did {partnerName} do? They'll get kibble for it!
+                                    </p>
+
                                     <textarea
                                         value={goodDeedText}
                                         onChange={(e) => setGoodDeedText(e.target.value)}
-                                        placeholder="What nice thing did you do?"
+                                        placeholder={`${partnerName} did something nice...`}
                                         className="w-full h-24 bg-neutral-50 border-2 border-neutral-100 rounded-xl p-3 text-neutral-700 placeholder:text-neutral-400 focus:ring-2 focus:ring-amber-200 focus:border-amber-300 focus:outline-none resize-none text-sm"
                                     />
 
@@ -300,7 +308,7 @@ const DashboardPage = () => {
                                         ) : (
                                             <>
                                                 <Star className="w-4 h-4" />
-                                                Log Deed (+10 Kibble)
+                                                Give {partnerName} Kibble
                                             </>
                                         )}
                                     </button>

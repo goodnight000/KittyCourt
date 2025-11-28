@@ -20,21 +20,37 @@ model User {
 }
 
 model Case {
-  id              String   @id @default(uuid())
+  id              String    @id @default(uuid())
   userAInput      String
-  userAFeelings   String   @default("")
+  userAFeelings   String    @default("")
   userBInput      String
-  userBFeelings   String   @default("")
-  verdict         String?  // JSON string or text
-  status          String   @default("PENDING") // PENDING, RESOLVED
+  userBFeelings   String    @default("")
+  status          String    @default("PENDING") // PENDING, WAITING_FOR_B, DELIBERATING, RESOLVED
   
-  // Smart Summary Metadata (AI-generated)
+  // Smart Summary Metadata (AI-generated, from latest verdict)
   caseTitle       String?  // 3-6 word AI summary of conflict topic
   severityLevel   String?  // high_tension, friction, disconnection
   primaryHissTag  String?  // Main Horseman detected (nullable)
   shortResolution String?  // 5-word summary of the Sentence
   
+  // Verdicts stored as JSON array of all versions
+  verdicts        Verdict[]
+  
   createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Verdict {
+  id          String   @id @default(uuid())
+  caseId      String
+  case        Case     @relation(fields: [caseId], references: [id])
+  version     Int      @default(1)  // 1 = original, 2+ = after addendums
+  content     String   // JSON string of the verdict
+  addendumBy  String?  // 'userA' or 'userB' or null for original
+  addendumText String? // The addendum text that triggered this verdict
+  createdAt   DateTime @default(now())
+  
+  @@index([caseId])
 }
 
 model Transaction {
@@ -45,4 +61,16 @@ model Transaction {
   type        String // EARN, SPEND
   description String
   createdAt   DateTime @default(now())
+}
+
+// Court session state for the summoning system
+model CourtSession {
+  id          String   @id @default(uuid())
+  status      String   @default("WAITING") // WAITING, IN_SESSION, CLOSED
+  createdBy   String   // userA or userB who initiated
+  userAJoined Boolean  @default(false)
+  userBJoined Boolean  @default(false)
+  caseId      String?  // Reference to the case once created
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime // Session expires after some time
 }

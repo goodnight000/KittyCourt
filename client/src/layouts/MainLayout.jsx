@@ -23,9 +23,9 @@ const MainLayout = () => {
                 <motion.div
                     animate={{ rotate: 360 }}
                     transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                    className="w-12 h-12 mx-auto rounded-full border-3 border-pink-200 border-t-pink-400"
+                    className="w-12 h-12 mx-auto rounded-full border-3 border-court-tan border-t-court-gold"
                 />
-                <p className="text-neutral-500 font-medium">Loading Cat Judge...</p>
+                <p className="text-court-brownLight font-medium">Loading Cat Judge...</p>
             </motion.div>
         </div>
     );
@@ -39,19 +39,27 @@ const MainLayout = () => {
             <motion.header
                 initial={{ y: -20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
-                className="sticky top-0 z-50 bg-white/70 backdrop-blur-xl border-b border-white/50 shadow-soft"
+                className="sticky top-0 z-50 bg-white/70 backdrop-blur-xl border-b border-court-tan/30 shadow-soft"
             >
                 <div className="flex items-center justify-between px-4 h-14">
                     {/* Logo */}
                     <div className="flex items-center gap-2.5">
-                        <div className="w-9 h-9 bg-gradient-to-br from-pink-400 to-violet-400 rounded-xl flex items-center justify-center shadow-soft">
-                            <Cat className="w-5 h-5 text-white" />
+                        <div className="w-9 h-9 rounded-xl overflow-hidden shadow-soft border border-court-gold/30">
+                            <img 
+                                src="/judge-whiskers.png" 
+                                alt="Judge Whiskers"
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                    e.target.style.display = 'none';
+                                    e.target.parentElement.innerHTML = '<div class="w-full h-full bg-gradient-to-br from-court-gold to-court-goldDark flex items-center justify-center"><span class="text-white text-lg">🐱</span></div>';
+                                }}
+                            />
                         </div>
                         <span className="text-lg font-bold text-gradient font-display">Cat Judge</span>
                     </div>
 
                     {/* User Toggle Pills */}
-                    <div className="flex bg-neutral-100/80 rounded-full p-1 gap-1">
+                    <div className="flex bg-court-cream rounded-full p-1 gap-1">
                         {users.map((u) => (
                             <button
                                 key={u.id}
@@ -59,8 +67,8 @@ const MainLayout = () => {
                                 className={clsx(
                                     "px-3 py-1.5 rounded-full text-xs font-bold transition-all duration-200",
                                     currentUser.id === u.id
-                                        ? "bg-gradient-to-r from-pink-400 to-violet-400 text-white shadow-sm"
-                                        : "text-neutral-500 active:bg-white/50"
+                                        ? "bg-gradient-to-r from-court-gold to-court-goldDark text-white shadow-sm"
+                                        : "text-court-brownLight active:bg-white/50"
                                 )}
                             >
                                 {u.name}
@@ -72,7 +80,7 @@ const MainLayout = () => {
 
             {/* Main Scrollable Content */}
             <main className="flex-1 overflow-y-auto overscroll-contain">
-                <div className="px-4 py-5 pb-24 max-w-lg mx-auto">
+                <div className="px-4 py-5 pb-28 max-w-lg mx-auto">
                     <AnimatePresence mode="wait">
                         <motion.div
                             key={location.pathname}
@@ -92,13 +100,13 @@ const MainLayout = () => {
                 initial={{ y: 100 }}
                 animate={{ y: 0 }}
                 transition={{ delay: 0.1, type: "spring", stiffness: 300, damping: 30 }}
-                className="fixed bottom-0 left-1/2 -translate-x-1/2 z-40 w-full max-w-lg bg-white/80 backdrop-blur-xl border-t border-white/50 shadow-soft-lg safe-bottom rounded-t-2xl"
+                className="fixed bottom-0 left-1/2 -translate-x-1/2 z-40 w-full max-w-lg bg-white/80 backdrop-blur-xl border-t border-court-tan/30 shadow-soft-lg safe-bottom rounded-t-2xl"
             >
-                <div className="flex items-center justify-around h-16 px-2">
-                    <TabItem to="/" icon={<Home size={22} />} label="Home" />
-                    <TabItem to="/courtroom" icon={<Gavel size={22} />} label="Court" />
-                    <TabItem to="/daily-meow" icon={<Calendar size={22} />} label="Daily" />
-                    <TabItem to="/economy" icon={<Coins size={22} />} label="Shop" />
+                <div className="flex items-center justify-around h-20 px-2">
+                    <TabItem to="/" icon={<Home size={26} />} label="Home" />
+                    <TabItem to="/courtroom" icon={<Gavel size={26} />} label="Court" />
+                    <TabItem to="/daily-meow" icon={<Calendar size={26} />} label="Daily" />
+                    <TabItem to="/economy" icon={<Coins size={26} />} label="Shop" />
                 </div>
             </motion.nav>
         </div>
@@ -110,25 +118,33 @@ const TabItem = ({ to, icon, label }) => (
         to={to}
         className={({ isActive }) =>
             clsx(
-                "flex flex-col items-center justify-center gap-0.5 py-2 px-4 rounded-2xl transition-all duration-200 min-w-[64px]",
+                "flex flex-col items-center justify-center gap-1 transition-all duration-200",
                 isActive
-                    ? "text-pink-500"
-                    : "text-neutral-400 active:text-neutral-500 active:bg-neutral-100/50"
+                    ? "text-court-gold"
+                    : "text-court-brownLight active:text-court-brown"
             )
         }
     >
         {({ isActive }) => (
-            <>
-                {isActive && (
-                    <motion.div
-                        layoutId="activeTab"
-                        className="absolute inset-0 bg-pink-50 rounded-2xl"
-                        transition={{ type: "spring", bounce: 0.15, duration: 0.5 }}
-                    />
-                )}
-                <span className="relative z-10">{icon}</span>
-                <span className="relative z-10 text-[10px] font-bold">{label}</span>
-            </>
+            <div className="relative flex flex-col items-center">
+                {/* Circular touch target */}
+                <div className={clsx(
+                    "w-14 h-14 rounded-full flex items-center justify-center transition-all duration-200",
+                    isActive 
+                        ? "bg-court-gold/15" 
+                        : "active:bg-court-cream/50"
+                )}>
+                    {isActive && (
+                        <motion.div
+                            layoutId="activeTabCircle"
+                            className="absolute inset-0 bg-court-gold/10 rounded-full"
+                            transition={{ type: "spring", bounce: 0.15, duration: 0.5 }}
+                        />
+                    )}
+                    <span className="relative z-10">{icon}</span>
+                </div>
+                <span className="relative z-10 text-[10px] font-bold -mt-1">{label}</span>
+            </div>
         )}
     </NavLink>
 );

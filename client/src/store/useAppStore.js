@@ -11,6 +11,10 @@ const useAppStore = create(
             isLoading: false,
             error: null,
 
+            // --- Court Session State ---
+            courtSession: null, // Active court session
+            isCourtAnimationPlaying: false,
+
             // --- Actions ---
             fetchUsers: async () => {
                 set({ isLoading: true });
@@ -29,15 +33,87 @@ const useAppStore = create(
                 if (user) set({ currentUser: user });
             },
 
+            // --- Court Session Actions ---
+            checkActiveSession: async () => {
+                try {
+                    const response = await api.get('/court-sessions/active');
+                    set({ courtSession: response.data });
+                    return response.data;
+                } catch (error) {
+                    console.error("Failed to check active session", error);
+                    return null;
+                }
+            },
+
+            servePartner: async () => {
+                const { currentUser } = get();
+                const userId = currentUser?.name?.includes('User A') ? 'userA' : 'userB';
+                
+                try {
+                    const response = await api.post('/court-sessions', { createdBy: userId });
+                    set({ courtSession: response.data });
+                    return response.data;
+                } catch (error) {
+                    console.error("Failed to serve partner", error);
+                    throw error;
+                }
+            },
+
+            joinCourt: async () => {
+                const { courtSession, currentUser } = get();
+                if (!courtSession) return null;
+                
+                const userId = currentUser?.name?.includes('User A') ? 'userA' : 'userB';
+                
+                try {
+                    const response = await api.post(`/court-sessions/${courtSession.id}/join`, { userId });
+                    const updatedSession = response.data;
+                    set({ courtSession: updatedSession });
+                    
+                    // If both joined, trigger animation
+                    if (updatedSession.status === 'IN_SESSION') {
+                        set({ isCourtAnimationPlaying: true });
+                    }
+                    
+                    return updatedSession;
+                } catch (error) {
+                    console.error("Failed to join court", error);
+                    throw error;
+                }
+            },
+
+            finishCourtAnimation: () => {
+                set({ isCourtAnimationPlaying: false });
+            },
+
+            closeCourtSession: async (caseId = null) => {
+                const { courtSession } = get();
+                if (!courtSession) return;
+                
+                try {
+                    await api.post(`/court-sessions/${courtSession.id}/close`, { caseId });
+                    set({ courtSession: null });
+                } catch (error) {
+                    console.error("Failed to close court session", error);
+                }
+            },
+
             // --- Case State ---
             activeCase: {
+                id: null,
                 userAInput: '',
                 userAFeelings: '',
                 userBInput: '',
                 userBFeelings: '',
+                userASubmitted: false, // Track if User A has submitted
+                userBSubmitted: false, // Track if User B has submitted
+                userAAccepted: false,  // Track if User A accepted the verdict
+                userBAccepted: false,  // Track if User B accepted the verdict
                 status: 'DRAFT', // DRAFT, LOCKED_A, DELIBERATING, RESOLVED
                 verdict: null,
+                allVerdicts: [], // All verdict versions
             },
+            showCelebration: false, // For the celebration animation
             caseHistory: [],
 
             updateCaseInput: (input, field = 'facts') => {
@@ -64,11 +140,27 @@ const useAppStore = create(
                 const isUserA = currentUser?.name?.includes('User A');
 
                 if (isUserA) {
-                    set({ activeCase: { ...activeCase, status: 'LOCKED_A' } });
+                    const newCase = { ...activeCase, userASubmitted: true };
+                    // If B already submitted, go to deliberating
+                    if (activeCase.userBSubmitted) {
+                        newCase.status = 'DELIBERATING';
+                        set({ activeCase: newCase });
+                        get().generateVerdict();
+                    } else {
+                        newCase.status = 'LOCKED_A';
+                        set({ activeCase: newCase });
+                    }
                 } else {
-                    set({ activeCase: { ...activeCase, status: 'DELIBERATING' } });
-                    // Trigger verdict generation immediately (API takes ~10s)
-                    get().generateVerdict();
+                    const newCase = { ...activeCase, userBSubmitted: true };
+                    // If A already submitted, go to deliberating
+                    if (activeCase.userASubmitted) {
+                        newCase.status = 'DELIBERATING';
+                        set({ activeCase: newCase });
+                        get().generateVerdict();
+                    } else {
+                        newCase.status = 'LOCKED_B';
+                        set({ activeCase: newCase });
+                    }
                 }
             },
 
@@ -82,7 +174,7 @@ const useAppStore = create(
                 try {
                     // Call the real Judge Engine API
                     const response = await api.post('/judge/deliberate', {
-                        caseId: `case_${Date.now()}`,
+                        caseId: activeCase.id || `case_${Date.now()}`,
                         participants: {
                             userA: { name: userA.name || 'Partner A', id: userA.id },
                             userB: { name: userB.name || 'Partner B', id: userB.id }
@@ -116,6 +208,8 @@ const useAppStore = create(
                         // Meta info
                         analysis: judgeResponse._meta?.analysis,
                         processingTimeMs: judgeResponse._meta?.processingTimeMs,
+                        verdictId: judgeResponse.verdictId,
+                        timestamp: judgeResponse.timestamp,
                         // Legacy compat
                         kibbleReward: { userA: 10, userB: 10 }
                     };
@@ -128,7 +222,8 @@ const useAppStore = create(
                     const shortResolution = analysis.shortResolution || null;
 
                     // Save to database with metadata
-                    await api.post('/cases', {
+                    const savedCase = await api.post('/cases', {
+                        id: activeCase.id || undefined,
                         userAInput: activeCase.userAInput,
                         userAFeelings: activeCase.userAFeelings || '',
                         userBInput: activeCase.userBInput,
@@ -142,11 +237,16 @@ const useAppStore = create(
                         shortResolution
                     });
 
+                    // Build allVerdicts array
+                    const allVerdicts = savedCase.data.allVerdicts || [{ version: 1, content: JSON.stringify(verdict) }];
+
                     set({
                         activeCase: { 
-                            ...activeCase, 
+                            ...activeCase,
+                            id: savedCase.data.id,
                             status: 'RESOLVED', 
                             verdict,
+                            allVerdicts,
                             // Also store metadata in active case
                             caseTitle,
                             severityLevel,
@@ -154,7 +254,7 @@ const useAppStore = create(
                             shortResolution
                         },
                         caseHistory: [{ 
-                            ...activeCase, 
+                            ...savedCase.data,
                             verdict,
                             caseTitle,
                             severityLevel,
@@ -162,6 +262,9 @@ const useAppStore = create(
                             shortResolution
                         }, ...get().caseHistory]
                     });
+
+                    // Close the court session
+                    get().closeCourtSession(savedCase.data.id);
 
                     // Refresh users to update balances
                     get().fetchUsers();
@@ -190,22 +293,227 @@ const useAppStore = create(
                         activeCase: { 
                             ...activeCase, 
                             status: 'RESOLVED', 
-                            verdict: fallbackVerdict
+                            verdict: fallbackVerdict,
+                            allVerdicts: [{ version: 1, content: JSON.stringify(fallbackVerdict) }]
                         }
                     });
+                }
+            },
+
+            // Submit an addendum and get a new verdict
+            submitAddendum: async (addendumText) => {
+                const { activeCase, users, currentUser } = get();
+                if (!activeCase.id || activeCase.status !== 'RESOLVED') return;
+                
+                const isUserA = currentUser?.name?.includes('User A');
+                const addendumFrom = isUserA ? 'userA' : 'userB';
+                
+                // Get user names
+                const userA = users.find(u => u.name?.includes('User A')) || { name: 'Partner A', id: 'user-a' };
+                const userB = users.find(u => u.name?.includes('User B')) || { name: 'Partner B', id: 'user-b' };
+
+                set({ activeCase: { ...activeCase, status: 'DELIBERATING' } });
+
+                try {
+                    // Call the addendum endpoint
+                    const response = await api.post('/judge/addendum', {
+                        participants: {
+                            userA: { name: userA.name || 'Partner A', id: userA.id },
+                            userB: { name: userB.name || 'Partner B', id: userB.id }
+                        },
+                        submissions: {
+                            userA: {
+                                cameraFacts: activeCase.userAInput,
+                                selectedPrimaryEmotion: 'Frustrated',
+                                theStoryIamTellingMyself: activeCase.userAFeelings || 'I feel unheard.',
+                                coreNeed: 'To be understood'
+                            },
+                            userB: {
+                                cameraFacts: activeCase.userBInput,
+                                selectedPrimaryEmotion: 'Misunderstood',
+                                theStoryIamTellingMyself: activeCase.userBFeelings || 'I feel blamed.',
+                                coreNeed: 'To be accepted'
+                            }
+                        },
+                        addendumText,
+                        addendumFrom,
+                        previousVerdict: activeCase.verdict
+                    });
+
+                    const judgeResponse = response.data;
+                    
+                    // Transform the new verdict
+                    const newVerdict = {
+                        theSummary: judgeResponse.judgeContent?.theSummary,
+                        theRuling_ThePurr: judgeResponse.judgeContent?.theRuling_ThePurr,
+                        theRuling_TheHiss: judgeResponse.judgeContent?.theRuling_TheHiss || [],
+                        theSentence: judgeResponse.judgeContent?.theSentence,
+                        closingStatement: judgeResponse.judgeContent?.closingStatement,
+                        analysis: judgeResponse._meta?.analysis,
+                        processingTimeMs: judgeResponse._meta?.processingTimeMs,
+                        verdictId: judgeResponse.verdictId,
+                        timestamp: judgeResponse.timestamp,
+                        isAddendum: true,
+                        addendumBy: addendumFrom,
+                        kibbleReward: { userA: 5, userB: 5 }
+                    };
+
+                    // Extract metadata
+                    const analysis = judgeResponse._meta?.analysis || {};
+                    
+                    // Save the addendum verdict
+                    const savedCase = await api.post(`/cases/${activeCase.id}/addendum`, {
+                        addendumBy: addendumFrom,
+                        addendumText,
+                        verdict: JSON.stringify(newVerdict),
+                        caseTitle: analysis.caseTitle,
+                        severityLevel: analysis.severityLevel,
+                        primaryHissTag: analysis.primaryHissTag,
+                        shortResolution: analysis.shortResolution
+                    });
+
+                    const allVerdicts = savedCase.data.allVerdicts || [];
+
+                    set({
+                        activeCase: {
+                            ...activeCase,
+                            status: 'RESOLVED',
+                            verdict: newVerdict,
+                            allVerdicts,
+                            caseTitle: analysis.caseTitle || activeCase.caseTitle,
+                            severityLevel: analysis.severityLevel || activeCase.severityLevel,
+                            primaryHissTag: analysis.primaryHissTag || activeCase.primaryHissTag,
+                            shortResolution: analysis.shortResolution || activeCase.shortResolution
+                        }
+                    });
+
+                    // Refresh case history
+                    get().fetchCaseHistory();
+
+                } catch (error) {
+                    console.error("Failed to submit addendum", error);
+                    set({ activeCase: { ...activeCase, status: 'RESOLVED' } });
+                    throw error;
                 }
             },
 
             resetCase: () => {
                 set({ 
                     activeCase: { 
+                        id: null,
                         userAInput: '', 
                         userAFeelings: '',
                         userBInput: '', 
                         userBFeelings: '',
+                        userASubmitted: false,
+                        userBSubmitted: false,
+                        userAAccepted: false,
+                        userBAccepted: false,
                         status: 'DRAFT',
-                        verdict: null
-                    } 
+                        verdict: null,
+                        allVerdicts: []
+                    },
+                    showCelebration: false
+                });
+            },
+
+            // Accept the verdict - both users must accept
+            acceptVerdict: async () => {
+                const { activeCase, currentUser, users } = get();
+                if (!activeCase.verdict) return;
+                
+                const isUserA = currentUser?.name?.includes('User A');
+                const newCase = { ...activeCase };
+                
+                if (isUserA) {
+                    newCase.userAAccepted = true;
+                } else {
+                    newCase.userBAccepted = true;
+                }
+                
+                set({ activeCase: newCase });
+                
+                // If both have accepted, award kibble and show celebration
+                if (newCase.userAAccepted && newCase.userBAccepted) {
+                    try {
+                        // Award kibble to both users
+                        const kibbleReward = activeCase.verdict.kibbleReward || { userA: 10, userB: 10 };
+                        
+                        const userA = users.find(u => u.name?.includes('User A'));
+                        const userB = users.find(u => u.name?.includes('User B'));
+                        
+                        if (userA) {
+                            await api.post('/economy/transaction', {
+                                userId: userA.id,
+                                amount: kibbleReward.userA,
+                                type: 'EARN',
+                                description: 'Case resolved - verdict accepted'
+                            });
+                        }
+                        
+                        if (userB) {
+                            await api.post('/economy/transaction', {
+                                userId: userB.id,
+                                amount: kibbleReward.userB,
+                                type: 'EARN',
+                                description: 'Case resolved - verdict accepted'
+                            });
+                        }
+                        
+                        // Refresh user balances
+                        await get().fetchUsers();
+                        
+                        // Show celebration
+                        set({ showCelebration: true });
+                        
+                    } catch (error) {
+                        console.error("Failed to award kibble", error);
+                    }
+                }
+                
+                return newCase;
+            },
+            
+            closeCelebration: async () => {
+                // Close the court session on backend if exists
+                const { courtSession } = get();
+                if (courtSession?.id) {
+                    try {
+                        await api.post(`/court-sessions/${courtSession.id}/close`);
+                    } catch (error) {
+                        console.error("Failed to close court session on backend", error);
+                    }
+                }
+                
+                // End the court session and reset case locally
+                set({ 
+                    showCelebration: false,
+                    courtSession: null
+                });
+                get().resetCase();
+            },
+
+            // Load a specific case from history (for viewing/adding addendums)
+            loadCase: (caseItem) => {
+                const verdict = typeof caseItem.verdict === 'string' 
+                    ? JSON.parse(caseItem.verdict) 
+                    : caseItem.verdict;
+                
+                set({
+                    activeCase: {
+                        id: caseItem.id,
+                        userAInput: caseItem.userAInput,
+                        userAFeelings: caseItem.userAFeelings,
+                        userBInput: caseItem.userBInput,
+                        userBFeelings: caseItem.userBFeelings,
+                        status: 'RESOLVED',
+                        verdict,
+                        allVerdicts: caseItem.allVerdicts || [],
+                        caseTitle: caseItem.caseTitle,
+                        severityLevel: caseItem.severityLevel,
+                        primaryHissTag: caseItem.primaryHissTag,
+                        shortResolution: caseItem.shortResolution
+                    }
                 });
             },
 
@@ -219,23 +527,29 @@ const useAppStore = create(
             },
 
             // --- Economy Actions ---
+            // When you log a good deed, you're logging something your PARTNER did
+            // So the kibble goes to your partner
             logGoodDeed: async (description) => {
-                const { currentUser } = get();
+                const { currentUser, users } = get();
                 if (!currentUser) return;
+                
+                // Find the partner (the other user)
+                const partner = users.find(u => u.id !== currentUser.id);
+                if (!partner) return;
 
                 try {
+                    // Award kibble to the PARTNER, not the current user
                     const response = await api.post('/economy/transaction', {
-                        userId: currentUser.id,
+                        userId: partner.id,
                         amount: 10,
                         type: 'EARN',
-                        description: description || 'Good deed logged'
+                        description: `${currentUser.name} appreciated: ${description || 'Good deed'}`
                     });
 
-                    // Update local user balance
+                    // Update partner's balance in state
                     set({
-                        currentUser: { ...currentUser, kibbleBalance: response.data.newBalance },
                         users: get().users.map(u => 
-                            u.id === currentUser.id 
+                            u.id === partner.id 
                                 ? { ...u, kibbleBalance: response.data.newBalance }
                                 : u
                         )
@@ -312,6 +626,7 @@ const useAppStore = create(
             partialize: (state) => ({
                 activeCase: state.activeCase,
                 hasAnsweredToday: state.hasAnsweredToday,
+                courtSession: state.courtSession,
             }),
         }
     )
