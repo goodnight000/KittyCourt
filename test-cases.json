@@ -1,0 +1,124 @@
+{
+  "testCases": [
+    {
+      "id": 1,
+      "title": "The Thermostat War",
+      "userA": {
+        "input": "My partner keeps setting the thermostat to 68°F which is freezing! I need it at 74°F to be comfortable. Every time I change it, they change it back within an hour. I've started wearing three sweaters around the house.",
+        "feelings": "I feel like my comfort doesn't matter. It's my home too and I shouldn't have to bundle up like I'm going camping."
+      },
+      "userB": {
+        "input": "The apartment is already warm enough! 74 degrees is way too hot and it's wasting money on electricity. I wake up sweating every night. They could just put on a sweater instead of cranking up the heat.",
+        "feelings": "I feel dismissed when my partner ignores the energy bill and my sleep quality. Being too hot makes me cranky."
+      }
+    },
+    {
+      "id": 2,
+      "title": "The Leftover Lunch Incident",
+      "userA": {
+        "input": "I made myself a fancy sandwich with the last of the good deli turkey and special cheese for tomorrow's lunch. I labeled it clearly with my name and a 'DO NOT EAT' note. Came home to find the container empty in the sink.",
+        "feelings": "I feel betrayed and hungry. I was looking forward to that sandwich all day at work."
+      },
+      "userB": {
+        "input": "I was starving and running late for a meeting. There was literally nothing else in the fridge except that sandwich. I was going to replace everything at the store later but they came home before I could.",
+        "feelings": "I feel bad but also a bit attacked. It was an emergency hunger situation! I didn't mean to cause drama."
+      }
+    },
+    {
+      "id": 3,
+      "title": "The Netflix Queue Catastrophe",
+      "userA": {
+        "input": "We agreed to watch the new season of our favorite show together. I come home and find out they watched 4 episodes without me while I was at my mom's for the weekend!",
+        "feelings": "I feel left out and like our ritual doesn't matter to them. Now I'll have to avoid spoilers somehow."
+      },
+      "userB": {
+        "input": "They were gone for THREE days! I was bored and it auto-played. Also they were on their phone during half the episodes we watched together anyway so I didn't think they cared that much.",
+        "feelings": "I feel guilty but also a little defensive. I didn't think it was that big a deal."
+      }
+    },
+    {
+      "id": 4,
+      "title": "The Chore Chart Conflict",
+      "userA": {
+        "input": "I created a fair chore chart two months ago. My partner has 'forgotten' to do their assigned tasks 6 times now. Meanwhile I've done mine plus picked up their slack because I can't live in a messy house.",
+        "feelings": "I feel like their parent, not their partner. I'm exhausted from being the only responsible one."
+      },
+      "userB": {
+        "input": "The chore chart is way too rigid! Life happens - sometimes I'm tired from work or have other things going on. They always do the chores before I even get a chance, then act like a martyr about it.",
+        "feelings": "I feel controlled and criticized. I'm not a child who needs a chart to function."
+      }
+    },
+    {
+      "id": 5,
+      "title": "The In-Law Weekend Surprise",
+      "userA": {
+        "input": "My partner invited their parents to stay with us for a WEEK without asking me first. I found out when their mom texted me asking what kind of pillows we have. Our apartment is tiny!",
+        "feelings": "I feel blindsided and stressed. I need time to mentally prepare for guests, especially in-laws."
+      },
+      "userB": {
+        "input": "My parents are only in town once a year and hotels are expensive. I didn't think it would be a big deal - they're family! Also my partner loves my parents and always says they're welcome anytime.",
+        "feelings": "I feel caught between my partner and my parents now. This is awkward for everyone."
+      }
+    },
+    {
+      "id": 6,
+      "title": "The Social Media Silence",
+      "userA": {
+        "input": "We've been together for 2 years and there's not a single photo of us on my partner's Instagram. Meanwhile they post constantly - friends, food, sunsets, their cat. Am I their secret?",
+        "feelings": "I feel hidden and unimportant, like they're embarrassed of our relationship."
+      },
+      "userB": {
+        "input": "I just like to keep my relationship private! Social media isn't real life. I show my love in person, not through performative posts. They know I love them - why do strangers need to know too?",
+        "feelings": "I feel pressured to perform our relationship online when that's not my style."
+      }
+    },
+    {
+      "id": 7,
+      "title": "The Snoring Standoff",
+      "userA": {
+        "input": "My partner's snoring has gotten so bad I haven't had a full night's sleep in weeks. I've nicely suggested they see a doctor or try those nose strips but they refuse and say I'm exaggerating.",
+        "feelings": "I feel exhausted and unheard. My health is suffering and they won't even acknowledge there's a problem."
+      },
+      "userB": {
+        "input": "I can't help that I snore! It's a natural body function. They've started sleeping in the guest room which hurts my feelings. Also they definitely snore too sometimes, they just don't hear themselves.",
+        "feelings": "I feel self-conscious and rejected. It's not like I'm snoring on purpose."
+      }
+    },
+    {
+      "id": 8,
+      "title": "The Restaurant Roulette",
+      "userA": {
+        "input": "Every single time we try to decide on dinner, my partner says 'I don't care, you pick' and then vetoes every single suggestion I make. We went through 7 restaurant ideas last night before they finally picked sushi - which they wanted all along!",
+        "feelings": "I feel frustrated and like they're playing games. Just tell me what you want!"
+      },
+      "userB": {
+        "input": "I genuinely don't know what I want until I hear the options! It's not my fault none of their suggestions sounded good. Also they suggested pizza THREE times when they know I'm trying to eat healthier.",
+        "feelings": "I feel pressured to make decisions when I'm indecisive by nature. Why is picking dinner such high stakes?"
+      }
+    },
+    {
+      "id": 9,
+      "title": "The Alarm Clock Abuse",
+      "userA": {
+        "input": "My partner sets 7 alarms starting at 5:30am, snoozes all of them, and doesn't actually get up until 7am. I have to lie there listening to their phone blast every 10 minutes for 90 minutes every single morning.",
+        "feelings": "I feel like my sleep doesn't matter. I'm cranky before my day even starts."
+      },
+      "userB": {
+        "input": "I physically cannot wake up to just one alarm, I've tried everything! It's just how my body works. They're a light sleeper which isn't my fault. Maybe they should try earplugs?",
+        "feelings": "I feel like I'm being blamed for something I can't control. At least I'm trying to wake up on time!"
+      }
+    },
+    {
+      "id": 10,
+      "title": "The Text Back Time",
+      "userA": {
+        "input": "My partner takes HOURS to respond to my texts, but I see them actively posting on social media and chatting in group chats during that time. When I bring it up they say they were 'busy'.",
+        "feelings": "I feel like I'm not a priority. If you can text other people, you can text me."
+      },
+      "userB": {
+        "input": "Sometimes I see a text and plan to respond thoughtfully later, then I forget. Group chats are different - those are quick jokes, not conversations. They want me to drop everything instantly which feels controlling.",
+        "feelings": "I feel monitored and suffocated. I need some communication autonomy."
+      }
+    }
+  ]
+}

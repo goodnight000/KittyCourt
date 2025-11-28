@@ -1,0 +1,41 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String        @id @default(uuid())
+  name          String
+  avatar        String        @default("default_cat.png")
+  kibbleBalance Int           @default(0)
+  transactions  Transaction[]
+  createdAt     DateTime      @default(now())
+}
+
+model Case {
+  id           String   @id @default(uuid())
+  userAInput   String
+  userAFeelings String  @default("")
+  userBInput   String
+  userBFeelings String  @default("")
+  verdict      String? // JSON string or text
+  status       String   @default("PENDING") // PENDING, RESOLVED
+  createdAt    DateTime @default(now())
+}
+
+model Transaction {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  amount      Int
+  type        String // EARN, SPEND
+  description String
+  createdAt   DateTime @default(now())
+}
