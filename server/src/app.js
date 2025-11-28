@@ -3,12 +3,18 @@ const cors = require('cors');
 const { PrismaClient } = require('@prisma/client');
 require('dotenv').config();
 
+// Import routes
+const judgeRoutes = require('./routes/judge');
+
 const app = express();
 const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
+
+// --- Judge Engine Routes ---
+app.use('/api/judge', judgeRoutes);
 
 // --- Routes ---
 
@@ -48,13 +54,37 @@ app.get('/api/users/:id', async (req, res) => {
 // Submit a Case (or update it)
 app.post('/api/cases', async (req, res) => {
     try {
-        const { id, userAInput, userAFeelings, userBInput, userBFeelings, status, verdict } = req.body;
+        const { 
+            id, 
+            userAInput, 
+            userAFeelings, 
+            userBInput, 
+            userBFeelings, 
+            status, 
+            verdict,
+            // Smart Summary Metadata
+            caseTitle,
+            severityLevel,
+            primaryHissTag,
+            shortResolution
+        } = req.body;
 
         if (id) {
             // Update existing case
             const updated = await prisma.case.update({
                 where: { id },
-                data: { userAInput, userAFeelings, userBInput, userBFeelings, status, verdict }
+                data: { 
+                    userAInput, 
+                    userAFeelings, 
+                    userBInput, 
+                    userBFeelings, 
+                    status, 
+                    verdict,
+                    caseTitle,
+                    severityLevel,
+                    primaryHissTag,
+                    shortResolution
+                }
             });
             return res.json(updated);
         } else {
@@ -66,7 +96,11 @@ app.post('/api/cases', async (req, res) => {
                     userBInput: userBInput || '',
                     userBFeelings: userBFeelings || '',
                     status: status || 'PENDING',
-                    verdict: verdict || null
+                    verdict: verdict || null,
+                    caseTitle: caseTitle || null,
+                    severityLevel: severityLevel || null,
+                    primaryHissTag: primaryHissTag || null,
+                    shortResolution: shortResolution || null
                 }
             });
             return res.json(newCase);

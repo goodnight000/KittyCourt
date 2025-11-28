@@ -1,0 +1,118 @@
+/**
+ * Judge API Routes
+ * Handles all endpoints related to the Cat Judge deliberation process
+ */
+
+const express = require('express');
+const { deliberate } = require('../lib/judgeEngine');
+const { isOpenAIConfigured } = require('../lib/openai');
+
+const router = express.Router();
+
+/**
+ * POST /api/judge/deliberate
+ * 
+ * Main endpoint for submitting a dispute for Judge Mittens' verdict.
+ * Expects a structured intake payload with both users' submissions.
+ * 
+ * @body {object} participants - { userA: {name, id}, userB: {name, id} }
+ * @body {object} submissions - { userA: {...submission}, userB: {...submission} }
+ * 
+ * @returns {object} Complete verdict response with Judge Mittens' ruling
+ */
+router.post('/deliberate', async (req, res) => {
+    try {
+        console.log('[Judge API] Received deliberation request');
+
+        // Check if API key is configured
+        if (!isOpenAIConfigured()) {
+            return res.status(503).json({
+                verdictId: null,
+                timestamp: new Date().toISOString(),
+                status: 'error',
+                error: 'Judge Mittens is sleeping. OpenAI API key not configured.',
+            });
+        }
+
+        const result = await deliberate(req.body);
+
+        // Set appropriate status code based on result
+        if (result.status === 'error') {
+            return res.status(400).json(result);
+        }
+
+        if (result.status === 'unsafe_counseling_recommended') {
+            return res.status(200).json(result); // Still 200, but with warning status
+        }
+
+        return res.status(200).json(result);
+    } catch (error) {
+        console.error('[Judge API] Unexpected error:', error);
+        return res.status(500).json({
+            verdictId: null,
+            timestamp: new Date().toISOString(),
+            status: 'error',
+            error: 'An unexpected error occurred. Judge Mittens has encountered a hairball.',
+        });
+    }
+});
+
+/**
+ * GET /api/judge/health
+ * 
+ * Health check endpoint for the Judge Engine
+ */
+router.get('/health', (req, res) => {
+    const hasApiKey = isOpenAIConfigured();
+    
+    res.json({
+        status: hasApiKey ? 'ready' : 'unconfigured',
+        service: 'Judge Mittens Court',
+        message: hasApiKey 
+            ? 'Judge Mittens is awake and ready to preside.' 
+            : 'Judge Mittens requires an OpenAI API key to function.',
+        timestamp: new Date().toISOString(),
+    });
+});
+
+/**
+ * POST /api/judge/test
+ * 
+ * Test endpoint with a sample dispute for development purposes
+ * Only available in non-production environments
+ */
+router.post('/test', async (req, res) => {
+    if (process.env.NODE_ENV === 'production') {
+        return res.status(404).json({ error: 'Not found' });
+    }
+
+    const sampleInput = {
+        participants: {
+            userA: { name: 'Alex', id: 'u123' },
+            userB: { name: 'Sam', id: 'u456' },
+        },
+        submissions: {
+            userA: {
+                cameraFacts: 'I came home and the dishes were in the sink. I asked Sam about them, and Sam left the room.',
+                selectedPrimaryEmotion: 'Overwhelmed',
+                theStoryIamTellingMyself: 'That I am not a priority and I am expected to do everything.',
+                coreNeed: 'Support & Partnership',
+            },
+            userB: {
+                cameraFacts: 'Alex came home and immediately commented on the dishes. I had a long day and needed a minute before starting chores.',
+                selectedPrimaryEmotion: 'Defensive',
+                theStoryIamTellingMyself: 'That I am being attacked the second Alex walks in the door.',
+                coreNeed: 'Appreciation & Peace',
+            },
+        },
+    };
+
+    try {
+        const result = await deliberate(sampleInput);
+        return res.json(result);
+    } catch (error) {
+        return res.status(500).json({ error: error.message });
+    }
+});
+
+module.exports = router;

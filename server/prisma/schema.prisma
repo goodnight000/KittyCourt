@@ -20,14 +20,21 @@ model User {
 }
 
 model Case {
-  id           String   @id @default(uuid())
-  userAInput   String
-  userAFeelings String  @default("")
-  userBInput   String
-  userBFeelings String  @default("")
-  verdict      String? // JSON string or text
-  status       String   @default("PENDING") // PENDING, RESOLVED
-  createdAt    DateTime @default(now())
+  id              String   @id @default(uuid())
+  userAInput      String
+  userAFeelings   String   @default("")
+  userBInput      String
+  userBFeelings   String   @default("")
+  verdict         String?  // JSON string or text
+  status          String   @default("PENDING") // PENDING, RESOLVED
+  
+  // Smart Summary Metadata (AI-generated)
+  caseTitle       String?  // 3-6 word AI summary of conflict topic
+  severityLevel   String?  // high_tension, friction, disconnection
+  primaryHissTag  String?  // Main Horseman detected (nullable)
+  shortResolution String?  // 5-word summary of the Sentence
+  
+  createdAt       DateTime @default(now())
 }
 
 model Transaction {

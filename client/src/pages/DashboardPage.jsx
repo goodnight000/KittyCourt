@@ -152,7 +152,7 @@ const DashboardPage = () => {
                     </motion.span>
                 </motion.div>
 
-                <h2 className="font-bold text-neutral-800 mb-1">Judge Whiskers</h2>
+                <h2 className="font-bold text-neutral-800 mb-1">Judge Mittens</h2>
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-violet-50 text-violet-600 rounded-full text-xs font-bold">
                     <span className="w-1.5 h-1.5 bg-violet-400 rounded-full animate-pulse" />
                     Tap to file a case

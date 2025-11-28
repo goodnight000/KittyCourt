@@ -67,71 +67,130 @@ const useAppStore = create(
                     set({ activeCase: { ...activeCase, status: 'LOCKED_A' } });
                 } else {
                     set({ activeCase: { ...activeCase, status: 'DELIBERATING' } });
-                    // Trigger verdict generation after delay
-                    setTimeout(() => get().generateVerdict(), 2500);
+                    // Trigger verdict generation immediately (API takes ~10s)
+                    get().generateVerdict();
                 }
             },
 
             generateVerdict: async () => {
-                const { activeCase } = get();
+                const { activeCase, users } = get();
                 
-                // Generate a fun cat-themed verdict
-                const verdicts = [
-                    {
-                        summary: "After careful consideration of both testimonies, the evidence suggests a classic case of miscommunication topped with a sprinkle of hangry behavior.",
-                        ruling: "Both parties share responsibility - User A is 55% accountable, User B is 45% accountable.",
-                        sentence: "User A must provide 3 head scratches and User B must make tea. Peace offering: watch a movie together tonight.",
-                        winner: "tie",
-                        kibbleReward: { userA: 5, userB: 5 }
-                    },
-                    {
-                        summary: "The court finds that while both sides have merit, one party clearly forgot the sacred law of 'always share the last slice'.",
-                        ruling: "User B has been found in violation of Snack Sharing Protocol 7.2",
-                        sentence: "User B shall provide a back massage for 10 minutes and must let User A pick dinner for the next 2 days.",
-                        winner: "userA",
-                        kibbleReward: { userA: 15, userB: 0 }
-                    },
-                    {
-                        summary: "This court has seen many disputes, but this level of dramatic sighing is unprecedented. Both parties need to use their words.",
-                        ruling: "User A is found guilty of excessive passive-aggressiveness.",
-                        sentence: "User A must apologize with actual words (not just 'hmm') and bring User B their favorite snack.",
-                        winner: "userB",
-                        kibbleReward: { userA: 0, userB: 15 }
-                    }
-                ];
-
-                const verdict = verdicts[Math.floor(Math.random() * verdicts.length)];
+                // Get user names from the store
+                const userA = users.find(u => u.name?.includes('User A')) || { name: 'Partner A', id: 'user-a' };
+                const userB = users.find(u => u.name?.includes('User B')) || { name: 'Partner B', id: 'user-b' };
 
                 try {
-                    const response = await api.post('/cases', {
+                    // Call the real Judge Engine API
+                    const response = await api.post('/judge/deliberate', {
+                        caseId: `case_${Date.now()}`,
+                        participants: {
+                            userA: { name: userA.name || 'Partner A', id: userA.id },
+                            userB: { name: userB.name || 'Partner B', id: userB.id }
+                        },
+                        submissions: {
+                            userA: {
+                                cameraFacts: activeCase.userAInput,
+                                selectedPrimaryEmotion: 'Frustrated', // Could be enhanced with emotion picker
+                                theStoryIamTellingMyself: activeCase.userAFeelings || 'I feel unheard.',
+                                coreNeed: 'To be understood'
+                            },
+                            userB: {
+                                cameraFacts: activeCase.userBInput,
+                                selectedPrimaryEmotion: 'Misunderstood',
+                                theStoryIamTellingMyself: activeCase.userBFeelings || 'I feel blamed.',
+                                coreNeed: 'To be accepted'
+                            }
+                        }
+                    });
+
+                    const judgeResponse = response.data;
+                    
+                    // Transform the judge response to the verdict format
+                    const verdict = {
+                        // New psychological framework fields
+                        theSummary: judgeResponse.judgeContent?.theSummary || judgeResponse.judgeContent?.translationSummary,
+                        theRuling_ThePurr: judgeResponse.judgeContent?.theRuling_ThePurr || judgeResponse.judgeContent?.validation_ThePurr,
+                        theRuling_TheHiss: judgeResponse.judgeContent?.theRuling_TheHiss || judgeResponse.judgeContent?.callouts_TheHiss || [],
+                        theSentence: judgeResponse.judgeContent?.theSentence || judgeResponse.judgeContent?.theSentence_RepairAttempt,
+                        closingStatement: judgeResponse.judgeContent?.closingStatement,
+                        // Meta info
+                        analysis: judgeResponse._meta?.analysis,
+                        processingTimeMs: judgeResponse._meta?.processingTimeMs,
+                        // Legacy compat
+                        kibbleReward: { userA: 10, userB: 10 }
+                    };
+
+                    // Extract smart summary metadata from analysis
+                    const analysis = judgeResponse._meta?.analysis || {};
+                    const caseTitle = analysis.caseTitle || null;
+                    const severityLevel = analysis.severityLevel || null;
+                    const primaryHissTag = analysis.primaryHissTag || null;
+                    const shortResolution = analysis.shortResolution || null;
+
+                    // Save to database with metadata
+                    await api.post('/cases', {
                         userAInput: activeCase.userAInput,
                         userAFeelings: activeCase.userAFeelings || '',
                         userBInput: activeCase.userBInput,
                         userBFeelings: activeCase.userBFeelings || '',
                         status: 'RESOLVED',
-                        verdict: JSON.stringify(verdict)
+                        verdict: JSON.stringify(verdict),
+                        // Smart Summary Metadata
+                        caseTitle,
+                        severityLevel,
+                        primaryHissTag,
+                        shortResolution
                     });
 
                     set({
                         activeCase: { 
                             ...activeCase, 
                             status: 'RESOLVED', 
-                            verdict 
+                            verdict,
+                            // Also store metadata in active case
+                            caseTitle,
+                            severityLevel,
+                            primaryHissTag,
+                            shortResolution
                         },
-                        caseHistory: [response.data, ...get().caseHistory]
+                        caseHistory: [{ 
+                            ...activeCase, 
+                            verdict,
+                            caseTitle,
+                            severityLevel,
+                            primaryHissTag,
+                            shortResolution
+                        }, ...get().caseHistory]
                     });
 
                     // Refresh users to update balances
                     get().fetchUsers();
 
                 } catch (error) {
-                    console.error("Failed to save case", error);
-                    // Still show the verdict even if save fails
+                    console.error("Failed to generate verdict", error);
+                    
+                    // Fallback verdict if API fails
+                    const fallbackVerdict = {
+                        theSummary: "The Judge Engine encountered a hairball. Please try again.",
+                        theRuling_ThePurr: {
+                            userA: "Your feelings are valid, even when technology fails us.",
+                            userB: "Your feelings are valid, even when technology fails us."
+                        },
+                        theRuling_TheHiss: ["Technical difficulties are no one's fault. Hiss at the server."],
+                        theSentence: {
+                            title: "The 20-Second Hug",
+                            description: "While we fix things, share a comforting hug.",
+                            rationale: "Connection heals all, including server errors."
+                        },
+                        closingStatement: "Court will resume shortly. 🐱",
+                        kibbleReward: { userA: 5, userB: 5 }
+                    };
+
                     set({
                         activeCase: { 
                             ...activeCase, 
                             status: 'RESOLVED', 
-                            verdict 
+                            verdict: fallbackVerdict
                         }
                     });
                 }
