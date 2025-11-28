@@ -3,7 +3,6 @@
  * Uses OpenRouter API with moonshotai/kimi-k2-thinking model
  * 
  * JSON Mode: Uses response_format with json_schema for structured output
- * Based on Moonshot API docs for reliable JSON output
  */
 
 let _openRouterClient = null;

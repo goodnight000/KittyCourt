@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import useAppStore from '../store/useAppStore';
@@ -6,8 +6,182 @@ import {
     Lock, Send, Scale, Heart, MessageCircle, RotateCcw, History, 
     Sparkles, AlertTriangle, HeartHandshake, Quote, Gavel, Users,
     Bell, ChevronRight, Plus, Clock, FileText, Check, PartyPopper,
-    Moon, Coffee, Zap
+    Moon, Coffee, Zap, Cat
 } from 'lucide-react';
+
+// Waiting Screen Component - Calming breathing meditation while LLM deliberates
+const WaitingScreen = ({ isLoading }) => {
+    const audioRef = useRef(null);
+    
+    useEffect(() => {
+        if (!isLoading) return;
+        
+        // Initialize and play purring audio
+        audioRef.current = new Audio('/sounds/deep-purr.mp3');
+        audioRef.current.loop = true;
+        audioRef.current.volume = 0.4;
+        
+        // Try to play (may be blocked by autoplay policy)
+        audioRef.current.play().catch(err => {
+            console.log('Audio autoplay blocked:', err);
+        });
+        
+        return () => {
+            if (audioRef.current) {
+                audioRef.current.pause();
+                audioRef.current.currentTime = 0;
+                audioRef.current = null;
+            }
+        };
+    }, [isLoading]);
+    
+    if (!isLoading) return null;
+    
+    // Breathing pattern: Inhale 4s, Hold 2s, Exhale 6s = 12s total cycle
+    const breathingCycle = {
+        scale: [1, 1.5, 1.5, 1],
+        opacity: [0.7, 1, 1, 0.7],
+    };
+    
+    // Keyframe timing: 0% -> 33.3% (4s inhale) -> 50% (2s hold) -> 100% (6s exhale)
+    const breathingTimes = [0, 0.333, 0.5, 1]; // Normalized to 0-1
+    
+    return (
+        <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-gradient-to-br from-purple-900 via-slate-800 to-slate-900 flex flex-col items-center justify-center overflow-hidden"
+        >
+            {/* Ambient stars */}
+            {[...Array(20)].map((_, i) => (
+                <motion.div
+                    key={i}
+                    animate={{ 
+                        opacity: [0.2, 0.6, 0.2],
+                    }}
+                    transition={{ 
+                        duration: 3 + Math.random() * 3,
+                        delay: Math.random() * 2,
+                        repeat: Infinity
+                    }}
+                    className="absolute w-1 h-1 bg-white rounded-full"
+                    style={{
+                        left: `${Math.random() * 100}%`,
+                        top: `${Math.random() * 100}%`
+                    }}
+                />
+            ))}
+            
+            {/* Top Text */}
+            <motion.h2 
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="text-xl md:text-2xl font-light text-white/90 mb-12 text-center px-4"
+            >
+                The Judge is meditating on your evidence.
+            </motion.h2>
+            
+            {/* Central Breathing Circle with Cat */}
+            <div className="relative flex items-center justify-center">
+                {/* Breathing Ring - Outer glow */}
+                <motion.div
+                    animate={breathingCycle}
+                    transition={{
+                        duration: 12,
+                        times: breathingTimes,
+                        repeat: Infinity,
+                        ease: "easeInOut"
+                    }}
+                    className="absolute w-48 h-48 md:w-64 md:h-64 rounded-full"
+                    style={{
+                        background: 'radial-gradient(circle, rgba(251,191,36,0.3) 0%, rgba(251,191,36,0.1) 50%, transparent 70%)',
+                        boxShadow: '0 0 60px 20px rgba(251,191,36,0.2), inset 0 0 40px 10px rgba(251,191,36,0.1)',
+                    }}
+                />
+                
+                {/* Breathing Ring - Inner ring */}
+                <motion.div
+                    animate={breathingCycle}
+                    transition={{
+                        duration: 12,
+                        times: breathingTimes,
+                        repeat: Infinity,
+                        ease: "easeInOut"
+                    }}
+                    className="absolute w-40 h-40 md:w-52 md:h-52 rounded-full border-2 border-amber-400/50 shadow-lg"
+                    style={{
+                        boxShadow: '0 0 30px 10px rgba(251,191,36,0.3)',
+                    }}
+                />
+                
+                {/* Sleeping Cat Center */}
+                <motion.div 
+                    animate={{ 
+                        y: [0, -5, 0],
+                    }}
+                    transition={{ 
+                        duration: 4,
+                        repeat: Infinity,
+                        ease: "easeInOut"
+                    }}
+                    className="relative z-10 w-28 h-28 md:w-36 md:h-36 bg-gradient-to-br from-slate-700 to-slate-800 rounded-full flex items-center justify-center shadow-2xl border border-amber-400/30"
+                >
+                    {/* Cat icon or emoji */}
+                    <span className="text-6xl md:text-7xl">😺</span>
+                    
+                    {/* Floating Zzz */}
+                    <div className="absolute -right-4 -top-2">
+                        {['z', 'Z'].map((letter, i) => (
+                            <motion.span
+                                key={i}
+                                animate={{ 
+                                    opacity: [0, 0.8, 0],
+                                    x: [0, 10, 20],
+                                    y: [0, -15, -30]
+                                }}
+                                transition={{
+                                    duration: 3,
+                                    delay: i * 1,
+                                    repeat: Infinity
+                                }}
+                                className="absolute text-amber-300 font-bold"
+                                style={{ fontSize: `${12 + i * 6}px` }}
+                            >
+                                {letter}
+                            </motion.span>
+                        ))}
+                    </div>
+                </motion.div>
+            </div>
+            
+            {/* Bottom Instruction Text */}
+            <motion.p 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+                className="mt-12 text-sm md:text-base text-white/60 text-center px-6"
+            >
+                Sync your breathing with the purr to aid deliberations.
+            </motion.p>
+            
+            {/* Breathing Guide */}
+            <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.7 }}
+                className="mt-6 flex items-center gap-4 text-xs text-white/40"
+            >
+                <span>Inhale 4s</span>
+                <span className="text-amber-400">•</span>
+                <span>Hold 2s</span>
+                <span className="text-amber-400">•</span>
+                <span>Exhale 6s</span>
+            </motion.div>
+        </motion.div>
+    );
+};
 
 // Court at Rest Component - Shows when no court session is active
 const CourtAtRest = ({ onServe, navigate }) => {
@@ -29,11 +203,7 @@ const CourtAtRest = ({ onServe, navigate }) => {
     return (
         <div className="min-h-[70vh] flex flex-col items-center justify-center px-4">
             {/* Sleeping Cat Scene */}
-            <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="relative"
-            >
+            <div className="relative">
                 {/* Moon & Stars Background */}
                 <div className="absolute inset-0 -z-10">
                     {[...Array(8)].map((_, i) => (
@@ -122,24 +292,18 @@ const CourtAtRest = ({ onServe, navigate }) => {
                 {/* Speech Bubble */}
                 <motion.div
                     key={catPhase}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0 }}
+                    initial={{ opacity: 0.8 }}
+                    animate={{ opacity: 1 }}
                     className="mt-6 glass-card px-5 py-3 max-w-xs mx-auto text-center"
                 >
                     <p className="text-court-brownLight text-sm italic">
                         {sleepingPhrases[catPhase]}
                     </p>
                 </motion.div>
-            </motion.div>
+            </div>
 
             {/* Status Card */}
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="mt-8 text-center space-y-2"
-            >
+            <div className="mt-8 text-center space-y-2">
                 <div className="inline-flex items-center gap-2 bg-court-cream px-4 py-2 rounded-full">
                     <Moon className="w-4 h-4 text-court-gold" />
                     <span className="text-sm font-medium text-court-brown">Court Adjourned</span>
@@ -147,15 +311,10 @@ const CourtAtRest = ({ onServe, navigate }) => {
                 <p className="text-xs text-court-brownLight max-w-[200px] mx-auto">
                     The courtroom is peaceful. No disputes to settle.
                 </p>
-            </motion.div>
+            </div>
 
             {/* Action Buttons */}
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-                className="mt-8 w-full max-w-xs space-y-3"
-            >
+            <div className="mt-8 w-full max-w-xs space-y-3">
                 <motion.button
                     whileTap={{ scale: 0.98 }}
                     onClick={onServe}
@@ -174,15 +333,10 @@ const CourtAtRest = ({ onServe, navigate }) => {
                     <History className="w-4 h-4 text-court-gold" />
                     View Past Cases
                 </motion.button>
-            </motion.div>
+            </div>
 
             {/* Fun Stats */}
-            <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.6 }}
-                className="mt-8 flex gap-6 text-center"
-            >
+            <div className="mt-8 flex gap-6 text-center">
                 <div>
                     <Coffee className="w-5 h-5 text-court-gold mx-auto mb-1" />
                     <p className="text-xs text-court-brownLight">Harmony<br/>Maintained</p>
@@ -192,7 +346,7 @@ const CourtAtRest = ({ onServe, navigate }) => {
                     <Heart className="w-5 h-5 text-pink-400 mx-auto mb-1" />
                     <p className="text-xs text-court-brownLight">Love<br/>Thriving</p>
                 </div>
-            </motion.div>
+            </div>
         </div>
     );
 };
@@ -1179,48 +1333,9 @@ const CourtroomPage = () => {
         );
     }
 
-    // Deliberating View
+    // Deliberating View - Show calming breathing meditation screen
     if (activeCase.status === 'DELIBERATING') {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="glass-card p-6 text-center max-w-sm w-full"
-                >
-                    <motion.div
-                        animate={{ y: [0, -8, 0] }}
-                        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                        className="w-24 h-24 rounded-3xl mx-auto mb-4 overflow-hidden border-2 border-court-gold shadow-lg"
-                    >
-                        <img 
-                            src="/judge-whiskers.png" 
-                            alt="Judge Whiskers thinking"
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                                e.target.style.display = 'none';
-                                e.target.parentElement.innerHTML = '<span class="text-5xl flex items-center justify-center h-full bg-court-cream">🐱</span>';
-                            }}
-                        />
-                    </motion.div>
-
-                    <h2 className="text-xl font-bold text-court-brown mb-2">Judge Whiskers is Thinking...</h2>
-                    <p className="text-court-brownLight text-sm mb-1">Analyzing your conflict patterns</p>
-                    <p className="text-court-tan text-xs mb-4">Using the Gottman Method 💜</p>
-
-                    <div className="flex justify-center gap-1">
-                        {[0, 1, 2].map((i) => (
-                            <motion.div
-                                key={i}
-                                animate={{ scale: [1, 1.3, 1], opacity: [0.5, 1, 0.5] }}
-                                transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.2 }}
-                                className="w-2.5 h-2.5 bg-court-gold rounded-full"
-                            />
-                        ))}
-                    </div>
-                </motion.div>
-            </div>
-        );
+        return <WaitingScreen isLoading={true} />;
     }
 
     // Locked View - handles both LOCKED_A and LOCKED_B

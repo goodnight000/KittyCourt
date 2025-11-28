@@ -27,12 +27,12 @@ const { retrieveHistoricalContext, formatContextForPrompt, hasHistoricalContext 
 const { triggerBackgroundExtraction } = require('./stenographer');
 const { repairAndParseJSON } = require('./jsonRepair');
 
-// Configuration - Using OpenRouter with Kimi K2 Thinking
+// Configuration - Using OpenRouter with fast model for quick verdicts
 const CONFIG = {
     model: 'moonshotai/kimi-k2-thinking', // Moonshot's thinking model via OpenRouter
     analysisTemperature: 0.5, // Lower temp for consistent clinical analysis
     verdictTemperature: 0.7,  // Higher temp for creative cat persona
-    maxTokens: 6000,          // Increased for complete responses
+    maxTokens: 5000,          // Sufficient for complete responses
     maxRetries: 2,            // Number of retries on failure
 };
 
