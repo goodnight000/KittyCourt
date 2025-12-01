@@ -526,9 +526,25 @@ const useAppStore = create(
                 }
             },
 
+            // --- Appreciation State ---
+            appreciations: [], // Appreciations received by current user from partner
+
+            // Fetch appreciations that the current user received
+            fetchAppreciations: async () => {
+                const { currentUser } = get();
+                if (!currentUser) return;
+
+                try {
+                    const response = await api.get(`/appreciations/${currentUser.id}`);
+                    set({ appreciations: response.data });
+                } catch (error) {
+                    console.error("Failed to fetch appreciations", error);
+                }
+            },
+
             // --- Economy Actions ---
-            // When you log a good deed, you're logging something your PARTNER did
-            // So the kibble goes to your partner
+            // When you show appreciation, you're logging something your PARTNER did
+            // So the kibble goes to your partner and it's logged as an appreciation
             logGoodDeed: async (description) => {
                 const { currentUser, users } = get();
                 if (!currentUser) return;
@@ -538,12 +554,12 @@ const useAppStore = create(
                 if (!partner) return;
 
                 try {
-                    // Award kibble to the PARTNER, not the current user
-                    const response = await api.post('/economy/transaction', {
-                        userId: partner.id,
-                        amount: 10,
-                        type: 'EARN',
-                        description: `${currentUser.name} appreciated: ${description || 'Good deed'}`
+                    // Create appreciation and award kibble to partner
+                    const response = await api.post('/appreciations', {
+                        fromUserId: currentUser.id,
+                        toUserId: partner.id,
+                        message: description || 'Something nice',
+                        kibbleAmount: 10
                     });
 
                     // Update partner's balance in state
@@ -557,7 +573,7 @@ const useAppStore = create(
 
                     return response.data;
                 } catch (error) {
-                    console.error("Failed to log good deed", error);
+                    console.error("Failed to log appreciation", error);
                     throw error;
                 }
             },

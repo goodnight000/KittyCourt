@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Heart, Coffee, TrendingUp, Sparkles, Star, Gift, X, Check, Scale, History } from 'lucide-react';
+import { Heart, Coffee, TrendingUp, Sparkles, Star, Gift, X, Check, Scale, History, MessageCircle } from 'lucide-react';
 import useAppStore from '../store/useAppStore';
 
 const DashboardPage = () => {
     const navigate = useNavigate();
     const { currentUser, users, logGoodDeed, caseHistory } = useAppStore();
     const [showGoodDeedModal, setShowGoodDeedModal] = useState(false);
-    
+
     // Get partner name for good deed display
     const partner = users?.find(u => u.id !== currentUser?.id);
     const partnerName = partner?.name || 'your partner';
@@ -17,7 +17,33 @@ const DashboardPage = () => {
     const [showSuccess, setShowSuccess] = useState(false);
 
     const vibeScore = 75;
-    const daysTogether = 7;
+    
+    // Calculate actual days together from anniversary date
+    const getDaysTogether = () => {
+        // Try to get anniversary from current user's profile first, then partner's
+        const currentUserProfile = localStorage.getItem(`catjudge_profile_${currentUser?.id}`);
+        const partnerProfile = localStorage.getItem(`catjudge_profile_${partner?.id}`);
+        
+        let anniversaryDate = null;
+        if (currentUserProfile) {
+            const parsed = JSON.parse(currentUserProfile);
+            if (parsed.anniversaryDate) anniversaryDate = parsed.anniversaryDate;
+        }
+        if (!anniversaryDate && partnerProfile) {
+            const parsed = JSON.parse(partnerProfile);
+            if (parsed.anniversaryDate) anniversaryDate = parsed.anniversaryDate;
+        }
+        
+        if (!anniversaryDate) return null;
+        
+        const start = new Date(anniversaryDate);
+        const today = new Date();
+        const diffTime = today.getTime() - start.getTime();
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        return diffDays >= 0 ? diffDays : null;
+    };
+    
+    const daysTogether = getDaysTogether();
 
     const handleLogGoodDeed = async () => {
         if (!goodDeedText.trim()) return;
@@ -38,7 +64,7 @@ const DashboardPage = () => {
 
     const goodDeedSuggestions = [
         "Made me breakfast ☕",
-        "Did the dishes 🍽️", 
+        "Did the dishes 🍽️",
         "Gave me a massage 💆",
         "Said something sweet 💕",
         "Surprised me 🎁",
@@ -86,13 +112,18 @@ const DashboardPage = () => {
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     whileTap={{ scale: 0.98 }}
-                    className="glass-card p-4 bg-gradient-to-br from-pink-50/80 to-white/60"
+                    onClick={() => navigate('/profiles')}
+                    className="glass-card p-4 bg-gradient-to-br from-violet-50/80 to-white/60 cursor-pointer"
                 >
                     <div className="flex items-center gap-2 mb-1">
                         <Heart className="w-5 h-5 text-pink-500" />
-                        <span className="text-2xl font-bold text-neutral-800">{daysTogether}</span>
+                        <span className="text-2xl font-bold text-neutral-800">
+                            {daysTogether !== null ? daysTogether : '?'}
+                        </span>
                     </div>
-                    <span className="text-xs text-neutral-500 font-medium">Days Together</span>
+                    <span className="text-xs text-neutral-500 font-medium">
+                        {daysTogether !== null ? 'Days Together' : 'Set Anniversary →'}
+                    </span>
                 </motion.div>
             </div>
 
@@ -122,7 +153,7 @@ const DashboardPage = () => {
                         initial={{ width: 0 }}
                         animate={{ width: `${vibeScore}%` }}
                         transition={{ duration: 1, ease: "easeOut", delay: 0.3 }}
-                        className="h-full bg-gradient-to-r from-pink-400 via-violet-400 to-amber-400 rounded-full"
+                        className="h-full bg-gradient-to-r from-court-gold via-court-maroon to-court-goldDark rounded-full"
                     />
                 </div>
 
@@ -144,19 +175,13 @@ const DashboardPage = () => {
                     transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
                     className="relative inline-block mb-3"
                 >
-                    <div className="w-20 h-20 bg-gradient-to-br from-pink-100 to-violet-100 rounded-3xl flex items-center justify-center shadow-soft mx-auto">
-                        <span className="text-4xl">🐱</span>
+                    <div className="w-20 h-20 rounded-3xl overflow-hidden shadow-soft mx-auto">
+                        <img src="/assets/avatars/judge_whiskers.png" alt="Judge Whiskers" className="w-full h-full object-cover" />
                     </div>
-                    <motion.span
-                        animate={{ rotate: [-5, 5, -5] }}
-                        transition={{ duration: 2, repeat: Infinity }}
-                        className="absolute -top-3 left-1/2 -translate-x-1/2 text-xl"
-                    >
-                        ��
-                    </motion.span>
+
                 </motion.div>
 
-                <h2 className="font-bold text-neutral-800 mb-1">Judge Mittens</h2>
+                <h2 className="font-bold text-neutral-800 mb-1">Judge Whiskers</h2>
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-violet-50 text-violet-600 rounded-full text-xs font-bold">
                     <span className="w-1.5 h-1.5 bg-violet-400 rounded-full animate-pulse" />
                     Tap to file a case
@@ -175,12 +200,12 @@ const DashboardPage = () => {
                         onClick={() => setShowGoodDeedModal(true)}
                         className="glass-card p-4 text-left relative overflow-hidden active:bg-white/90 transition-colors"
                     >
-                        <span className="absolute top-2 right-2 text-lg opacity-50">✨</span>
+                        <span className="absolute top-2 right-2 text-lg opacity-50">💕</span>
                         <div className="w-10 h-10 bg-white/80 rounded-xl flex items-center justify-center shadow-soft mb-2">
-                            <Star className="w-5 h-5 text-amber-500" />
+                            <Heart className="w-5 h-5 text-pink-500" />
                         </div>
-                        <div className="font-bold text-neutral-800 text-sm">Give Kibble</div>
-                        <div className="text-xs text-neutral-500">Reward partner</div>
+                        <div className="font-bold text-neutral-800 text-sm">Show Appreciation</div>
+                        <div className="text-xs text-neutral-500">Thank partner</div>
                     </motion.button>
                     <motion.button
                         whileTap={{ scale: 0.97 }}
@@ -200,15 +225,15 @@ const DashboardPage = () => {
                 <div className="grid grid-cols-2 gap-3">
                     <motion.button
                         whileTap={{ scale: 0.97 }}
-                        onClick={() => navigate('/courtroom')}
-                        className="glass-card p-4 text-left relative overflow-hidden active:bg-white/90 transition-colors"
+                        onClick={() => navigate('/daily-meow')}
+                        className="glass-card p-4 text-left relative overflow-hidden active:bg-white/90 transition-colors bg-gradient-to-br from-amber-50/60 to-orange-50/60"
                     >
-                        <span className="absolute top-2 right-2 text-lg opacity-50">⚖️</span>
+                        <span className="absolute top-2 right-2 text-lg opacity-50">💬</span>
                         <div className="w-10 h-10 bg-white/80 rounded-xl flex items-center justify-center shadow-soft mb-2">
-                            <Scale className="w-5 h-5 text-violet-500" />
+                            <MessageCircle className="w-5 h-5 text-amber-500" />
                         </div>
-                        <div className="font-bold text-neutral-800 text-sm">File Case</div>
-                        <div className="text-xs text-neutral-500">Resolve dispute</div>
+                        <div className="font-bold text-neutral-800 text-sm">Daily Question</div>
+                        <div className="text-xs text-neutral-500">Answer together</div>
                     </motion.button>
                     <motion.button
                         whileTap={{ scale: 0.97 }}
@@ -223,6 +248,24 @@ const DashboardPage = () => {
                         <div className="text-xs text-neutral-500">{caseHistory?.length || 0} cases</div>
                     </motion.button>
                 </div>
+
+                {/* View Appreciations */}
+                <motion.button
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => navigate('/appreciations')}
+                    className="glass-card p-4 text-left relative overflow-hidden active:bg-white/90 transition-colors w-full bg-gradient-to-r from-violet-50/60 to-pink-50/60"
+                >
+                    <span className="absolute top-2 right-2 text-lg opacity-50">💕</span>
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-white/80 rounded-xl flex items-center justify-center shadow-soft">
+                            <TrendingUp className="w-5 h-5 text-pink-500" />
+                        </div>
+                        <div>
+                            <div className="font-bold text-neutral-800 text-sm">View Appreciations</div>
+                            <div className="text-xs text-neutral-500">See what {partnerName} appreciates about you</div>
+                        </div>
+                    </div>
+                </motion.button>
             </div>
 
             {/* Good Deed Modal */}
@@ -261,7 +304,7 @@ const DashboardPage = () => {
                             ) : (
                                 <>
                                     <div className="flex items-center justify-between">
-                                        <h3 className="font-bold text-neutral-800 text-lg">Reward {partnerName} ✨</h3>
+                                        <h3 className="font-bold text-neutral-800 text-lg">Appreciate {partnerName} 💕</h3>
                                         <button
                                             onClick={() => setShowGoodDeedModal(false)}
                                             className="w-8 h-8 bg-neutral-100 rounded-full flex items-center justify-center"
@@ -271,7 +314,7 @@ const DashboardPage = () => {
                                     </div>
 
                                     <p className="text-neutral-500 text-sm -mt-2">
-                                        What nice thing did {partnerName} do? They'll get kibble for it!
+                                        What did {partnerName} do that you appreciate? They'll get kibble for it!
                                     </p>
 
                                     <textarea
@@ -307,8 +350,8 @@ const DashboardPage = () => {
                                             />
                                         ) : (
                                             <>
-                                                <Star className="w-4 h-4" />
-                                                Give {partnerName} Kibble
+                                                <Heart className="w-4 h-4" />
+                                                Show Appreciation
                                             </>
                                         )}
                                     </button>

@@ -2,8 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import useAppStore from '../store/useAppStore';
-import { 
-    Lock, Send, Scale, Heart, MessageCircle, RotateCcw, History, 
+import useAuthStore from '../store/useAuthStore';
+import RequirePartner from '../components/RequirePartner';
+import {
+    Lock, Send, Scale, Heart, MessageCircle, RotateCcw, History,
     Sparkles, AlertTriangle, HeartHandshake, Quote, Gavel, Users,
     Bell, ChevronRight, Plus, Clock, FileText, Check, PartyPopper,
     Moon, Coffee, Zap, Cat
@@ -12,20 +14,20 @@ import {
 // Waiting Screen Component - Calming breathing meditation while LLM deliberates
 const WaitingScreen = ({ isLoading }) => {
     const audioRef = useRef(null);
-    
+
     useEffect(() => {
         if (!isLoading) return;
-        
+
         // Initialize and play purring audio
         audioRef.current = new Audio('/sounds/deep-purr.mp3');
         audioRef.current.loop = true;
         audioRef.current.volume = 0.4;
-        
+
         // Try to play (may be blocked by autoplay policy)
         audioRef.current.play().catch(err => {
             console.log('Audio autoplay blocked:', err);
         });
-        
+
         return () => {
             if (audioRef.current) {
                 audioRef.current.pause();
@@ -34,20 +36,20 @@ const WaitingScreen = ({ isLoading }) => {
             }
         };
     }, [isLoading]);
-    
+
     if (!isLoading) return null;
-    
+
     // Breathing pattern: Inhale 4s, Hold 2s, Exhale 6s = 12s total cycle
     const breathingCycle = {
         scale: [1, 1.5, 1.5, 1],
         opacity: [0.7, 1, 1, 0.7],
     };
-    
+
     // Keyframe timing: 0% -> 33.3% (4s inhale) -> 50% (2s hold) -> 100% (6s exhale)
     const breathingTimes = [0, 0.333, 0.5, 1]; // Normalized to 0-1
-    
+
     return (
-        <motion.div 
+        <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -57,10 +59,10 @@ const WaitingScreen = ({ isLoading }) => {
             {[...Array(20)].map((_, i) => (
                 <motion.div
                     key={i}
-                    animate={{ 
+                    animate={{
                         opacity: [0.2, 0.6, 0.2],
                     }}
-                    transition={{ 
+                    transition={{
                         duration: 3 + Math.random() * 3,
                         delay: Math.random() * 2,
                         repeat: Infinity
@@ -72,9 +74,9 @@ const WaitingScreen = ({ isLoading }) => {
                     }}
                 />
             ))}
-            
+
             {/* Top Text */}
-            <motion.h2 
+            <motion.h2
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
@@ -82,7 +84,7 @@ const WaitingScreen = ({ isLoading }) => {
             >
                 The Judge is meditating on your evidence.
             </motion.h2>
-            
+
             {/* Central Breathing Circle with Cat */}
             <div className="relative flex items-center justify-center">
                 {/* Breathing Ring - Outer glow */}
@@ -100,7 +102,7 @@ const WaitingScreen = ({ isLoading }) => {
                         boxShadow: '0 0 60px 20px rgba(251,191,36,0.2), inset 0 0 40px 10px rgba(251,191,36,0.1)',
                     }}
                 />
-                
+
                 {/* Breathing Ring - Inner ring */}
                 <motion.div
                     animate={breathingCycle}
@@ -115,28 +117,32 @@ const WaitingScreen = ({ isLoading }) => {
                         boxShadow: '0 0 30px 10px rgba(251,191,36,0.3)',
                     }}
                 />
-                
+
                 {/* Sleeping Cat Center */}
-                <motion.div 
-                    animate={{ 
+                <motion.div
+                    animate={{
                         y: [0, -5, 0],
                     }}
-                    transition={{ 
+                    transition={{
                         duration: 4,
                         repeat: Infinity,
                         ease: "easeInOut"
                     }}
-                    className="relative z-10 w-28 h-28 md:w-36 md:h-36 bg-gradient-to-br from-slate-700 to-slate-800 rounded-full flex items-center justify-center shadow-2xl border border-amber-400/30"
+                    className="relative z-10 w-28 h-28 md:w-36 md:h-36 rounded-full overflow-hidden shadow-2xl border-2 border-amber-400/30"
                 >
-                    {/* Cat icon or emoji */}
-                    <span className="text-6xl md:text-7xl">😺</span>
-                    
+                    {/* Judge Whiskers Avatar */}
+                    <img
+                        src="/assets/avatars/judge_whiskers.png"
+                        alt="Judge Whiskers"
+                        className="w-full h-full object-cover"
+                    />
+
                     {/* Floating Zzz */}
                     <div className="absolute -right-4 -top-2">
                         {['z', 'Z'].map((letter, i) => (
                             <motion.span
                                 key={i}
-                                animate={{ 
+                                animate={{
                                     opacity: [0, 0.8, 0],
                                     x: [0, 10, 20],
                                     y: [0, -15, -30]
@@ -155,9 +161,9 @@ const WaitingScreen = ({ isLoading }) => {
                     </div>
                 </motion.div>
             </div>
-            
+
             {/* Bottom Instruction Text */}
-            <motion.p 
+            <motion.p
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5 }}
@@ -165,9 +171,9 @@ const WaitingScreen = ({ isLoading }) => {
             >
                 Sync your breathing with the purr to aid deliberations.
             </motion.p>
-            
+
             {/* Breathing Guide */}
-            <motion.div 
+            <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.7 }}
@@ -186,7 +192,7 @@ const WaitingScreen = ({ isLoading }) => {
 // Court at Rest Component - Shows when no court session is active
 const CourtAtRest = ({ onServe, navigate }) => {
     const [catPhase, setCatPhase] = useState(0);
-    
+
     useEffect(() => {
         const interval = setInterval(() => {
             setCatPhase(prev => (prev + 1) % 3);
@@ -209,11 +215,11 @@ const CourtAtRest = ({ onServe, navigate }) => {
                     {[...Array(8)].map((_, i) => (
                         <motion.div
                             key={i}
-                            animate={{ 
+                            animate={{
                                 opacity: [0.3, 1, 0.3],
                                 scale: [0.8, 1.2, 0.8]
                             }}
-                            transition={{ 
+                            transition={{
                                 duration: 2 + Math.random() * 2,
                                 delay: Math.random() * 2,
                                 repeat: Infinity
@@ -231,62 +237,73 @@ const CourtAtRest = ({ onServe, navigate }) => {
 
                 {/* Sleeping Judge Whiskers */}
                 <motion.div
-                    animate={{ 
+                    animate={{
                         y: [0, -8, 0],
                         rotate: [-2, 2, -2]
                     }}
-                    transition={{ 
+                    transition={{
                         duration: 4,
                         repeat: Infinity,
                         ease: "easeInOut"
                     }}
                     className="relative"
                 >
-                    {/* Pillow/Cushion */}
-                    <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-40 h-8 bg-gradient-to-t from-court-tan to-court-cream rounded-[100%] shadow-lg" />
+                    {/* Soft glow behind avatar */}
+                    <div className="absolute inset-0 w-52 h-52 -left-2 -top-2 bg-court-gold/20 rounded-full blur-xl" />
                     
-                    {/* Cat on cushion */}
-                    <div className="relative w-36 h-36 bg-gradient-to-br from-court-cream to-court-tan rounded-[40%] mx-auto flex items-center justify-center shadow-xl border-4 border-court-gold/30">
+                    {/* Cat Avatar */}
+                    <div className="relative w-48 h-48 rounded-full mx-auto overflow-hidden shadow-xl border-4 border-court-gold/30">
                         <motion.div
-                            animate={{ scale: [1, 1.05, 1] }}
-                            transition={{ duration: 2, repeat: Infinity }}
+                            animate={{ scale: [1, 1.02, 1] }}
+                            transition={{ duration: 3, repeat: Infinity }}
+                            className="w-full h-full"
                         >
-                            <span className="text-7xl">😴</span>
-                        </motion.div>
-                        
-                        {/* Sleeping Cap */}
-                        <motion.div
-                            animate={{ rotate: [-5, 5, -5] }}
-                            transition={{ duration: 2, repeat: Infinity }}
-                            className="absolute -top-6 -right-2 text-4xl"
-                        >
-                            🧢
+                            <img
+                                src="/assets/avatars/sleeping_judge_whiskers.png"
+                                alt="Sleeping Judge Whiskers"
+                                className="w-full h-full object-cover"
+                            />
                         </motion.div>
                     </div>
                     
                     {/* Floating Zzz */}
-                    <div className="absolute -right-8 top-0">
-                        {['z', 'Z', 'z'].map((letter, i) => (
+                    <div className="absolute right-0 top-4">
+                        {['z', 'Z', 'Z'].map((letter, i) => (
                             <motion.span
                                 key={i}
                                 initial={{ opacity: 0, x: 0, y: 0 }}
-                                animate={{ 
+                                animate={{
                                     opacity: [0, 1, 0],
-                                    x: [0, 15, 30],
-                                    y: [0, -20, -40]
+                                    x: [0, 10 + i * 4, 20 + i * 6],
+                                    y: [0, -12 - i * 6, -28 - i * 10]
                                 }}
                                 transition={{
-                                    duration: 3,
-                                    delay: i * 0.8,
-                                    repeat: Infinity
+                                    duration: 2.5,
+                                    delay: i * 0.6,
+                                    repeat: Infinity,
+                                    ease: "easeOut"
                                 }}
-                                className="absolute text-court-gold font-bold"
-                                style={{ fontSize: `${14 + i * 4}px` }}
+                                className="absolute text-court-gold font-bold drop-shadow-sm"
+                                style={{ fontSize: `${12 + i * 5}px` }}
                             >
                                 {letter}
                             </motion.span>
                         ))}
                     </div>
+                    
+                    {/* Soft breathing pulse */}
+                    <motion.div
+                        animate={{
+                            scale: [1, 1.08, 1],
+                            opacity: [0.3, 0.5, 0.3]
+                        }}
+                        transition={{
+                            duration: 3,
+                            repeat: Infinity,
+                            ease: "easeInOut"
+                        }}
+                        className="absolute inset-0 w-48 h-48 rounded-full border-2 border-court-gold/30 mx-auto"
+                    />
                 </motion.div>
 
                 {/* Speech Bubble */}
@@ -339,12 +356,12 @@ const CourtAtRest = ({ onServe, navigate }) => {
             <div className="mt-8 flex gap-6 text-center">
                 <div>
                     <Coffee className="w-5 h-5 text-court-gold mx-auto mb-1" />
-                    <p className="text-xs text-court-brownLight">Harmony<br/>Maintained</p>
+                    <p className="text-xs text-court-brownLight">Harmony<br />Maintained</p>
                 </div>
                 <div className="w-px bg-court-tan" />
                 <div>
                     <Heart className="w-5 h-5 text-pink-400 mx-auto mb-1" />
-                    <p className="text-xs text-court-brownLight">Love<br/>Thriving</p>
+                    <p className="text-xs text-court-brownLight">Love<br />Thriving</p>
                 </div>
             </div>
         </div>
@@ -359,9 +376,9 @@ const CelebrationAnimation = ({ onComplete, kibbleReward }) => {
     }, [onComplete]);
 
     const confettiColors = ['#FFD700', '#FF6B9D', '#A855F7', '#10B981', '#F59E0B', '#EC4899'];
-    
+
     return (
-        <motion.div 
+        <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -371,36 +388,36 @@ const CelebrationAnimation = ({ onComplete, kibbleReward }) => {
             {[...Array(50)].map((_, i) => (
                 <motion.div
                     key={i}
-                    initial={{ 
-                        y: -20, 
+                    initial={{
+                        y: -20,
                         x: Math.random() * window.innerWidth,
                         rotate: 0,
                         scale: 0
                     }}
-                    animate={{ 
+                    animate={{
                         y: window.innerHeight + 100,
                         rotate: Math.random() * 720 - 360,
                         scale: [0, 1, 1, 0.5]
                     }}
-                    transition={{ 
+                    transition={{
                         duration: 3 + Math.random() * 2,
                         delay: Math.random() * 0.5,
                         ease: "easeOut"
                     }}
                     className="absolute w-3 h-3 rounded-sm"
-                    style={{ 
+                    style={{
                         backgroundColor: confettiColors[i % confettiColors.length],
                         left: `${Math.random() * 100}%`
                     }}
                 />
             ))}
-            
+
             {/* Stars burst */}
             {[...Array(12)].map((_, i) => (
                 <motion.div
                     key={`star-${i}`}
                     initial={{ scale: 0, opacity: 0 }}
-                    animate={{ 
+                    animate={{
                         scale: [0, 1.5, 0],
                         opacity: [0, 1, 0],
                         x: Math.cos((i * 30) * Math.PI / 180) * 150,
@@ -422,24 +439,20 @@ const CelebrationAnimation = ({ onComplete, kibbleReward }) => {
                     className="relative mx-auto"
                 >
                     <motion.div
-                        animate={{ 
+                        animate={{
                             y: [0, -20, 0],
                             rotate: [-5, 5, -5]
                         }}
                         transition={{ duration: 1, repeat: Infinity }}
                         className="w-32 h-32 rounded-full mx-auto overflow-hidden shadow-2xl border-4 border-court-gold bg-white"
                     >
-                        <img 
-                            src="/judge-whiskers.png" 
+                        <img
+                            src="/assets/avatars/judge_whiskers.png"
                             alt="Judge Whiskers"
                             className="w-full h-full object-cover"
-                            onError={(e) => {
-                                e.target.style.display = 'none';
-                                e.target.parentElement.innerHTML = '<span class="text-6xl flex items-center justify-center h-full">🐱</span>';
-                            }}
                         />
                     </motion.div>
-                    
+
                     {/* Crown */}
                     <motion.div
                         initial={{ y: -50, opacity: 0 }}
@@ -457,7 +470,7 @@ const CelebrationAnimation = ({ onComplete, kibbleReward }) => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.6 }}
                 >
-                    <motion.h1 
+                    <motion.h1
                         className="text-3xl font-bold text-gradient mb-2"
                         animate={{ scale: [1, 1.05, 1] }}
                         transition={{ duration: 0.5, repeat: Infinity, repeatDelay: 1 }}
@@ -539,7 +552,7 @@ const CourtOpeningAnimation = ({ onComplete }) => {
     }, [onComplete]);
 
     return (
-        <motion.div 
+        <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -549,11 +562,11 @@ const CourtOpeningAnimation = ({ onComplete }) => {
                 {/* Gavel Animation */}
                 <motion.div
                     initial={{ rotate: -45, y: -50 }}
-                    animate={{ 
+                    animate={{
                         rotate: [-45, 15, -45, 15, 0],
                         y: [-50, 0, -50, 0, 0]
                     }}
-                    transition={{ 
+                    transition={{
                         duration: 2,
                         times: [0, 0.25, 0.5, 0.75, 1],
                         ease: "easeInOut"
@@ -567,7 +580,7 @@ const CourtOpeningAnimation = ({ onComplete }) => {
                     >
                         <Gavel className="w-16 h-16 text-white" />
                     </motion.div>
-                    
+
                     {/* Impact stars */}
                     {[0.25, 0.75, 1.25].map((delay, i) => (
                         <motion.div
@@ -589,7 +602,7 @@ const CourtOpeningAnimation = ({ onComplete }) => {
                     transition={{ delay: 2 }}
                     className="space-y-2"
                 >
-                    <motion.h1 
+                    <motion.h1
                         className="text-4xl font-bold text-court-cream"
                         animate={{ scale: [1, 1.05, 1] }}
                         transition={{ delay: 2.5, duration: 0.5 }}
@@ -611,15 +624,10 @@ const CourtOpeningAnimation = ({ onComplete }) => {
                         transition={{ duration: 1.5, repeat: Infinity, delay: 3.2 }}
                         className="w-32 h-32 rounded-full mx-auto overflow-hidden shadow-2xl border-4 border-court-gold"
                     >
-                        <img 
-                            src="/judge-whiskers.png" 
+                        <img
+                            src="/assets/avatars/judge_whiskers.png"
                             alt="Judge Whiskers"
                             className="w-full h-full object-cover"
-                            onError={(e) => {
-                                // Fallback to emoji if image not found
-                                e.target.style.display = 'none';
-                                e.target.parentElement.innerHTML = '<span class="text-6xl flex items-center justify-center h-full bg-court-cream">🐱</span>';
-                            }}
                         />
                     </motion.div>
                 </motion.div>
@@ -631,7 +639,7 @@ const CourtOpeningAnimation = ({ onComplete }) => {
 // Waiting for Partner Component
 const WaitingForPartner = ({ session, currentUserRole, onCancel }) => {
     const partnerName = currentUserRole === 'userA' ? 'User B' : 'User A';
-    
+
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -639,7 +647,7 @@ const WaitingForPartner = ({ session, currentUserRole, onCancel }) => {
             className="glass-card p-6 text-center max-w-sm mx-auto"
         >
             <motion.div
-                animate={{ 
+                animate={{
                     rotate: [0, 10, -10, 0],
                     scale: [1, 1.05, 1]
                 }}
@@ -697,7 +705,7 @@ const WaitingForPartner = ({ session, currentUserRole, onCancel }) => {
 // Summons Received Component
 const SummonsReceived = ({ session, onJoin }) => {
     const senderName = session.createdBy === 'userA' ? 'User A' : 'User B';
-    
+
     return (
         <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
@@ -833,8 +841,8 @@ const StartCourtView = ({ onServe, navigate }) => {
 };
 
 // Verdict Display Component
-const VerdictView = ({ 
-    activeCase, verdict, analysis, allVerdicts, selectedVerdictVersion, 
+const VerdictView = ({
+    activeCase, verdict, analysis, allVerdicts, selectedVerdictVersion,
     setSelectedVerdictVersion, userAName, userBName, setShowAddendumModal,
     resetCase, navigate, currentUser, onAcceptVerdict
 }) => {
@@ -842,7 +850,7 @@ const VerdictView = ({
     const hasAccepted = isUserA ? activeCase.userAAccepted : activeCase.userBAccepted;
     const partnerHasAccepted = isUserA ? activeCase.userBAccepted : activeCase.userAAccepted;
     const partnerName = isUserA ? userBName : userAName;
-    
+
     return (
         <div className="space-y-4 pb-4">
             {/* Header */}
@@ -856,26 +864,22 @@ const VerdictView = ({
                     <Gavel className="w-3 h-3" />
                     VERDICT DELIVERED
                 </div>
-                
+
                 <motion.div
                     animate={{ rotate: [-5, 5, -5] }}
                     transition={{ duration: 2, repeat: Infinity }}
                     className="w-20 h-20 rounded-3xl mx-auto mb-3 shadow-lg overflow-hidden border-2 border-court-gold"
                 >
-                    <img 
-                        src="/judge-whiskers.png" 
+                    <img
+                        src="/assets/avatars/judge_whiskers.png"
                         alt="Judge Whiskers"
                         className="w-full h-full object-cover"
-                        onError={(e) => {
-                            e.target.style.display = 'none';
-                            e.target.parentElement.innerHTML = '<span class="text-4xl flex items-center justify-center h-full bg-court-cream">🐱</span>';
-                        }}
                     />
                 </motion.div>
 
                 <h2 className="text-xl font-bold text-court-brown mb-1">Judge Whiskers Has Spoken</h2>
                 <p className="text-xs text-court-brownLight">The Therapist Cat delivers wisdom</p>
-                
+
                 {/* Verdict Version Selector */}
                 {allVerdicts.length > 1 && (
                     <div className="mt-4 flex items-center justify-center gap-2">
@@ -885,11 +889,10 @@ const VerdictView = ({
                                 <button
                                     key={v.version}
                                     onClick={() => setSelectedVerdictVersion(v.version)}
-                                    className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
-                                        (selectedVerdictVersion === 0 && idx === 0) || selectedVerdictVersion === v.version
+                                    className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${(selectedVerdictVersion === 0 && idx === 0) || selectedVerdictVersion === v.version
                                             ? 'bg-court-gold text-white'
                                             : 'bg-court-cream text-court-brown hover:bg-court-tan'
-                                    }`}
+                                        }`}
                                 >
                                     {v.addendumBy ? `+${v.version}` : `#${v.version}`}
                                 </button>
@@ -897,7 +900,7 @@ const VerdictView = ({
                         </div>
                     </div>
                 )}
-                
+
                 {/* Dynamic Badge */}
                 {analysis?.identifiedDynamic && (
                     <motion.div
@@ -950,7 +953,7 @@ const VerdictView = ({
                             <p className="text-[10px] text-green-600/70">Your feelings are valid</p>
                         </div>
                     </div>
-                    
+
                     <div className="space-y-3 pl-2">
                         <div className="border-l-2 border-green-200 pl-3">
                             <p className="text-xs font-bold text-green-700 mb-1">{userAName}</p>
@@ -958,7 +961,7 @@ const VerdictView = ({
                                 {verdict.theRuling_ThePurr.userA}
                             </p>
                         </div>
-                        
+
                         <div className="border-l-2 border-green-200 pl-3">
                             <p className="text-xs font-bold text-green-700 mb-1">{userBName}</p>
                             <p className="text-court-brown text-sm leading-relaxed">
@@ -986,7 +989,7 @@ const VerdictView = ({
                             <p className="text-[10px] text-court-brownLight">Behaviors to work on</p>
                         </div>
                     </div>
-                    
+
                     <div className="space-y-2 pl-2">
                         {verdict.theRuling_TheHiss.map((hiss, index) => (
                             <div key={index} className="flex items-start gap-2 text-sm text-court-brown">
@@ -1015,7 +1018,7 @@ const VerdictView = ({
                             <p className="text-[10px] text-court-maroonLight">Your path to reconnection</p>
                         </div>
                     </div>
-                    
+
                     <div className="bg-white/60 rounded-xl p-4 space-y-2">
                         <h4 className="font-bold text-court-brown flex items-center gap-2">
                             <span className="text-lg">✨</span>
@@ -1059,11 +1062,10 @@ const VerdictView = ({
                     <p className="text-xs text-court-brownLight text-center mb-2">Gottman's Four Horsemen Detected</p>
                     <div className="flex flex-wrap justify-center gap-1.5">
                         {[...new Set([...(analysis.userA_Horsemen || []), ...(analysis.userB_Horsemen || [])])].filter(h => h !== 'None').map((horseman, i) => (
-                            <span key={i} className={`text-xs px-2 py-1 rounded-full ${
-                                horseman === 'Contempt' || horseman === 'Stonewalling' 
-                                    ? 'bg-court-maroon/20 text-court-maroon' 
+                            <span key={i} className={`text-xs px-2 py-1 rounded-full ${horseman === 'Contempt' || horseman === 'Stonewalling'
+                                    ? 'bg-court-maroon/20 text-court-maroon'
                                     : 'bg-court-gold/20 text-court-goldDark'
-                            }`}>
+                                }`}>
                                 {horseman}
                             </span>
                         ))}
@@ -1136,13 +1138,14 @@ const VerdictView = ({
 // Main Courtroom Page
 const CourtroomPage = () => {
     const navigate = useNavigate();
-    const { 
+    const { hasPartner } = useAuthStore();
+    const {
         activeCase, currentUser, users, updateCaseInput, submitSide, resetCase,
-        courtSession, checkActiveSession, servePartner, joinCourt, 
+        courtSession, checkActiveSession, servePartner, joinCourt,
         isCourtAnimationPlaying, finishCourtAnimation, closeCourtSession,
         submitAddendum, acceptVerdict, showCelebration, closeCelebration
     } = useAppStore();
-    
+
     const [showAddendumModal, setShowAddendumModal] = useState(false);
     const [addendumText, setAddendumText] = useState('');
     const [isSubmittingAddendum, setIsSubmittingAddendum] = useState(false);
@@ -1161,6 +1164,25 @@ const CourtroomPage = () => {
     useEffect(() => {
         checkActiveSession();
     }, []);
+
+    // Require partner to access courtroom
+    if (!hasPartner) {
+        return (
+            <RequirePartner
+                feature="Court"
+                description="The courtroom requires both partners to be connected. Resolve disputes together, share your perspectives, and let Judge Whiskers deliver fair verdicts!"
+            >
+                {/* Preview content */}
+                <div className="space-y-4">
+                    <div className="glass-card p-5 text-center bg-gradient-to-br from-court-cream to-court-tan/30">
+                        <Gavel className="w-12 h-12 mx-auto text-court-gold mb-3" />
+                        <h2 className="text-lg font-bold text-court-brown">The Courtroom</h2>
+                        <p className="text-sm text-court-brownLight">Present your case to Judge Whiskers</p>
+                    </div>
+                </div>
+            </RequirePartner>
+        );
+    }
 
     // Handle serving partner
     const handleServe = async () => {
@@ -1198,12 +1220,12 @@ const CourtroomPage = () => {
         }
         setIsSubmittingAddendum(false);
     };
-    
+
     // Handle accept verdict
     const handleAcceptVerdict = async () => {
         await acceptVerdict();
     };
-    
+
     // Handle celebration complete - go back to home
     const handleCelebrationComplete = () => {
         closeCelebration();
@@ -1216,8 +1238,8 @@ const CourtroomPage = () => {
     // Show celebration animation
     if (showCelebration) {
         return (
-            <CelebrationAnimation 
-                onComplete={handleCelebrationComplete} 
+            <CelebrationAnimation
+                onComplete={handleCelebrationComplete}
                 kibbleReward={activeCase.verdict?.kibbleReward}
             />
         );
@@ -1230,18 +1252,18 @@ const CourtroomPage = () => {
 
     // Verdict View
     if (activeCase.status === 'RESOLVED' && activeCase.verdict) {
-        const currentVerdict = selectedVerdictVersion === 0 
-            ? activeCase.verdict 
+        const currentVerdict = selectedVerdictVersion === 0
+            ? activeCase.verdict
             : allVerdicts.find(v => v.version === selectedVerdictVersion);
-        
-        const verdict = selectedVerdictVersion === 0 
-            ? activeCase.verdict 
+
+        const verdict = selectedVerdictVersion === 0
+            ? activeCase.verdict
             : (typeof currentVerdict?.content === 'string' ? JSON.parse(currentVerdict.content) : currentVerdict?.content) || activeCase.verdict;
         const analysis = verdict.analysis;
-        
+
         return (
             <>
-                <VerdictView 
+                <VerdictView
                     activeCase={activeCase}
                     verdict={verdict}
                     analysis={analysis}
@@ -1256,7 +1278,7 @@ const CourtroomPage = () => {
                     currentUser={currentUser}
                     onAcceptVerdict={handleAcceptVerdict}
                 />
-                
+
                 {/* Addendum Modal */}
                 <AnimatePresence>
                     {showAddendumModal && (
@@ -1342,7 +1364,7 @@ const CourtroomPage = () => {
     if (activeCase.status === 'LOCKED_A' || activeCase.status === 'LOCKED_B') {
         const waitingFor = activeCase.status === 'LOCKED_A' ? userBName : userAName;
         const hasCurrentUserSubmitted = isUserA ? activeCase.userASubmitted : activeCase.userBSubmitted;
-        
+
         // If current user hasn't submitted yet, show the input form
         if (!hasCurrentUserSubmitted) {
             // Fall through to the input form below
@@ -1379,8 +1401,10 @@ const CourtroomPage = () => {
 
     // Check court session status - Show Court at Rest when no active session
     if (!courtSession || courtSession.status === 'CLOSED') {
-        // Check if we have an active case in DRAFT or no case at all
-        if (!activeCase.id && activeCase.status === 'DRAFT' && !activeCase.userAInput && !activeCase.userBInput) {
+        // Check if we have an active case in DRAFT with no substantial content
+        const hasSubstantialContent = activeCase.userAInput?.trim() || activeCase.userBInput?.trim();
+        
+        if (activeCase.status === 'DRAFT' && !hasSubstantialContent) {
             return <CourtAtRest onServe={handleServe} navigate={navigate} />;
         }
         // If there's draft content, show the start court view
@@ -1390,7 +1414,7 @@ const CourtroomPage = () => {
     if (courtSession.status === 'WAITING') {
         const hasJoined = (isUserA && courtSession.userAJoined) || (!isUserA && courtSession.userBJoined);
         const isCreator = courtSession.createdBy === currentUserRole;
-        
+
         if (hasJoined && isCreator) {
             return <WaitingForPartner session={courtSession} currentUserRole={currentUserRole} onCancel={handleCancelSession} />;
         } else if (!hasJoined && !isCreator) {
@@ -1424,37 +1448,17 @@ const CourtroomPage = () => {
                         LIVE
                     </div>
                 </div>
-                
+
                 {/* Participants Status */}
-                <div className="flex justify-center gap-6">
-                    <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 bg-court-gold/20 rounded-full flex items-center justify-center overflow-hidden">
-                            <img 
-                                src="/judge-whiskers.png" 
-                                alt=""
-                                className="w-full h-full object-cover"
-                                onError={(e) => { e.target.style.display = 'none'; }}
-                            />
-                        </div>
-                        <div>
-                            <p className="text-xs font-bold text-court-brown">{userAName}</p>
-                            <p className="text-[10px] text-court-brownLight">{isUserA ? 'You' : 'Partner'}</p>
-                        </div>
+                <div className="flex items-center justify-center gap-4">
+                    <div className="flex flex-col items-center text-center min-w-[80px]">
+                        <p className="text-sm font-bold text-court-brown">{userAName}</p>
+                        <p className="text-[10px] text-court-brownLight">{isUserA ? 'You' : 'Partner'}</p>
                     </div>
-                    <div className="text-court-tan font-bold">vs</div>
-                    <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 bg-court-maroon/20 rounded-full flex items-center justify-center overflow-hidden">
-                            <img 
-                                src="/judge-whiskers.png" 
-                                alt=""
-                                className="w-full h-full object-cover"
-                                onError={(e) => { e.target.style.display = 'none'; }}
-                            />
-                        </div>
-                        <div>
-                            <p className="text-xs font-bold text-court-brown">{userBName}</p>
-                            <p className="text-[10px] text-court-brownLight">{!isUserA ? 'You' : 'Partner'}</p>
-                        </div>
+                    <div className="text-court-tan font-bold text-lg">vs</div>
+                    <div className="flex flex-col items-center text-center min-w-[80px]">
+                        <p className="text-sm font-bold text-court-brown">{userBName}</p>
+                        <p className="text-[10px] text-court-brownLight">{!isUserA ? 'You' : 'Partner'}</p>
                     </div>
                 </div>
             </motion.div>

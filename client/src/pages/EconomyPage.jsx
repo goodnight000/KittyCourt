@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Coins, Gift, Star, Plus, X, Check, Edit3, Trash2, Settings } from 'lucide-react';
+import { Coins, Gift, Star, Plus, X, Check, Edit3, Trash2, Settings, ShoppingBag } from 'lucide-react';
 import useAppStore from '../store/useAppStore';
+import useAuthStore from '../store/useAuthStore';
+import RequirePartner from '../components/RequirePartner';
 
 const DEFAULT_REWARDS = [
     { id: 1, title: "Foot Massage", subtitle: "10 minutes", cost: 50, icon: "🦶", color: "pink" },
@@ -28,6 +30,7 @@ const storeRewards = (userId, rewards) => {
 
 export default function EconomyPage() {
     const { currentUser, users, redeemCoupon } = useAppStore();
+    const { hasPartner } = useAuthStore();
     const partner = users.find(u => u.id !== currentUser?.id);
     
     const [showAddModal, setShowAddModal] = useState(false);
@@ -42,6 +45,25 @@ export default function EconomyPage() {
         if (partner?.id) setPartnerRewards(getStoredRewards(partner.id));
         if (currentUser?.id) setMyRewards(getStoredRewards(currentUser.id));
     }, [currentUser?.id, partner?.id]);
+
+    // Require partner for economy/shop
+    if (!hasPartner) {
+        return (
+            <RequirePartner
+                feature="Kibble Market"
+                description="The Kibble Market lets you and your partner create custom rewards! Earn kibble through appreciations and cases, then redeem for special treats from your partner."
+            >
+                {/* Preview content */}
+                <div className="space-y-4">
+                    <div className="glass-card p-5 text-center">
+                        <ShoppingBag className="w-12 h-12 mx-auto text-amber-500 mb-3" />
+                        <h2 className="text-lg font-bold text-neutral-800">Kibble Market</h2>
+                        <p className="text-sm text-neutral-500">Earn and redeem rewards</p>
+                    </div>
+                </div>
+            </RequirePartner>
+        );
+    }
 
     const handleRedeem = async (coupon) => {
         if (currentUser.kibbleBalance < coupon.cost) { alert("Not enough kibble!"); return; }

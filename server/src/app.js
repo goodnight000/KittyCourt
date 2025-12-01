@@ -391,6 +391,250 @@ app.post('/api/economy/transaction', async (req, res) => {
     }
 });
 
+// ==================== APPRECIATION ENDPOINTS ====================
+
+// Create appreciation - logs what a user appreciates about their partner
+app.post('/api/appreciations', async (req, res) => {
+    try {
+        const { fromUserId, toUserId, message, kibbleAmount = 10 } = req.body;
+
+        // Create the appreciation log entry
+        const appreciation = await prisma.appreciation.create({
+            data: {
+                fromUserId,
+                toUserId,
+                message,
+                kibbleAmount
+            }
+        });
+
+        // Also award kibble via transaction
+        const transaction = await prisma.transaction.create({
+            data: {
+                userId: toUserId,
+                amount: kibbleAmount,
+                type: 'EARN',
+                description: `Appreciated: ${message}`
+            }
+        });
+
+        // Update user balance
+        const user = await prisma.user.findUnique({ where: { id: toUserId } });
+        const newBalance = user.kibbleBalance + kibbleAmount;
+        await prisma.user.update({
+            where: { id: toUserId },
+            data: { kibbleBalance: newBalance }
+        });
+
+        res.json({ appreciation, transaction, newBalance });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get appreciations FOR a user (things their partner appreciated about them)
+app.get('/api/appreciations/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        
+        const appreciations = await prisma.appreciation.findMany({
+            where: { toUserId: userId },
+            orderBy: { createdAt: 'desc' }
+        });
+
+        res.json(appreciations);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ==================== CALENDAR ENDPOINTS ====================
+
+// Get all calendar events
+app.get('/api/calendar/events', async (req, res) => {
+    try {
+        const events = await prisma.calendarEvent.findMany({
+            orderBy: { date: 'asc' }
+        });
+        res.json(events);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Create a new calendar event
+app.post('/api/calendar/events', async (req, res) => {
+    try {
+        const { title, date, type, emoji, isRecurring, createdBy, notes } = req.body;
+        
+        const event = await prisma.calendarEvent.create({
+            data: {
+                title,
+                date: new Date(date),
+                type: type || 'custom',
+                emoji: emoji || '📅',
+                isRecurring: isRecurring || false,
+                createdBy,
+                notes
+            }
+        });
+        
+        res.json(event);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Update a calendar event
+app.put('/api/calendar/events/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { title, date, type, emoji, isRecurring, notes } = req.body;
+        
+        const event = await prisma.calendarEvent.update({
+            where: { id },
+            data: {
+                title,
+                date: date ? new Date(date) : undefined,
+                type,
+                emoji,
+                isRecurring,
+                notes
+            }
+        });
+        
+        res.json(event);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Delete a calendar event
+app.delete('/api/calendar/events/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        await prisma.calendarEvent.delete({
+            where: { id }
+        });
+        
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// AI-powered event planning suggestions
+app.post('/api/calendar/plan-event', async (req, res) => {
+    try {
+        const { eventTitle, eventType, eventDate, partnerContext, currentUserName } = req.body;
+        
+        // Build context from partner info
+        const loveLanguageMap = {
+            'words': 'Words of Affirmation - they love compliments and verbal appreciation',
+            'acts': 'Acts of Service - they appreciate when you do helpful things',
+            'gifts': 'Receiving Gifts - thoughtful presents mean a lot to them',
+            'time': 'Quality Time - they value undivided attention together',
+            'touch': 'Physical Touch - hugs, hand-holding, and closeness matter most',
+        };
+        
+        const loveLanguageContext = partnerContext.loveLanguage && loveLanguageMap[partnerContext.loveLanguage]
+            ? `Their love language is ${loveLanguageMap[partnerContext.loveLanguage]}.`
+            : '';
+        
+        const appreciationsContext = partnerContext.recentAppreciations?.length > 0
+            ? `Recently, ${partnerContext.name} has appreciated these things: ${partnerContext.recentAppreciations.join(', ')}.`
+            : '';
+
+        // Use OpenRouter to generate personalized suggestions
+        const { callOpenRouter } = require('./lib/openrouter');
+        
+        const prompt = `You are a romantic relationship advisor helping someone plan a special ${eventTitle} for their partner.
+
+Partner Info:
+- Name: ${partnerContext.name || 'their partner'}
+${loveLanguageContext}
+${appreciationsContext}
+
+Generate 3 creative and thoughtful ideas for ${eventTitle} that would be meaningful based on what we know about the partner. Each idea should:
+1. Be practical and achievable
+2. Show thoughtfulness about the partner's preferences
+3. Include a personal touch
+
+Return ONLY a JSON array with exactly 3 objects, each with:
+- "emoji": a single emoji representing the idea
+- "title": a short catchy title (3-5 words)
+- "description": a brief explanation (1-2 sentences) personalized for ${partnerContext.name || 'them'}
+
+Example format:
+[{"emoji":"🌹","title":"Surprise Breakfast in Bed","description":"Wake them up with their favorite breakfast and a love note."}]`;
+
+        try {
+            const response = await callOpenRouter([
+                { role: 'user', content: prompt }
+            ], {
+                model: 'google/gemini-flash-1.5',
+                maxTokens: 500,
+                temperature: 0.8,
+            });
+
+            // Parse the response
+            const content = response.choices[0]?.message?.content || '[]';
+            
+            // Try to extract JSON from the response
+            const jsonMatch = content.match(/\[[\s\S]*\]/);
+            if (jsonMatch) {
+                const suggestions = JSON.parse(jsonMatch[0]);
+                return res.json({ suggestions });
+            }
+        } catch (aiError) {
+            console.error('AI planning error:', aiError);
+        }
+
+        // Fallback suggestions if AI fails
+        const fallbackSuggestions = getFallbackSuggestions(eventType, partnerContext.name);
+        res.json({ suggestions: fallbackSuggestions });
+        
+    } catch (error) {
+        console.error('Planning error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Fallback suggestions
+function getFallbackSuggestions(eventType, partnerName) {
+    const name = partnerName || 'your partner';
+    const suggestions = {
+        birthday: [
+            { emoji: '🎂', title: 'Homemade Cake Surprise', description: `Bake ${name}'s favorite cake from scratch with love` },
+            { emoji: '📝', title: 'Memory Scrapbook', description: `Create a book of your favorite moments together` },
+            { emoji: '🎁', title: 'Experience Over Things', description: `Plan a surprise activity they've always wanted to try` },
+        ],
+        anniversary: [
+            { emoji: '💕', title: 'First Date Redux', description: `Recreate your first date with a romantic twist` },
+            { emoji: '✉️', title: 'Love Letter Jar', description: `Write 12 love notes, one for each month until next year` },
+            { emoji: '📷', title: 'Year in Photos', description: `Make a photo book of your favorite memories this year` },
+        ],
+        holiday: [
+            { emoji: '🏠', title: 'Cozy Movie Night', description: `Set up a comfy fort with ${name}'s favorite movies and snacks` },
+            { emoji: '🍳', title: 'Cook Together', description: `Make a special holiday meal together as a team` },
+            { emoji: '🎄', title: 'DIY Gift Exchange', description: `Exchange handmade gifts with a heartfelt touch` },
+        ],
+        date_night: [
+            { emoji: '🌙', title: 'Stargazing Picnic', description: `Pack a basket and find a spot to watch the stars together` },
+            { emoji: '💆', title: 'Home Spa Night', description: `Create a relaxing spa experience at home for ${name}` },
+            { emoji: '🎮', title: 'Game Night Date', description: `Play games together with their favorite snacks` },
+        ],
+        custom: [
+            { emoji: '💐', title: 'Surprise Flowers', description: `Get ${name}'s favorite flowers delivered unexpectedly` },
+            { emoji: '🎵', title: 'Playlist of Love', description: `Create a playlist of songs that remind you of ${name}` },
+            { emoji: '🍽️', title: 'Fancy Home Dinner', description: `Cook an elaborate candlelit dinner at home` },
+        ],
+    };
+    
+    return suggestions[eventType] || suggestions.custom;
+}
+
 app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
 });
