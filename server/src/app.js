@@ -1,5 +1,5 @@
 /**
- * Kitty Court Server
+ * Pause Server
  * 
  * Express API server that uses Supabase for all data storage.
  * No more Prisma/SQLite - everything goes to Supabase!
@@ -973,7 +973,7 @@ function getFallbackSuggestions(eventType, partnerName) {
 // Root endpoint - for easy verification
 app.get('/', (req, res) => {
     res.json({
-        name: 'Kitty Court API',
+        name: 'Pause API',
         version: '1.0.0',
         status: 'running',
         endpoints: {

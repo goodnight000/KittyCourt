@@ -15,7 +15,7 @@ const api = axios.create({
 // --- Judge Engine API ---
 
 /**
- * Submit a dispute for Judge Mittens' verdict
+ * Submit a dispute for Judge Whiskers' verdict
  * 
  * @param {object} payload - The deliberation payload
  * @param {object} payload.participants - { userA: {name, id}, userB: {name, id} }

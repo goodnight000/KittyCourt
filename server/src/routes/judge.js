@@ -12,13 +12,13 @@ const router = express.Router();
 /**
  * POST /api/judge/deliberate
  * 
- * Main endpoint for submitting a dispute for Judge Mittens' verdict.
+ * Main endpoint for submitting a dispute for Judge Whiskers' verdict.
  * Expects a structured intake payload with both users' submissions.
  * 
  * @body {object} participants - { userA: {name, id}, userB: {name, id} }
  * @body {object} submissions - { userA: {...submission}, userB: {...submission} }
  * 
- * @returns {object} Complete verdict response with Judge Mittens' ruling
+ * @returns {object} Complete verdict response with Judge Whiskers' ruling
  */
 router.post('/deliberate', async (req, res) => {
     try {
@@ -30,7 +30,7 @@ router.post('/deliberate', async (req, res) => {
                 verdictId: null,
                 timestamp: new Date().toISOString(),
                 status: 'error',
-                error: 'Judge Mittens is sleeping. OpenRouter API key not configured.',
+                error: 'Judge Whiskers is sleeping. OpenRouter API key not configured.',
             });
         }
 
@@ -52,7 +52,7 @@ router.post('/deliberate', async (req, res) => {
             verdictId: null,
             timestamp: new Date().toISOString(),
             status: 'error',
-            error: 'An unexpected error occurred. Judge Mittens has encountered a hairball.',
+            error: 'An unexpected error occurred. Judge Whiskers has encountered a hairball.',
         });
     }
 });
@@ -81,7 +81,7 @@ router.post('/addendum', async (req, res) => {
                 verdictId: null,
                 timestamp: new Date().toISOString(),
                 status: 'error',
-                error: 'Judge Mittens is sleeping. OpenRouter API key not configured.',
+                error: 'Judge Whiskers is sleeping. OpenRouter API key not configured.',
             });
         }
 
@@ -124,11 +124,11 @@ router.get('/health', (req, res) => {
 
     res.json({
         status: hasApiKey ? 'ready' : 'unconfigured',
-        service: 'Judge Mittens Court',
+        service: 'Judge Whiskers Court',
         model: 'x-ai/grok-4.1-fast:free',
         message: hasApiKey
-            ? 'Judge Mittens is awake and ready to preside (via OpenRouter).'
-            : 'Judge Mittens requires an OpenRouter API key to function.',
+            ? 'Judge Whiskers is awake and ready to preside (via OpenRouter).'
+            : 'Judge Whiskers requires an OpenRouter API key to function.',
         timestamp: new Date().toISOString(),
     });
 });

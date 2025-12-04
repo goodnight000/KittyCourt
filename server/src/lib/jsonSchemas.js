@@ -110,7 +110,7 @@ const ANALYSIS_JSON_SCHEMA = {
 
 /**
  * Verdict Schema for Step 3
- * Provides structure for Judge Mittens verdict output
+ * Provides structure for Judge Whiskers verdict output
  */
 const VERDICT_JSON_SCHEMA = {
     name: 'judge_verdict',

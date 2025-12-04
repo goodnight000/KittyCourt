@@ -1,5 +1,5 @@
 {
-  "name": "client",
+  "name": "pause",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -13,6 +13,12 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@capacitor/android": "^7.4.4",
+    "@capacitor/cli": "^7.4.4",
+    "@capacitor/core": "^7.4.4",
+    "@capacitor/ios": "^7.4.4",
+    "@capacitor/splash-screen": "^7.0.3",
+    "@capacitor/status-bar": "^7.0.3",
     "@supabase/supabase-js": "^2.86.0",
     "axios": "^1.13.2",
     "clsx": "^2.1.1",

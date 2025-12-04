@@ -1,0 +1,22 @@
+{
+  "appId": "com.pause.app",
+  "appName": "Pause",
+  "webDir": "dist",
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "launchAutoHide": true,
+      "backgroundColor": "#FAF7F2",
+      "showSpinner": false,
+      "androidSpinnerStyle": "small",
+      "splashFullScreen": true,
+      "splashImmersive": true,
+      "layoutName": "launch_screen",
+      "useDialog": false
+    },
+    "StatusBar": {
+      "style": "dark",
+      "backgroundColor": "#FAF7F2"
+    }
+  }
+}

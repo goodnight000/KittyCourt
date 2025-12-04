@@ -17,7 +17,7 @@ let _openRouterClient = null;
 function getOpenRouter() {
     if (!_openRouterClient) {
         if (!process.env.OPENROUTER_API_KEY || process.env.OPENROUTER_API_KEY === 'your_openrouter_api_key_here') {
-            throw new Error('OPENROUTER_API_KEY is not configured. Judge Mittens needs an API key to function.');
+            throw new Error('OPENROUTER_API_KEY is not configured. Judge Whiskers needs an API key to function.');
         }
 
         _openRouterClient = {

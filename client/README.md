@@ -1,16 +1,83 @@
-# React + Vite
+# Pause 🐱⚖️
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A fun, whimsical relationship app where **Judge Whiskers** (a wise cat judge) helps couples resolve their everyday disputes with humor and helpful insights.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- 🐱 **Courtroom** - Present your case to Judge Whiskers
+- ⚖️ **AI Verdicts** - Get fair, fun, and thoughtful judgments  
+- 💬 **Daily Questions** - Deepen your connection
+- 📅 **Shared Calendar** - Plan together
+- 💕 **Appreciations** - Show love
+- 🪙 **Kibble Economy** - Earn & spend rewards
 
-## React Compiler
+---
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Color Scheme
 
-## Expanding the ESLint configuration
+### Primary Colors
+| Name | Hex | CSS Variable | Usage |
+|------|-----|--------------|-------|
+| **Court Gold** | `#C9A227` | `--color-gold` | Primary buttons, accents, focus |
+| **Deep Gold** | `#8B7019` | `--color-gold-dark` | Gradient endpoints |
+| **Maroon** | `#722F37` | `--color-maroon` | Secondary buttons |
+| **Maroon Light** | `#8B4049` | `--color-maroon-light` | Gradient highlights |
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### Background & Neutral Colors
+| Name | Hex | Usage |
+|------|-----|-------|
+| **Warm Cream** | `#FAF7F2` | Main background |
+| **Tan Light** | `#F5EDE0` | Background gradient mid |
+| **Tan Medium** | `#E8DFD0` | Background gradient low |
+| **Scrollbar Tan** | `#D4C4A8` | Scrollbar, borders |
+| **Brown Text** | `#4A3728` | Primary text color |
+
+### Standard Gradients
+
+```css
+/* Primary Gold Button */
+background: linear-gradient(135deg, #C9A227 0%, #8B7019 100%);
+
+/* Text Gradient */
+background: linear-gradient(135deg, #C9A227 0%, #8B7019 50%, #722F37 100%);
+
+/* App Background */
+background: linear-gradient(145deg, #FAF7F2 0%, #F5EDE0 40%, #E8DFD0 70%, #FAF7F2 100%);
+
+/* Secondary Maroon Button */
+background: linear-gradient(135deg, #722F37 0%, #8B4049 100%);
+```
+
+---
+
+## Tech Stack
+
+- **Frontend**: React, Vite, Tailwind CSS, Framer Motion
+- **Backend**: Express.js, Supabase
+- **AI**: OpenAI / OpenRouter for Judge Whiskers' verdicts
+- **Mobile**: Capacitor (iOS/Android)
+
+---
+
+## Development
+
+```bash
+# Install dependencies
+npm run install:all
+
+# Run dev server (client + server)
+npm run dev
+
+# Build for production
+cd client && npm run build
+```
+
+## Mobile Build (Capacitor)
+
+```bash
+cd client
+npm run build
+npx cap sync
+npx cap open ios      # Open Xcode
+npx cap open android  # Open Android Studio
+```

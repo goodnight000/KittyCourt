@@ -105,7 +105,7 @@ Do NOT include markdown, code blocks, or any text outside the JSON.`;
 
 
 // --- STEP 3: THE THERAPIST CAT (Persona with Deep Knowledge) ---
-const JUDGE_SYSTEM_PROMPT = `You are The Honorable Judge Mittens, a Therapist Cat — aloof and judgey on the surface, but deeply knowledgeable about relationship psychology underneath.
+const JUDGE_SYSTEM_PROMPT = `You are The Honorable Judge Whiskers, a Therapist Cat — aloof and judgey on the surface, but deeply knowledgeable about relationship psychology underneath.
 
 CRITICAL: IDENTITY ANCHOR PROTOCOL
 Before generating ANY output, you must internally map the participants:
@@ -213,7 +213,7 @@ OUTPUT RULES:
 
 // --- Helper function to build the analyst prompt with data ---
 const buildAnalystUserPrompt = (input) => {
-    return `Perform a deep psychological analysis of this couple's conflict:
+  return `Perform a deep psychological analysis of this couple's conflict:
 
 ## Participants
 - User A: ${input.participants.userA.name}
@@ -245,17 +245,17 @@ Analyze this conflict using the Gottman Method framework. Identify the dynamic, 
  * @returns {string} The formatted prompt
  */
 const buildJudgeUserPrompt = (input, analysis, historicalContext = '') => {
-    const a = analysis.analysis;
-    
-    // Get the recommended repair from the analysis (with fallback)
-    const recommendedRepair = a.recommendedRepair || 'The 20-Second Hug';
-    
-    // Build historical context section if available
-    const contextSection = historicalContext 
-        ? `\n${historicalContext}\n` 
-        : '';
-    
-    return `You are presiding over a conflict between ${input.participants.userA.name} and ${input.participants.userB.name}.
+  const a = analysis.analysis;
+
+  // Get the recommended repair from the analysis (with fallback)
+  const recommendedRepair = a.recommendedRepair || 'The 20-Second Hug';
+
+  // Build historical context section if available
+  const contextSection = historicalContext
+    ? `\n${historicalContext}\n`
+    : '';
+
+  return `You are presiding over a conflict between ${input.participants.userA.name} and ${input.participants.userB.name}.
 ${contextSection}
 ## THE CURRENT CONFLICT
 
@@ -299,7 +299,7 @@ You MUST use this exact repair in your theSentence. Do NOT substitute or create 
 
 ---
 
-Now deliver your verdict as Judge Mittens, the Therapist Cat. Remember:
+Now deliver your verdict as Judge Whiskers, the Therapist Cat. Remember:
 - NEVER assign blame percentages
 - NEVER trivialize their pain
 - USE THE PRESCRIBED REPAIR: "${recommendedRepair}" — no alternatives
@@ -309,8 +309,8 @@ ${historicalContext ? '- Reference historical patterns when relevant to provide 
 
 
 module.exports = {
-    ANALYST_SYSTEM_PROMPT,
-    JUDGE_SYSTEM_PROMPT,
-    buildAnalystUserPrompt,
-    buildJudgeUserPrompt,
+  ANALYST_SYSTEM_PROMPT,
+  JUDGE_SYSTEM_PROMPT,
+  buildAnalystUserPrompt,
+  buildJudgeUserPrompt,
 };

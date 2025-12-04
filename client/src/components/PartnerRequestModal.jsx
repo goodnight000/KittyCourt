@@ -22,31 +22,31 @@ const PartnerRequestModal = () => {
 
     const handleConfirmAccept = async () => {
         if (!request) return;
-        
+
         // Validate anniversary date using our helper
         if (!anniversaryDate) {
             setAnniversaryError('Please enter your anniversary date');
             return;
         }
-        
+
         const validation = validateAnniversaryDate(anniversaryDate);
         if (!validation.isValid) {
             setAnniversaryError(validation.error);
             return;
         }
-        
+
         setAnniversaryError('');
         setProcessingId(request.id);
         setAction('accept');
         const result = await acceptRequest(request.id, anniversaryDate);
-        
+
         if (result.error) {
             setAnniversaryError(result.error);
             setProcessingId(null);
             setAction(null);
             return;
         }
-        
+
         setProcessingId(null);
         setAction(null);
         setShowAnniversaryStep(false);
@@ -106,8 +106,8 @@ const PartnerRequestModal = () => {
                             {showAnniversaryStep ? 'Set Your Anniversary 💕' : 'Partner Request! 💕'}
                         </h2>
                         <p className="text-pink-100 text-sm mt-1">
-                            {showAnniversaryStep 
-                                ? 'When did you start dating?' 
+                            {showAnniversaryStep
+                                ? 'When did you start dating?'
                                 : 'Someone wants to connect with you'}
                         </p>
                     </div>
@@ -120,8 +120,8 @@ const PartnerRequestModal = () => {
                                 <div className="text-center mb-6">
                                     <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-court-gold to-court-brown flex items-center justify-center text-3xl mb-3">
                                         {senderAvatar ? (
-                                            <img 
-                                                src={senderAvatar} 
+                                            <img
+                                                src={senderAvatar}
                                                 alt={senderName}
                                                 className="w-full h-full rounded-full object-cover"
                                             />
@@ -173,7 +173,7 @@ const PartnerRequestModal = () => {
                                     >
                                         Back
                                     </motion.button>
-                                    
+
                                     <motion.button
                                         whileTap={{ scale: 0.95 }}
                                         onClick={handleConfirmAccept}
@@ -199,8 +199,8 @@ const PartnerRequestModal = () => {
                                 <div className="flex items-center gap-4 mb-6">
                                     <div className="w-16 h-16 rounded-full bg-gradient-to-br from-court-gold to-court-brown flex items-center justify-center text-3xl">
                                         {senderAvatar ? (
-                                            <img 
-                                                src={senderAvatar} 
+                                            <img
+                                                src={senderAvatar}
                                                 alt={senderName}
                                                 className="w-full h-full rounded-full object-cover"
                                             />
@@ -211,7 +211,7 @@ const PartnerRequestModal = () => {
                                     <div className="flex-1">
                                         <p className="font-bold text-lg text-neutral-800">{senderName}</p>
                                         <p className="text-sm text-neutral-500">
-                                            wants to be your partner in Kitty Court
+                                            wants to be your partner in Pause
                                         </p>
                                     </div>
                                 </div>
@@ -228,7 +228,7 @@ const PartnerRequestModal = () => {
                                 {/* What this means */}
                                 <div className="bg-court-cream/50 rounded-xl p-4 mb-6 border border-court-tan/50">
                                     <p className="text-xs text-court-brown">
-                                        <span className="font-bold">By accepting:</span> You'll be connected as partners and can start resolving disputes together, share appreciations, and more! 
+                                        <span className="font-bold">By accepting:</span> You'll be connected as partners and can start resolving disputes together, share appreciations, and more!
                                     </p>
                                 </div>
 
@@ -249,7 +249,7 @@ const PartnerRequestModal = () => {
                                             </>
                                         )}
                                     </motion.button>
-                                    
+
                                     <motion.button
                                         whileTap={{ scale: 0.95 }}
                                         onClick={handleAcceptClick}

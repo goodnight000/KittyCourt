@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { 
-    Copy, Check, Heart, Users, ArrowRight, Link2, 
+import {
+    Copy, Check, Heart, Users, ArrowRight, Link2,
     Send, Loader2, AlertCircle, Clock, UserPlus
 } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 
 const ConnectPartnerPage = () => {
     const navigate = useNavigate();
-    const { 
-        profile, 
-        signOut, 
+    const {
+        profile,
+        signOut,
         sendPartnerRequestByCode,
         sentRequest,
         cancelSentRequest,
@@ -56,13 +56,13 @@ const ConnectPartnerPage = () => {
 
     const handleSendRequest = async () => {
         if (partnerCode.length !== 12) return;
-        
+
         setIsSubmitting(true);
         setError('');
         setSuccess('');
 
         const result = await sendPartnerRequestByCode(partnerCode);
-        
+
         setIsSubmitting(false);
 
         if (result.error) {
@@ -128,7 +128,7 @@ const ConnectPartnerPage = () => {
                     </motion.div>
                     <h1 className="text-2xl font-bold text-neutral-800">Connect with Your Partner</h1>
                     <p className="text-neutral-500 mt-2">
-                        Link your accounts to start using Kitty Court together 💕
+                        Link your accounts to start using Pause together 💕
                     </p>
                 </motion.div>
 
@@ -167,11 +167,10 @@ const ConnectPartnerPage = () => {
                 <div className="flex bg-white/60 rounded-2xl p-1.5 gap-1">
                     <button
                         onClick={() => setActiveTab('share')}
-                        className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${
-                            activeTab === 'share'
+                        className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${activeTab === 'share'
                                 ? 'text-white shadow-md'
                                 : 'text-neutral-600 hover:bg-white/50'
-                        }`}
+                            }`}
                         style={activeTab === 'share' ? { background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' } : {}}
                     >
                         <Link2 className="w-4 h-4" />
@@ -179,11 +178,10 @@ const ConnectPartnerPage = () => {
                     </button>
                     <button
                         onClick={() => setActiveTab('enter')}
-                        className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${
-                            activeTab === 'enter'
+                        className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${activeTab === 'enter'
                                 ? 'text-white shadow-md'
                                 : 'text-neutral-600 hover:bg-white/50'
-                        }`}
+                            }`}
                         style={activeTab === 'enter' ? { background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' } : {}}
                     >
                         <UserPlus className="w-4 h-4" />
@@ -210,7 +208,7 @@ const ConnectPartnerPage = () => {
                                     Share this code with your partner so they can connect with you
                                 </p>
                             </div>
-                            
+
                             <div className="bg-court-cream/50 rounded-2xl p-5 border border-court-tan/50">
                                 <div className="flex items-center justify-between">
                                     <p className="text-2xl font-mono font-bold text-court-brown tracking-widest flex-1 text-center">
@@ -229,7 +227,7 @@ const ConnectPartnerPage = () => {
                                     </motion.button>
                                 </div>
                             </div>
-                            
+
                             {copied && (
                                 <motion.p
                                     initial={{ opacity: 0, y: -5 }}
@@ -257,7 +255,7 @@ const ConnectPartnerPage = () => {
                                     Type in the 12-character code your partner shared with you
                                 </p>
                             </div>
-                            
+
                             <input
                                 type="text"
                                 value={partnerCode}
@@ -270,7 +268,7 @@ const ConnectPartnerPage = () => {
                                 disabled={!!sentRequest}
                                 className="w-full px-4 py-4 bg-neutral-50 border-2 border-neutral-200 rounded-2xl text-center text-xl font-mono tracking-widest text-neutral-700 placeholder:text-neutral-300 focus:outline-none focus:border-court-gold focus:ring-2 focus:ring-court-gold/20 transition-all disabled:opacity-50"
                             />
-                            
+
                             {/* Error Message */}
                             <AnimatePresence>
                                 {error && (
@@ -300,7 +298,7 @@ const ConnectPartnerPage = () => {
                                     </motion.div>
                                 )}
                             </AnimatePresence>
-                            
+
                             <motion.button
                                 whileTap={{ scale: 0.97 }}
                                 onClick={handleSendRequest}
@@ -329,7 +327,7 @@ const ConnectPartnerPage = () => {
                     className="bg-blue-50 rounded-2xl p-4 border border-blue-100"
                 >
                     <p className="text-sm text-blue-700 text-center">
-                        <span className="font-bold">How it works:</span> When you enter your partner's code, 
+                        <span className="font-bold">How it works:</span> When you enter your partner's code,
                         they'll receive a request to connect. Once they accept, you'll be linked! 🔗
                     </p>
                 </motion.div>
@@ -341,7 +339,7 @@ const ConnectPartnerPage = () => {
                     transition={{ delay: 0.4 }}
                     className="text-center space-y-3"
                 >
-                    <button 
+                    <button
                         onClick={handleSkip}
                         className="text-sm text-neutral-500 hover:text-neutral-700 transition-colors"
                     >
@@ -351,7 +349,7 @@ const ConnectPartnerPage = () => {
                         You can connect later from your Profile page
                     </p>
                     <div className="pt-2">
-                        <button 
+                        <button
                             onClick={signOut}
                             className="text-xs text-neutral-400 hover:text-neutral-600 transition-colors"
                         >

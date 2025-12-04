@@ -10,7 +10,7 @@
  * 1. Safety Guardrail (Moderation API)
  * 2. Memory Retrieval (RAG - fetch historical context)
  * 3. Analytical Phase (Psychological analysis, JSON mode)
- * 4. Verdict Generation (Judge Mittens persona)
+ * 4. Verdict Generation (Judge Whiskers persona)
  * 5. Background Memory Extraction (Stenographer agent)
  */
 
@@ -269,7 +269,7 @@ async function deliberate(rawInput, options = {}) {
             verdictId: generateVerdictId(),
             timestamp: new Date().toISOString(),
             status: 'error',
-            error: 'Judge Mittens is sleeping. OpenRouter API key not configured.',
+            error: 'Judge Whiskers is sleeping. OpenRouter API key not configured.',
         };
     }
 

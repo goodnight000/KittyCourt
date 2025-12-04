@@ -25,7 +25,7 @@ const MainLayout = () => {
                     transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
                     className="w-12 h-12 mx-auto rounded-full border-3 border-court-tan border-t-court-gold"
                 />
-                <p className="text-court-brownLight font-medium">Loading Cat Judge...</p>
+                <p className="text-court-brownLight font-medium">Loading Pause...</p>
             </motion.div>
         </div>
     );
@@ -51,7 +51,7 @@ const MainLayout = () => {
                                 className="w-full h-full object-cover"
                             />
                         </div>
-                        <span className="text-lg font-bold text-gradient font-display">Cat Judge</span>
+                        <span className="text-lg font-bold text-gradient font-display">Pause</span>
                     </div>
 
                     {/* User Toggle Pills - REMOVED */}

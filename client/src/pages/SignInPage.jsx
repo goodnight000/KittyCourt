@@ -7,7 +7,7 @@ import useAuthStore from '../store/useAuthStore';
 // Helper to get user-friendly error messages
 const getErrorMessage = (error) => {
     const message = error?.message?.toLowerCase() || '';
-    
+
     // Supabase returns "Invalid login credentials" for both wrong password AND non-existent user
     // This is intentional for security (prevents user enumeration)
     if (message.includes('invalid login credentials') || message.includes('invalid password') || message.includes('invalid email')) {
@@ -18,7 +18,7 @@ const getErrorMessage = (error) => {
             icon: Lock
         };
     }
-    
+
     if (message.includes('user not found') || message.includes('no user found')) {
         return {
             type: 'no_account',
@@ -27,7 +27,7 @@ const getErrorMessage = (error) => {
             icon: UserX
         };
     }
-    
+
     if (message.includes('email not confirmed')) {
         return {
             type: 'unconfirmed',
@@ -36,7 +36,7 @@ const getErrorMessage = (error) => {
             icon: Mail
         };
     }
-    
+
     if (message.includes('too many requests') || message.includes('rate limit')) {
         return {
             type: 'rate_limit',
@@ -45,10 +45,10 @@ const getErrorMessage = (error) => {
             icon: AlertCircle
         };
     }
-    
+
     // Log unknown errors for debugging
     console.error('[SignIn] Unknown error:', error);
-    
+
     return {
         type: 'generic',
         title: 'Sign In Failed',
@@ -82,7 +82,7 @@ const SignInPage = () => {
         const result = await signIn(email, password);
         console.log('[SignInPage] signIn result:', result);
         setIsSubmitting(false);
-        
+
         if (result.error) {
             console.error('[SignInPage] Error:', result.error);
             setError(getErrorMessage(result.error));
@@ -149,7 +149,7 @@ const SignInPage = () => {
                 >
                     <span className="text-4xl">🐱</span>
                 </motion.div>
-                <h1 className="text-3xl font-bold text-gradient font-display">Kitty Court</h1>
+                <h1 className="text-3xl font-bold text-gradient font-display">Pause</h1>
                 <p className="text-neutral-500 mt-2">Welcome back, counselor!</p>
             </motion.div>
 
@@ -176,8 +176,8 @@ const SignInPage = () => {
                                     <p className="font-semibold text-red-700 text-sm">{error.title}</p>
                                     <p className="text-red-600 text-sm mt-0.5">{error.message}</p>
                                     {error.type === 'no_account' && (
-                                        <Link 
-                                            to="/signup" 
+                                        <Link
+                                            to="/signup"
                                             className="inline-flex items-center gap-1 text-sm font-medium text-court-brown hover:text-court-gold mt-2 transition-colors"
                                         >
                                             Create an account <ArrowRight className="w-3.5 h-3.5" />
@@ -185,14 +185,14 @@ const SignInPage = () => {
                                     )}
                                     {error.type === 'invalid_credentials' && (
                                         <div className="flex flex-wrap gap-3 mt-2">
-                                            <Link 
-                                                to="/forgot-password" 
+                                            <Link
+                                                to="/forgot-password"
                                                 className="inline-flex items-center gap-1 text-sm font-medium text-court-brown hover:text-court-gold transition-colors"
                                             >
                                                 Reset password <ArrowRight className="w-3.5 h-3.5" />
                                             </Link>
-                                            <Link 
-                                                to="/signup" 
+                                            <Link
+                                                to="/signup"
                                                 className="inline-flex items-center gap-1 text-sm font-medium text-court-brown hover:text-court-gold transition-colors"
                                             >
                                                 Create account <ArrowRight className="w-3.5 h-3.5" />
@@ -304,7 +304,7 @@ const SignInPage = () => {
                     transition={{ delay: 0.3 }}
                     className="mt-6 text-center text-neutral-600"
                 >
-                    New to Kitty Court?{' '}
+                    New to Pause?{' '}
                     <Link
                         to="/signup"
                         className="font-bold text-court-gold hover:text-court-goldDark transition-colors"

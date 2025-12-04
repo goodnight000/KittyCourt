@@ -61,7 +61,7 @@ const LoadingScreen = () => {
                     <Sparkles className="w-8 h-8 text-white" />
                 </div>
             </motion.div>
-            <h2 className="text-xl font-bold text-neutral-700">Loading Kitty Court...</h2>
+            <h2 className="text-xl font-bold text-neutral-700">Loading Pause...</h2>
             <p className="text-neutral-500 mt-2">🐱</p>
 
             {showReset && (
@@ -108,7 +108,7 @@ const AppRoutes = () => {
     useEffect(() => {
         // Only initialize once
         if (initialized) return;
-        
+
         console.log('[App] Calling initialize...');
         setInitialized(true);
         initialize().then(() => {

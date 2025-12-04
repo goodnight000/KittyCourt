@@ -135,7 +135,7 @@ const SignUpPage = () => {
                 >
                     <span className="text-4xl">🐱</span>
                 </motion.div>
-                <h1 className="text-3xl font-bold text-gradient font-display">Join Kitty Court</h1>
+                <h1 className="text-3xl font-bold text-gradient font-display">Join Pause</h1>
                 <p className="text-neutral-500 mt-2">Create your account to get started</p>
             </motion.div>
 

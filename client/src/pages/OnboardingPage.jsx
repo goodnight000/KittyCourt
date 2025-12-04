@@ -14,7 +14,7 @@ import { validateDate } from '../utils/helpers';
 const ONBOARDING_STEPS = [
     {
         id: 'welcome',
-        title: 'Welcome to Kitty Court! 🐱',
+        title: 'Welcome to Pause! 🐱',
         subtitle: "Let's get to know you better so Judge Whiskers can serve you well",
         icon: '✨',
     },
@@ -173,7 +173,7 @@ const OnboardingPage = () => {
                     return; // Required field is empty
                 }
             }
-            
+
             // Validate birthday date
             if (currentStepData.field === 'birthday' && value) {
                 const validation = validateDate(value);
@@ -281,7 +281,7 @@ const OnboardingPage = () => {
                         </motion.div>
                         <div className="space-y-4">
                             <p className="text-neutral-600">
-                                Kitty Court is your playful space for resolving relationship
+                                Pause is your playful space for resolving relationship
                                 disputes with humor and love.
                             </p>
                             <div className="flex flex-wrap justify-center gap-2">
@@ -340,7 +340,7 @@ const OnboardingPage = () => {
                                 onChange={(e) => {
                                     const value = e.target.value;
                                     updateOnboardingData({ birthday: value });
-                                    
+
                                     // Validate the date
                                     if (value) {
                                         const validation = validateDate(value);
@@ -349,11 +349,10 @@ const OnboardingPage = () => {
                                         setBirthdayError(null);
                                     }
                                 }}
-                                className={`w-full pl-12 pr-4 py-4 bg-white border-2 rounded-2xl text-neutral-700 text-lg focus:outline-none focus:ring-2 transition-all ${
-                                    birthdayError 
-                                        ? 'border-red-300 focus:border-red-400 focus:ring-red-200' 
+                                className={`w-full pl-12 pr-4 py-4 bg-white border-2 rounded-2xl text-neutral-700 text-lg focus:outline-none focus:ring-2 transition-all ${birthdayError
+                                        ? 'border-red-300 focus:border-red-400 focus:ring-red-200'
                                         : 'border-neutral-200 focus:border-court-gold focus:ring-court-gold/20'
-                                }`}
+                                    }`}
                             />
                         </div>
                         {birthdayError && (
@@ -514,8 +513,8 @@ const OnboardingPage = () => {
                                         whileTap={{ scale: 0.97 }}
                                         onClick={() => handleOptionSelect(option.id)}
                                         className={`p-4 rounded-2xl text-left transition-all border-2 ${isOptionSelected(option.id)
-                                                ? 'border-court-gold bg-court-cream/50 shadow-md'
-                                                : 'border-neutral-200 bg-white hover:border-neutral-300 hover:shadow-sm'
+                                            ? 'border-court-gold bg-court-cream/50 shadow-md'
+                                            : 'border-neutral-200 bg-white hover:border-neutral-300 hover:shadow-sm'
                                             }`}
                                     >
                                         <div className="flex items-start gap-3">

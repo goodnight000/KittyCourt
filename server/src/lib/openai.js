@@ -19,7 +19,7 @@ let _openai = null;
 function getOpenAI() {
     if (!_openai) {
         if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === 'your_openai_api_key_here') {
-            throw new Error('OPENAI_API_KEY is not configured. Judge Mittens needs an API key to function.');
+            throw new Error('OPENAI_API_KEY is not configured. Judge Whiskers needs an API key to function.');
         }
         _openai = new OpenAI({
             apiKey: process.env.OPENAI_API_KEY,
