@@ -121,13 +121,13 @@ router.post('/addendum', async (req, res) => {
  */
 router.get('/health', (req, res) => {
     const hasApiKey = isOpenRouterConfigured();
-    
+
     res.json({
         status: hasApiKey ? 'ready' : 'unconfigured',
         service: 'Judge Mittens Court',
-        model: 'moonshotai/kimi-k2-thinking',
-        message: hasApiKey 
-            ? 'Judge Mittens is awake and ready to preside (via OpenRouter).' 
+        model: 'x-ai/grok-4.1-fast:free',
+        message: hasApiKey
+            ? 'Judge Mittens is awake and ready to preside (via OpenRouter).'
             : 'Judge Mittens requires an OpenRouter API key to function.',
         timestamp: new Date().toISOString(),
     });

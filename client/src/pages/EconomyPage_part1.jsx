@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Gift, Star, Plus, X, Check, Edit3, Trash2, Settings } from 'lucide-react';
 import useAppStore from '../store/useAppStore';
+import useAuthStore from '../store/useAuthStore';
 
 const DEFAULT_REWARDS = [
     { id: 1, title: "Foot Massage", subtitle: "10 minutes", cost: 50, icon: "🦵", color: "pink" },
@@ -28,7 +29,12 @@ const storeRewards = (userId, rewards) => {
 
 const EconomyPage = () => {
     const { currentUser, users, redeemCoupon } = useAppStore();
+    const { profile, partner: connectedPartner } = useAuthStore();
     const partner = users.find(u => u.id !== currentUser?.id);
+    
+    // Use real names from Supabase profiles
+    const myName = profile?.display_name || currentUser?.name || 'You';
+    const partnerName = connectedPartner?.display_name || partner?.name || 'Partner';
     
     const [showAddModal, setShowAddModal] = useState(false);
     const [editingReward, setEditingReward] = useState(null);
@@ -89,15 +95,15 @@ const EconomyPage = () => {
             </motion.div>
 
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="grid grid-cols-2 gap-3">
-                <div className={`glass-card p-4 ${currentUser?.name?.includes('User A') ? 'bg-gradient-to-br from-pink-50/80 to-white/60 ring-2 ring-pink-200' : 'bg-gradient-to-br from-violet-50/80 to-white/60 ring-2 ring-violet-200'}`}>
-                    <p className="text-xs font-bold uppercase tracking-wider text-neutral-500 mb-1">{currentUser?.name} (You)</p>
+                <div className="glass-card p-4 bg-gradient-to-br from-pink-50/80 to-white/60 ring-2 ring-pink-200">
+                    <p className="text-xs font-bold uppercase tracking-wider text-neutral-500 mb-1">{myName} (You)</p>
                     <div className="flex items-baseline gap-1">
                         <span className="text-3xl font-bold text-neutral-800">{currentUser?.kibbleBalance || 0}</span>
                         <span className="text-neutral-500 text-xs">🪙</span>
                     </div>
                 </div>
                 <div className="glass-card p-4 bg-gradient-to-br from-amber-50/80 to-white/60">
-                    <p className="text-xs font-bold uppercase tracking-wider text-neutral-500 mb-1">{partner?.name}</p>
+                    <p className="text-xs font-bold uppercase tracking-wider text-neutral-500 mb-1">{partnerName}</p>
                     <div className="flex items-baseline gap-1">
                         <span className="text-3xl font-bold text-neutral-800">{partner?.kibbleBalance || 0}</span>
                         <span className="text-neutral-500 text-xs">🪙</span>

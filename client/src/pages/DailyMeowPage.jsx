@@ -1,315 +1,260 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { HelpCircle, Sparkles, Heart, MessageCircle, RotateCcw, Check, Clock, RefreshCw, History, ChevronDown, ChevronUp, Smile, Cat } from 'lucide-react';
-import useAppStore from '../store/useAppStore';
+import { useNavigate } from 'react-router-dom';
+import { 
+    Sparkles, Heart, Check, Clock, History, 
+    Cat, Edit3, Send, Lock, AlertCircle, RefreshCw, BookOpen, ChevronRight
+} from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 import RequirePartner from '../components/RequirePartner';
+import api from '../services/api';
 
-// 20 mood/feeling options with emojis
+// 20 mood/feeling options with emojis - organized by positive/neutral/challenging
 const MOOD_OPTIONS = [
-    { id: 'happy', emoji: '😊', label: 'Happy' },
-    { id: 'loved', emoji: '🥰', label: 'Loved' },
-    { id: 'grateful', emoji: '🙏', label: 'Grateful' },
-    { id: 'excited', emoji: '🤩', label: 'Excited' },
-    { id: 'peaceful', emoji: '😌', label: 'Peaceful' },
-    { id: 'playful', emoji: '😜', label: 'Playful' },
-    { id: 'cozy', emoji: '🥹', label: 'Cozy' },
-    { id: 'romantic', emoji: '😍', label: 'Romantic' },
-    { id: 'silly', emoji: '🤪', label: 'Silly' },
-    { id: 'hopeful', emoji: '✨', label: 'Hopeful' },
-    { id: 'tired', emoji: '😴', label: 'Tired' },
-    { id: 'stressed', emoji: '😩', label: 'Stressed' },
-    { id: 'anxious', emoji: '😰', label: 'Anxious' },
-    { id: 'sad', emoji: '😢', label: 'Sad' },
-    { id: 'frustrated', emoji: '😤', label: 'Frustrated' },
-    { id: 'overwhelmed', emoji: '🤯', label: 'Overwhelmed' },
-    { id: 'lonely', emoji: '🥺', label: 'Lonely' },
-    { id: 'confused', emoji: '😵‍💫', label: 'Confused' },
-    { id: 'meh', emoji: '😐', label: 'Meh' },
-    { id: 'hangry', emoji: '🤤', label: 'Hangry' },
+    // Positive moods
+    { id: 'happy', emoji: '😊', label: 'Happy', color: 'from-yellow-100 to-amber-100' },
+    { id: 'loved', emoji: '🥰', label: 'Loved', color: 'from-pink-100 to-rose-100' },
+    { id: 'grateful', emoji: '🙏', label: 'Grateful', color: 'from-amber-100 to-orange-100' },
+    { id: 'excited', emoji: '🤩', label: 'Excited', color: 'from-yellow-100 to-lime-100' },
+    { id: 'peaceful', emoji: '😌', label: 'Peaceful', color: 'from-cyan-100 to-teal-100' },
+    { id: 'playful', emoji: '😜', label: 'Playful', color: 'from-orange-100 to-amber-100' },
+    { id: 'cozy', emoji: '🥹', label: 'Cozy', color: 'from-amber-100 to-yellow-100' },
+    { id: 'romantic', emoji: '😍', label: 'Romantic', color: 'from-rose-100 to-pink-100' },
+    { id: 'silly', emoji: '🤪', label: 'Silly', color: 'from-lime-100 to-green-100' },
+    { id: 'hopeful', emoji: '✨', label: 'Hopeful', color: 'from-violet-100 to-purple-100' },
+    // Neutral/Challenging moods
+    { id: 'tired', emoji: '😴', label: 'Tired', color: 'from-slate-100 to-gray-100' },
+    { id: 'stressed', emoji: '😩', label: 'Stressed', color: 'from-orange-100 to-red-100' },
+    { id: 'anxious', emoji: '😰', label: 'Anxious', color: 'from-blue-100 to-indigo-100' },
+    { id: 'sad', emoji: '😢', label: 'Sad', color: 'from-blue-100 to-slate-100' },
+    { id: 'frustrated', emoji: '😤', label: 'Frustrated', color: 'from-red-100 to-orange-100' },
+    { id: 'overwhelmed', emoji: '🤯', label: 'Overwhelmed', color: 'from-purple-100 to-pink-100' },
+    { id: 'lonely', emoji: '🥺', label: 'Lonely', color: 'from-indigo-100 to-blue-100' },
+    { id: 'confused', emoji: '😵‍💫', label: 'Confused', color: 'from-violet-100 to-fuchsia-100' },
+    { id: 'meh', emoji: '😐', label: 'Meh', color: 'from-gray-100 to-slate-100' },
+    { id: 'hangry', emoji: '🤤', label: 'Hangry', color: 'from-orange-100 to-yellow-100' },
 ];
-
-// Daily questions pool
-const DAILY_QUESTIONS = [
-    { id: 1, question: "Who would survive longer in a zombie apocalypse? 🧟", emoji: "🧟" },
-    { id: 2, question: "Who is more likely to become famous? 🌟", emoji: "🌟" },
-    { id: 3, question: "Who is the better cook? 👨‍🍳", emoji: "👨‍🍳" },
-    { id: 4, question: "Who is more romantic? 💕", emoji: "💕" },
-    { id: 5, question: "Who would win in an argument? 🗣️", emoji: "🗣️" },
-    { id: 6, question: "Who is more likely to cry at a movie? 🎬", emoji: "🎬" },
-    { id: 7, question: "Who spends more money? 💸", emoji: "💸" },
-    { id: 8, question: "Who is the early bird? 🐦", emoji: "🐦" },
-    { id: 9, question: "Who takes longer to get ready? 💄", emoji: "💄" },
-    { id: 10, question: "Who is the better driver? 🚗", emoji: "🚗" },
-    { id: 11, question: "Who falls asleep first? 😴", emoji: "😴" },
-    { id: 12, question: "Who is more adventurous? 🏔️", emoji: "🏔️" },
-];
-
-// Get today's question based on date
-const getTodaysQuestion = () => {
-    const today = new Date();
-    const dayOfYear = Math.floor((today - new Date(today.getFullYear(), 0, 0)) / (1000 * 60 * 60 * 24));
-    const index = dayOfYear % DAILY_QUESTIONS.length;
-    return DAILY_QUESTIONS[index];
-};
-
-// Check if user already answered today
-const getStoredAnswer = (userId) => {
-    const key = `dailyMeow_${new Date().toDateString()}_${userId}`;
-    const stored = localStorage.getItem(key);
-    if (stored) {
-        try {
-            return JSON.parse(stored);
-        } catch {
-            // Legacy: plain text answer
-            return { answer: stored, mood: null };
-        }
-    }
-    return null;
-};
-
-const storeAnswer = (userId, answer, mood) => {
-    const key = `dailyMeow_${new Date().toDateString()}_${userId}`;
-    localStorage.setItem(key, JSON.stringify({ answer, mood }));
-};
-
-// Get stored mood for today
-const getStoredMood = (userId) => {
-    const stored = getStoredAnswer(userId);
-    return stored?.mood || null;
-};
-
-// Get history of past questions and answers
-const getAnswerHistory = () => {
-    const history = [];
-    const keys = Object.keys(localStorage).filter(k => k.startsWith('dailyMeow_') && !k.includes(new Date().toDateString()));
-    
-    // Group by date
-    const dateMap = {};
-    keys.forEach(key => {
-        const parts = key.split('_');
-        const dateStr = parts.slice(1, -1).join('_');
-        const userId = parts[parts.length - 1];
-        if (!dateMap[dateStr]) dateMap[dateStr] = {};
-        const stored = localStorage.getItem(key);
-        try {
-            dateMap[dateStr][userId] = JSON.parse(stored);
-        } catch {
-            // Legacy: plain text answer
-            dateMap[dateStr][userId] = { answer: stored, mood: null };
-        }
-    });
-    
-    // Convert to array and match with questions
-    Object.entries(dateMap).forEach(([dateStr, answers]) => {
-        const date = new Date(dateStr);
-        const dayOfYear = Math.floor((date - new Date(date.getFullYear(), 0, 0)) / (1000 * 60 * 60 * 24));
-        const question = DAILY_QUESTIONS[dayOfYear % DAILY_QUESTIONS.length];
-        history.push({ date: dateStr, question, answers });
-    });
-    
-    return history.sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 7);
-};
 
 const DailyMeowPage = () => {
-    const { currentUser, users } = useAppStore();
-    const { hasPartner } = useAuthStore();
-    const partner = users.find(u => u.id !== currentUser?.id);
+    const navigate = useNavigate();
+    const { hasPartner, user: authUser, profile, partner: connectedPartner } = useAuthStore();
     
-    const [revealed, setRevealed] = useState(false);
+    const myId = authUser?.id;
+    const partnerId = connectedPartner?.id;
+    const partnerDisplayName = connectedPartner?.display_name || 'Your partner';
+    
+    // Ref to prevent duplicate fetches
+    const hasFetched = useRef(false);
+    
+    // State
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [todaysQuestion, setTodaysQuestion] = useState(null);
     const [answer, setAnswer] = useState('');
     const [selectedMood, setSelectedMood] = useState(null);
-    const [submitted, setSubmitted] = useState(false);
-    const [partnerAnswer, setPartnerAnswer] = useState(null);
-    const [partnerMood, setPartnerMood] = useState(null);
-    const [showMoodPicker, setShowMoodPicker] = useState(false);
+    const [moodLocked, setMoodLocked] = useState(false); // Once mood is set, it's locked
+    const [isEditing, setIsEditing] = useState(false);
+    const [editingAnswer, setEditingAnswer] = useState('');
+    const [submitting, setSubmitting] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
-    const [showHistory, setShowHistory] = useState(false);
-    const [history, setHistory] = useState([]);
+    const [step, setStep] = useState('mood'); // 'mood' | 'answer' | 'done'
 
-    const todaysQuestion = getTodaysQuestion();
-
-    // Check if current user already answered
+    // Timeout for loading state to prevent infinite loading
     useEffect(() => {
-        if (currentUser?.id) {
-            const existingData = getStoredAnswer(currentUser.id);
-            if (existingData) {
-                setAnswer(existingData.answer || '');
-                setSelectedMood(existingData.mood || null);
-                setSubmitted(true);
+        const timeout = setTimeout(() => {
+            if (loading && hasPartner && (!myId || !partnerId)) {
+                setLoading(false);
+                setError('Unable to load user data. Please try refreshing the page.');
+            }
+        }, 5000); // 5 second timeout
+        return () => clearTimeout(timeout);
+    }, [loading, hasPartner, myId, partnerId]);
+
+    // Fetch today's question
+    const fetchTodaysQuestion = useCallback(async () => {
+        if (!myId || !partnerId) {
+            return;
+        }
+        
+        try {
+            setLoading(true);
+            setError(null);
+            const response = await api.get('/daily-questions/today', {
+                params: { userId: myId, partnerId }
+            });
+            
+            // Validate the response has the expected structure
+            if (!response.data) {
+                setError('No data received from server');
+                return;
+            }
+            
+            // The API returns the question directly on response.data
+            const questionData = response.data;
+            
+            if (!questionData.assignment_id || !questionData.question) {
+                console.error('DailyMeow: Invalid response structure', questionData);
+                setError('Invalid question data received');
+                return;
+            }
+            
+            setTodaysQuestion(questionData);
+            
+            // Determine initial state based on existing answer
+            if (questionData.my_answer) {
+                setAnswer(questionData.my_answer.answer || '');
+                setSelectedMood(questionData.my_answer.mood || null);
+                setMoodLocked(!!questionData.my_answer.mood);
+                setStep('done');
             } else {
                 setAnswer('');
                 setSelectedMood(null);
-                setSubmitted(false);
+                setMoodLocked(false);
+                setStep('mood');
             }
+        } catch (err) {
+            console.error('Error fetching today\'s question:', err);
+            const errorMessage = err.response?.data?.error || err.message || 'Failed to load today\'s question';
+            setError(errorMessage);
+        } finally {
+            setLoading(false);
         }
-        // Check partner's answer and mood
-        if (partner?.id) {
-            const partnerData = getStoredAnswer(partner.id);
-            if (partnerData) {
-                setPartnerAnswer(partnerData.answer || partnerData);
-                setPartnerMood(partnerData.mood || null);
-            } else {
-                setPartnerAnswer(null);
-                setPartnerMood(null);
-            }
-        }
-        // Load history
-        setHistory(getAnswerHistory());
-    }, [currentUser?.id, partner?.id]);
+    }, [myId, partnerId]);
 
-    // Require partner to access Daily Meow
+    useEffect(() => {
+        // Only fetch once when we have both IDs
+        if (myId && partnerId && !hasFetched.current) {
+            hasFetched.current = true;
+            fetchTodaysQuestion();
+        } else if (hasPartner && (!myId || !partnerId)) {
+            // Partner is connected but IDs not yet loaded - keep loading
+            setLoading(true);
+        } else if (!hasPartner) {
+            // No partner - this is handled by RequirePartner component
+            setLoading(false);
+        }
+    }, [myId, partnerId, hasPartner]); // Removed fetchTodaysQuestion to prevent re-triggers
+
+    // Require partner
     if (!hasPartner) {
         return (
             <RequirePartner
                 feature="Daily Meow"
-                description="Daily Meow is a fun way to check in with your partner every day. Answer playful questions together and see if you're on the same page!"
+                description="Daily Meow is where you and your partner answer a question together every day. It's a beautiful way to stay connected and learn more about each other!"
             >
-                {/* Preview content */}
                 <div className="space-y-4">
-                    <div className="glass-card p-5 text-center">
-                        <Cat className="w-12 h-12 mx-auto text-amber-500 mb-3" />
-                        <h2 className="text-lg font-bold text-neutral-800">Daily Meow</h2>
-                        <p className="text-sm text-neutral-500">Answer fun questions with your partner</p>
+                    <div className="glass-card p-8 text-center">
+                        <Cat className="w-16 h-16 mx-auto text-amber-500 mb-4" />
+                        <h2 className="text-xl font-bold text-neutral-800">Daily Meow</h2>
+                        <p className="text-neutral-500 mt-2">One question. Two hearts. Every day.</p>
                     </div>
                 </div>
             </RequirePartner>
         );
     }
 
-    const handleSubmit = () => {
-        if (answer.trim() && currentUser?.id) {
-            storeAnswer(currentUser.id, answer.trim(), selectedMood);
-            setSubmitted(true);
+    const handleMoodSelect = (mood) => {
+        if (moodLocked) return; // Cannot change once locked
+        setSelectedMood(mood.id);
+    };
+
+    const confirmMood = () => {
+        if (!selectedMood) return;
+        setMoodLocked(true);
+        setStep('answer');
+    };
+
+    const handleSubmit = async () => {
+        if (!answer.trim() || !todaysQuestion?.assignment_id || !selectedMood) return;
+        
+        try {
+            setSubmitting(true);
+            await api.post('/daily-questions/answer', {
+                userId: myId,
+                assignmentId: todaysQuestion.assignment_id,
+                answer: answer.trim(),
+                mood: selectedMood
+            });
+            
             setShowSuccess(true);
             setTimeout(() => setShowSuccess(false), 2000);
             
-            // Check if partner also answered
-            if (partner?.id) {
-                const partnerData = getStoredAnswer(partner.id);
-                if (partnerData) {
-                    setPartnerAnswer(partnerData.answer || partnerData);
-                    setPartnerMood(partnerData.mood || null);
-                    setTimeout(() => setRevealed(true), 1500);
-                }
-            }
+            await fetchTodaysQuestion();
+        } catch (err) {
+            console.error('Error submitting answer:', err);
+            setError('Failed to submit answer');
+        } finally {
+            setSubmitting(false);
         }
     };
 
-    const handleReveal = () => {
-        if (partnerAnswer) {
-            setRevealed(true);
+    const handleEdit = async () => {
+        if (!editingAnswer.trim() || !todaysQuestion?.my_answer?.id) return;
+        
+        try {
+            setSubmitting(true);
+            // Note: mood is NOT included - it cannot be changed
+            await api.put(`/daily-questions/answer/${todaysQuestion.my_answer.id}`, {
+                answer: editingAnswer.trim()
+            });
+            
+            setIsEditing(false);
+            setShowSuccess(true);
+            setTimeout(() => setShowSuccess(false), 2000);
+            
+            await fetchTodaysQuestion();
+        } catch (err) {
+            console.error('Error editing answer:', err);
+            setError('Failed to update answer');
+        } finally {
+            setSubmitting(false);
         }
     };
 
-    const handleNewQuestion = () => {
-        // Clear today's answers for testing (in production, this would wait for midnight)
-        if (currentUser?.id) {
-            localStorage.removeItem(`dailyMeow_${new Date().toDateString()}_${currentUser.id}`);
-        }
-        if (partner?.id) {
-            localStorage.removeItem(`dailyMeow_${new Date().toDateString()}_${partner.id}`);
-        }
-        setAnswer('');
-        setSelectedMood(null);
-        setSubmitted(false);
-        setPartnerAnswer(null);
-        setPartnerMood(null);
-        setRevealed(false);
+    const startEditing = () => {
+        setEditingAnswer(answer);
+        setIsEditing(true);
     };
 
     const getMoodData = (moodId) => MOOD_OPTIONS.find(m => m.id === moodId);
+    
+    const formatDate = (dateStr) => {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('en-US', { 
+            weekday: 'long',
+            month: 'long', 
+            day: 'numeric'
+        });
+    };
+    
+    const formatEditedDate = (dateStr) => {
+        if (!dateStr) return null;
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('en-US', { 
+            month: 'short', 
+            day: 'numeric'
+        });
+    };
 
-    const bothAnswered = submitted && partnerAnswer;
+    const hasAnswered = !!todaysQuestion?.my_answer;
+    const partnerHasAnswered = !!todaysQuestion?.partner_answer;
+    const bothAnswered = hasAnswered && partnerHasAnswered;
+    const isBacklog = todaysQuestion?.is_backlog;
+    const currentMoodData = getMoodData(selectedMood);
 
     return (
-        <div className="space-y-5">
+        <div className="min-h-[calc(100dvh-120px)] flex flex-col">
             {/* Success Toast */}
             <AnimatePresence>
                 {showSuccess && (
                     <motion.div
-                        initial={{ opacity: 0, y: -20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-court-gold text-white px-4 py-2 rounded-xl shadow-lg flex items-center gap-2"
+                        initial={{ opacity: 0, y: -20, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                        className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-5 py-3 rounded-2xl shadow-lg flex items-center gap-2"
                     >
-                        <Check className="w-4 h-4" />
-                        Answer submitted!
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* Mood Picker Modal */}
-            <AnimatePresence>
-                {showMoodPicker && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="fixed inset-0 bg-black/30 backdrop-blur-md z-[60] flex items-center justify-center p-6"
-                        onClick={() => setShowMoodPicker(false)}
-                    >
-                        <motion.div
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.9, opacity: 0 }}
-                            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                            onClick={(e) => e.stopPropagation()}
-                            className="bg-gradient-to-br from-white to-court-cream/40 rounded-[2rem] w-full max-w-sm p-6 shadow-2xl border border-white/50"
-                        >
-                            <div className="text-center mb-5">
-                                <motion.div
-                                    initial={{ scale: 0 }}
-                                    animate={{ scale: 1 }}
-                                    transition={{ type: 'spring', delay: 0.1 }}
-                                    className="w-14 h-14 bg-gradient-to-br from-amber-100 to-orange-100 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-soft"
-                                >
-                                    <span className="text-2xl">💭</span>
-                                </motion.div>
-                                <h3 className="font-bold text-neutral-800 text-lg">How are you feeling?</h3>
-                                <p className="text-neutral-400 text-sm mt-1">Tap to select your mood</p>
-                            </div>
-                            
-                            <div className="grid grid-cols-4 gap-3">
-                                {MOOD_OPTIONS.map((mood, index) => (
-                                    <motion.button
-                                        key={mood.id}
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: index * 0.02 }}
-                                        whileHover={{ scale: 1.05 }}
-                                        whileTap={{ scale: 0.95 }}
-                                        onClick={() => {
-                                            setSelectedMood(mood.id);
-                                            setShowMoodPicker(false);
-                                        }}
-                                        className={`aspect-square rounded-2xl flex flex-col items-center justify-center p-2 transition-all shadow-sm ${
-                                            selectedMood === mood.id
-                                                ? 'bg-gradient-to-br from-court-gold/30 to-amber-100 ring-2 ring-court-gold shadow-md'
-                                                : 'bg-white/80 hover:bg-white hover:shadow-md'
-                                        }`}
-                                    >
-                                        <span className="text-2xl mb-0.5">{mood.emoji}</span>
-                                        <span className="text-[10px] text-neutral-500 font-medium leading-tight">{mood.label}</span>
-                                    </motion.button>
-                                ))}
-                            </div>
-                            
-                            {selectedMood && (
-                                <motion.button
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    onClick={() => {
-                                        setSelectedMood(null);
-                                        setShowMoodPicker(false);
-                                    }}
-                                    className="w-full py-2.5 mt-4 text-neutral-400 text-sm font-medium hover:text-neutral-600 transition-colors"
-                                >
-                                    Clear selection
-                                </motion.button>
-                            )}
-                        </motion.div>
+                        <Check className="w-5 h-5" />
+                        <span className="font-medium">Answer saved!</span>
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -318,314 +263,402 @@ const DailyMeowPage = () => {
             <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="text-center space-y-2"
+                className="text-center pt-2 pb-4"
             >
                 <motion.div
-                    animate={{ y: [0, -6, 0] }}
+                    animate={{ y: [0, -5, 0] }}
                     transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
                     className="inline-block"
                 >
-                    <div className="w-14 h-14 bg-gradient-to-br from-violet-100 to-pink-100 rounded-2xl flex items-center justify-center shadow-soft mx-auto">
+                    <div className="w-14 h-14 bg-gradient-to-br from-amber-100 via-orange-100 to-pink-100 rounded-2xl flex items-center justify-center shadow-lg mx-auto">
                         <span className="text-2xl">🐱</span>
                     </div>
                 </motion.div>
-                <h1 className="text-2xl font-bold text-gradient font-display">Daily Meow</h1>
-                <p className="text-neutral-500 text-sm flex items-center justify-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                    One question to rule them all
+                <h1 className="text-xl font-bold bg-gradient-to-r from-amber-600 to-pink-600 bg-clip-text text-transparent mt-2">
+                    Daily Meow
+                </h1>
+                <p className="text-neutral-400 text-xs flex items-center justify-center gap-1">
+                    <Sparkles className="w-3 h-3 text-amber-400" />
+                    One question, two hearts
                 </p>
             </motion.div>
 
-            {/* Card Container */}
-            <div className="perspective-1000">
-                <motion.div
-                    animate={{ rotateY: revealed ? 180 : 0 }}
-                    transition={{ duration: 0.5, ease: "easeInOut" }}
-                    style={{ transformStyle: 'preserve-3d' }}
-                    className="relative min-h-[380px]"
-                >
-                    {/* Front - Question Card */}
-                    <div 
-                        className="absolute inset-0 backface-hidden"
-                        style={{ backfaceVisibility: 'hidden' }}
-                    >
-                        <div className="glass-card p-5 h-full flex flex-col">
-                            {/* Question Icon */}
-                            <div className="flex justify-center mb-4">
-                                <motion.div
-                                    whileTap={{ scale: 0.95 }}
-                                    className="w-16 h-16 bg-gradient-to-br from-court-cream to-court-tan rounded-2xl flex items-center justify-center shadow-soft"
-                                >
-                                    <span className="text-3xl">{todaysQuestion.emoji}</span>
-                                </motion.div>
-                            </div>
-                            
-                            {/* Badge */}
-                            <div className="flex justify-center mb-3">
-                                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-court-cream text-court-brown rounded-full text-xs font-bold">
-                                    <Heart className="w-3 h-3" />
-                                    Today's Question
-                                </span>
-                            </div>
-
-                            {/* Question */}
-                            <h2 className="text-lg font-bold text-neutral-800 text-center mb-4 leading-snug">
-                                {todaysQuestion.question}
-                            </h2>
-                            
-                            {/* Input Area */}
-                            <div className="flex-1 flex flex-col">
-                                {/* Mood Selector */}
-                                <div className="flex items-center justify-between mb-3">
-                                    <div className="flex items-center gap-1.5 text-xs text-neutral-400">
-                                        <MessageCircle className="w-3.5 h-3.5" />
-                                        <span>
-                                            {submitted 
-                                                ? "You've answered!" 
-                                                : "Your partner can't see yet!"}
-                                        </span>
-                                    </div>
-                                    <motion.button
-                                        whileTap={{ scale: 0.95 }}
-                                        onClick={() => setShowMoodPicker(true)}
-                                        disabled={submitted}
-                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
-                                            selectedMood 
-                                                ? 'bg-court-cream text-court-brown' 
-                                                : 'bg-neutral-100 text-neutral-500'
-                                        } ${submitted ? 'opacity-60' : ''}`}
-                                    >
-                                        {selectedMood ? (
-                                            <>
-                                                <span className="text-base">{getMoodData(selectedMood)?.emoji}</span>
-                                                {getMoodData(selectedMood)?.label}
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Smile className="w-3.5 h-3.5" />
-                                                My mood
-                                            </>
-                                        )}
-                                    </motion.button>
-                                </div>
-                                <textarea
-                                    value={answer}
-                                    onChange={(e) => setAnswer(e.target.value)}
-                                    placeholder="Type your honest answer..."
-                                    disabled={submitted}
-                                    className="flex-1 w-full bg-white/60 rounded-2xl p-4 text-neutral-700 border border-neutral-100 focus:border-pink-200 focus:ring-2 focus:ring-pink-100 outline-none resize-none text-sm shadow-inner-soft placeholder:text-neutral-400 disabled:opacity-60"
-                                />
-                            </div>
-                            
-                            {/* Action Buttons */}
-                            {!submitted ? (
-                                <button
-                                    onClick={handleSubmit}
-                                    disabled={!answer.trim()}
-                                    className="mt-4 w-full py-3.5 text-white font-bold rounded-2xl shadow-md disabled:opacity-40 disabled:saturate-50 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-                                    style={{ background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' }}
-                                >
-                                    <Check size={16} />
-                                    Submit Answer
-                                </button>
-                            ) : bothAnswered ? (
-                                <button
-                                    onClick={handleReveal}
-                                    className="mt-4 w-full py-3.5 bg-gradient-to-r from-court-gold to-court-maroon text-white font-bold rounded-2xl shadow-soft active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-                                >
-                                    <Sparkles size={16} />
-                                    Reveal Both Answers! 🎉
-                                </button>
-                            ) : (
-                                <div className="mt-4 w-full py-3.5 bg-neutral-100 text-neutral-500 font-bold rounded-2xl flex items-center justify-center gap-2">
-                                    <Clock size={16} />
-                                    Waiting for {partner?.name || 'Partner'}...
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Back - Results Card */}
-                    <div
-                        className="absolute inset-0"
-                        style={{ 
-                            backfaceVisibility: 'hidden', 
-                            transform: 'rotateY(180deg)',
-                        }}
-                    >
-                        <div className="glass-card p-5 h-full flex flex-col">
-                            {/* Header */}
-                            <div className="text-center mb-4">
-                                <span className="text-2xl">💕</span>
-                                <h3 className="text-lg font-bold text-neutral-800 mt-1">The Answers Are In!</h3>
-                                <p className="text-xs text-neutral-500 mt-1">{todaysQuestion.question}</p>
-                            </div>
-                            
-                            {/* Answers */}
-                            <div className="flex-1 space-y-3">
-                                {/* Your answer */}
-                                <motion.div 
-                                    initial={{ opacity: 0, x: -20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: 0.2 }}
-                                    className="bg-gradient-to-br from-court-cream to-white p-4 rounded-2xl border border-court-tan/50"
-                                >
-                                    <div className="flex items-center justify-between mb-1.5">
-                                        <p className="text-xs text-court-gold font-bold flex items-center gap-1">
-                                            <span>👤</span> {currentUser?.name || 'You'} said:
-                                        </p>
-                                        {selectedMood && (
-                                            <span className="flex items-center gap-1 px-2 py-0.5 bg-white rounded-full text-xs">
-                                                <span>{getMoodData(selectedMood)?.emoji}</span>
-                                                <span className="text-neutral-500">{getMoodData(selectedMood)?.label}</span>
-                                            </span>
-                                        )}
-                                    </div>
-                                    <p className="text-neutral-700 text-sm">{answer}</p>
-                                </motion.div>
-                                
-                                {/* Partner's answer */}
-                                <motion.div 
-                                    initial={{ opacity: 0, x: 20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: 0.4 }}
-                                    className="bg-gradient-to-br from-court-tan/30 to-white p-4 rounded-2xl border border-court-tan/50"
-                                >
-                                    <div className="flex items-center justify-between mb-1.5">
-                                        <p className="text-xs text-court-maroon font-bold flex items-center gap-1">
-                                            <span>💑</span> {partner?.name || 'Partner'} said:
-                                        </p>
-                                        {partnerMood && (
-                                            <span className="flex items-center gap-1 px-2 py-0.5 bg-white rounded-full text-xs">
-                                                <span>{getMoodData(partnerMood)?.emoji}</span>
-                                                <span className="text-neutral-500">{getMoodData(partnerMood)?.label}</span>
-                                            </span>
-                                        )}
-                                    </div>
-                                    <p className="text-neutral-700 text-sm">
-                                        {partnerAnswer || "No answer yet"}
-                                    </p>
-                                </motion.div>
-
-                                {/* Match indicator */}
-                                {partnerAnswer && (
-                                    <motion.div 
-                                        initial={{ scale: 0 }}
-                                        animate={{ scale: 1 }}
-                                        transition={{ delay: 0.6, type: "spring" }}
-                                        className="flex justify-center"
-                                    >
-                                        <span className="px-4 py-2 bg-gradient-to-r from-court-cream to-court-tan rounded-full text-sm font-bold text-court-brown flex items-center gap-2">
-                                            ✨ You both answered! +5 Kibbles
-                                        </span>
-                                    </motion.div>
-                                )}
-                            </div>
-                            
-                            {/* Action buttons */}
-                            <div className="mt-4 space-y-2">
-                                <button
-                                    onClick={() => setRevealed(false)}
-                                    className="w-full py-3 bg-white/80 text-court-brown font-bold rounded-2xl border border-court-tan active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-                                >
-                                    <RotateCcw size={16} />
-                                    Flip Back
-                                </button>
-                                <button
-                                    onClick={handleNewQuestion}
-                                    className="w-full py-3 bg-neutral-100 text-neutral-600 font-bold rounded-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-2 text-sm"
-                                >
-                                    <RefreshCw size={14} />
-                                    Reset for Testing
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </motion.div>
-            </div>
-
-            {/* Footer tip */}
-            <p className="text-center text-xs text-neutral-400 pt-2">
-                🐾 New question every day at midnight! 🐾
-            </p>
-
-            {/* Past Questions History */}
-            <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.3 }}
-                className="glass-card overflow-hidden"
-            >
-                <button
-                    onClick={() => setShowHistory(!showHistory)}
-                    className="w-full p-4 flex items-center justify-between text-left"
-                >
-                    <div className="flex items-center gap-2">
-                        <History className="w-4 h-4 text-violet-400" />
-                        <span className="font-bold text-neutral-700 text-sm">Past Questions</span>
-                        {history.length > 0 && (
-                            <span className="px-2 py-0.5 bg-violet-100 text-violet-600 rounded-full text-xs font-bold">
-                                {history.length}
-                            </span>
-                        )}
-                    </div>
-                    {showHistory ? <ChevronUp className="w-4 h-4 text-neutral-400" /> : <ChevronDown className="w-4 h-4 text-neutral-400" />}
-                </button>
-                
-                <AnimatePresence>
-                    {showHistory && (
+            {/* Loading State */}
+            {loading && (
+                <div className="flex-1 flex items-center justify-center">
+                    <div className="text-center">
                         <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            className="overflow-hidden"
+                            animate={{ rotate: 360 }}
+                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                            className="w-10 h-10 border-3 border-amber-400 border-t-transparent rounded-full mx-auto"
+                        />
+                        <p className="text-neutral-500 mt-4">Loading today's question...</p>
+                    </div>
+                </div>
+            )}
+
+            {/* Error State */}
+            {error && !loading && (
+                <div className="flex-1 flex items-center justify-center p-4">
+                    <div className="glass-card p-6 text-center max-w-sm">
+                        <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-3" />
+                        <p className="text-neutral-600 font-medium mb-4">{error}</p>
+                        <button
+                            onClick={fetchTodaysQuestion}
+                            className="px-5 py-2.5 bg-neutral-100 text-neutral-600 rounded-xl font-medium flex items-center gap-2 mx-auto"
                         >
-                            {history.length === 0 ? (
-                                <div className="px-4 pb-4 text-center">
-                                    <span className="text-2xl mb-2 block">📜</span>
-                                    <p className="text-neutral-500 text-sm">No past questions yet!</p>
-                                    <p className="text-neutral-400 text-xs">Your history will appear here after a few days.</p>
-                                </div>
-                            ) : (
-                                <div className="px-4 pb-4 space-y-3">
-                                    {history.map((item, index) => (
-                                        <motion.div
-                                            key={item.date}
-                                            initial={{ opacity: 0, x: -10 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            transition={{ delay: index * 0.05 }}
-                                            className="bg-white/60 rounded-xl p-3 border border-neutral-100"
-                                        >
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <span className="text-lg">{item.question.emoji}</span>
-                                                <div className="flex-1">
-                                                    <p className="text-xs text-neutral-400">{item.date}</p>
-                                                    <p className="text-sm font-medium text-neutral-700">{item.question.question}</p>
-                                                </div>
-                                            </div>
-                                            <div className="grid grid-cols-2 gap-2 mt-2">
-                                                {Object.entries(item.answers).map(([userId, ans]) => {
-                                                    const user = users.find(u => u.id === userId);
-                                                    const mood = item.moods?.[userId];
-                                                    return (
-                                                        <div key={userId} className="bg-neutral-50 rounded-lg p-2">
-                                                            <div className="flex items-center gap-1 mb-0.5">
-                                                                <p className="text-xs text-neutral-400 font-medium">{user?.name || 'User'}</p>
-                                                                {mood && <span className="text-sm">{mood}</span>}
-                                                            </div>
-                                                            <p className="text-xs text-neutral-600 line-clamp-2">{ans}</p>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        </motion.div>
-                                    ))}
-                                </div>
-                            )}
+                            <RefreshCw className="w-4 h-4" />
+                            Try Again
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* No Question Available State */}
+            {!loading && !error && !todaysQuestion && (
+                <div className="flex-1 flex items-center justify-center p-4">
+                    <div className="glass-card p-6 text-center max-w-sm">
+                        <Cat className="w-16 h-16 text-amber-400 mx-auto mb-3" />
+                        <h3 className="text-lg font-bold text-neutral-800 mb-2">No Questions Available</h3>
+                        <p className="text-neutral-500 text-sm mb-4">
+                            We couldn't load today's question. This might be a temporary issue.
+                        </p>
+                        <button
+                            onClick={fetchTodaysQuestion}
+                            className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-medium flex items-center gap-2 mx-auto"
+                        >
+                            <RefreshCw className="w-4 h-4" />
+                            Refresh
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Main Content */}
+            {!loading && !error && todaysQuestion && (
+                <div className="flex-1 flex flex-col px-1">
+                    {/* Backlog Badge */}
+                    {isBacklog && (
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="flex items-center justify-center gap-2 px-4 py-2 bg-amber-50 border border-amber-200 rounded-2xl mb-4"
+                        >
+                            <Clock className="w-4 h-4 text-amber-600" />
+                            <span className="text-sm font-medium text-amber-700">
+                                Catch-up from {formatDate(todaysQuestion.assigned_date)}
+                            </span>
                         </motion.div>
                     )}
-                </AnimatePresence>
-            </motion.div>
+
+                    {/* Question Card */}
+                    <motion.div 
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className={`glass-card overflow-hidden flex-1 flex flex-col ${
+                            currentMoodData ? `bg-gradient-to-br ${currentMoodData.color}` : ''
+                        }`}
+                    >
+                        {/* Question Header */}
+                        <div className="p-5 text-center border-b border-white/50">
+                            <motion.span 
+                                className="text-5xl block mb-3"
+                                animate={{ scale: [1, 1.1, 1] }}
+                                transition={{ duration: 2, repeat: Infinity }}
+                            >
+                                {todaysQuestion.emoji || '💭'}
+                            </motion.span>
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/70 rounded-full text-xs font-bold text-amber-700 shadow-sm mb-3">
+                                <Heart className="w-3 h-3" />
+                                {isBacklog ? 'Catch-up Question' : "Today's Question"}
+                            </span>
+                            <h2 className="text-xl font-bold text-neutral-800 leading-relaxed">
+                                {todaysQuestion.question}
+                            </h2>
+                        </div>
+
+                        {/* Step Content */}
+                        <div className="flex-1 p-5 flex flex-col">
+                            <AnimatePresence mode="wait">
+                                {/* STEP 1: Mood Selection (MANDATORY) */}
+                                {step === 'mood' && !hasAnswered && (
+                                    <motion.div
+                                        key="mood-step"
+                                        initial={{ opacity: 0, x: 20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        exit={{ opacity: 0, x: -20 }}
+                                        className="flex-1 flex flex-col"
+                                    >
+                                        <div className="text-center mb-4">
+                                            <h3 className="text-lg font-bold text-neutral-800">How are you feeling today?</h3>
+                                            <p className="text-sm text-neutral-500 mt-1">
+                                                Choose your mood before answering
+                                            </p>
+                                            <p className="text-xs text-amber-600 mt-2 flex items-center justify-center gap-1">
+                                                <Lock className="w-3 h-3" />
+                                                Your mood cannot be changed after selection
+                                            </p>
+                                        </div>
+                                        
+                                        <div className="grid grid-cols-4 gap-2 flex-1 content-start">
+                                            {MOOD_OPTIONS.map((mood) => (
+                                                <motion.button
+                                                    key={mood.id}
+                                                    whileTap={{ scale: 0.95 }}
+                                                    onClick={() => handleMoodSelect(mood)}
+                                                    className={`aspect-square rounded-2xl flex flex-col items-center justify-center p-1 transition-all ${
+                                                        selectedMood === mood.id
+                                                            ? `bg-gradient-to-br ${mood.color} ring-2 ring-amber-400 shadow-md`
+                                                            : 'bg-white/60 hover:bg-white/80'
+                                                    }`}
+                                                >
+                                                    <span className="text-2xl">{mood.emoji}</span>
+                                                    <span className="text-[10px] text-neutral-600 font-medium mt-0.5">{mood.label}</span>
+                                                </motion.button>
+                                            ))}
+                                        </div>
+
+                                        <motion.button
+                                            whileTap={{ scale: 0.98 }}
+                                            onClick={confirmMood}
+                                            disabled={!selectedMood}
+                                            className="mt-4 w-full py-4 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold rounded-2xl shadow-lg disabled:opacity-40 disabled:saturate-50 flex items-center justify-center gap-2"
+                                        >
+                                            {selectedMood ? (
+                                                <>
+                                                    <span className="text-xl">{getMoodData(selectedMood)?.emoji}</span>
+                                                    I'm feeling {getMoodData(selectedMood)?.label}
+                                                </>
+                                            ) : (
+                                                'Select your mood to continue'
+                                            )}
+                                        </motion.button>
+                                    </motion.div>
+                                )}
+
+                                {/* STEP 2: Answer Input */}
+                                {step === 'answer' && !hasAnswered && (
+                                    <motion.div
+                                        key="answer-step"
+                                        initial={{ opacity: 0, x: 20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        exit={{ opacity: 0, x: -20 }}
+                                        className="flex-1 flex flex-col"
+                                    >
+                                        {/* Locked Mood Display */}
+                                        <div className="flex items-center justify-center gap-2 mb-4 px-4 py-2 bg-white/60 rounded-xl">
+                                            <span className="text-xl">{currentMoodData?.emoji}</span>
+                                            <span className="text-sm font-medium text-neutral-700">
+                                                Feeling {currentMoodData?.label}
+                                            </span>
+                                            <Lock className="w-3 h-3 text-neutral-400 ml-1" />
+                                        </div>
+
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="text-xs text-neutral-500 flex items-center gap-1">
+                                                <Lock className="w-3 h-3" />
+                                                Private until both answer
+                                            </span>
+                                        </div>
+
+                                        <textarea
+                                            value={answer}
+                                            onChange={(e) => setAnswer(e.target.value)}
+                                            placeholder="Share your honest thoughts..."
+                                            className="flex-1 min-h-[150px] bg-white/70 rounded-2xl p-4 text-neutral-700 border border-white focus:border-amber-300 focus:ring-2 focus:ring-amber-100 outline-none resize-none text-base placeholder:text-neutral-400"
+                                            autoFocus
+                                        />
+
+                                        <motion.button
+                                            whileTap={{ scale: 0.98 }}
+                                            onClick={handleSubmit}
+                                            disabled={!answer.trim() || submitting}
+                                            className="mt-4 w-full py-4 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold rounded-2xl shadow-lg disabled:opacity-40 disabled:saturate-50 flex items-center justify-center gap-2"
+                                        >
+                                            {submitting ? (
+                                                <motion.div
+                                                    animate={{ rotate: 360 }}
+                                                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                                    className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
+                                                />
+                                            ) : (
+                                                <>
+                                                    <Send className="w-5 h-5" />
+                                                    Submit Answer
+                                                </>
+                                            )}
+                                        </motion.button>
+                                    </motion.div>
+                                )}
+
+                                {/* STEP 3: Done - View Answers */}
+                                {(step === 'done' || hasAnswered) && !isEditing && (
+                                    <motion.div
+                                        key="done-step"
+                                        initial={{ opacity: 0, x: 20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        exit={{ opacity: 0, x: -20 }}
+                                        className="flex-1 flex flex-col gap-4"
+                                    >
+                                        {/* Status Indicators */}
+                                        <div className="flex items-center justify-between px-1">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-3 h-3 rounded-full bg-emerald-400 shadow-sm" />
+                                                <span className="text-sm text-neutral-600">You answered</span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-sm text-neutral-600">
+                                                    {partnerHasAnswered ? `${partnerDisplayName} answered` : `Waiting...`}
+                                                </span>
+                                                <div className={`w-3 h-3 rounded-full ${partnerHasAnswered ? 'bg-emerald-400' : 'bg-neutral-300 animate-pulse'}`} />
+                                            </div>
+                                        </div>
+
+                                        {/* My Answer */}
+                                        <div className="bg-white/70 rounded-2xl p-4 border border-white shadow-sm">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm font-bold text-amber-700">Your answer</span>
+                                                    {selectedMood && (
+                                                        <span className="text-lg">{getMoodData(selectedMood)?.emoji}</span>
+                                                    )}
+                                                </div>
+                                                <button
+                                                    onClick={startEditing}
+                                                    className="flex items-center gap-1 text-xs text-amber-600 font-medium hover:text-amber-700 px-2 py-1 rounded-lg hover:bg-amber-50"
+                                                >
+                                                    <Edit3 className="w-3 h-3" />
+                                                    Edit
+                                                </button>
+                                            </div>
+                                            <p className="text-neutral-700 leading-relaxed">{answer}</p>
+                                            {todaysQuestion.my_answer?.edited_at && (
+                                                <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
+                                                    <Edit3 className="w-3 h-3" />
+                                                    Edited {formatEditedDate(todaysQuestion.my_answer.edited_at)}
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        {/* Partner's Answer or Waiting */}
+                                        {bothAnswered ? (
+                                            <motion.div 
+                                                initial={{ opacity: 0, y: 10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                className="bg-white/70 rounded-2xl p-4 border border-pink-200 shadow-sm"
+                                            >
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <span className="text-sm font-bold text-pink-700">{partnerDisplayName}'s answer</span>
+                                                    {todaysQuestion.partner_answer?.mood && (
+                                                        <span className="text-lg">{getMoodData(todaysQuestion.partner_answer.mood)?.emoji}</span>
+                                                    )}
+                                                </div>
+                                                <p className="text-neutral-700 leading-relaxed">
+                                                    {todaysQuestion.partner_answer?.answer}
+                                                </p>
+                                            </motion.div>
+                                        ) : (
+                                            <div className="bg-white/50 rounded-2xl p-6 border border-dashed border-neutral-300 text-center">
+                                                <Lock className="w-6 h-6 text-neutral-400 mx-auto mb-2" />
+                                                <p className="text-sm text-neutral-500">
+                                                    {partnerDisplayName}'s answer will appear once they respond
+                                                </p>
+                                            </div>
+                                        )}
+
+                                        {/* Completion Celebration */}
+                                        {bothAnswered && (
+                                            <motion.div
+                                                initial={{ scale: 0, opacity: 0 }}
+                                                animate={{ scale: 1, opacity: 1 }}
+                                                transition={{ type: "spring", delay: 0.2 }}
+                                                className="flex justify-center"
+                                            >
+                                                <span className="px-5 py-2.5 bg-gradient-to-r from-emerald-100 to-teal-100 rounded-full text-sm font-bold text-emerald-700 flex items-center gap-2 shadow-sm">
+                                                    ✨ You both answered! +5 Kibbles each
+                                                </span>
+                                            </motion.div>
+                                        )}
+                                    </motion.div>
+                                )}
+
+                                {/* Editing Mode */}
+                                {isEditing && (
+                                    <motion.div
+                                        key="edit-step"
+                                        initial={{ opacity: 0, x: 20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        exit={{ opacity: 0, x: -20 }}
+                                        className="flex-1 flex flex-col"
+                                    >
+                                        {/* Locked Mood Display - Cannot edit */}
+                                        <div className="flex items-center justify-center gap-2 mb-4 px-4 py-2 bg-white/60 rounded-xl">
+                                            <span className="text-xl">{getMoodData(todaysQuestion.my_answer?.mood)?.emoji}</span>
+                                            <span className="text-sm font-medium text-neutral-700">
+                                                Feeling {getMoodData(todaysQuestion.my_answer?.mood)?.label}
+                                            </span>
+                                            <Lock className="w-3 h-3 text-neutral-400 ml-1" />
+                                        </div>
+
+                                        <textarea
+                                            value={editingAnswer}
+                                            onChange={(e) => setEditingAnswer(e.target.value)}
+                                            className="flex-1 min-h-[150px] bg-white/70 rounded-2xl p-4 text-neutral-700 border border-amber-300 focus:ring-2 focus:ring-amber-100 outline-none resize-none text-base"
+                                            autoFocus
+                                        />
+
+                                        <div className="flex gap-3 mt-4">
+                                            <button
+                                                onClick={() => setIsEditing(false)}
+                                                className="flex-1 py-3.5 bg-white/70 text-neutral-600 font-bold rounded-2xl border border-neutral-200"
+                                            >
+                                                Cancel
+                                            </button>
+                                            <motion.button
+                                                whileTap={{ scale: 0.98 }}
+                                                onClick={handleEdit}
+                                                disabled={!editingAnswer.trim() || submitting}
+                                                className="flex-1 py-3.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold rounded-2xl shadow-lg disabled:opacity-40 flex items-center justify-center gap-2"
+                                            >
+                                                {submitting ? (
+                                                    <motion.div
+                                                        animate={{ rotate: 360 }}
+                                                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                                        className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
+                                                    />
+                                                ) : (
+                                                    <>
+                                                        <Check className="w-5 h-5" />
+                                                        Save Changes
+                                                    </>
+                                                )}
+                                            </motion.button>
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </div>
+                    </motion.div>
+
+                    {/* Footer Actions */}
+                    <div className="py-4 space-y-3">
+                        {/* View History Button */}
+                        <motion.button
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => navigate('/daily-meow/history')}
+                            className="w-full py-3.5 bg-white/80 text-neutral-700 font-bold rounded-2xl shadow-sm border border-neutral-200 flex items-center justify-center gap-2"
+                        >
+                            <BookOpen className="w-5 h-5 text-court-gold" />
+                            Question Archives
+                            <ChevronRight className="w-4 h-4 text-neutral-400" />
+                        </motion.button>
+
+                        <p className="text-center text-xs text-neutral-400">
+                            🐾 New question every day at midnight 🐾
+                        </p>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

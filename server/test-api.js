@@ -4,10 +4,10 @@ const { createChatCompletion, isOpenRouterConfigured } = require("./src/lib/open
 async function test() {
     console.log("OpenRouter configured:", isOpenRouterConfigured());
     console.log("API Key exists:", !!process.env.OPENROUTER_API_KEY);
-    
+
     try {
         const response = await createChatCompletion({
-            model: "moonshotai/kimi-k2-thinking",
+            model: "x-ai/grok-4.1-fast:free",
             messages: [
                 { role: "user", content: "Say hello in one word" }
             ],

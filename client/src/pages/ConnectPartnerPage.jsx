@@ -15,7 +15,9 @@ const ConnectPartnerPage = () => {
         sendPartnerRequestByCode,
         sentRequest,
         cancelSentRequest,
-        refreshPendingRequests
+        refreshPendingRequests,
+        refreshProfile,
+        hasPartner
     } = useAuthStore();
 
     const [copied, setCopied] = useState(false);
@@ -25,14 +27,24 @@ const ConnectPartnerPage = () => {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
 
-    // Check for pending requests periodically
+    // Redirect to home if partner is connected
     useEffect(() => {
-        const interval = setInterval(() => {
+        if (hasPartner) {
+            console.log('[ConnectPartner] Partner connected, redirecting to home');
+            navigate('/');
+        }
+    }, [hasPartner, navigate]);
+
+    // Check for pending requests and profile updates periodically
+    useEffect(() => {
+        const interval = setInterval(async () => {
             refreshPendingRequests();
-        }, 10000); // Check every 10 seconds
+            // Also refresh profile to check if partner connected us
+            await refreshProfile();
+        }, 5000); // Check every 5 seconds
 
         return () => clearInterval(interval);
-    }, [refreshPendingRequests]);
+    }, [refreshPendingRequests, refreshProfile]);
 
     const handleCopyCode = async () => {
         if (profile?.partner_code) {

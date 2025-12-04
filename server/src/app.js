@@ -1,21 +1,40 @@
+/**
+ * Kitty Court Server
+ * 
+ * Express API server that uses Supabase for all data storage.
+ * No more Prisma/SQLite - everything goes to Supabase!
+ */
+
 const path = require('path');
 const express = require('express');
 const cors = require('cors');
-const { PrismaClient } = require('@prisma/client');
 
 // Load environment variables from server/.env explicitly
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
+// Import Supabase client
+const { getSupabase, isSupabaseConfigured } = require('./lib/supabase');
+
 // Import routes
 const judgeRoutes = require('./routes/judge');
 const memoryRoutes = require('./routes/memory');
+const dailyQuestionsRoutes = require('./routes/dailyQuestions');
 
 const app = express();
-const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
+
+// Helper to check Supabase and get client
+const requireSupabase = () => {
+    if (!isSupabaseConfigured()) {
+        throw new Error('Supabase is not configured. Set SUPABASE_URL and SUPABASE_SERVICE_KEY.');
+    }
+    return getSupabase();
+};
+
+// --- Routes ---
 
 // --- Judge Engine Routes ---
 app.use('/api/judge', judgeRoutes);
@@ -23,108 +42,112 @@ app.use('/api/judge', judgeRoutes);
 // --- Memory System Routes ---
 app.use('/api/memory', memoryRoutes);
 
-// --- Routes ---
-
-// Get all users (or create default ones if empty)
-app.get('/api/users', async (req, res) => {
-    try {
-        let users = await prisma.user.findMany();
-        if (users.length === 0) {
-            // Seed default users
-            await prisma.user.createMany({
-                data: [
-                    { name: 'User A', avatar: 'cat_a.png', kibbleBalance: 50 },
-                    { name: 'User B', avatar: 'cat_b.png', kibbleBalance: 50 },
-                ],
-            });
-            users = await prisma.user.findMany();
-        }
-        res.json(users);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Get User by ID
-app.get('/api/users/:id', async (req, res) => {
-    try {
-        const user = await prisma.user.findUnique({
-            where: { id: req.params.id },
-            include: { transactions: true },
-        });
-        res.json(user);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
+// --- Daily Questions Routes ---
+app.use('/api/daily-questions', dailyQuestionsRoutes);
 
 // --- Court Session Management ---
 
-// Create a new court session (User A serves User B)
+// Create a new court session (User serves their partner)
 app.post('/api/court-sessions', async (req, res) => {
     try {
-        const { createdBy } = req.body;
+        const { createdBy, partnerId } = req.body;
+        
+        if (!createdBy) {
+            return res.status(400).json({ error: 'createdBy (user ID) is required' });
+        }
+        
+        const supabase = requireSupabase();
         
         // Expire old sessions
-        await prisma.courtSession.updateMany({
-            where: {
-                status: 'WAITING',
-                expiresAt: { lt: new Date() }
-            },
-            data: { status: 'CLOSED' }
-        });
+        await supabase
+            .from('court_sessions')
+            .update({ status: 'CLOSED' })
+            .eq('status', 'WAITING')
+            .lt('expires_at', new Date().toISOString());
         
-        // Check for existing active session
-        const existingSession = await prisma.courtSession.findFirst({
-            where: { 
-                status: { in: ['WAITING', 'IN_SESSION'] }
-            }
-        });
+        // Check for existing active session for this couple
+        let query = supabase
+            .from('court_sessions')
+            .select('*')
+            .in('status', ['WAITING', 'IN_SESSION']);
         
-        if (existingSession) {
+        if (partnerId) {
+            query = query.or(`created_by.eq.${createdBy},partner_id.eq.${createdBy},created_by.eq.${partnerId},partner_id.eq.${partnerId}`);
+        } else {
+            query = query.or(`created_by.eq.${createdBy},partner_id.eq.${createdBy}`);
+        }
+        
+        const { data: existingSessions } = await query;
+        
+        if (existingSessions && existingSessions.length > 0) {
             return res.status(400).json({ 
-                error: 'A court session is already active',
-                session: existingSession
+                error: 'A court session is already active for this couple',
+                session: existingSessions[0]
             });
         }
         
         // Create new session that expires in 24 hours
-        const session = await prisma.courtSession.create({
-            data: {
-                createdBy,
-                userAJoined: createdBy === 'userA',
-                userBJoined: createdBy === 'userB',
-                expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-            }
-        });
+        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+        
+        const { data: session, error } = await supabase
+            .from('court_sessions')
+            .insert({
+                created_by: createdBy,
+                partner_id: partnerId || null,
+                creator_joined: true,
+                partner_joined: false,
+                user_a_joined: true,
+                user_b_joined: false,
+                status: 'WAITING',
+                expires_at: expiresAt
+            })
+            .select()
+            .single();
+        
+        if (error) throw error;
         
         res.json(session);
     } catch (error) {
+        console.error('Error creating court session:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
-// Get active court session
+// Get active court session for the current user/couple
 app.get('/api/court-sessions/active', async (req, res) => {
     try {
+        const { userId, partnerId } = req.query;
+        
+        const supabase = requireSupabase();
+        
         // Expire old sessions first
-        await prisma.courtSession.updateMany({
-            where: {
-                status: 'WAITING',
-                expiresAt: { lt: new Date() }
-            },
-            data: { status: 'CLOSED' }
-        });
+        await supabase
+            .from('court_sessions')
+            .update({ status: 'CLOSED' })
+            .eq('status', 'WAITING')
+            .lt('expires_at', new Date().toISOString());
         
-        const session = await prisma.courtSession.findFirst({
-            where: { 
-                status: { in: ['WAITING', 'IN_SESSION'] }
-            },
-            orderBy: { createdAt: 'desc' }
-        });
+        // Build query to find sessions relevant to this couple
+        let query = supabase
+            .from('court_sessions')
+            .select('*')
+            .in('status', ['WAITING', 'IN_SESSION'])
+            .order('created_at', { ascending: false })
+            .limit(1);
         
-        res.json(session);
+        if (userId && partnerId) {
+            query = query.or(`and(created_by.eq.${userId},partner_id.eq.${partnerId}),and(created_by.eq.${partnerId},partner_id.eq.${userId}),and(created_by.eq.${userId},partner_id.is.null),and(created_by.eq.${partnerId},partner_id.is.null)`);
+        } else if (userId) {
+            query = query.or(`created_by.eq.${userId},partner_id.eq.${userId}`);
+        }
+        
+        const { data: sessions, error } = await query;
+        
+        if (error) throw error;
+        
+        res.json(sessions?.[0] || null);
     } catch (error) {
+        console.error('Error getting active session:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -132,12 +155,18 @@ app.get('/api/court-sessions/active', async (req, res) => {
 // Join a court session
 app.post('/api/court-sessions/:id/join', async (req, res) => {
     try {
-        const { userId } = req.body; // 'userA' or 'userB'
-        const session = await prisma.courtSession.findUnique({
-            where: { id: req.params.id }
-        });
+        const { userId } = req.body;
+        const sessionId = req.params.id;
         
-        if (!session) {
+        const supabase = requireSupabase();
+        
+        const { data: session, error: fetchError } = await supabase
+            .from('court_sessions')
+            .select('*')
+            .eq('id', sessionId)
+            .single();
+        
+        if (fetchError || !session) {
             return res.status(404).json({ error: 'Session not found' });
         }
         
@@ -145,26 +174,119 @@ app.post('/api/court-sessions/:id/join', async (req, res) => {
             return res.status(400).json({ error: 'Session has expired' });
         }
         
-        const updateData = userId === 'userA' 
-            ? { userAJoined: true }
-            : { userBJoined: true };
+        // Determine if this user is the creator or the partner
+        const isCreator = session.created_by === userId;
+        const isPartner = session.partner_id === userId || (!session.partner_id && session.created_by !== userId);
         
-        const updatedSession = await prisma.courtSession.update({
-            where: { id: req.params.id },
-            data: updateData
-        });
+        if (!isCreator && !isPartner) {
+            return res.status(403).json({ error: 'You are not part of this court session' });
+        }
+        
+        // Update the appropriate joined field
+        const updateData = isCreator 
+            ? { creator_joined: true, user_a_joined: true }
+            : { partner_joined: true, user_b_joined: true, partner_id: userId };
+        
+        const { data: updatedSession, error: updateError } = await supabase
+            .from('court_sessions')
+            .update(updateData)
+            .eq('id', sessionId)
+            .select()
+            .single();
+        
+        if (updateError) throw updateError;
         
         // If both have joined, start the session
-        if (updatedSession.userAJoined && updatedSession.userBJoined) {
-            const startedSession = await prisma.courtSession.update({
-                where: { id: req.params.id },
-                data: { status: 'IN_SESSION' }
-            });
+        if (updatedSession.creator_joined && updatedSession.partner_joined) {
+            const { data: startedSession, error: startError } = await supabase
+                .from('court_sessions')
+                .update({ status: 'IN_SESSION' })
+                .eq('id', sessionId)
+                .select()
+                .single();
+            
+            if (startError) throw startError;
             return res.json(startedSession);
         }
         
         res.json(updatedSession);
     } catch (error) {
+        console.error('Error joining session:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Request to settle out of court
+app.post('/api/court-sessions/:id/settle', async (req, res) => {
+    try {
+        const { userId } = req.body;
+        const sessionId = req.params.id;
+        
+        if (!userId) {
+            return res.status(400).json({ error: 'userId is required' });
+        }
+        
+        const supabase = requireSupabase();
+        
+        // Get current session
+        const { data: session, error: getError } = await supabase
+            .from('court_sessions')
+            .select('*')
+            .eq('id', sessionId)
+            .single();
+        
+        if (getError) throw getError;
+        
+        if (!session) {
+            return res.status(404).json({ error: 'Session not found' });
+        }
+        
+        if (session.status !== 'IN_SESSION') {
+            return res.status(400).json({ error: 'Can only settle during an active session' });
+        }
+        
+        // Determine if user is creator or partner
+        const isCreator = session.created_by === userId;
+        const isPartner = session.partner_id === userId;
+        
+        if (!isCreator && !isPartner) {
+            return res.status(403).json({ error: 'User is not part of this session' });
+        }
+        
+        // Track settle requests (we'll use a simple approach with session metadata)
+        const currentSettleRequests = session.settle_requests || { creator: false, partner: false };
+        
+        if (isCreator) {
+            currentSettleRequests.creator = true;
+        } else {
+            currentSettleRequests.partner = true;
+        }
+        
+        // Check if both have requested to settle
+        const bothSettled = currentSettleRequests.creator && currentSettleRequests.partner;
+        
+        // Update session with settle request
+        const { data: updatedSession, error: updateError } = await supabase
+            .from('court_sessions')
+            .update({ 
+                settle_requests: currentSettleRequests,
+                status: bothSettled ? 'SETTLED' : session.status
+            })
+            .eq('id', sessionId)
+            .select()
+            .single();
+        
+        if (updateError) throw updateError;
+        
+        res.json({
+            ...updatedSession,
+            settled: bothSettled,
+            message: bothSettled 
+                ? 'Both parties agreed to settle. Case dismissed.' 
+                : 'Settlement requested. Waiting for partner to agree.'
+        });
+    } catch (error) {
+        console.error('Error settling session:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -173,17 +295,22 @@ app.post('/api/court-sessions/:id/join', async (req, res) => {
 app.post('/api/court-sessions/:id/close', async (req, res) => {
     try {
         const { caseId } = req.body;
+        const sessionId = req.params.id;
         
-        const session = await prisma.courtSession.update({
-            where: { id: req.params.id },
-            data: { 
-                status: 'CLOSED',
-                caseId 
-            }
-        });
+        const supabase = requireSupabase();
+        
+        const { data: session, error } = await supabase
+            .from('court_sessions')
+            .update({ status: 'CLOSED', case_id: caseId })
+            .eq('id', sessionId)
+            .select()
+            .single();
+        
+        if (error) throw error;
         
         res.json(session);
     } catch (error) {
+        console.error('Error closing session:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -194,91 +321,110 @@ app.post('/api/court-sessions/:id/close', async (req, res) => {
 app.post('/api/cases', async (req, res) => {
     try {
         const { 
-            id, 
+            id,
+            userAId,
+            userBId,
             userAInput, 
             userAFeelings, 
             userBInput, 
             userBFeelings, 
             status, 
-            verdict, // For backwards compatibility, also accept single verdict
-            // Smart Summary Metadata
+            verdict,
             caseTitle,
             severityLevel,
             primaryHissTag,
             shortResolution
         } = req.body;
 
+        const supabase = requireSupabase();
+
         if (id) {
             // Update existing case
-            const updated = await prisma.case.update({
-                where: { id },
-                data: { 
-                    userAInput, 
-                    userAFeelings, 
-                    userBInput, 
-                    userBFeelings, 
+            const { data: updated, error: updateError } = await supabase
+                .from('cases')
+                .update({ 
+                    user_a_input: userAInput, 
+                    user_a_feelings: userAFeelings, 
+                    user_b_input: userBInput, 
+                    user_b_feelings: userBFeelings, 
                     status,
-                    caseTitle,
-                    severityLevel,
-                    primaryHissTag,
-                    shortResolution
-                },
-                include: { verdicts: true }
-            });
+                    case_title: caseTitle,
+                    severity_level: severityLevel,
+                    primary_hiss_tag: primaryHissTag,
+                    short_resolution: shortResolution
+                })
+                .eq('id', id)
+                .select()
+                .single();
+            
+            if (updateError) throw updateError;
             
             // If verdict provided, create a new verdict record
             if (verdict) {
-                const existingVerdicts = await prisma.verdict.count({ where: { caseId: id } });
-                await prisma.verdict.create({
-                    data: {
-                        caseId: id,
-                        version: existingVerdicts + 1,
-                        content: typeof verdict === 'string' ? verdict : JSON.stringify(verdict),
-                    }
+                const { count } = await supabase
+                    .from('verdicts')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('case_id', id);
+                
+                await supabase.from('verdicts').insert({
+                    case_id: id,
+                    version: (count || 0) + 1,
+                    content: typeof verdict === 'string' ? JSON.parse(verdict) : verdict
                 });
             }
             
-            const result = await prisma.case.findUnique({
-                where: { id },
-                include: { verdicts: { orderBy: { version: 'desc' } } }
-            });
+            // Fetch with verdicts
+            const { data: result } = await supabase
+                .from('cases')
+                .select(`*, verdicts(*)`)
+                .eq('id', id)
+                .order('version', { foreignTable: 'verdicts', ascending: false })
+                .single();
             
-            return res.json(result);
+            return res.json(transformCase(result));
         } else {
             // Create new case
-            const newCase = await prisma.case.create({
-                data: {
-                    userAInput: userAInput || '',
-                    userAFeelings: userAFeelings || '',
-                    userBInput: userBInput || '',
-                    userBFeelings: userBFeelings || '',
+            const { data: newCase, error: insertError } = await supabase
+                .from('cases')
+                .insert({
+                    user_a_id: userAId || null,
+                    user_b_id: userBId || null,
+                    user_a_input: userAInput || '',
+                    user_a_feelings: userAFeelings || '',
+                    user_b_input: userBInput || '',
+                    user_b_feelings: userBFeelings || '',
                     status: status || 'PENDING',
-                    caseTitle: caseTitle || null,
-                    severityLevel: severityLevel || null,
-                    primaryHissTag: primaryHissTag || null,
-                    shortResolution: shortResolution || null
-                }
-            });
+                    case_title: caseTitle || null,
+                    severity_level: severityLevel || null,
+                    primary_hiss_tag: primaryHissTag || null,
+                    short_resolution: shortResolution || null
+                })
+                .select()
+                .single();
+            
+            if (insertError) throw insertError;
             
             // If verdict provided, create the first verdict record
             if (verdict) {
-                await prisma.verdict.create({
-                    data: {
-                        caseId: newCase.id,
-                        version: 1,
-                        content: typeof verdict === 'string' ? verdict : JSON.stringify(verdict),
-                    }
+                await supabase.from('verdicts').insert({
+                    case_id: newCase.id,
+                    version: 1,
+                    content: typeof verdict === 'string' ? JSON.parse(verdict) : verdict
                 });
             }
             
-            const result = await prisma.case.findUnique({
-                where: { id: newCase.id },
-                include: { verdicts: { orderBy: { version: 'desc' } } }
-            });
+            // Fetch with verdicts
+            const { data: result } = await supabase
+                .from('cases')
+                .select(`*, verdicts(*)`)
+                .eq('id', newCase.id)
+                .order('version', { foreignTable: 'verdicts', ascending: false })
+                .single();
             
-            return res.json(result);
+            return res.json(transformCase(result));
         }
     } catch (error) {
+        console.error('Error saving case:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -287,59 +433,75 @@ app.post('/api/cases', async (req, res) => {
 app.post('/api/cases/:id/addendum', async (req, res) => {
     try {
         const { addendumBy, addendumText, verdict, caseTitle, severityLevel, primaryHissTag, shortResolution } = req.body;
+        const caseId = req.params.id;
         
-        const existingVerdicts = await prisma.verdict.count({ where: { caseId: req.params.id } });
+        const supabase = requireSupabase();
+        
+        const { count } = await supabase
+            .from('verdicts')
+            .select('*', { count: 'exact', head: true })
+            .eq('case_id', caseId);
         
         // Create new verdict with addendum info
-        const newVerdict = await prisma.verdict.create({
-            data: {
-                caseId: req.params.id,
-                version: existingVerdicts + 1,
-                content: typeof verdict === 'string' ? verdict : JSON.stringify(verdict),
-                addendumBy,
-                addendumText,
-            }
+        await supabase.from('verdicts').insert({
+            case_id: caseId,
+            version: (count || 0) + 1,
+            content: typeof verdict === 'string' ? JSON.parse(verdict) : verdict,
+            addendum_by: addendumBy,
+            addendum_text: addendumText
         });
         
         // Update case metadata with latest
-        await prisma.case.update({
-            where: { id: req.params.id },
-            data: {
-                caseTitle: caseTitle || undefined,
-                severityLevel: severityLevel || undefined,
-                primaryHissTag: primaryHissTag || undefined,
-                shortResolution: shortResolution || undefined,
-            }
-        });
+        if (caseTitle || severityLevel || primaryHissTag || shortResolution) {
+            await supabase.from('cases').update({
+                case_title: caseTitle || undefined,
+                severity_level: severityLevel || undefined,
+                primary_hiss_tag: primaryHissTag || undefined,
+                short_resolution: shortResolution || undefined
+            }).eq('id', caseId);
+        }
         
-        const result = await prisma.case.findUnique({
-            where: { id: req.params.id },
-            include: { verdicts: { orderBy: { version: 'desc' } } }
-        });
+        // Fetch updated case
+        const { data: result } = await supabase
+            .from('cases')
+            .select(`*, verdicts(*)`)
+            .eq('id', caseId)
+            .order('version', { foreignTable: 'verdicts', ascending: false })
+            .single();
         
-        res.json(result);
+        res.json(transformCase(result));
     } catch (error) {
+        console.error('Error adding addendum:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
-// Get Case History (with all verdicts)
+// Get Case History
 app.get('/api/cases', async (req, res) => {
     try {
-        const cases = await prisma.case.findMany({
-            orderBy: { createdAt: 'desc' },
-            include: { verdicts: { orderBy: { version: 'desc' } } }
-        });
+        const { userAId, userBId } = req.query;
         
-        // Transform to include latest verdict as 'verdict' for backwards compatibility
-        const transformed = cases.map(c => ({
-            ...c,
-            verdict: c.verdicts[0]?.content || null,
-            allVerdicts: c.verdicts
-        }));
+        const supabase = requireSupabase();
         
-        res.json(transformed);
+        let query = supabase
+            .from('cases')
+            .select(`*, verdicts(*)`)
+            .order('created_at', { ascending: false });
+        
+        if (userAId && userBId) {
+            query = query.or(`and(user_a_id.eq.${userAId},user_b_id.eq.${userBId}),and(user_a_id.eq.${userBId},user_b_id.eq.${userAId})`);
+        } else if (userAId || userBId) {
+            const userId = userAId || userBId;
+            query = query.or(`user_a_id.eq.${userId},user_b_id.eq.${userId}`);
+        }
+        
+        const { data: cases, error } = await query;
+        
+        if (error) throw error;
+        
+        res.json(cases.map(transformCase));
     } catch (error) {
+        console.error('Error fetching cases:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -347,179 +509,352 @@ app.get('/api/cases', async (req, res) => {
 // Get single case with all verdicts
 app.get('/api/cases/:id', async (req, res) => {
     try {
-        const caseItem = await prisma.case.findUnique({
-            where: { id: req.params.id },
-            include: { verdicts: { orderBy: { version: 'desc' } } }
-        });
+        const supabase = requireSupabase();
         
-        if (!caseItem) {
+        const { data: caseItem, error } = await supabase
+            .from('cases')
+            .select(`*, verdicts(*)`)
+            .eq('id', req.params.id)
+            .order('version', { foreignTable: 'verdicts', ascending: false })
+            .single();
+        
+        if (error || !caseItem) {
             return res.status(404).json({ error: 'Case not found' });
         }
         
-        res.json({
-            ...caseItem,
-            verdict: caseItem.verdicts[0]?.content || null,
-            allVerdicts: caseItem.verdicts
-        });
+        res.json(transformCase(caseItem));
     } catch (error) {
+        console.error('Error fetching case:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
-// Transaction (Earn/Spend)
+// Helper to transform case data for client
+function transformCase(c) {
+    if (!c) return null;
+    
+    const verdicts = c.verdicts || [];
+    verdicts.sort((a, b) => b.version - a.version);
+    
+    return {
+        id: c.id,
+        userAId: c.user_a_id,
+        userBId: c.user_b_id,
+        userAInput: c.user_a_input,
+        userAFeelings: c.user_a_feelings,
+        userBInput: c.user_b_input,
+        userBFeelings: c.user_b_feelings,
+        status: c.status,
+        caseTitle: c.case_title,
+        severityLevel: c.severity_level,
+        primaryHissTag: c.primary_hiss_tag,
+        shortResolution: c.short_resolution,
+        createdAt: c.created_at,
+        updatedAt: c.updated_at,
+        verdict: verdicts[0]?.content ? JSON.stringify(verdicts[0].content) : null,
+        allVerdicts: verdicts.map(v => ({
+            id: v.id,
+            version: v.version,
+            content: v.content ? JSON.stringify(v.content) : null,
+            addendumBy: v.addendum_by,
+            addendumText: v.addendum_text,
+            createdAt: v.created_at
+        }))
+    };
+}
+
+// --- Economy/Transactions ---
+
 app.post('/api/economy/transaction', async (req, res) => {
     try {
         const { userId, amount, type, description } = req.body;
 
-        // 1. Create Transaction
-        const transaction = await prisma.transaction.create({
-            data: { userId, amount, type, description },
-        });
+        if (!userId) {
+            return res.status(400).json({ error: 'userId is required' });
+        }
 
-        // 2. Update User Balance
-        const user = await prisma.user.findUnique({ where: { id: userId } });
-        const newBalance = user.kibbleBalance + amount; // amount can be negative for SPEND
+        const supabase = requireSupabase();
 
-        await prisma.user.update({
-            where: { id: userId },
-            data: { kibbleBalance: newBalance },
-        });
+        // Create Transaction
+        const { data: transaction, error: insertError } = await supabase
+            .from('transactions')
+            .insert({ user_id: userId, amount, type, description })
+            .select()
+            .single();
+        
+        if (insertError) throw insertError;
+
+        // Calculate new balance from all transactions
+        const { data: allTransactions } = await supabase
+            .from('transactions')
+            .select('amount')
+            .eq('user_id', userId);
+        
+        const newBalance = (allTransactions || []).reduce((sum, t) => sum + t.amount, 0);
 
         res.json({ transaction, newBalance });
     } catch (error) {
+        console.error('Error creating transaction:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
-// ==================== APPRECIATION ENDPOINTS ====================
+// Get user's kibble balance from transactions
+app.get('/api/economy/balance/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        
+        const supabase = requireSupabase();
+        
+        const { data: transactions } = await supabase
+            .from('transactions')
+            .select('amount')
+            .eq('user_id', userId);
+        
+        const balance = (transactions || []).reduce((sum, t) => sum + t.amount, 0);
+        
+        res.json({ userId, balance });
+    } catch (error) {
+        console.error('Error fetching balance:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
 
-// Create appreciation - logs what a user appreciates about their partner
+// --- Appreciations ---
+
 app.post('/api/appreciations', async (req, res) => {
     try {
-        const { fromUserId, toUserId, message, kibbleAmount = 10 } = req.body;
+        const { fromUserId, toUserId, message, category, kibbleAmount = 10 } = req.body;
 
-        // Create the appreciation log entry
-        const appreciation = await prisma.appreciation.create({
-            data: {
-                fromUserId,
-                toUserId,
+        if (!fromUserId || !toUserId) {
+            return res.status(400).json({ error: 'fromUserId and toUserId are required' });
+        }
+
+        const supabase = requireSupabase();
+
+        // Create the appreciation
+        const { data: appreciation, error: insertError } = await supabase
+            .from('appreciations')
+            .insert({
+                from_user_id: fromUserId,
+                to_user_id: toUserId,
                 message,
-                kibbleAmount
-            }
-        });
+                category,
+                kibble_amount: kibbleAmount
+            })
+            .select()
+            .single();
+        
+        if (insertError) throw insertError;
 
-        // Also award kibble via transaction
-        const transaction = await prisma.transaction.create({
-            data: {
-                userId: toUserId,
+        // Award kibble via transaction
+        const { data: transaction } = await supabase
+            .from('transactions')
+            .insert({
+                user_id: toUserId,
                 amount: kibbleAmount,
                 type: 'EARN',
-                description: `Appreciated: ${message}`
-            }
-        });
+                description: `Appreciated: ${message.substring(0, 50)}${message.length > 50 ? '...' : ''}`
+            })
+            .select()
+            .single();
 
-        // Update user balance
-        const user = await prisma.user.findUnique({ where: { id: toUserId } });
-        const newBalance = user.kibbleBalance + kibbleAmount;
-        await prisma.user.update({
-            where: { id: toUserId },
-            data: { kibbleBalance: newBalance }
-        });
+        // Calculate new balance
+        const { data: allTransactions } = await supabase
+            .from('transactions')
+            .select('amount')
+            .eq('user_id', toUserId);
+        
+        const newBalance = (allTransactions || []).reduce((sum, t) => sum + t.amount, 0);
 
-        res.json({ appreciation, transaction, newBalance });
+        res.json({ 
+            appreciation: {
+                ...appreciation,
+                fromUserId: appreciation.from_user_id,
+                toUserId: appreciation.to_user_id,
+                kibbleAmount: appreciation.kibble_amount
+            }, 
+            transaction, 
+            newBalance 
+        });
     } catch (error) {
+        console.error('Error creating appreciation:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
-// Get appreciations FOR a user (things their partner appreciated about them)
+// Get appreciations FOR a user
 app.get('/api/appreciations/:userId', async (req, res) => {
     try {
         const { userId } = req.params;
         
-        const appreciations = await prisma.appreciation.findMany({
-            where: { toUserId: userId },
-            orderBy: { createdAt: 'desc' }
-        });
+        const supabase = requireSupabase();
+        
+        const { data: appreciations, error } = await supabase
+            .from('appreciations')
+            .select('*')
+            .eq('to_user_id', userId)
+            .order('created_at', { ascending: false });
+        
+        if (error) throw error;
 
-        res.json(appreciations);
+        // Transform to camelCase
+        const transformed = appreciations.map(a => ({
+            id: a.id,
+            fromUserId: a.from_user_id,
+            toUserId: a.to_user_id,
+            message: a.message,
+            category: a.category,
+            kibbleAmount: a.kibble_amount,
+            createdAt: a.created_at
+        }));
+
+        res.json(transformed);
     } catch (error) {
+        console.error('Error fetching appreciations:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
-// ==================== CALENDAR ENDPOINTS ====================
+// --- Calendar Events ---
 
-// Get all calendar events
 app.get('/api/calendar/events', async (req, res) => {
     try {
-        const events = await prisma.calendarEvent.findMany({
-            orderBy: { date: 'asc' }
-        });
-        res.json(events);
+        const { userId, partnerId } = req.query;
+        
+        const supabase = requireSupabase();
+        
+        let query = supabase
+            .from('calendar_events')
+            .select('*')
+            .order('event_date', { ascending: true });
+        
+        // Filter by couple if IDs provided
+        if (userId && partnerId) {
+            query = query.or(`created_by.eq.${userId},created_by.eq.${partnerId}`);
+        } else if (userId) {
+            query = query.eq('created_by', userId);
+        }
+        
+        const { data: events, error } = await query;
+        
+        if (error) throw error;
+        
+        // Transform to camelCase
+        const transformed = events.map(e => ({
+            id: e.id,
+            createdBy: e.created_by,
+            title: e.title,
+            emoji: e.emoji,
+            date: e.event_date,
+            type: e.event_type,
+            notes: e.notes,
+            isRecurring: e.is_recurring,
+            recurrencePattern: e.recurrence_pattern,
+            createdAt: e.created_at
+        }));
+        
+        res.json(transformed);
     } catch (error) {
+        console.error('Error fetching events:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
-// Create a new calendar event
 app.post('/api/calendar/events', async (req, res) => {
     try {
         const { title, date, type, emoji, isRecurring, createdBy, notes } = req.body;
         
-        const event = await prisma.calendarEvent.create({
-            data: {
-                title,
-                date: new Date(date),
-                type: type || 'custom',
-                emoji: emoji || '📅',
-                isRecurring: isRecurring || false,
-                createdBy,
-                notes
-            }
-        });
+        const supabase = requireSupabase();
         
-        res.json(event);
+        const { data: event, error } = await supabase
+            .from('calendar_events')
+            .insert({
+                title,
+                event_date: date,
+                event_type: type || 'custom',
+                emoji: emoji || '📅',
+                is_recurring: isRecurring || false,
+                created_by: createdBy,
+                notes
+            })
+            .select()
+            .single();
+        
+        if (error) throw error;
+        
+        res.json({
+            id: event.id,
+            createdBy: event.created_by,
+            title: event.title,
+            emoji: event.emoji,
+            date: event.event_date,
+            type: event.event_type,
+            notes: event.notes,
+            isRecurring: event.is_recurring,
+            createdAt: event.created_at
+        });
     } catch (error) {
+        console.error('Error creating event:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
-// Update a calendar event
 app.put('/api/calendar/events/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const { title, date, type, emoji, isRecurring, notes } = req.body;
         
-        const event = await prisma.calendarEvent.update({
-            where: { id },
-            data: {
-                title,
-                date: date ? new Date(date) : undefined,
-                type,
-                emoji,
-                isRecurring,
-                notes
-            }
-        });
+        const supabase = requireSupabase();
         
-        res.json(event);
+        const { data: event, error } = await supabase
+            .from('calendar_events')
+            .update({
+                title,
+                event_date: date,
+                event_type: type,
+                emoji,
+                is_recurring: isRecurring,
+                notes
+            })
+            .eq('id', id)
+            .select()
+            .single();
+        
+        if (error) throw error;
+        
+        res.json({
+            id: event.id,
+            createdBy: event.created_by,
+            title: event.title,
+            emoji: event.emoji,
+            date: event.event_date,
+            type: event.event_type,
+            notes: event.notes,
+            isRecurring: event.is_recurring
+        });
     } catch (error) {
+        console.error('Error updating event:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
-// Delete a calendar event
 app.delete('/api/calendar/events/:id', async (req, res) => {
     try {
         const { id } = req.params;
         
-        await prisma.calendarEvent.delete({
-            where: { id }
-        });
+        const supabase = requireSupabase();
+        
+        const { error } = await supabase
+            .from('calendar_events')
+            .delete()
+            .eq('id', id);
+        
+        if (error) throw error;
         
         res.json({ success: true });
     } catch (error) {
+        console.error('Error deleting event:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -635,6 +970,16 @@ function getFallbackSuggestions(eventType, partnerName) {
     return suggestions[eventType] || suggestions.custom;
 }
 
+// Health check
+app.get('/api/health', (req, res) => {
+    res.json({ 
+        status: 'ok', 
+        supabase: isSupabaseConfigured(),
+        timestamp: new Date().toISOString()
+    });
+});
+
 app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Supabase configured: ${isSupabaseConfigured()}`);
 });

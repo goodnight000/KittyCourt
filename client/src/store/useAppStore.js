@@ -19,9 +19,33 @@ const useAppStore = create(
             fetchUsers: async () => {
                 set({ isLoading: true });
                 try {
-                    const response = await api.get('/users');
-                    const users = response.data;
-                    const currentUser = get().currentUser || users[0];
+                    // Get real auth user and partner from auth store
+                    const { user: authUser, profile: authProfile, partner: connectedPartner } = await import('./useAuthStore').then(m => m.default.getState());
+
+                    if (!authUser || !authProfile) {
+                        set({ users: [], currentUser: null, isLoading: false });
+                        return;
+                    }
+
+                    // Build users array from auth store data (not from legacy /users endpoint)
+                    const users = [authProfile];
+                    if (connectedPartner) {
+                        users.push(connectedPartner);
+                    }
+
+                    // Fetch kibble balances for each user
+                    for (const user of users) {
+                        try {
+                            const balanceRes = await api.get(`/economy/balance/${user.id}`);
+                            user.kibbleBalance = balanceRes.data.balance || 0;
+                        } catch (e) {
+                            user.kibbleBalance = 0;
+                        }
+                    }
+
+                    // Current user is the auth profile with balance
+                    const currentUser = users.find(u => u.id === authUser.id) || authProfile;
+
                     set({ users, currentUser, isLoading: false });
                 } catch (error) {
                     set({ error: error.message, isLoading: false });
@@ -29,14 +53,23 @@ const useAppStore = create(
             },
 
             switchUser: (userId) => {
-                const user = get().users.find((u) => u.id === userId);
-                if (user) set({ currentUser: user });
+                console.warn('User switching is disabled in production mode.');
+                // No-op
             },
 
             // --- Court Session Actions ---
             checkActiveSession: async () => {
                 try {
-                    const response = await api.get('/court-sessions/active');
+                    // Get auth user and partner from auth store for proper filtering
+                    const { user: authUser, partner: connectedPartner } = await import('./useAuthStore').then(m => m.default.getState());
+                    
+                    // Build query params for couple-scoped session lookup
+                    const params = new URLSearchParams();
+                    if (authUser?.id) params.set('userId', authUser.id);
+                    if (connectedPartner?.id) params.set('partnerId', connectedPartner.id);
+                    
+                    const url = params.toString() ? `/court-sessions/active?${params.toString()}` : '/court-sessions/active';
+                    const response = await api.get(url);
                     set({ courtSession: response.data });
                     return response.data;
                 } catch (error) {
@@ -46,11 +79,22 @@ const useAppStore = create(
             },
 
             servePartner: async () => {
-                const { currentUser } = get();
-                const userId = currentUser?.name?.includes('User A') ? 'userA' : 'userB';
+                // Get auth user and partner from auth store
+                const { user: authUser, partner: connectedPartner } = await import('./useAuthStore').then(m => m.default.getState());
                 
+                if (!authUser?.id) {
+                    throw new Error('You must be logged in to serve your partner');
+                }
+                
+                if (!connectedPartner?.id) {
+                    throw new Error('You must connect with a partner first');
+                }
+
                 try {
-                    const response = await api.post('/court-sessions', { createdBy: userId });
+                    const response = await api.post('/court-sessions', { 
+                        createdBy: authUser.id,
+                        partnerId: connectedPartner.id
+                    });
                     set({ courtSession: response.data });
                     return response.data;
                 } catch (error) {
@@ -60,21 +104,26 @@ const useAppStore = create(
             },
 
             joinCourt: async () => {
-                const { courtSession, currentUser } = get();
+                const { courtSession } = get();
                 if (!courtSession) return null;
+
+                // Get auth user from auth store
+                const { user: authUser } = await import('./useAuthStore').then(m => m.default.getState());
                 
-                const userId = currentUser?.name?.includes('User A') ? 'userA' : 'userB';
-                
+                if (!authUser?.id) {
+                    throw new Error('You must be logged in to join court');
+                }
+
                 try {
-                    const response = await api.post(`/court-sessions/${courtSession.id}/join`, { userId });
+                    const response = await api.post(`/court-sessions/${courtSession.id}/join`, { userId: authUser.id });
                     const updatedSession = response.data;
                     set({ courtSession: updatedSession });
-                    
+
                     // If both joined, trigger animation
                     if (updatedSession.status === 'IN_SESSION') {
                         set({ isCourtAnimationPlaying: true });
                     }
-                    
+
                     return updatedSession;
                 } catch (error) {
                     console.error("Failed to join court", error);
@@ -89,7 +138,7 @@ const useAppStore = create(
             closeCourtSession: async (caseId = null) => {
                 const { courtSession } = get();
                 if (!courtSession) return;
-                
+
                 try {
                     await api.post(`/court-sessions/${courtSession.id}/close`, { caseId });
                     set({ courtSession: null });
@@ -98,17 +147,53 @@ const useAppStore = create(
                 }
             },
 
+            // Request to settle out of court - when both agree, case is dismissed
+            settleOutOfCourt: async () => {
+                const { courtSession, resetCase } = get();
+                if (!courtSession) return null;
+
+                // Get auth user from auth store
+                const { user: authUser } = await import('./useAuthStore').then(m => m.default.getState());
+                
+                if (!authUser?.id) {
+                    throw new Error('You must be logged in to settle');
+                }
+
+                try {
+                    const response = await api.post(`/court-sessions/${courtSession.id}/settle`, { 
+                        userId: authUser.id 
+                    });
+                    const result = response.data;
+                    
+                    // Update local session state
+                    set({ courtSession: result });
+                    
+                    // If both settled, reset the case and clear the session
+                    if (result.settled) {
+                        // Reset case without saving
+                        get().resetCase();
+                        set({ courtSession: null });
+                    }
+                    
+                    return result;
+                } catch (error) {
+                    console.error("Failed to settle out of court", error);
+                    throw error;
+                }
+            },
+
             // --- Case State ---
             activeCase: {
                 id: null,
+                initiatorId: null, // The user who started the case (userA)
                 userAInput: '',
                 userAFeelings: '',
                 userBInput: '',
                 userBFeelings: '',
-                userASubmitted: false, // Track if User A has submitted
-                userBSubmitted: false, // Track if User B has submitted
-                userAAccepted: false,  // Track if User A accepted the verdict
-                userBAccepted: false,  // Track if User B accepted the verdict
+                userASubmitted: false, // Track if initiator has submitted
+                userBSubmitted: false, // Track if partner has submitted
+                userAAccepted: false,  // Track if initiator accepted the verdict
+                userBAccepted: false,  // Track if partner accepted the verdict
                 status: 'DRAFT', // DRAFT, LOCKED_A, DELIBERATING, RESOLVED
                 verdict: null,
                 allVerdicts: [], // All verdict versions
@@ -116,15 +201,21 @@ const useAppStore = create(
             showCelebration: false, // For the celebration animation
             caseHistory: [],
 
-            updateCaseInput: (input, field = 'facts') => {
-                const { activeCase, currentUser } = get();
-                const isUserA = currentUser?.name?.includes('User A');
+            updateCaseInput: async (input, field = 'facts') => {
+                const { activeCase } = get();
+                // Get auth user to determine which side they're on
+                const { user: authUser, profile, partner } = await import('./useAuthStore').then(m => m.default.getState());
+                
+                // User A is the one who initiated the connection (or first user alphabetically by ID)
+                // For simplicity, we'll use: current auth user = their side of the case
+                const isInitiator = activeCase.initiatorId === authUser?.id;
+                const isUserA = isInitiator || !activeCase.initiatorId; // Default to A if no initiator set
 
                 if (isUserA) {
                     if (field === 'facts') {
-                        set({ activeCase: { ...activeCase, userAInput: input } });
+                        set({ activeCase: { ...activeCase, userAInput: input, initiatorId: authUser?.id } });
                     } else {
-                        set({ activeCase: { ...activeCase, userAFeelings: input } });
+                        set({ activeCase: { ...activeCase, userAFeelings: input, initiatorId: authUser?.id } });
                     }
                 } else {
                     if (field === 'facts') {
@@ -135,12 +226,13 @@ const useAppStore = create(
                 }
             },
 
-            submitSide: () => {
-                const { activeCase, currentUser } = get();
-                const isUserA = currentUser?.name?.includes('User A');
+            submitSide: async () => {
+                const { activeCase } = get();
+                const { user: authUser } = await import('./useAuthStore').then(m => m.default.getState());
+                const isUserA = activeCase.initiatorId === authUser?.id || !activeCase.initiatorId;
 
                 if (isUserA) {
-                    const newCase = { ...activeCase, userASubmitted: true };
+                    const newCase = { ...activeCase, userASubmitted: true, initiatorId: authUser?.id };
                     // If B already submitted, go to deliberating
                     if (activeCase.userBSubmitted) {
                         newCase.status = 'DELIBERATING';
@@ -165,19 +257,23 @@ const useAppStore = create(
             },
 
             generateVerdict: async () => {
-                const { activeCase, users } = get();
+                const { activeCase } = get();
+
+                // Get real user names from auth store
+                const { user: authUser, profile, partner: connectedPartner } = await import('./useAuthStore').then(m => m.default.getState());
                 
-                // Get user names from the store
-                const userA = users.find(u => u.name?.includes('User A')) || { name: 'Partner A', id: 'user-a' };
-                const userB = users.find(u => u.name?.includes('User B')) || { name: 'Partner B', id: 'user-b' };
+                const userAName = profile?.display_name || 'Partner A';
+                const userBName = connectedPartner?.display_name || 'Partner B';
+                const userAId = authUser?.id || 'user-a';
+                const userBId = connectedPartner?.id || 'user-b';
 
                 try {
                     // Call the real Judge Engine API
                     const response = await api.post('/judge/deliberate', {
                         caseId: activeCase.id || `case_${Date.now()}`,
                         participants: {
-                            userA: { name: userA.name || 'Partner A', id: userA.id },
-                            userB: { name: userB.name || 'Partner B', id: userB.id }
+                            userA: { name: userAName, id: userAId },
+                            userB: { name: userBName, id: userBId }
                         },
                         submissions: {
                             userA: {
@@ -196,7 +292,7 @@ const useAppStore = create(
                     });
 
                     const judgeResponse = response.data;
-                    
+
                     // Transform the judge response to the verdict format
                     const verdict = {
                         // New psychological framework fields
@@ -221,9 +317,11 @@ const useAppStore = create(
                     const primaryHissTag = analysis.primaryHissTag || null;
                     const shortResolution = analysis.shortResolution || null;
 
-                    // Save to database with metadata
+                    // Save to database with metadata and user IDs
                     const savedCase = await api.post('/cases', {
                         id: activeCase.id || undefined,
+                        userAId: userAId,  // Track which user is A
+                        userBId: userBId,  // Track which user is B
                         userAInput: activeCase.userAInput,
                         userAFeelings: activeCase.userAFeelings || '',
                         userBInput: activeCase.userBInput,
@@ -241,10 +339,10 @@ const useAppStore = create(
                     const allVerdicts = savedCase.data.allVerdicts || [{ version: 1, content: JSON.stringify(verdict) }];
 
                     set({
-                        activeCase: { 
+                        activeCase: {
                             ...activeCase,
                             id: savedCase.data.id,
-                            status: 'RESOLVED', 
+                            status: 'RESOLVED',
                             verdict,
                             allVerdicts,
                             // Also store metadata in active case
@@ -253,7 +351,7 @@ const useAppStore = create(
                             primaryHissTag,
                             shortResolution
                         },
-                        caseHistory: [{ 
+                        caseHistory: [{
                             ...savedCase.data,
                             verdict,
                             caseTitle,
@@ -271,7 +369,7 @@ const useAppStore = create(
 
                 } catch (error) {
                     console.error("Failed to generate verdict", error);
-                    
+
                     // Fallback verdict if API fails
                     const fallbackVerdict = {
                         theSummary: "The Judge Engine encountered a hairball. Please try again.",
@@ -290,9 +388,9 @@ const useAppStore = create(
                     };
 
                     set({
-                        activeCase: { 
-                            ...activeCase, 
-                            status: 'RESOLVED', 
+                        activeCase: {
+                            ...activeCase,
+                            status: 'RESOLVED',
                             verdict: fallbackVerdict,
                             allVerdicts: [{ version: 1, content: JSON.stringify(fallbackVerdict) }]
                         }
@@ -302,15 +400,19 @@ const useAppStore = create(
 
             // Submit an addendum and get a new verdict
             submitAddendum: async (addendumText) => {
-                const { activeCase, users, currentUser } = get();
+                const { activeCase } = get();
                 if (!activeCase.id || activeCase.status !== 'RESOLVED') return;
-                
-                const isUserA = currentUser?.name?.includes('User A');
+
+                // Get auth user to determine who is submitting
+                const { user: authUser, profile, partner: connectedPartner } = await import('./useAuthStore').then(m => m.default.getState());
+                const isUserA = activeCase.initiatorId === authUser?.id || !activeCase.initiatorId;
                 const addendumFrom = isUserA ? 'userA' : 'userB';
-                
+
                 // Get user names
-                const userA = users.find(u => u.name?.includes('User A')) || { name: 'Partner A', id: 'user-a' };
-                const userB = users.find(u => u.name?.includes('User B')) || { name: 'Partner B', id: 'user-b' };
+                const userAName = profile?.display_name || 'Partner A';
+                const userBName = connectedPartner?.display_name || 'Partner B';
+                const userAId = authUser?.id || 'user-a';
+                const userBId = connectedPartner?.id || 'user-b';
 
                 set({ activeCase: { ...activeCase, status: 'DELIBERATING' } });
 
@@ -318,8 +420,8 @@ const useAppStore = create(
                     // Call the addendum endpoint
                     const response = await api.post('/judge/addendum', {
                         participants: {
-                            userA: { name: userA.name || 'Partner A', id: userA.id },
-                            userB: { name: userB.name || 'Partner B', id: userB.id }
+                            userA: { name: userAName, id: userAId },
+                            userB: { name: userBName, id: userBId }
                         },
                         submissions: {
                             userA: {
@@ -341,7 +443,7 @@ const useAppStore = create(
                     });
 
                     const judgeResponse = response.data;
-                    
+
                     // Transform the new verdict
                     const newVerdict = {
                         theSummary: judgeResponse.judgeContent?.theSummary,
@@ -360,7 +462,7 @@ const useAppStore = create(
 
                     // Extract metadata
                     const analysis = judgeResponse._meta?.analysis || {};
-                    
+
                     // Save the addendum verdict
                     const savedCase = await api.post(`/cases/${activeCase.id}/addendum`, {
                         addendumBy: addendumFrom,
@@ -398,12 +500,13 @@ const useAppStore = create(
             },
 
             resetCase: () => {
-                set({ 
-                    activeCase: { 
+                set({
+                    activeCase: {
                         id: null,
-                        userAInput: '', 
+                        initiatorId: null,
+                        userAInput: '',
                         userAFeelings: '',
-                        userBInput: '', 
+                        userBInput: '',
                         userBFeelings: '',
                         userASubmitted: false,
                         userBSubmitted: false,
@@ -419,61 +522,60 @@ const useAppStore = create(
 
             // Accept the verdict - both users must accept
             acceptVerdict: async () => {
-                const { activeCase, currentUser, users } = get();
+                const { activeCase } = get();
                 if (!activeCase.verdict) return;
-                
-                const isUserA = currentUser?.name?.includes('User A');
+
+                // Get auth user to determine who is accepting
+                const { user: authUser, profile, partner: connectedPartner } = await import('./useAuthStore').then(m => m.default.getState());
+                const isUserA = activeCase.initiatorId === authUser?.id || !activeCase.initiatorId;
                 const newCase = { ...activeCase };
-                
+
                 if (isUserA) {
                     newCase.userAAccepted = true;
                 } else {
                     newCase.userBAccepted = true;
                 }
-                
+
                 set({ activeCase: newCase });
-                
+
                 // If both have accepted, award kibble and show celebration
                 if (newCase.userAAccepted && newCase.userBAccepted) {
                     try {
-                        // Award kibble to both users
+                        // Award kibble to both users using their actual IDs
                         const kibbleReward = activeCase.verdict.kibbleReward || { userA: 10, userB: 10 };
-                        
-                        const userA = users.find(u => u.name?.includes('User A'));
-                        const userB = users.find(u => u.name?.includes('User B'));
-                        
-                        if (userA) {
+
+                        if (authUser?.id) {
                             await api.post('/economy/transaction', {
-                                userId: userA.id,
+                                userId: authUser.id,
                                 amount: kibbleReward.userA,
                                 type: 'EARN',
                                 description: 'Case resolved - verdict accepted'
                             });
                         }
-                        
-                        if (userB) {
+
+                        if (connectedPartner?.id) {
                             await api.post('/economy/transaction', {
-                                userId: userB.id,
+                                userId: connectedPartner.id,
                                 amount: kibbleReward.userB,
                                 type: 'EARN',
                                 description: 'Case resolved - verdict accepted'
                             });
                         }
-                        
+
                         // Refresh user balances
                         await get().fetchUsers();
-                        
+
                         // Show celebration
                         set({ showCelebration: true });
-                        
+
                     } catch (error) {
                         console.error("Failed to award kibble", error);
                     }
                 }
-                
+
                 return newCase;
             },
-            
+
             closeCelebration: async () => {
                 // Close the court session on backend if exists
                 const { courtSession } = get();
@@ -484,9 +586,9 @@ const useAppStore = create(
                         console.error("Failed to close court session on backend", error);
                     }
                 }
-                
+
                 // End the court session and reset case locally
-                set({ 
+                set({
                     showCelebration: false,
                     courtSession: null
                 });
@@ -495,10 +597,10 @@ const useAppStore = create(
 
             // Load a specific case from history (for viewing/adding addendums)
             loadCase: (caseItem) => {
-                const verdict = typeof caseItem.verdict === 'string' 
-                    ? JSON.parse(caseItem.verdict) 
+                const verdict = typeof caseItem.verdict === 'string'
+                    ? JSON.parse(caseItem.verdict)
                     : caseItem.verdict;
-                
+
                 set({
                     activeCase: {
                         id: caseItem.id,
@@ -519,7 +621,16 @@ const useAppStore = create(
 
             fetchCaseHistory: async () => {
                 try {
-                    const response = await api.get('/cases');
+                    // Get auth user and partner to filter cases for this couple
+                    const { user: authUser, partner: connectedPartner } = await import('./useAuthStore').then(m => m.default.getState());
+                    
+                    // Build query params for filtering
+                    const params = new URLSearchParams();
+                    if (authUser?.id) params.set('userAId', authUser.id);
+                    if (connectedPartner?.id) params.set('userBId', connectedPartner.id);
+                    
+                    const url = params.toString() ? `/cases?${params.toString()}` : '/cases';
+                    const response = await api.get(url);
                     set({ caseHistory: response.data });
                 } catch (error) {
                     console.error("Failed to fetch case history", error);
@@ -531,11 +642,12 @@ const useAppStore = create(
 
             // Fetch appreciations that the current user received
             fetchAppreciations: async () => {
-                const { currentUser } = get();
-                if (!currentUser) return;
+                // Get auth user from auth store
+                const { user: authUser } = await import('./useAuthStore').then(m => m.default.getState());
+                if (!authUser?.id) return;
 
                 try {
-                    const response = await api.get(`/appreciations/${currentUser.id}`);
+                    const response = await api.get(`/appreciations/${authUser.id}`);
                     set({ appreciations: response.data });
                 } catch (error) {
                     console.error("Failed to fetch appreciations", error);
@@ -546,26 +658,23 @@ const useAppStore = create(
             // When you show appreciation, you're logging something your PARTNER did
             // So the kibble goes to your partner and it's logged as an appreciation
             logGoodDeed: async (description) => {
-                const { currentUser, users } = get();
-                if (!currentUser) return;
-                
-                // Find the partner (the other user)
-                const partner = users.find(u => u.id !== currentUser.id);
-                if (!partner) return;
+                // Get auth user and partner from auth store
+                const { user: authUser, partner: connectedPartner } = await import('./useAuthStore').then(m => m.default.getState());
+                if (!authUser?.id || !connectedPartner?.id) return;
 
                 try {
                     // Create appreciation and award kibble to partner
                     const response = await api.post('/appreciations', {
-                        fromUserId: currentUser.id,
-                        toUserId: partner.id,
+                        fromUserId: authUser.id,
+                        toUserId: connectedPartner.id,
                         message: description || 'Something nice',
                         kibbleAmount: 10
                     });
 
                     // Update partner's balance in state
                     set({
-                        users: get().users.map(u => 
-                            u.id === partner.id 
+                        users: get().users.map(u =>
+                            u.id === connectedPartner.id
                                 ? { ...u, kibbleBalance: response.data.newBalance }
                                 : u
                         )
@@ -580,14 +689,18 @@ const useAppStore = create(
 
             redeemCoupon: async (coupon) => {
                 const { currentUser } = get();
-                if (!currentUser) return;
-                if (currentUser.kibbleBalance < coupon.cost) {
+                // Get auth user for the ID
+                const { user: authUser } = await import('./useAuthStore').then(m => m.default.getState());
+                const userId = authUser?.id || currentUser?.id;
+                
+                if (!userId) return;
+                if ((currentUser?.kibbleBalance || 0) < coupon.cost) {
                     throw new Error("Not enough kibble!");
                 }
 
                 try {
                     const response = await api.post('/economy/transaction', {
-                        userId: currentUser.id,
+                        userId,
                         amount: -coupon.cost,
                         type: 'SPEND',
                         description: `Redeemed: ${coupon.title}`
@@ -595,8 +708,8 @@ const useAppStore = create(
 
                     set({
                         currentUser: { ...currentUser, kibbleBalance: response.data.newBalance },
-                        users: get().users.map(u => 
-                            u.id === currentUser.id 
+                        users: get().users.map(u =>
+                            u.id === userId
                                 ? { ...u, kibbleBalance: response.data.newBalance }
                                 : u
                         )
@@ -620,15 +733,19 @@ const useAppStore = create(
                 const { dailyAnswer, currentUser } = get();
                 if (!dailyAnswer.trim()) return;
 
+                // Get auth user for the ID
+                const { user: authUser } = await import('./useAuthStore').then(m => m.default.getState());
+                const userId = authUser?.id || currentUser?.id;
+
                 // Award kibble for answering
                 try {
                     await api.post('/economy/transaction', {
-                        userId: currentUser.id,
+                        userId,
                         amount: 5,
                         type: 'EARN',
                         description: 'Answered daily question'
                     });
-                    
+
                     get().fetchUsers();
                     set({ hasAnsweredToday: true, dailyAnswer: '' });
                 } catch (error) {

@@ -13,8 +13,8 @@ The system uses a **hybrid approach** combining:
 
 | Task | Model | Provider | Purpose |
 |------|-------|----------|---------|
-| Main Judge | Kimi K2 Thinking | OpenRouter | Verdict generation |
-| Extractor Agent | GPT-4o-mini | OpenAI | Insight extraction |
+| Main Judge | Grok 4.1 Fast | OpenRouter | Verdict generation |
+| Extractor Agent | Grok 4.1 Fast | OpenRouter | Insight extraction |
 | Embeddings | text-embedding-3-small | OpenAI | Vector generation |
 
 ## Components
@@ -76,10 +76,10 @@ Add to your `.env` file:
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SERVICE_KEY=your-service-role-key
 
-# OpenAI (for embeddings and extraction agent)
+# OpenAI (for embeddings only - judge and extraction now use OpenRouter)
 OPENAI_API_KEY=sk-your-openai-key
 
-# OpenRouter (for main judge - already configured)
+# OpenRouter (for main judge and extraction agent)
 OPENROUTER_API_KEY=your-openrouter-key
 ```
 
@@ -143,11 +143,11 @@ Extracted insights are categorized as:
 │     └─> Search relevant memories (pgvector)                    │ │
 │                                                                │ │
 │  3. ANALYSIS PHASE                                             │ │
-│     └─> Psychological analysis (Kimi K2 Thinking)              │ │
+│     └─> Psychological analysis (Grok 4.1 Fast)              │ │
 │                                                                │ │
 │  4. VERDICT GENERATION                                         │ │
 │     ├─> Inject historical context ←───────────────────────────┘ │
-│     └─> Generate verdict (Kimi K2 Thinking)                     │
+│     └─> Generate verdict (Grok 4.1 Fast)                     │
 │                                                                  │
 │  5. BACKGROUND EXTRACTION ─────────────────────────────────────┐ │
 │     ├─> Extract insights (GPT-4o-mini)                         │ │
@@ -220,7 +220,7 @@ curl http://localhost:3000/api/memory/insights/USER_ID
 
 ## Cost Optimization
 
-- **GPT-4o-mini** for extraction: ~$0.00015 per case
+- **Grok 4.1 Fast (free tier)** for extraction: $0 per case
 - **text-embedding-3-small**: ~$0.00002 per embedding
 - Background extraction runs asynchronously (no UI delay)
 - De-duplication prevents embedding bloat

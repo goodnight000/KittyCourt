@@ -1,28 +1,24 @@
 {
   "name": "server",
   "version": "1.0.0",
-  "description": "Cat Judge Backend - Judge Mittens' Court",
+  "description": "Cat Judge Backend - Judge Mittens' Court (Supabase)",
   "main": "src/app.js",
   "scripts": {
     "start": "node src/app.js",
     "dev": "node --watch src/app.js",
     "test": "vitest run",
-    "test:watch": "vitest",
-    "db:migrate": "prisma migrate deploy",
-    "db:generate": "prisma generate"
+    "test:watch": "vitest"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "@prisma/client": "5.22.0",
     "@supabase/supabase-js": "^2.86.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "openai": "^6.9.1",
-    "prisma": "5.22.0",
     "zod": "^4.1.13"
   },
   "devDependencies": {

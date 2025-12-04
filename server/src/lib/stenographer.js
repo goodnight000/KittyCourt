@@ -5,22 +5,23 @@
  * It analyzes case inputs to extract deep, reusable psychological insights
  * about each user for long-term memory storage.
  * 
- * Uses GPT-4o-mini for cost-efficient extraction.
+ * Uses Grok 4.1 Fast via OpenRouter with reasoning for high-quality extraction.
  */
 
 const { generateEmbedding, generateEmbeddings } = require('./embeddings');
-const { 
-    searchSimilarMemories, 
-    insertMemory, 
+const {
+    searchSimilarMemories,
+    insertMemory,
     reinforceMemory,
-    isSupabaseConfigured 
+    isSupabaseConfigured
 } = require('./supabase');
+const { createChatCompletion, isOpenRouterConfigured } = require('./openrouter');
 
 // Configuration
 const CONFIG = {
-    model: 'gpt-4o-mini',
+    model: 'x-ai/grok-4.1-fast:free', // Grok's fast reasoning model via OpenRouter
     temperature: 0.3, // Low temperature for consistent extraction
-    maxTokens: 1500,
+    maxTokens: 6000, // Increased for reasoning tokens
     similarityThreshold: 0.92, // For de-duplication
 };
 
@@ -99,7 +100,7 @@ If you cannot extract meaningful insights for a user, return an empty insights a
  */
 function buildExtractionPrompt(caseData) {
     const { participants, submissions } = caseData;
-    
+
     return `Extract psychological insights from this couple's conflict:
 
 ## User A: ${participants.userA.name}
@@ -118,47 +119,40 @@ Extract lasting psychological insights about each person that would be relevant 
 }
 
 /**
- * Call the extraction LLM (GPT-4o-mini)
+ * Call the extraction LLM (Grok 4.1 Fast via OpenRouter)
  * 
  * @param {string} systemPrompt - The system prompt
  * @param {string} userPrompt - The user prompt
  * @returns {Promise<object>} The extracted insights
  */
 async function callExtractionLLM(systemPrompt, userPrompt) {
-    const apiKey = process.env.OPENAI_API_KEY;
-    
-    if (!apiKey || apiKey === 'your_openai_api_key_here') {
-        throw new Error('OPENAI_API_KEY is not configured for extraction agent.');
+    if (!isOpenRouterConfigured()) {
+        throw new Error('OPENROUTER_API_KEY is not configured for extraction agent.');
     }
-    
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-            model: CONFIG.model,
-            messages: [
-                { role: 'system', content: systemPrompt },
-                { role: 'user', content: userPrompt },
-            ],
-            temperature: CONFIG.temperature,
-            max_tokens: CONFIG.maxTokens,
-            response_format: { type: 'json_object' },
-        }),
+
+    console.log('[Stenographer] Calling extraction LLM with reasoning enabled...');
+
+    const response = await createChatCompletion({
+        model: CONFIG.model,
+        messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt },
+        ],
+        temperature: CONFIG.temperature,
+        maxTokens: CONFIG.maxTokens,
+        // Note: OpenRouter's createChatCompletion doesn't support json_schema yet for Grok
+        // We'll parse the JSON from the response
     });
-    
-    if (!response.ok) {
-        const errorText = await response.text();
-        console.error('[Stenographer] API Error:', errorText);
-        throw new Error(`Extraction API error: ${response.status}`);
+
+    const content = response.choices[0].message.content;
+
+    // Try to parse JSON, with fallback handling
+    try {
+        return JSON.parse(content);
+    } catch (error) {
+        console.error('[Stenographer] Failed to parse JSON response:', content);
+        throw new Error('Failed to parse extraction response as JSON');
     }
-    
-    const data = await response.json();
-    const content = data.choices[0].message.content;
-    
-    return JSON.parse(content);
 }
 
 /**
@@ -175,28 +169,28 @@ async function processUserInsights(userId, insights, sourceCaseId) {
         reinforced: 0,
         discarded: 0,
     };
-    
+
     if (!insights || insights.length === 0) {
         return stats;
     }
-    
+
     // Generate embeddings for all insights in batch
     const insightTexts = insights.map(i => i.text);
     const embeddings = await generateEmbeddings(insightTexts);
-    
+
     for (let i = 0; i < insights.length; i++) {
         const insight = insights[i];
         const embedding = embeddings[i];
-        
+
         try {
             // Search for similar existing memories
             const similar = await searchSimilarMemories(
-                embedding, 
-                userId, 
-                CONFIG.similarityThreshold, 
+                embedding,
+                userId,
+                CONFIG.similarityThreshold,
                 1
             );
-            
+
             if (similar.length > 0) {
                 // Found a similar memory - reinforce it instead of duplicating
                 await reinforceMemory(similar[0].id);
@@ -220,7 +214,7 @@ async function processUserInsights(userId, insights, sourceCaseId) {
             stats.discarded++;
         }
     }
-    
+
     return stats;
 }
 
@@ -234,36 +228,36 @@ async function processUserInsights(userId, insights, sourceCaseId) {
  */
 async function extractAndStoreInsights(caseData, caseId) {
     console.log('[Stenographer] Starting insight extraction for case:', caseId);
-    
+
     // Check if Supabase is configured
     if (!isSupabaseConfigured()) {
         console.log('[Stenographer] Supabase not configured, skipping memory extraction');
-        return { 
-            success: false, 
+        return {
+            success: false,
             error: 'Supabase not configured',
             userA: { stored: 0, reinforced: 0, discarded: 0 },
             userB: { stored: 0, reinforced: 0, discarded: 0 },
         };
     }
-    
+
     try {
         // Step 1: Call extraction LLM
         const prompt = buildExtractionPrompt(caseData);
         const extracted = await callExtractionLLM(STENOGRAPHER_SYSTEM_PROMPT, prompt);
-        
+
         console.log('[Stenographer] Extracted insights:', JSON.stringify(extracted, null, 2));
-        
+
         // Step 2: Process insights for each user
         const userAId = caseData.participants.userA.id;
         const userBId = caseData.participants.userB.id;
-        
+
         const [userAStats, userBStats] = await Promise.all([
             processUserInsights(userAId, extracted.userA?.insights || [], caseId),
             processUserInsights(userBId, extracted.userB?.insights || [], caseId),
         ]);
-        
+
         console.log('[Stenographer] Processing complete:', { userA: userAStats, userB: userBStats });
-        
+
         return {
             success: true,
             userA: userAStats,

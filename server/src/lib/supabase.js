@@ -174,17 +174,27 @@ async function reinforceMemory(memoryId) {
 }
 
 /**
- * Get user profile data
+ * Get user profile data for RAG context
+ * Fetches relationship-relevant profile data from the profiles table
  * 
  * @param {string} userId - User ID
- * @returns {Promise<object>} The profile data
+ * @returns {Promise<object>} The profile data formatted for RAG
  */
 async function getUserProfile(userId) {
     const supabase = getSupabase();
     
     const { data, error } = await supabase
-        .from('User')
-        .select('profile_data')
+        .from('profiles')
+        .select(`
+            display_name,
+            love_language,
+            communication_style,
+            conflict_style,
+            favorite_date_activities,
+            pet_peeves,
+            appreciation_style,
+            bio
+        `)
         .eq('id', userId)
         .single();
     
@@ -193,30 +203,62 @@ async function getUserProfile(userId) {
         return {};
     }
     
-    return data?.profile_data || {};
+    if (!data) return {};
+    
+    // Map to the format expected by memoryRetrieval.js
+    const profile = {};
+    
+    if (data.love_language) {
+        profile.loveLanguages = [data.love_language];
+    }
+    if (data.communication_style) {
+        profile.communicationStyle = data.communication_style;
+    }
+    if (data.conflict_style) {
+        profile.conflictStyle = data.conflict_style;
+    }
+    if (data.pet_peeves && data.pet_peeves.length > 0) {
+        profile.petPeeves = data.pet_peeves;
+    }
+    if (data.appreciation_style) {
+        profile.appreciationStyle = data.appreciation_style;
+    }
+    if (data.bio) {
+        profile.bio = data.bio;
+    }
+    
+    return profile;
 }
 
 /**
  * Update user profile data (merge with existing)
+ * Note: This updates individual columns, not a JSONB blob
  * 
  * @param {string} userId - User ID
- * @param {object} profileUpdate - Profile data to merge
+ * @param {object} profileUpdate - Profile data to update
  * @returns {Promise<object>} The updated profile
  */
 async function updateUserProfile(userId, profileUpdate) {
     const supabase = getSupabase();
     
-    // First get existing profile
-    const existing = await getUserProfile(userId);
+    // Map from RAG format back to database columns
+    const updates = {};
+    if (profileUpdate.loveLanguages) updates.love_language = profileUpdate.loveLanguages[0];
+    if (profileUpdate.communicationStyle) updates.communication_style = profileUpdate.communicationStyle;
+    if (profileUpdate.conflictStyle) updates.conflict_style = profileUpdate.conflictStyle;
+    if (profileUpdate.petPeeves) updates.pet_peeves = profileUpdate.petPeeves;
+    if (profileUpdate.appreciationStyle) updates.appreciation_style = profileUpdate.appreciationStyle;
+    if (profileUpdate.bio) updates.bio = profileUpdate.bio;
     
-    // Merge with new data
-    const merged = { ...existing, ...profileUpdate };
+    if (Object.keys(updates).length === 0) {
+        return getUserProfile(userId);
+    }
     
     const { data, error } = await supabase
-        .from('User')
-        .update({ profile_data: merged })
+        .from('profiles')
+        .update(updates)
         .eq('id', userId)
-        .select('profile_data')
+        .select()
         .single();
     
     if (error) {
@@ -224,7 +266,7 @@ async function updateUserProfile(userId, profileUpdate) {
         throw error;
     }
     
-    return data?.profile_data || merged;
+    return getUserProfile(userId);
 }
 
 /**

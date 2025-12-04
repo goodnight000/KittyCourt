@@ -8,7 +8,7 @@ import {
     Lock, Send, Scale, Heart, MessageCircle, RotateCcw, History,
     Sparkles, AlertTriangle, HeartHandshake, Quote, Gavel, Users,
     Bell, ChevronRight, Plus, Clock, FileText, Check, PartyPopper,
-    Moon, Coffee, Zap, Cat
+    Moon, Coffee, Zap, Cat, Handshake, X
 } from 'lucide-react';
 
 // Waiting Screen Component - Calming breathing meditation while LLM deliberates
@@ -636,75 +636,182 @@ const CourtOpeningAnimation = ({ onComplete }) => {
     );
 };
 
-// Waiting for Partner Component
-const WaitingForPartner = ({ session, currentUserRole, onCancel }) => {
-    const partnerName = currentUserRole === 'userA' ? 'User B' : 'User A';
+// Waiting for Partner Component - Enhanced UI
+const WaitingForPartner = ({ session, partnerName, myName, isCreator, onCancel }) => {
+    // Use actual names passed from props
+    const displayPartnerName = partnerName || 'your partner';
+    const displayMyName = myName || 'You';
 
     return (
-        <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="glass-card p-6 text-center max-w-sm mx-auto"
-        >
+        <div className="max-w-md mx-auto space-y-6">
+            {/* Main Card */}
             <motion.div
-                animate={{
-                    rotate: [0, 10, -10, 0],
-                    scale: [1, 1.05, 1]
-                }}
-                transition={{ duration: 2, repeat: Infinity }}
-                className="w-20 h-20 bg-gradient-to-br from-court-gold/20 to-court-tan rounded-2xl flex items-center justify-center mx-auto mb-4"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="glass-card overflow-hidden"
             >
-                <Bell className="w-10 h-10 text-court-gold" />
+                {/* Header Banner */}
+                <div className="bg-gradient-to-r from-court-gold via-court-goldDark to-court-brown p-4 text-center">
+                    <motion.div
+                        animate={{ scale: [1, 1.1, 1] }}
+                        transition={{ duration: 2, repeat: Infinity }}
+                        className="inline-block"
+                    >
+                        <span className="text-4xl">📜</span>
+                    </motion.div>
+                    <h2 className="text-xl font-bold text-white mt-2">
+                        Summons Delivered!
+                    </h2>
+                    <p className="text-court-cream/80 text-sm">
+                        The court awaits {displayPartnerName}'s presence
+                    </p>
+                </div>
+
+                {/* Content */}
+                <div className="p-6 text-center">
+                    {/* Animated Waiting Indicator */}
+                    <div className="relative w-24 h-24 mx-auto mb-6">
+                        {/* Outer ring - pulsing */}
+                        <motion.div
+                            animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.6, 0.3] }}
+                            transition={{ duration: 2, repeat: Infinity }}
+                            className="absolute inset-0 rounded-full border-4 border-court-gold/30"
+                        />
+                        {/* Middle ring - rotating */}
+                        <motion.div
+                            animate={{ rotate: 360 }}
+                            transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                            className="absolute inset-2 rounded-full border-2 border-dashed border-court-gold/50"
+                        />
+                        {/* Inner circle with icon */}
+                        <div className="absolute inset-4 bg-gradient-to-br from-court-cream to-white rounded-full flex items-center justify-center shadow-lg">
+                            <motion.div
+                                animate={{ y: [0, -3, 0] }}
+                                transition={{ duration: 1.5, repeat: Infinity }}
+                            >
+                                <Bell className="w-8 h-8 text-court-gold" />
+                            </motion.div>
+                        </div>
+                    </div>
+
+                    {/* Status Message */}
+                    <p className="text-court-brown font-medium mb-6">
+                        Waiting for <span className="text-court-gold font-bold">{displayPartnerName}</span> to join...
+                    </p>
+
+                    {/* Court Status Panel */}
+                    <div className="bg-gradient-to-br from-court-cream to-court-tan/30 rounded-2xl p-4 mb-6">
+                        <div className="flex items-center justify-center gap-2 mb-3">
+                            <Users className="w-4 h-4 text-court-gold" />
+                            <span className="text-sm font-bold text-court-brown">Court Attendance</span>
+                        </div>
+                        
+                        <div className="flex justify-center gap-8">
+                            {/* You */}
+                            <div className="text-center">
+                                <motion.div
+                                    animate={{ scale: [1, 1.05, 1] }}
+                                    transition={{ duration: 2, repeat: Infinity }}
+                                    className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2 border-2 border-green-400"
+                                >
+                                    <Check className="w-6 h-6 text-green-600" />
+                                </motion.div>
+                                <span className="text-xs font-medium text-court-brown">{displayMyName}</span>
+                                <div className="text-[10px] text-green-600 font-medium mt-0.5">Present</div>
+                            </div>
+                            
+                            {/* Divider */}
+                            <div className="flex flex-col items-center justify-center">
+                                <div className="w-8 h-0.5 bg-court-tan" />
+                                <motion.div
+                                    animate={{ x: [-10, 10, -10] }}
+                                    transition={{ duration: 2, repeat: Infinity }}
+                                    className="text-lg my-1"
+                                >
+                                    ⚖️
+                                </motion.div>
+                                <div className="w-8 h-0.5 bg-court-tan" />
+                            </div>
+                            
+                            {/* Partner */}
+                            <div className="text-center">
+                                <motion.div
+                                    animate={{ 
+                                        boxShadow: [
+                                            '0 0 0 0 rgba(201, 162, 39, 0)',
+                                            '0 0 0 8px rgba(201, 162, 39, 0.3)',
+                                            '0 0 0 0 rgba(201, 162, 39, 0)'
+                                        ]
+                                    }}
+                                    transition={{ duration: 2, repeat: Infinity }}
+                                    className="w-12 h-12 bg-court-cream rounded-full flex items-center justify-center mx-auto mb-2 border-2 border-court-gold/50"
+                                >
+                                    <Clock className="w-5 h-5 text-court-gold" />
+                                </motion.div>
+                                <span className="text-xs font-medium text-court-brown">{displayPartnerName}</span>
+                                <div className="text-[10px] text-court-gold font-medium mt-0.5">Awaiting...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Loading dots */}
+                    <div className="flex justify-center gap-1.5 mb-6">
+                        {[0, 1, 2].map((i) => (
+                            <motion.div
+                                key={i}
+                                animate={{ 
+                                    y: [0, -8, 0],
+                                    opacity: [0.4, 1, 0.4]
+                                }}
+                                transition={{ 
+                                    duration: 0.8, 
+                                    repeat: Infinity, 
+                                    delay: i * 0.15 
+                                }}
+                                className="w-2.5 h-2.5 bg-court-gold rounded-full"
+                            />
+                        ))}
+                    </div>
+
+                    {/* Cancel Button */}
+                    <motion.button
+                        whileTap={{ scale: 0.98 }}
+                        onClick={onCancel}
+                        className="text-court-brownLight hover:text-court-maroon transition-colors text-sm font-medium flex items-center gap-2 mx-auto"
+                    >
+                        <X className="w-4 h-4" />
+                        Cancel Summons
+                    </motion.button>
+                </div>
             </motion.div>
 
-            <h2 className="text-xl font-bold text-court-brown mb-2">
-                Summons Sent! 📜
-            </h2>
-            <p className="text-court-brownLight text-sm mb-4">
-                Waiting for <span className="font-bold text-court-gold">{partnerName}</span> to join the court...
-            </p>
-
-            <div className="bg-court-cream rounded-xl p-4 mb-4">
-                <div className="flex items-center justify-center gap-2 mb-2">
-                    <Users className="w-4 h-4 text-court-gold" />
-                    <span className="text-xs font-bold text-court-brown">Court Status</span>
-                </div>
-                <div className="flex justify-center gap-4">
-                    <div className="flex items-center gap-2">
-                        <div className={`w-3 h-3 rounded-full ${session.userAJoined ? 'bg-green-500' : 'bg-court-tan'}`} />
-                        <span className="text-xs text-court-brownLight">User A</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <div className={`w-3 h-3 rounded-full ${session.userBJoined ? 'bg-green-500' : 'bg-court-tan'}`} />
-                        <span className="text-xs text-court-brownLight">User B</span>
-                    </div>
-                </div>
-            </div>
-
-            <div className="flex justify-center gap-1 mb-4">
-                {[0, 1, 2].map((i) => (
-                    <motion.div
-                        key={i}
-                        animate={{ scale: [1, 1.4, 1], opacity: [0.5, 1, 0.5] }}
-                        transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }}
-                        className="w-2 h-2 bg-court-gold rounded-full"
-                    />
-                ))}
-            </div>
-
-            <button
-                onClick={onCancel}
-                className="text-court-brownLight text-sm hover:text-court-brown transition-colors"
+            {/* Tip Card */}
+            <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="glass-card p-4 bg-gradient-to-r from-violet-50/60 to-pink-50/60"
             >
-                Cancel Summons
-            </button>
-        </motion.div>
+                <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm">
+                        <span className="text-xl">💡</span>
+                    </div>
+                    <div>
+                        <p className="text-sm text-court-brown font-medium">While you wait...</p>
+                        <p className="text-xs text-court-brownLight mt-1">
+                            Take a deep breath. Remember, you're here to understand each other, not to win.
+                        </p>
+                    </div>
+                </div>
+            </motion.div>
+        </div>
     );
 };
 
 // Summons Received Component
-const SummonsReceived = ({ session, onJoin }) => {
-    const senderName = session.createdBy === 'userA' ? 'User A' : 'User B';
+const SummonsReceived = ({ session, senderName, onJoin }) => {
+    // Use actual sender name passed from props
+    const displaySenderName = senderName || 'Your partner';
 
     return (
         <motion.div
@@ -724,7 +831,7 @@ const SummonsReceived = ({ session, onJoin }) => {
                 You've Been Summoned! ⚖️
             </h2>
             <p className="text-court-brownLight text-sm mb-4">
-                <span className="font-bold text-court-gold">{senderName}</span> has filed a case and requests your presence in court.
+                <span className="font-bold text-court-gold">{displaySenderName}</span> has filed a case and requests your presence in court.
             </p>
 
             <motion.button
@@ -739,6 +846,189 @@ const SummonsReceived = ({ session, onJoin }) => {
             <p className="text-xs text-court-brownLight mt-4">
                 ⏰ This summons expires in 24 hours
             </p>
+        </motion.div>
+    );
+};
+
+// Settlement Confirmation Modal
+const SettleModal = ({ onConfirm, onCancel, partnerName, partnerWantsToSettle }) => {
+    return (
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
+            onClick={onCancel}
+        >
+            <motion.div
+                initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl text-center"
+            >
+                {/* Icon */}
+                <motion.div
+                    animate={{ 
+                        scale: [1, 1.1, 1],
+                        rotate: [0, 5, -5, 0]
+                    }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                    className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-pink-100 to-rose-100 rounded-3xl flex items-center justify-center"
+                >
+                    <Handshake className="w-10 h-10 text-pink-500" />
+                </motion.div>
+
+                {/* Title */}
+                <h2 className="text-xl font-bold text-neutral-800 mb-2">
+                    {partnerWantsToSettle ? 'Accept Settlement?' : 'Settle Out of Court?'}
+                </h2>
+
+                {/* Description */}
+                <p className="text-neutral-500 text-sm mb-6">
+                    {partnerWantsToSettle ? (
+                        <>
+                            <span className="font-bold text-pink-500">{partnerName}</span> wants to settle this peacefully. 
+                            Choose love over winning?
+                        </>
+                    ) : (
+                        <>
+                            Request to end this case without a verdict. 
+                            Both you and <span className="font-bold text-pink-500">{partnerName}</span> must agree.
+                        </>
+                    )}
+                </p>
+
+                {/* Love Quote */}
+                <div className="bg-gradient-to-r from-pink-50 to-rose-50 rounded-2xl p-4 mb-6">
+                    <p className="text-sm text-pink-700 italic">
+                        "Sometimes the bravest thing is choosing connection over being right."
+                    </p>
+                    <p className="text-xs text-pink-400 mt-1">— Judge Whiskers 🐱</p>
+                </div>
+
+                {/* Buttons */}
+                <div className="flex gap-3">
+                    <motion.button
+                        whileTap={{ scale: 0.97 }}
+                        onClick={onCancel}
+                        className="flex-1 py-3 px-4 bg-neutral-100 text-neutral-600 rounded-2xl font-medium text-sm"
+                    >
+                        Keep Case Open
+                    </motion.button>
+                    <motion.button
+                        whileTap={{ scale: 0.97 }}
+                        onClick={onConfirm}
+                        className="flex-1 py-3 px-4 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-2xl font-bold text-sm shadow-lg flex items-center justify-center gap-2"
+                    >
+                        <Heart className="w-4 h-4" />
+                        {partnerWantsToSettle ? 'Accept' : 'Request'}
+                    </motion.button>
+                </div>
+            </motion.div>
+        </motion.div>
+    );
+};
+
+// Settlement Success Animation
+const SettleSuccessAnimation = ({ partnerName }) => {
+    return (
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-gradient-to-br from-pink-50 via-white to-rose-50 flex items-center justify-center overflow-hidden"
+        >
+            {/* Floating Hearts */}
+            {[...Array(20)].map((_, i) => (
+                <motion.div
+                    key={i}
+                    initial={{ y: window.innerHeight, x: Math.random() * window.innerWidth, opacity: 0 }}
+                    animate={{ 
+                        y: -100, 
+                        opacity: [0, 1, 1, 0],
+                        rotate: Math.random() * 360
+                    }}
+                    transition={{ 
+                        duration: 4 + Math.random() * 2, 
+                        delay: Math.random() * 2,
+                        repeat: Infinity
+                    }}
+                    className="absolute text-2xl"
+                >
+                    {['💕', '💗', '💖', '✨', '🤍'][i % 5]}
+                </motion.div>
+            ))}
+
+            <div className="text-center px-6 z-10">
+                {/* Handshake Icon */}
+                <motion.div
+                    initial={{ scale: 0, rotate: -180 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                    transition={{ type: "spring", bounce: 0.5, delay: 0.2 }}
+                    className="w-32 h-32 mx-auto mb-6 bg-gradient-to-br from-pink-200 to-rose-200 rounded-full flex items-center justify-center shadow-2xl"
+                >
+                    <motion.div
+                        animate={{ scale: [1, 1.2, 1] }}
+                        transition={{ duration: 1, repeat: Infinity }}
+                    >
+                        <Handshake className="w-16 h-16 text-pink-600" />
+                    </motion.div>
+                </motion.div>
+
+                {/* Title */}
+                <motion.h1
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.5 }}
+                    className="text-3xl font-bold text-pink-600 mb-3"
+                >
+                    Case Dismissed! 🕊️
+                </motion.h1>
+
+                {/* Subtitle */}
+                <motion.p
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.7 }}
+                    className="text-neutral-600 text-lg mb-6"
+                >
+                    You both chose love over winning
+                </motion.p>
+
+                {/* Card */}
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.9 }}
+                    className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl max-w-xs mx-auto"
+                >
+                    <div className="flex items-center justify-center gap-3 mb-4">
+                        <div className="w-12 h-12 bg-pink-100 rounded-full flex items-center justify-center text-2xl">
+                            🐱
+                        </div>
+                        <Heart className="w-6 h-6 text-pink-400 fill-pink-400" />
+                        <div className="w-12 h-12 bg-rose-100 rounded-full flex items-center justify-center text-2xl">
+                            🐱
+                        </div>
+                    </div>
+                    <p className="text-sm text-neutral-600 italic">
+                        "The strongest couples know when to put down their swords 
+                        and pick up each other's hearts."
+                    </p>
+                    <p className="text-xs text-neutral-400 mt-2">— Judge Whiskers</p>
+                </motion.div>
+
+                {/* Redirect notice */}
+                <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 1.5 }}
+                    className="text-neutral-400 text-sm mt-6"
+                >
+                    Returning to home...
+                </motion.p>
+            </div>
         </motion.div>
     );
 };
@@ -844,9 +1134,10 @@ const StartCourtView = ({ onServe, navigate }) => {
 const VerdictView = ({
     activeCase, verdict, analysis, allVerdicts, selectedVerdictVersion,
     setSelectedVerdictVersion, userAName, userBName, setShowAddendumModal,
-    resetCase, navigate, currentUser, onAcceptVerdict
+    resetCase, navigate, currentUser, onAcceptVerdict, isInitiator
 }) => {
-    const isUserA = currentUser?.name?.includes('User A');
+    // Use isInitiator prop instead of checking User A/B names
+    const isUserA = isInitiator;
     const hasAccepted = isUserA ? activeCase.userAAccepted : activeCase.userBAccepted;
     const partnerHasAccepted = isUserA ? activeCase.userBAccepted : activeCase.userAAccepted;
     const partnerName = isUserA ? userBName : userAName;
@@ -1138,27 +1429,54 @@ const VerdictView = ({
 // Main Courtroom Page
 const CourtroomPage = () => {
     const navigate = useNavigate();
-    const { hasPartner } = useAuthStore();
+    const { hasPartner, user: authUser, profile, partner: connectedPartner } = useAuthStore();
     const {
         activeCase, currentUser, users, updateCaseInput, submitSide, resetCase,
         courtSession, checkActiveSession, servePartner, joinCourt,
         isCourtAnimationPlaying, finishCourtAnimation, closeCourtSession,
-        submitAddendum, acceptVerdict, showCelebration, closeCelebration
+        submitAddendum, acceptVerdict, showCelebration, closeCelebration,
+        settleOutOfCourt
     } = useAppStore();
 
     const [showAddendumModal, setShowAddendumModal] = useState(false);
     const [addendumText, setAddendumText] = useState('');
     const [isSubmittingAddendum, setIsSubmittingAddendum] = useState(false);
     const [selectedVerdictVersion, setSelectedVerdictVersion] = useState(0);
+    const [isSettling, setIsSettling] = useState(false);
+    const [settleMessage, setSettleMessage] = useState('');
+    const [showSettleModal, setShowSettleModal] = useState(false);
+    const [settleSuccess, setSettleSuccess] = useState(false);
 
-    const isUserA = currentUser?.name?.includes('User A');
+    // Determine if current user is the initiator (User A role) based on:
+    // 1. For court sessions: check if they created the session
+    // 2. For active cases: check if they're the initiator
+    // Note: Supabase returns snake_case (created_by), but we also check camelCase for compatibility
+    const isCreator = (courtSession?.created_by === authUser?.id) || (courtSession?.createdBy === authUser?.id);
+    const isInitiator = activeCase?.initiatorId === authUser?.id || (!activeCase?.initiatorId && isCreator);
+    const isUserA = isInitiator;
     const currentUserRole = isUserA ? 'userA' : 'userB';
     const myInput = isUserA ? activeCase.userAInput : activeCase.userBInput;
     const myFeelings = isUserA ? activeCase.userAFeelings : activeCase.userBFeelings;
 
-    // Get partner names for display
-    const userAName = users?.find(u => u.name?.includes('User A'))?.name || 'Partner A';
-    const userBName = users?.find(u => u.name?.includes('User B'))?.name || 'Partner B';
+    // Get partner names for display from auth store (Supabase profiles)
+    const myName = profile?.display_name || profile?.name || 'You';
+    const partnerName = connectedPartner?.display_name || connectedPartner?.name || 'Your Partner';
+    
+    // Check if partner has requested to settle
+    const partnerWantsToSettle = courtSession?.settle_requests && (
+        (courtSession.settle_requests.creator && !isCreator) || 
+        (courtSession.settle_requests.partner && isCreator)
+    );
+    
+    // Check if I have already requested to settle
+    const iHaveRequestedSettle = courtSession?.settle_requests && (
+        (courtSession.settle_requests.creator && isCreator) || 
+        (courtSession.settle_requests.partner && !isCreator)
+    );
+    
+    // For verdict display: User A is initiator, User B is partner
+    const userAName = isInitiator ? myName : partnerName;
+    const userBName = isInitiator ? partnerName : myName;
 
     // Check for active session on mount
     useEffect(() => {
@@ -1205,6 +1523,28 @@ const CourtroomPage = () => {
     // Handle cancel session
     const handleCancelSession = async () => {
         await closeCourtSession();
+    };
+
+    // Handle settle out of court request
+    const handleSettle = async () => {
+        setIsSettling(true);
+        setShowSettleModal(false);
+        try {
+            const result = await settleOutOfCourt();
+            if (result.settled) {
+                setSettleSuccess(true);
+                // Navigate home after animation
+                setTimeout(() => {
+                    navigate('/');
+                }, 3500);
+            } else {
+                setSettleMessage('Settlement requested. Waiting for your partner to agree...');
+            }
+        } catch (error) {
+            console.error("Failed to settle", error);
+            setSettleMessage('Failed to request settlement. Please try again.');
+        }
+        setIsSettling(false);
     };
 
     // Handle addendum submission
@@ -1277,6 +1617,7 @@ const CourtroomPage = () => {
                     navigate={navigate}
                     currentUser={currentUser}
                     onAcceptVerdict={handleAcceptVerdict}
+                    isInitiator={isInitiator}
                 />
 
                 {/* Addendum Modal */}
@@ -1412,15 +1753,27 @@ const CourtroomPage = () => {
     }
 
     if (courtSession.status === 'WAITING') {
-        const hasJoined = (isUserA && courtSession.userAJoined) || (!isUserA && courtSession.userBJoined);
-        const isCreator = courtSession.createdBy === currentUserRole;
-
-        if (hasJoined && isCreator) {
-            return <WaitingForPartner session={courtSession} currentUserRole={currentUserRole} onCancel={handleCancelSession} />;
-        } else if (!hasJoined && !isCreator) {
-            return <SummonsReceived session={courtSession} onJoin={handleJoin} />;
+        // Check if current user has joined based on creator status
+        const hasJoined = isCreator 
+            ? (courtSession.creatorJoined || courtSession.userAJoined)
+            : (courtSession.partnerJoined || courtSession.userBJoined);
+        
+        // If the current user is the creator, they're waiting for partner
+        if (isCreator) {
+            return <WaitingForPartner 
+                session={courtSession} 
+                partnerName={partnerName}
+                myName={myName}
+                isCreator={true}
+                onCancel={handleCancelSession} 
+            />;
         } else {
-            return <WaitingForPartner session={courtSession} currentUserRole={currentUserRole} onCancel={handleCancelSession} />;
+            // Current user is the partner who received the summons
+            return <SummonsReceived 
+                session={courtSession} 
+                senderName={partnerName}
+                onJoin={handleJoin} 
+            />;
         }
     }
 
@@ -1470,6 +1823,40 @@ const CourtroomPage = () => {
                 transition={{ delay: 0.1 }}
                 className="glass-card p-4 space-y-5"
             >
+                {/* Partner Settlement Request Banner */}
+                {partnerWantsToSettle && !iHaveRequestedSettle && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="bg-gradient-to-r from-pink-100 to-rose-100 border-2 border-pink-200 rounded-2xl p-4"
+                    >
+                        <div className="flex items-center gap-3">
+                            <motion.div
+                                animate={{ scale: [1, 1.2, 1] }}
+                                transition={{ duration: 1, repeat: Infinity }}
+                                className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm"
+                            >
+                                <Handshake className="w-6 h-6 text-pink-500" />
+                            </motion.div>
+                            <div className="flex-1">
+                                <p className="text-sm font-bold text-pink-700">
+                                    {partnerName} wants to settle 💕
+                                </p>
+                                <p className="text-xs text-pink-600">
+                                    They're choosing love over winning. Will you?
+                                </p>
+                            </div>
+                            <motion.button
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => setShowSettleModal(true)}
+                                className="px-4 py-2 bg-pink-500 text-white rounded-xl text-sm font-bold shadow-lg"
+                            >
+                                Accept
+                            </motion.button>
+                        </div>
+                    </motion.div>
+                )}
+
                 {/* Facts Input */}
                 <div className="space-y-2">
                     <label className="flex items-center gap-2 text-sm font-bold text-court-gold">
@@ -1498,22 +1885,101 @@ const CourtroomPage = () => {
                     />
                 </div>
 
-                {/* Submit Button */}
-                <motion.button
-                    whileTap={{ scale: 0.98 }}
-                    onClick={submitSide}
-                    disabled={!myInput.trim()}
-                    className="btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    <Send className="w-4 h-4" />
-                    Submit Evidence
-                </motion.button>
+                {/* Button Row */}
+                <div className="flex gap-3">
+                    {/* Submit Button */}
+                    <motion.button
+                        whileTap={{ scale: 0.98 }}
+                        onClick={submitSide}
+                        disabled={!myInput.trim()}
+                        className="btn-primary flex-1 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <Send className="w-4 h-4" />
+                        Submit Evidence
+                    </motion.button>
+
+                    {/* Settle Out of Court Button */}
+                    <motion.button
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => setShowSettleModal(true)}
+                        disabled={isSettling || iHaveRequestedSettle}
+                        className={`glass-card px-4 py-3 flex items-center justify-center gap-2 transition-colors disabled:opacity-50 ${
+                            iHaveRequestedSettle 
+                                ? 'bg-pink-100 text-pink-500' 
+                                : 'text-court-brownLight hover:text-court-brown hover:bg-white/80'
+                        }`}
+                        title={iHaveRequestedSettle ? 'Settlement Requested' : 'Settle Out of Court'}
+                    >
+                        <Handshake className="w-5 h-5" />
+                        {iHaveRequestedSettle && <Clock className="w-3 h-3 animate-pulse" />}
+                    </motion.button>
+                </div>
+
+                {/* Settlement Status */}
+                {iHaveRequestedSettle && !partnerWantsToSettle && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="flex items-center gap-3 p-3 bg-pink-50 border border-pink-200 rounded-xl"
+                    >
+                        <motion.div
+                            animate={{ rotate: 360 }}
+                            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                        >
+                            <Clock className="w-5 h-5 text-pink-400" />
+                        </motion.div>
+                        <div className="flex-1">
+                            <p className="text-sm font-medium text-pink-700">Settlement Requested</p>
+                            <p className="text-xs text-pink-500">Waiting for {partnerName} to accept...</p>
+                        </div>
+                    </motion.div>
+                )}
+
+                {/* Settle Message (for errors) */}
+                <AnimatePresence>
+                    {settleMessage && settleMessage.includes('Failed') && (
+                        <motion.div
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            className={`flex items-center gap-2 p-3 rounded-xl text-sm ${
+                                settleMessage.includes('dismissed') 
+                                    ? 'bg-green-100 text-green-700' 
+                                    : settleMessage.includes('Failed')
+                                        ? 'bg-red-100 text-red-700'
+                                        : 'bg-court-cream text-court-brown'
+                            }`}
+                        >
+                            <X className="w-4 h-4 flex-shrink-0" />
+                            <span>{settleMessage}</span>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </motion.div>
 
             {/* Tip */}
             <p className="text-center text-xs text-court-brownLight italic">
                 🐾 Judge Whiskers values honesty and emotional vulnerability 🐾
             </p>
+
+            {/* Settle Modal */}
+            <AnimatePresence>
+                {showSettleModal && (
+                    <SettleModal 
+                        onConfirm={handleSettle}
+                        onCancel={() => setShowSettleModal(false)}
+                        partnerName={partnerName}
+                        partnerWantsToSettle={partnerWantsToSettle}
+                    />
+                )}
+            </AnimatePresence>
+
+            {/* Settlement Success Animation */}
+            <AnimatePresence>
+                {settleSuccess && (
+                    <SettleSuccessAnimation partnerName={partnerName} />
+                )}
+            </AnimatePresence>
         </div>
     );
 };

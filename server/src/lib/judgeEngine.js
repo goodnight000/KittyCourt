@@ -4,7 +4,7 @@
  * This is the core deliberation pipeline that processes couple disputes
  * through a multi-step LLM chain based on Gottman Method and NVC principles.
  * 
- * Now using OpenRouter with moonshotai/kimi-k2-thinking model
+ * Now using OpenRouter with x-ai/grok-4.1-fast:free model
  * 
  * Pipeline Steps:
  * 1. Safety Guardrail (Moderation API)
@@ -29,10 +29,10 @@ const { repairAndParseJSON } = require('./jsonRepair');
 
 // Configuration - Using OpenRouter with fast model for quick verdicts
 const CONFIG = {
-    model: 'moonshotai/kimi-k2-thinking', // Moonshot's thinking model via OpenRouter
+    model: 'x-ai/grok-4.1-fast:free', // Grok's fast reasoning model via OpenRouter
     analysisTemperature: 0.5, // Lower temp for consistent clinical analysis
     verdictTemperature: 0.7,  // Higher temp for creative cat persona
-    maxTokens: 5000,          // Sufficient for complete responses
+    maxTokens: 10000,          // Sufficient for complete responses
     maxRetries: 2,            // Number of retries on failure
 };
 
@@ -100,7 +100,7 @@ async function runAnalysis(input) {
     for (let attempt = 1; attempt <= CONFIG.maxRetries; attempt++) {
         try {
             console.log(`[Judge Engine] Analysis attempt ${attempt}/${CONFIG.maxRetries}`);
-            
+
             const response = await createChatCompletion({
                 model: CONFIG.model,
                 messages: [
@@ -114,7 +114,7 @@ async function runAnalysis(input) {
 
             const content = response.choices[0].message.content;
             console.log('[Judge Engine] Raw analysis response:', content.substring(0, 200) + '...');
-            
+
             // Try to parse with repair capability
             let parsed;
             try {
@@ -123,7 +123,7 @@ async function runAnalysis(input) {
                 console.log('[Judge Engine] Direct parse failed, attempting repair...');
                 parsed = repairAndParseJSON(content);
             }
-            
+
             // Handle case where LLM returns fields directly without 'analysis' wrapper
             if (!parsed.analysis && (parsed.identifiedDynamic || parsed.userA_Horsemen)) {
                 parsed = { analysis: parsed };
@@ -135,14 +135,14 @@ async function runAnalysis(input) {
         } catch (error) {
             console.error(`[Judge Engine] Analysis attempt ${attempt} failed:`, error.message);
             lastError = error;
-            
+
             if (attempt < CONFIG.maxRetries) {
                 console.log('[Judge Engine] Retrying analysis...');
                 await new Promise(resolve => setTimeout(resolve, 1000)); // Brief delay before retry
             }
         }
     }
-    
+
     throw new Error(`Analysis failed after ${CONFIG.maxRetries} attempts: ${lastError?.message}`);
 }
 
@@ -165,7 +165,7 @@ async function generateVerdict(input, analysis, historicalContext = '') {
     for (let attempt = 1; attempt <= CONFIG.maxRetries; attempt++) {
         try {
             console.log(`[Judge Engine] Verdict attempt ${attempt}/${CONFIG.maxRetries}`);
-            
+
             const response = await createChatCompletion({
                 model: CONFIG.model,
                 messages: [
@@ -179,7 +179,7 @@ async function generateVerdict(input, analysis, historicalContext = '') {
 
             const content = response.choices[0].message.content;
             console.log('[Judge Engine] Raw verdict response:', content.substring(0, 200) + '...');
-            
+
             // Try to parse with repair capability
             let parsed;
             try {
@@ -188,7 +188,7 @@ async function generateVerdict(input, analysis, historicalContext = '') {
                 console.log('[Judge Engine] Direct parse failed, attempting repair...');
                 parsed = repairAndParseJSON(content);
             }
-            
+
             // Validate and normalize the verdict using the schema transform
             const validated = JudgeContentSchema.parse(parsed);
 
@@ -196,14 +196,14 @@ async function generateVerdict(input, analysis, historicalContext = '') {
         } catch (error) {
             console.error(`[Judge Engine] Verdict attempt ${attempt} failed:`, error.message);
             lastError = error;
-            
+
             if (attempt < CONFIG.maxRetries) {
                 console.log('[Judge Engine] Retrying verdict generation...');
                 await new Promise(resolve => setTimeout(resolve, 1000)); // Brief delay before retry
             }
         }
     }
-    
+
     // After all retries failed, return a graceful fallback verdict
     console.error(`[Judge Engine] All ${CONFIG.maxRetries} verdict attempts failed, using fallback`);
     return getFallbackVerdict(input, lastError);
@@ -277,7 +277,7 @@ async function deliberate(rawInput, options = {}) {
     if (options.addendumText) {
         const field = options.addendumFrom === 'userA' ? 'userA' : 'userB';
         input.submissions[field].cameraFacts += `\n\n[ADDENDUM]: ${options.addendumText}`;
-        
+
         // Add context about the previous verdict
         if (options.previousVerdict) {
             input._previousContext = {
@@ -312,8 +312,8 @@ async function deliberate(rawInput, options = {}) {
         if (hasHistoricalContext(historicalContext)) {
             formattedContext = formatContextForPrompt(historicalContext, input.participants);
             console.log('[Judge Engine] Historical context retrieved:', {
-                profilesFound: Object.keys(historicalContext.profiles.userA).length > 0 || 
-                              Object.keys(historicalContext.profiles.userB).length > 0,
+                profilesFound: Object.keys(historicalContext.profiles.userA).length > 0 ||
+                    Object.keys(historicalContext.profiles.userB).length > 0,
                 memoriesFound: historicalContext.memories.length,
             });
         } else {

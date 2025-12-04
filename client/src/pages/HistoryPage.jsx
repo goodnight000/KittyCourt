@@ -2,6 +2,8 @@ import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import useAppStore from '../store/useAppStore';
+import useAuthStore from '../store/useAuthStore';
+import RequirePartner from '../components/RequirePartner';
 import { ChevronLeft, Scale, ChevronRight, Calendar, AlertTriangle, Zap, Cloud, FileText } from 'lucide-react';
 
 /**
@@ -44,10 +46,32 @@ const HORSEMAN_COLORS = {
 const HistoryPage = () => {
     const navigate = useNavigate();
     const { caseHistory, fetchCaseHistory } = useAppStore();
+    const { hasPartner } = useAuthStore();
 
     useEffect(() => {
-        fetchCaseHistory();
-    }, [fetchCaseHistory]);
+        if (hasPartner) {
+            fetchCaseHistory();
+        }
+    }, [fetchCaseHistory, hasPartner]);
+
+    // Require partner for case history
+    if (!hasPartner) {
+        return (
+            <RequirePartner
+                feature="Trial History"
+                description="View past verdicts from Judge Whiskers! Your case history will appear here once you connect with your partner and file your first case together."
+            >
+                {/* Preview content */}
+                <div className="space-y-4">
+                    <div className="glass-card p-8 text-center">
+                        <Scale className="w-12 h-12 mx-auto text-violet-400 mb-3" />
+                        <h2 className="text-lg font-bold text-neutral-800">Trial History</h2>
+                        <p className="text-sm text-neutral-500">Past verdicts from Judge Whiskers</p>
+                    </div>
+                </div>
+            </RequirePartner>
+        );
+    }
 
     const formatDate = (dateString) => {
         const date = new Date(dateString);

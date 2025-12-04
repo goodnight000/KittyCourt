@@ -120,6 +120,33 @@ function formatContextForPrompt(context, participants) {
     
     const sections = [];
     
+    // Helper to format a single profile
+    const formatProfile = (profile, name) => {
+        const lines = [];
+        lines.push(`\n### ${name}'s Profile`);
+        
+        if (profile.loveLanguages && profile.loveLanguages.length > 0) {
+            lines.push(`- **Love Language:** ${profile.loveLanguages.join(', ')}`);
+        }
+        if (profile.communicationStyle) {
+            lines.push(`- **Communication Style:** ${profile.communicationStyle}`);
+        }
+        if (profile.conflictStyle) {
+            lines.push(`- **Conflict Style:** ${profile.conflictStyle}`);
+        }
+        if (profile.appreciationStyle) {
+            lines.push(`- **Appreciation Style:** ${profile.appreciationStyle}`);
+        }
+        if (profile.petPeeves && profile.petPeeves.length > 0) {
+            lines.push(`- **Pet Peeves:** ${profile.petPeeves.join(', ')}`);
+        }
+        if (profile.bio) {
+            lines.push(`- **About:** ${profile.bio}`);
+        }
+        
+        return lines;
+    };
+    
     // Section 1: Static Profiles
     const profileA = context.profiles.userA;
     const profileB = context.profiles.userB;
@@ -128,41 +155,11 @@ function formatContextForPrompt(context, participants) {
         sections.push('## HISTORICAL PROFILE DATA');
         
         if (Object.keys(profileA).length > 0) {
-            sections.push(`\n### ${participants.userA.name}'s Profile`);
-            if (profileA.attachmentStyle) {
-                sections.push(`- **Attachment Style:** ${profileA.attachmentStyle}`);
-            }
-            if (profileA.loveLanguages && profileA.loveLanguages.length > 0) {
-                sections.push(`- **Love Languages:** ${profileA.loveLanguages.join(', ')}`);
-            }
-            if (profileA.conflictStyle) {
-                sections.push(`- **Conflict Style:** ${profileA.conflictStyle}`);
-            }
-            if (profileA.stressResponse) {
-                sections.push(`- **Under Stress:** ${profileA.stressResponse}`);
-            }
-            if (profileA.coreNeeds && profileA.coreNeeds.length > 0) {
-                sections.push(`- **Core Needs:** ${profileA.coreNeeds.join(', ')}`);
-            }
+            sections.push(...formatProfile(profileA, participants.userA.name));
         }
         
         if (Object.keys(profileB).length > 0) {
-            sections.push(`\n### ${participants.userB.name}'s Profile`);
-            if (profileB.attachmentStyle) {
-                sections.push(`- **Attachment Style:** ${profileB.attachmentStyle}`);
-            }
-            if (profileB.loveLanguages && profileB.loveLanguages.length > 0) {
-                sections.push(`- **Love Languages:** ${profileB.loveLanguages.join(', ')}`);
-            }
-            if (profileB.conflictStyle) {
-                sections.push(`- **Conflict Style:** ${profileB.conflictStyle}`);
-            }
-            if (profileB.stressResponse) {
-                sections.push(`- **Under Stress:** ${profileB.stressResponse}`);
-            }
-            if (profileB.coreNeeds && profileB.coreNeeds.length > 0) {
-                sections.push(`- **Core Needs:** ${profileB.coreNeeds.join(', ')}`);
-            }
+            sections.push(...formatProfile(profileB, participants.userB.name));
         }
     }
     

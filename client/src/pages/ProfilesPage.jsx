@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { 
-    User, Heart, Calendar, Star, Settings, ChevronRight, 
-    Edit3, Check, X, Gift, Scale, Sparkles, Clock,
-    Coffee, TrendingUp, Award, Link2, Copy, Users
+import {
+    User, Heart, Calendar, Star, Settings, ChevronRight,
+    Edit3, Check, X, Gift, Scale, Clock,
+    Coffee, TrendingUp, Award, Link2, Copy, Users, LogOut, Lock, MessageSquare
 } from 'lucide-react';
 import useAppStore from '../store/useAppStore';
 import useAuthStore from '../store/useAuthStore';
+import { validateBirthdayDate } from '../utils/helpers';
 
 const AVATAR_OPTIONS = [
     { id: 'cat_orange', emoji: '🐱', label: 'Orange Cat' },
@@ -31,22 +32,26 @@ const LOVE_LANGUAGES = [
 const ProfilesPage = () => {
     const navigate = useNavigate();
     const { currentUser, users, caseHistory, appreciations, fetchAppreciations } = useAppStore();
-    const { profile, partner: connectedPartner, hasPartner } = useAuthStore();
+    const { profile, partner: connectedPartner, hasPartner, signOut } = useAuthStore();
     const partnerFromUsers = users?.find(u => u.id !== currentUser?.id);
-    
+
     const [showEditModal, setShowEditModal] = useState(false);
     const [activeTab, setActiveTab] = useState('me'); // 'me' or 'us'
     const [copied, setCopied] = useState(false);
-    
-    // Profile settings (stored in localStorage per user)
+
+    // Profile settings - initialize from Supabase profile, fallback to localStorage
     const [profileData, setProfileData] = useState(() => {
         const stored = localStorage.getItem(`catjudge_profile_${currentUser?.id}`);
-        return stored ? JSON.parse(stored) : {
-            nickname: '',
-            birthday: '',
-            loveLanguage: '',
-            avatar: 'cat_orange',
-            anniversaryDate: '',
+        const storedData = stored ? JSON.parse(stored) : {};
+        
+        // Merge with Supabase profile data (Supabase takes priority for name/birthday/anniversary)
+        return {
+            nickname: profile?.display_name || storedData.nickname || '',
+            birthday: profile?.birthday || storedData.birthday || '',
+            loveLanguage: profile?.love_language || storedData.loveLanguage || '',
+            avatar: storedData.avatar || 'cat_orange',
+            anniversaryDate: profile?.anniversary_date || storedData.anniversaryDate || '',
+            profilePicture: storedData.profilePicture || null,
         };
     });
 
@@ -57,9 +62,19 @@ const ProfilesPage = () => {
     useEffect(() => {
         if (currentUser?.id) {
             const stored = localStorage.getItem(`catjudge_profile_${currentUser.id}`);
-            if (stored) setProfileData(JSON.parse(stored));
+            const storedData = stored ? JSON.parse(stored) : {};
+            
+            // Merge Supabase profile with localStorage (Supabase takes priority)
+            setProfileData({
+                nickname: profile?.display_name || storedData.nickname || '',
+                birthday: profile?.birthday || storedData.birthday || '',
+                loveLanguage: profile?.love_language || storedData.loveLanguage || '',
+                avatar: storedData.avatar || 'cat_orange',
+                anniversaryDate: profile?.anniversary_date || storedData.anniversaryDate || '',
+                profilePicture: storedData.profilePicture || null,
+            });
         }
-    }, [currentUser?.id]);
+    }, [currentUser?.id, profile]);
 
     const saveProfile = (newData) => {
         setProfileData(newData);
@@ -70,6 +85,8 @@ const ProfilesPage = () => {
     const totalCases = caseHistory?.length || 0;
     const totalAppreciations = appreciations?.length || 0;
     const totalKibbleEarned = appreciations?.reduce((sum, a) => sum + (a.kibbleAmount || 0), 0) || 0;
+    const questionsAnswered = profile?.questions_answered || 0;
+    const partnerQuestionsAnswered = connectedPartner?.questions_answered || 0;
 
     // Get selected avatar emoji
     const selectedAvatar = AVATAR_OPTIONS.find(a => a.id === profileData.avatar)?.emoji || '🐱';
@@ -98,24 +115,24 @@ const ProfilesPage = () => {
             <div className="flex bg-white/60 rounded-2xl p-1.5 gap-1">
                 <button
                     onClick={() => setActiveTab('me')}
-                    className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${
-                        activeTab === 'me'
-                            ? 'text-white shadow-md'
-                            : 'text-neutral-500'
-                    }`}
+                    className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'me'
+                        ? 'text-white shadow-md'
+                        : 'text-neutral-500'
+                        }`}
                     style={activeTab === 'me' ? { background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' } : {}}
                 >
                     My Profile
                 </button>
                 <button
-                    onClick={() => setActiveTab('us')}
-                    className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${
-                        activeTab === 'us'
-                            ? 'text-white shadow-md'
-                            : 'text-neutral-500'
-                    }`}
+                    onClick={() => hasPartner && setActiveTab('us')}
+                    disabled={!hasPartner}
+                    className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-1.5 ${activeTab === 'us'
+                        ? 'text-white shadow-md'
+                        : hasPartner ? 'text-neutral-500' : 'text-neutral-400 opacity-60 cursor-not-allowed'
+                        }`}
                     style={activeTab === 'us' ? { background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' } : {}}
                 >
+                    {!hasPartner && <Lock className="w-3.5 h-3.5" />}
                     Our Story
                 </button>
             </div>
@@ -135,9 +152,17 @@ const ProfilesPage = () => {
                                 <motion.div
                                     whileTap={{ scale: 0.95 }}
                                     onClick={() => setShowEditModal(true)}
-                                    className="w-20 h-20 bg-gradient-to-br from-violet-100 to-pink-100 rounded-2xl flex items-center justify-center text-4xl shadow-soft cursor-pointer relative"
+                                    className="w-20 h-20 bg-gradient-to-br from-violet-100 to-pink-100 rounded-2xl flex items-center justify-center text-4xl shadow-soft cursor-pointer relative overflow-hidden"
                                 >
-                                    {selectedAvatar}
+                                    {profileData.profilePicture ? (
+                                        <img 
+                                            src={profileData.profilePicture} 
+                                            alt="Profile" 
+                                            className="w-full h-full object-cover"
+                                        />
+                                    ) : (
+                                        selectedAvatar
+                                    )}
                                     <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-sm">
                                         <Edit3 className="w-3 h-3 text-violet-500" />
                                     </div>
@@ -152,6 +177,12 @@ const ProfilesPage = () => {
                                             {new Date(profileData.birthday).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                                         </p>
                                     )}
+                                    {profileData.anniversaryDate && (
+                                        <p className="text-pink-500 text-sm flex items-center gap-1 mt-0.5">
+                                            <Heart className="w-3.5 h-3.5 fill-pink-500" />
+                                            Anniversary: {new Date(profileData.anniversaryDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                        </p>
+                                    )}
                                     {selectedLoveLanguage && (
                                         <p className="text-pink-500 text-sm flex items-center gap-1 mt-1">
                                             <span>{selectedLoveLanguage.emoji}</span>
@@ -160,7 +191,7 @@ const ProfilesPage = () => {
                                     )}
                                 </div>
                             </div>
-                            
+
                             <motion.button
                                 whileTap={{ scale: 0.98 }}
                                 onClick={() => setShowEditModal(true)}
@@ -168,6 +199,18 @@ const ProfilesPage = () => {
                             >
                                 <Settings className="w-4 h-4" />
                                 Edit Profile
+                            </motion.button>
+
+                            <motion.button
+                                whileTap={{ scale: 0.98 }}
+                                onClick={async () => {
+                                    await signOut();
+                                    navigate('/signin');
+                                }}
+                                className="w-full py-2.5 bg-red-50 rounded-xl text-sm font-bold text-red-500 flex items-center justify-center gap-2 border border-red-100"
+                            >
+                                <LogOut className="w-4 h-4" />
+                                Sign Out
                             </motion.button>
                         </motion.div>
 
@@ -207,11 +250,11 @@ const ProfilesPage = () => {
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.25 }}
-                                className="glass-card p-4 text-center"
+                                className="glass-card p-4 text-center bg-gradient-to-r from-indigo-50/80 to-violet-50/60"
                             >
-                                <Sparkles className="w-6 h-6 text-amber-500 mx-auto mb-2" />
-                                <p className="text-2xl font-bold text-neutral-800">{totalKibbleEarned}</p>
-                                <p className="text-xs text-neutral-500">Kibble Earned</p>
+                                <MessageSquare className="w-6 h-6 text-indigo-500 mx-auto mb-2" />
+                                <p className="text-2xl font-bold text-neutral-800">{questionsAnswered}</p>
+                                <p className="text-xs text-neutral-500">Questions Answered</p>
                             </motion.div>
                         </div>
 
@@ -232,7 +275,7 @@ const ProfilesPage = () => {
                                         <p className="text-xs text-neutral-500">Unlock all features together! 💕</p>
                                     </div>
                                 </div>
-                                
+
                                 {/* Partner Code */}
                                 <div className="bg-white/60 rounded-xl p-3 border border-pink-100 mb-3">
                                     <p className="text-xs text-neutral-500 text-center mb-1">Your Partner Code</p>
@@ -259,7 +302,7 @@ const ProfilesPage = () => {
                                         </motion.button>
                                     </div>
                                 </div>
-                                
+
                                 <motion.button
                                     whileTap={{ scale: 0.98 }}
                                     onClick={() => navigate('/connect')}
@@ -283,8 +326,8 @@ const ProfilesPage = () => {
                                 <div className="flex items-center gap-3">
                                     <div className="w-14 h-14 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center text-2xl">
                                         {connectedPartner.avatar_url ? (
-                                            <img 
-                                                src={connectedPartner.avatar_url} 
+                                            <img
+                                                src={connectedPartner.avatar_url}
                                                 alt={connectedPartner.display_name}
                                                 className="w-full h-full rounded-full object-cover"
                                             />
@@ -311,19 +354,19 @@ const ProfilesPage = () => {
                         {/* Quick Links */}
                         <div className="space-y-2">
                             <h3 className="text-sm font-bold text-neutral-600 px-1">Quick Links</h3>
-                            <QuickLink 
+                            <QuickLink
                                 icon={<Heart className="w-5 h-5 text-pink-500" />}
                                 label="View Appreciations"
                                 sublabel="See what your partner loves"
                                 onClick={() => navigate('/appreciations')}
                             />
-                            <QuickLink 
+                            <QuickLink
                                 icon={<Calendar className="w-5 h-5 text-violet-500" />}
                                 label="Our Calendar"
                                 sublabel="Important dates & events"
                                 onClick={() => navigate('/calendar')}
                             />
-                            <QuickLink 
+                            <QuickLink
                                 icon={<Gift className="w-5 h-5 text-amber-500" />}
                                 label="Kibble Market"
                                 sublabel="Redeem rewards"
@@ -354,19 +397,25 @@ const ProfilesPage = () => {
                                 </motion.div>
                                 <div className="w-16 h-16 bg-gradient-to-br from-violet-100 to-violet-200 rounded-2xl flex items-center justify-center text-3xl shadow-soft">
                                     {(() => {
-                                        const partnerProfile = localStorage.getItem(`catjudge_profile_${partner?.id}`);
+                                        if (!connectedPartner?.id) return '😻';
+                                        const partnerProfile = localStorage.getItem(`catjudge_profile_${connectedPartner.id}`);
                                         const partnerAvatar = partnerProfile ? JSON.parse(partnerProfile).avatar : 'cat_heart';
                                         return AVATAR_OPTIONS.find(a => a.id === partnerAvatar)?.emoji || '😻';
                                     })()}
                                 </div>
                             </div>
                             <h2 className="font-bold text-neutral-800 text-lg">
-                                {profileData.nickname || currentUser?.name} & {partner?.name}
+                                {profileData.nickname || profile?.display_name || currentUser?.name} & {connectedPartner?.display_name || 'Partner'}
                             </h2>
                             {profileData.anniversaryDate && (
                                 <p className="text-pink-500 text-sm mt-1 flex items-center justify-center gap-1">
                                     <Heart className="w-3.5 h-3.5 fill-pink-500" />
                                     Together since {new Date(profileData.anniversaryDate).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                                </p>
+                            )}
+                            {!profileData.anniversaryDate && hasPartner && (
+                                <p className="text-neutral-400 text-sm mt-1 italic">
+                                    Anniversary not set
                                 </p>
                             )}
                         </motion.div>
@@ -380,6 +429,7 @@ const ProfilesPage = () => {
                             <div className="space-y-2">
                                 <StatBar label="Cases Resolved Together" value={totalCases} max={20} color="violet" />
                                 <StatBar label="Appreciations Shared" value={totalAppreciations * 2} max={50} color="pink" />
+                                <StatBar label="Daily Questions Answered" value={questionsAnswered + partnerQuestionsAnswered} max={60} color="indigo" />
                                 <StatBar label="Kibble Exchanged" value={Math.min(totalKibbleEarned, 500)} max={500} color="amber" />
                             </div>
                         </div>
@@ -391,35 +441,45 @@ const ProfilesPage = () => {
                                 Achievements
                             </h3>
                             <div className="grid grid-cols-3 gap-2">
-                                <AchievementBadge 
-                                    emoji="🌟" 
-                                    label="First Case" 
-                                    unlocked={totalCases >= 1} 
+                                <AchievementBadge
+                                    emoji="🌟"
+                                    label="First Case"
+                                    unlocked={totalCases >= 1}
                                 />
-                                <AchievementBadge 
-                                    emoji="💕" 
-                                    label="Appreciation" 
-                                    unlocked={totalAppreciations >= 1} 
+                                <AchievementBadge
+                                    emoji="💕"
+                                    label="Appreciation"
+                                    unlocked={totalAppreciations >= 1}
                                 />
-                                <AchievementBadge 
-                                    emoji="⚖️" 
-                                    label="5 Cases" 
-                                    unlocked={totalCases >= 5} 
+                                <AchievementBadge
+                                    emoji="⚖️"
+                                    label="5 Cases"
+                                    unlocked={totalCases >= 5}
                                 />
-                                <AchievementBadge 
-                                    emoji="🎁" 
-                                    label="Gift Giver" 
-                                    unlocked={currentUser?.kibbleBalance > 0} 
+                                <AchievementBadge
+                                    emoji="🎁"
+                                    label="Gift Giver"
+                                    unlocked={currentUser?.kibbleBalance > 0}
                                 />
-                                <AchievementBadge 
-                                    emoji="🏆" 
-                                    label="10 Cases" 
-                                    unlocked={totalCases >= 10} 
+                                <AchievementBadge
+                                    emoji="🏆"
+                                    label="10 Cases"
+                                    unlocked={totalCases >= 10}
                                 />
-                                <AchievementBadge 
-                                    emoji="💎" 
-                                    label="Super Fan" 
-                                    unlocked={totalAppreciations >= 10} 
+                                <AchievementBadge
+                                    emoji="💎"
+                                    label="Super Fan"
+                                    unlocked={totalAppreciations >= 10}
+                                />
+                                <AchievementBadge
+                                    emoji="💬"
+                                    label="Deep Talks"
+                                    unlocked={(questionsAnswered + partnerQuestionsAnswered) >= 7}
+                                />
+                                <AchievementBadge
+                                    emoji="📖"
+                                    label="Story Tellers"
+                                    unlocked={(questionsAnswered + partnerQuestionsAnswered) >= 30}
                                 />
                             </div>
                         </div>
@@ -468,7 +528,7 @@ const StatBar = ({ label, value, max, color }) => {
         pink: 'from-pink-400 to-pink-500',
         amber: 'from-amber-400 to-amber-500',
     };
-    
+
     return (
         <div>
             <div className="flex justify-between text-xs mb-1">
@@ -488,11 +548,10 @@ const StatBar = ({ label, value, max, color }) => {
 };
 
 const AchievementBadge = ({ emoji, label, unlocked }) => (
-    <div className={`p-3 rounded-xl text-center transition-all ${
-        unlocked 
-            ? 'bg-gradient-to-br from-amber-50 to-amber-100 shadow-soft' 
-            : 'bg-neutral-100 opacity-40'
-    }`}>
+    <div className={`p-3 rounded-xl text-center transition-all ${unlocked
+        ? 'bg-gradient-to-br from-amber-50 to-amber-100 shadow-soft'
+        : 'bg-neutral-100 opacity-40'
+        }`}>
         <span className="text-2xl block mb-1">{unlocked ? emoji : '🔒'}</span>
         <span className="text-[10px] font-bold text-neutral-600">{label}</span>
     </div>
@@ -500,6 +559,69 @@ const AchievementBadge = ({ emoji, label, unlocked }) => (
 
 const EditProfileModal = ({ profileData, onSave, onClose }) => {
     const [formData, setFormData] = useState({ ...profileData });
+    const [birthdayError, setBirthdayError] = useState(null);
+    const [uploading, setUploading] = useState(false);
+    const fileInputRef = React.useRef(null);
+
+    const handleBirthdayChange = (value) => {
+        setFormData({ ...formData, birthday: value });
+        if (value) {
+            const validation = validateBirthdayDate(value);
+            setBirthdayError(validation.isValid ? null : validation.error);
+        } else {
+            setBirthdayError(null);
+        }
+    };
+
+    const handleImageUpload = async (file) => {
+        if (!file) return;
+        
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+            alert('Please select an image file');
+            return;
+        }
+        
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            alert('Image must be less than 5MB');
+            return;
+        }
+        
+        setUploading(true);
+        try {
+            // Convert to base64 for preview and storage
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setFormData({ ...formData, profilePicture: reader.result });
+                setUploading(false);
+            };
+            reader.onerror = () => {
+                alert('Failed to read image');
+                setUploading(false);
+            };
+            reader.readAsDataURL(file);
+        } catch (err) {
+            console.error('Upload error:', err);
+            setUploading(false);
+        }
+    };
+
+    const handleCameraCapture = () => {
+        // Create a hidden file input for camera
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.capture = 'user'; // Front camera
+        input.onchange = (e) => handleImageUpload(e.target.files[0]);
+        input.click();
+    };
+
+    const handleSave = () => {
+        // Don't save if there are validation errors
+        if (birthdayError) return;
+        onSave(formData);
+    };
 
     return (
         <motion.div
@@ -526,19 +648,69 @@ const EditProfileModal = ({ profileData, onSave, onClose }) => {
                     </button>
                 </div>
 
+                {/* Profile Picture */}
+                <div>
+                    <label className="text-xs font-bold text-neutral-500 mb-2 block">Profile Picture 📸</label>
+                    <div className="flex items-center gap-4">
+                        <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-violet-100 to-pink-100 flex items-center justify-center overflow-hidden shadow-soft">
+                            {formData.profilePicture ? (
+                                <img 
+                                    src={formData.profilePicture} 
+                                    alt="Profile" 
+                                    className="w-full h-full object-cover"
+                                />
+                            ) : (
+                                <span className="text-4xl">{AVATAR_OPTIONS.find(a => a.id === formData.avatar)?.emoji || '🐱'}</span>
+                            )}
+                        </div>
+                        <div className="flex-1 space-y-2">
+                            <motion.button
+                                whileTap={{ scale: 0.95 }}
+                                onClick={handleCameraCapture}
+                                disabled={uploading}
+                                className="w-full py-2.5 bg-violet-50 text-violet-600 rounded-xl text-sm font-bold flex items-center justify-center gap-2 border border-violet-200"
+                            >
+                                📷 Take Photo
+                            </motion.button>
+                            <motion.button
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => fileInputRef.current?.click()}
+                                disabled={uploading}
+                                className="w-full py-2.5 bg-pink-50 text-pink-600 rounded-xl text-sm font-bold flex items-center justify-center gap-2 border border-pink-200"
+                            >
+                                {uploading ? 'Uploading...' : '🖼️ Upload Photo'}
+                            </motion.button>
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => handleImageUpload(e.target.files[0])}
+                                className="hidden"
+                            />
+                        </div>
+                    </div>
+                    {formData.profilePicture && (
+                        <button
+                            onClick={() => setFormData({ ...formData, profilePicture: null })}
+                            className="text-xs text-red-500 mt-2 underline"
+                        >
+                            Remove photo
+                        </button>
+                    )}
+                </div>
+
                 {/* Avatar Selection */}
                 <div>
-                    <label className="text-xs font-bold text-neutral-500 mb-2 block">Choose Avatar</label>
+                    <label className="text-xs font-bold text-neutral-500 mb-2 block">Or Choose Avatar</label>
                     <div className="grid grid-cols-4 gap-2">
                         {AVATAR_OPTIONS.map((avatar) => (
                             <button
                                 key={avatar.id}
-                                onClick={() => setFormData({ ...formData, avatar: avatar.id })}
-                                className={`p-3 rounded-xl text-2xl transition-all ${
-                                    formData.avatar === avatar.id
-                                        ? 'bg-violet-100 ring-2 ring-violet-400'
-                                        : 'bg-neutral-50 hover:bg-neutral-100'
-                                }`}
+                                onClick={() => setFormData({ ...formData, avatar: avatar.id, profilePicture: null })}
+                                className={`p-3 rounded-xl text-2xl transition-all ${formData.avatar === avatar.id && !formData.profilePicture
+                                    ? 'bg-violet-100 ring-2 ring-violet-400'
+                                    : 'bg-neutral-50 hover:bg-neutral-100'
+                                    }`}
                             >
                                 {avatar.emoji}
                             </button>
@@ -564,20 +736,19 @@ const EditProfileModal = ({ profileData, onSave, onClose }) => {
                     <input
                         type="date"
                         value={formData.birthday}
-                        onChange={(e) => setFormData({ ...formData, birthday: e.target.value })}
-                        className="w-full bg-neutral-50 border-2 border-neutral-100 rounded-xl p-3 text-neutral-700 focus:ring-2 focus:ring-violet-200 focus:border-violet-300 focus:outline-none text-sm"
+                        onChange={(e) => handleBirthdayChange(e.target.value)}
+                        className={`w-full bg-neutral-50 border-2 rounded-xl p-3 text-neutral-700 focus:ring-2 focus:outline-none text-sm ${
+                            birthdayError 
+                                ? 'border-red-300 focus:ring-red-200 focus:border-red-300' 
+                                : 'border-neutral-100 focus:ring-violet-200 focus:border-violet-300'
+                        }`}
                     />
-                </div>
-
-                {/* Anniversary */}
-                <div>
-                    <label className="text-xs font-bold text-neutral-500 mb-1 block">Anniversary Date 💕</label>
-                    <input
-                        type="date"
-                        value={formData.anniversaryDate}
-                        onChange={(e) => setFormData({ ...formData, anniversaryDate: e.target.value })}
-                        className="w-full bg-neutral-50 border-2 border-neutral-100 rounded-xl p-3 text-neutral-700 focus:ring-2 focus:ring-violet-200 focus:border-violet-300 focus:outline-none text-sm"
-                    />
+                    {birthdayError && (
+                        <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                            <AlertTriangle className="w-3 h-3" />
+                            {birthdayError}
+                        </p>
+                    )}
                 </div>
 
                 {/* Love Language */}
@@ -588,11 +759,10 @@ const EditProfileModal = ({ profileData, onSave, onClose }) => {
                             <button
                                 key={lang.id}
                                 onClick={() => setFormData({ ...formData, loveLanguage: lang.id })}
-                                className={`w-full p-3 rounded-xl text-left flex items-center gap-3 transition-all ${
-                                    formData.loveLanguage === lang.id
-                                        ? 'bg-pink-50 ring-2 ring-pink-300'
-                                        : 'bg-neutral-50 hover:bg-neutral-100'
-                                }`}
+                                className={`w-full p-3 rounded-xl text-left flex items-center gap-3 transition-all ${formData.loveLanguage === lang.id
+                                    ? 'bg-pink-50 ring-2 ring-pink-300'
+                                    : 'bg-neutral-50 hover:bg-neutral-100'
+                                    }`}
                             >
                                 <span className="text-xl">{lang.emoji}</span>
                                 <span className="text-sm font-medium text-neutral-700">{lang.label}</span>
@@ -605,8 +775,13 @@ const EditProfileModal = ({ profileData, onSave, onClose }) => {
                 </div>
 
                 <button
-                    onClick={() => onSave(formData)}
-                    className="btn-primary w-full flex items-center justify-center gap-2"
+                    onClick={handleSave}
+                    disabled={birthdayError || uploading}
+                    className={`w-full flex items-center justify-center gap-2 ${
+                        birthdayError || uploading 
+                            ? 'btn-secondary opacity-50 cursor-not-allowed' 
+                            : 'btn-primary'
+                    }`}
                 >
                     <Check className="w-4 h-4" />
                     Save Profile

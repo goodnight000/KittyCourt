@@ -8,12 +8,11 @@ import RequirePartner from '../components/RequirePartner';
 
 const AppreciationsPage = () => {
     const navigate = useNavigate();
-    const { currentUser, users, appreciations, fetchAppreciations } = useAppStore();
-    const { hasPartner } = useAuthStore();
+    const { appreciations, fetchAppreciations } = useAppStore();
+    const { hasPartner, partner: connectedPartner } = useAuthStore();
     
-    // Get partner info
-    const partner = users?.find(u => u.id !== currentUser?.id);
-    const partnerName = partner?.name || 'Your partner';
+    // Get partner info from auth store
+    const partnerName = connectedPartner?.display_name || connectedPartner?.name || 'Your partner';
 
     useEffect(() => {
         fetchAppreciations();

@@ -10,7 +10,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 // Create client even if vars are missing (will fail on API calls but won't crash app)
 export const supabase = createClient(
-    supabaseUrl || 'https://placeholder.supabase.co', 
+    supabaseUrl || 'https://placeholder.supabase.co',
     supabaseAnonKey || 'placeholder-key',
     {
         auth: {
@@ -57,13 +57,36 @@ export const signInWithEmail = async (email, password) => {
 };
 
 /**
+ * Request a password reset email
+ */
+export const resetPassword = async (email) => {
+    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+    });
+    return { data, error };
+};
+
+/**
+ * Update password (used after clicking reset link)
+ */
+export const updatePassword = async (newPassword) => {
+    const { data, error } = await supabase.auth.updateUser({
+        password: newPassword,
+    });
+    return { data, error };
+};
+
+/**
  * Sign in with Google OAuth
  */
 export const signInWithGoogle = async () => {
+    const redirectTo = `${window.location.origin}/auth/callback`;
+    console.log('[Auth] Google Sign-In Redirect URL:', redirectTo);
+
     const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-            redirectTo: `${window.location.origin}/auth/callback`,
+            redirectTo,
         },
     });
     return { data, error };
@@ -105,14 +128,14 @@ export const upsertProfile = async (profileData) => {
             .upsert(profileData, { onConflict: 'id' })
             .select()
             .single();
-        
+
         console.log('[supabase] upsertProfile result:', { data: upsertData, error: upsertError });
-        
+
         if (upsertError) {
             console.error('[supabase] upsertProfile error:', upsertError);
             return { data: null, error: upsertError };
         }
-        
+
         return { data: upsertData, error: null };
     } catch (e) {
         console.error('[supabase] upsertProfile exception:', e);
@@ -157,16 +180,30 @@ export const sendPartnerRequest = async (receiverId, message = '') => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { error: 'Not authenticated' };
 
-    // Check if there's already a pending request
-    const { data: existingRequest } = await supabase
+    // Check if there's already ANY request between these two users (in either direction)
+    const { data: existingRequests } = await supabase
         .from('partner_requests')
         .select('*')
-        .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
-        .eq('status', 'pending')
-        .single();
+        .or(`and(sender_id.eq.${user.id},receiver_id.eq.${receiverId}),and(sender_id.eq.${receiverId},receiver_id.eq.${user.id})`);
 
-    if (existingRequest) {
-        return { error: 'You already have a pending partner request' };
+    if (existingRequests && existingRequests.length > 0) {
+        const request = existingRequests[0];
+        
+        if (request.status === 'pending') {
+            if (request.sender_id === user.id) {
+                return { error: 'You already sent a request to this person. Waiting for their response!' };
+            } else {
+                return { error: 'This person already sent you a request! Check your pending requests.' };
+            }
+        } else if (request.status === 'accepted') {
+            return { error: 'You are already connected with this person!' };
+        } else if (request.status === 'rejected') {
+            // Delete the old rejected request and allow a new one
+            await supabase
+                .from('partner_requests')
+                .delete()
+                .eq('id', request.id);
+        }
     }
 
     const { data, error } = await supabase
@@ -230,56 +267,34 @@ export const getSentRequest = async () => {
 /**
  * Accept a partner connection request
  * This will update both users' profiles to link them as partners
+ * and set the anniversary date for both users
+ * @param {string} requestId - The ID of the partner request to accept
+ * @param {string} anniversaryDate - The couple's anniversary date (YYYY-MM-DD format)
  */
-export const acceptPartnerRequest = async (requestId) => {
+export const acceptPartnerRequest = async (requestId, anniversaryDate = null) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { error: 'Not authenticated' };
 
-    // Get the request
-    const { data: request, error: requestError } = await supabase
-        .from('partner_requests')
-        .select('*')
-        .eq('id', requestId)
-        .eq('receiver_id', user.id)
-        .single();
+    // Call the database function that handles both-way connection
+    // This function uses SECURITY DEFINER to bypass RLS
+    const { data, error } = await supabase.rpc('accept_partner_connection', {
+        p_request_id: requestId,
+        p_anniversary_date: anniversaryDate
+    });
 
-    if (requestError || !request) {
-        return { error: 'Request not found' };
+    if (error) {
+        console.error('[acceptPartnerRequest] RPC error:', error);
+        return { error: error.message || 'Failed to accept partner request' };
     }
 
-    // Update request status
-    await supabase
-        .from('partner_requests')
-        .update({ 
-            status: 'accepted',
-            responded_at: new Date().toISOString()
-        })
-        .eq('id', requestId);
-
-    // Link both users as partners
-    const now = new Date().toISOString();
-    
-    // Update receiver's profile (current user)
-    await supabase
-        .from('profiles')
-        .update({ 
-            partner_id: request.sender_id,
-            partner_connected_at: now
-        })
-        .eq('id', user.id);
-
-    // Update sender's profile
-    await supabase
-        .from('profiles')
-        .update({ 
-            partner_id: user.id,
-            partner_connected_at: now
-        })
-        .eq('id', request.sender_id);
+    // Check if the function returned an error
+    if (data?.error) {
+        return { error: data.error };
+    }
 
     // Get updated profile
     const { data: profile } = await getProfile(user.id);
-    
+
     return { data: profile, error: null };
 };
 
@@ -292,7 +307,7 @@ export const rejectPartnerRequest = async (requestId) => {
 
     const { data, error } = await supabase
         .from('partner_requests')
-        .update({ 
+        .update({
             status: 'rejected',
             responded_at: new Date().toISOString()
         })
@@ -350,6 +365,28 @@ export const subscribeToPartnerRequests = (userId, callback) => {
                 schema: 'public',
                 table: 'partner_requests',
                 filter: `receiver_id=eq.${userId}`
+            },
+            callback
+        )
+        .subscribe();
+
+    return subscription;
+};
+
+/**
+ * Subscribe to profile changes for real-time updates
+ * This is used to detect when a partner connection is accepted
+ */
+export const subscribeToProfileChanges = (userId, callback) => {
+    const subscription = supabase
+        .channel(`profile_changes_${userId}`)
+        .on(
+            'postgres_changes',
+            {
+                event: 'UPDATE',
+                schema: 'public',
+                table: 'profiles',
+                filter: `id=eq.${userId}`
             },
             callback
         )

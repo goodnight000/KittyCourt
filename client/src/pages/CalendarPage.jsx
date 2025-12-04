@@ -4,10 +4,12 @@ import { useNavigate } from 'react-router-dom';
 import { 
     ChevronLeft, ChevronRight, Plus, X, Check, Calendar,
     Heart, Cake, Star, Gift, PartyPopper, Sparkles, Trash2,
-    Lightbulb, Wand2, Loader2
+    Lightbulb, Wand2, Loader2, AlertTriangle
 } from 'lucide-react';
 import useAppStore from '../store/useAppStore';
+import useAuthStore from '../store/useAuthStore';
 import api from '../services/api';
+import { validateDate } from '../utils/helpers';
 
 const EVENT_TYPES = [
     { id: 'birthday', label: 'Birthday', emoji: '🎂', color: 'pink' },
@@ -39,8 +41,14 @@ const getDefaultHolidays = (year) => [
 
 const CalendarPage = () => {
     const navigate = useNavigate();
-    const { currentUser, users } = useAppStore();
-    const partner = users?.find(u => u.id !== currentUser?.id);
+    const { currentUser } = useAppStore();
+    const { user: authUser, profile, partner: connectedPartner, hasPartner } = useAuthStore();
+    
+    // Build users array from auth store
+    const myId = authUser?.id || currentUser?.id;
+    const myDisplayName = profile?.display_name || profile?.name || 'You';
+    const partnerId = connectedPartner?.id;
+    const partnerDisplayName = connectedPartner?.display_name || connectedPartner?.name || 'Partner';
     
     const [currentDate, setCurrentDate] = useState(new Date());
     const [events, setEvents] = useState([]);
@@ -53,62 +61,72 @@ const CalendarPage = () => {
     // Fetch events from API and merge with default holidays and profile dates
     useEffect(() => {
         fetchEvents();
-    }, [currentUser, users]);
+    }, [myId, partnerId, profile, connectedPartner]);
 
-    // Get personal events from localStorage profiles
+    // Get personal events from auth store profiles
     const getPersonalEvents = () => {
         const personalEvents = [];
         const currentYear = new Date().getFullYear();
         
-        users?.forEach(user => {
-            const profileKey = `catjudge_profile_${user.id}`;
-            const stored = localStorage.getItem(profileKey);
-            if (stored) {
-                const profile = JSON.parse(stored);
-                
-                // Add birthday events
-                if (profile.birthday) {
-                    const bday = new Date(profile.birthday);
-                    // This year's birthday
-                    personalEvents.push({
-                        id: `birthday_${user.id}_${currentYear}`,
-                        title: `${user.name}'s Birthday`,
-                        date: `${currentYear}-${String(bday.getMonth() + 1).padStart(2, '0')}-${String(bday.getDate()).padStart(2, '0')}`,
-                        type: 'birthday',
-                        emoji: '🎂',
-                        isPersonal: true,
-                    });
-                    // Next year's birthday
-                    personalEvents.push({
-                        id: `birthday_${user.id}_${currentYear + 1}`,
-                        title: `${user.name}'s Birthday`,
-                        date: `${currentYear + 1}-${String(bday.getMonth() + 1).padStart(2, '0')}-${String(bday.getDate()).padStart(2, '0')}`,
-                        type: 'birthday',
-                        emoji: '🎂',
-                        isPersonal: true,
-                    });
-                }
-                
-                // Add anniversary (only from one user to avoid duplicates)
-                if (profile.anniversaryDate && user.id === currentUser?.id) {
-                    const anniv = new Date(profile.anniversaryDate);
-                    personalEvents.push({
-                        id: `anniversary_${currentYear}`,
-                        title: `Our Anniversary 💕`,
-                        date: `${currentYear}-${String(anniv.getMonth() + 1).padStart(2, '0')}-${String(anniv.getDate()).padStart(2, '0')}`,
-                        type: 'anniversary',
-                        emoji: '💕',
-                        isPersonal: true,
-                    });
-                    personalEvents.push({
-                        id: `anniversary_${currentYear + 1}`,
-                        title: `Our Anniversary 💕`,
-                        date: `${currentYear + 1}-${String(anniv.getMonth() + 1).padStart(2, '0')}-${String(anniv.getDate()).padStart(2, '0')}`,
-                        type: 'anniversary',
-                        emoji: '💕',
-                        isPersonal: true,
-                    });
-                }
+        // Build users array from auth store
+        const users = [];
+        if (profile) {
+            users.push({ id: myId, name: myDisplayName, ...profile });
+        }
+        if (connectedPartner) {
+            users.push({ id: partnerId, name: partnerDisplayName, ...connectedPartner });
+        }
+        
+        users.forEach(user => {
+            const displayName = user.display_name || user.name || 'User';
+            
+            // Add birthday events (from profile data if available)
+            const birthday = user.birthday || user.birth_date;
+            if (birthday) {
+                const bday = new Date(birthday);
+                // This year's birthday
+                personalEvents.push({
+                    id: `birthday_${user.id}_${currentYear}`,
+                    title: `${displayName}'s Birthday`,
+                    date: `${currentYear}-${String(bday.getMonth() + 1).padStart(2, '0')}-${String(bday.getDate()).padStart(2, '0')}`,
+                    type: 'birthday',
+                    emoji: '🎂',
+                    isPersonal: true,
+                });
+                // Next year's birthday
+                personalEvents.push({
+                    id: `birthday_${user.id}_${currentYear + 1}`,
+                    title: `${displayName}'s Birthday`,
+                    date: `${currentYear + 1}-${String(bday.getMonth() + 1).padStart(2, '0')}-${String(bday.getDate()).padStart(2, '0')}`,
+                    type: 'birthday',
+                    emoji: '🎂',
+                    isPersonal: true,
+                });
+            }
+            
+            // Add anniversary (only from current user's profile to avoid duplicates)
+            const anniversaryDate = user.anniversary_date || user.anniversaryDate;
+            if (anniversaryDate && user.id === myId) {
+                // Parse as local date
+                const anniv = anniversaryDate.includes('T') 
+                    ? new Date(anniversaryDate) 
+                    : new Date(anniversaryDate + 'T00:00:00');
+                personalEvents.push({
+                    id: `anniversary_${currentYear}`,
+                    title: `Our Anniversary 💕`,
+                    date: `${currentYear}-${String(anniv.getMonth() + 1).padStart(2, '0')}-${String(anniv.getDate()).padStart(2, '0')}`,
+                    type: 'anniversary',
+                    emoji: '💕',
+                    isPersonal: true,
+                });
+                personalEvents.push({
+                    id: `anniversary_${currentYear + 1}`,
+                    title: `Our Anniversary 💕`,
+                    date: `${currentYear + 1}-${String(anniv.getMonth() + 1).padStart(2, '0')}-${String(anniv.getDate()).padStart(2, '0')}`,
+                    type: 'anniversary',
+                    emoji: '💕',
+                    isPersonal: true,
+                });
             }
         });
         
@@ -159,7 +177,7 @@ const CalendarPage = () => {
         try {
             const response = await api.post('/calendar/events', {
                 ...eventData,
-                createdBy: currentUser?.id
+                createdBy: myId
             });
             setEvents([...events, response.data]);
             setShowAddModal(false);
@@ -211,7 +229,12 @@ const CalendarPage = () => {
 
     const getEventsForDate = (date) => {
         return events.filter(event => {
-            const eventDate = new Date(event.date);
+            // Parse date string as local date by appending T00:00:00
+            // This prevents timezone shift when parsing "YYYY-MM-DD" strings
+            const dateStr = event.date;
+            const eventDate = dateStr.includes('T') 
+                ? new Date(dateStr) 
+                : new Date(dateStr + 'T00:00:00');
             return eventDate.getDate() === date.getDate() &&
                    eventDate.getMonth() === date.getMonth() &&
                    eventDate.getFullYear() === date.getFullYear();
@@ -231,15 +254,23 @@ const CalendarPage = () => {
 
     const days = getDaysInMonth(currentDate);
 
+    // Helper to parse date strings as local dates (not UTC)
+    const parseLocalDate = (dateStr) => {
+        if (!dateStr) return new Date();
+        // Append T00:00:00 to treat as local time, not UTC
+        return dateStr.includes('T') ? new Date(dateStr) : new Date(dateStr + 'T00:00:00');
+    };
+
     // Get upcoming events (next 7 days)
     const upcomingEvents = events
         .filter(event => {
-            const eventDate = new Date(event.date);
+            const eventDate = parseLocalDate(event.date);
             const today = new Date();
+            today.setHours(0, 0, 0, 0); // Start of today
             const weekFromNow = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
             return eventDate >= today && eventDate <= weekFromNow;
         })
-        .sort((a, b) => new Date(a.date) - new Date(b.date));
+        .sort((a, b) => parseLocalDate(a.date) - parseLocalDate(b.date));
 
     return (
         <div className="space-y-5">
@@ -410,8 +441,9 @@ const CalendarPage = () => {
                 {showPlanningModal && (
                     <PlanningModal
                         event={showPlanningModal}
-                        partner={partner}
-                        currentUser={currentUser}
+                        partnerId={partnerId}
+                        partnerDisplayName={partnerDisplayName}
+                        myDisplayName={myDisplayName}
                         onClose={() => setShowPlanningModal(null)}
                     />
                 )}
@@ -425,12 +457,15 @@ const CalendarPage = () => {
                         onDelete={deleteEvent}
                         onClose={() => setShowEventDetails(null)}
                         onAddMore={() => {
-                            setSelectedDate(new Date(showEventDetails[0].date));
+                            setSelectedDate(showEventDetails[0].date.includes('T') 
+                                ? new Date(showEventDetails[0].date) 
+                                : new Date(showEventDetails[0].date + 'T00:00:00'));
                             setShowEventDetails(null);
                             setShowAddModal(true);
                         }}
-                        currentUserId={currentUser?.id}
-                        users={users}
+                        currentUserId={myId}
+                        myDisplayName={myDisplayName}
+                        partnerDisplayName={partnerDisplayName}
                     />
                 )}
             </AnimatePresence>
@@ -440,7 +475,9 @@ const CalendarPage = () => {
 
 const EventCard = ({ event, delay, onClick, onPlanClick, showPlanButton }) => {
     const eventType = EVENT_TYPES.find(t => t.id === event.type) || EVENT_TYPES[4];
-    const eventDate = new Date(event.date);
+    // Parse date string as local date to prevent timezone shift
+    const dateStr = event.date;
+    const eventDate = dateStr?.includes('T') ? new Date(dateStr) : new Date(dateStr + 'T00:00:00');
     const isToday = new Date().toDateString() === eventDate.toDateString();
     const isSoon = eventDate.getTime() - new Date().getTime() < 7 * 24 * 60 * 60 * 1000;
     
@@ -511,30 +548,59 @@ const AddEventModal = ({ selectedDate, onAdd, onClose }) => {
     const [type, setType] = useState('custom');
     const [emoji, setEmoji] = useState('📅');
     
-    // Handle date initialization - ensure we get a valid date string
+    // Handle date initialization - use local date to avoid timezone shift
     const getInitialDate = () => {
         if (selectedDate) {
             // If selectedDate is already a Date object
             if (selectedDate instanceof Date && !isNaN(selectedDate)) {
-                return selectedDate.toISOString().split('T')[0];
+                // Use local date format to avoid timezone issues
+                const year = selectedDate.getFullYear();
+                const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+                const day = String(selectedDate.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
             }
-            // If it's a string, try to parse it
+            // If it's a string, return it as-is if it's in YYYY-MM-DD format
+            if (typeof selectedDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(selectedDate)) {
+                return selectedDate;
+            }
+            // If it's a different string format, try to parse it
             if (typeof selectedDate === 'string') {
                 const parsed = new Date(selectedDate);
                 if (!isNaN(parsed)) {
-                    return parsed.toISOString().split('T')[0];
+                    const year = parsed.getFullYear();
+                    const month = String(parsed.getMonth() + 1).padStart(2, '0');
+                    const day = String(parsed.getDate()).padStart(2, '0');
+                    return `${year}-${month}-${day}`;
                 }
             }
         }
-        return new Date().toISOString().split('T')[0];
+        // Default to today using local date
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
     };
     
     const [date, setDate] = useState(getInitialDate);
+    const [dateError, setDateError] = useState(null);
     const [isRecurring, setIsRecurring] = useState(false);
     const [notes, setNotes] = useState('');
 
+    const handleDateChange = (value) => {
+        setDate(value);
+        if (value) {
+            // For calendar events, allow future dates
+            const validation = validateDate(value, { allowFuture: true });
+            setDateError(validation.isValid ? null : validation.error);
+        } else {
+            setDateError(null);
+        }
+    };
+
     const handleSubmit = () => {
         if (!title.trim()) return;
+        if (dateError) return; // Don't submit if date is invalid
         onAdd({
             title: title.trim(),
             date,
@@ -609,9 +675,19 @@ const AddEventModal = ({ selectedDate, onAdd, onClose }) => {
                     <input
                         type="date"
                         value={date}
-                        onChange={(e) => setDate(e.target.value)}
-                        className="w-full bg-neutral-50 border-2 border-neutral-100 rounded-xl p-3 text-neutral-700 focus:ring-2 focus:ring-violet-200 focus:border-violet-300 focus:outline-none text-sm"
+                        onChange={(e) => handleDateChange(e.target.value)}
+                        className={`w-full bg-neutral-50 border-2 rounded-xl p-3 text-neutral-700 focus:ring-2 focus:outline-none text-sm ${
+                            dateError 
+                                ? 'border-red-300 focus:ring-red-200 focus:border-red-300' 
+                                : 'border-neutral-100 focus:ring-violet-200 focus:border-violet-300'
+                        }`}
                     />
+                    {dateError && (
+                        <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                            <AlertTriangle className="w-3 h-3" />
+                            {dateError}
+                        </p>
+                    )}
                 </div>
 
                 {/* Emoji */}
@@ -672,8 +748,10 @@ const AddEventModal = ({ selectedDate, onAdd, onClose }) => {
     );
 };
 
-const EventDetailsModal = ({ events, onDelete, onClose, onAddMore, currentUserId, users }) => {
-    const eventDate = new Date(events[0].date);
+const EventDetailsModal = ({ events, onDelete, onClose, onAddMore, currentUserId, myDisplayName, partnerDisplayName }) => {
+    // Parse date string as local date to prevent timezone shift
+    const dateStr = events[0].date;
+    const eventDate = dateStr?.includes('T') ? new Date(dateStr) : new Date(dateStr + 'T00:00:00');
     
     return (
         <motion.div
@@ -707,8 +785,10 @@ const EventDetailsModal = ({ events, onDelete, onClose, onAddMore, currentUserId
                 <div className="space-y-3">
                     {events.map((event, index) => {
                         const eventType = EVENT_TYPES.find(t => t.id === event.type) || EVENT_TYPES[4];
-                        const createdByUser = users?.find(u => u.id === event.createdBy);
-                        const canDelete = event.createdBy === currentUserId && !event.isDefault && !event.isPersonal;
+                        // Determine who created this event
+                        const isCreatedByMe = event.createdBy === currentUserId;
+                        const creatorName = isCreatedByMe ? myDisplayName : partnerDisplayName;
+                        const canDelete = isCreatedByMe && !event.isDefault && !event.isPersonal;
                         
                         return (
                             <motion.div
@@ -749,7 +829,7 @@ const EventDetailsModal = ({ events, onDelete, onClose, onAddMore, currentUserId
                                         <p className="text-neutral-400 text-xs mt-2">
                                             {event.isDefault ? '📅 Default Holiday' : 
                                              event.isPersonal ? '💕 From Profile' :
-                                             `Added by ${createdByUser?.name || 'Unknown'}`}
+                                             `Added by ${creatorName || 'Unknown'}`}
                                         </p>
                                     </div>
                                     {canDelete && (
@@ -780,7 +860,7 @@ const EventDetailsModal = ({ events, onDelete, onClose, onAddMore, currentUserId
 };
 
 // AI Planning Modal - uses RAG to get partner info and suggest ideas
-const PlanningModal = ({ event, partner, currentUser, onClose }) => {
+const PlanningModal = ({ event, partnerId, partnerDisplayName, myDisplayName, onClose }) => {
     const [suggestions, setSuggestions] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -795,14 +875,14 @@ const PlanningModal = ({ event, partner, currentUser, onClose }) => {
         
         try {
             // Try to get partner profile info from localStorage
-            const partnerProfileKey = `catjudge_profile_${partner?.id}`;
+            const partnerProfileKey = `catjudge_profile_${partnerId}`;
             const partnerProfile = localStorage.getItem(partnerProfileKey);
             const parsedProfile = partnerProfile ? JSON.parse(partnerProfile) : {};
             
             // Get appreciation history for context
             let appreciations = [];
             try {
-                const appreciationRes = await api.get(`/appreciations/${partner?.id}`);
+                const appreciationRes = await api.get(`/appreciations/${partnerId}`);
                 appreciations = appreciationRes.data.slice(0, 5); // Last 5 appreciations
             } catch (e) {
                 console.log('Could not fetch appreciations');
@@ -810,9 +890,9 @@ const PlanningModal = ({ event, partner, currentUser, onClose }) => {
 
             // Build context about the partner
             const partnerContext = {
-                name: partner?.name || 'your partner',
+                name: partnerDisplayName || 'your partner',
                 loveLanguage: parsedProfile.loveLanguage || 'unknown',
-                nickname: parsedProfile.nickname || partner?.name,
+                nickname: parsedProfile.nickname || partnerDisplayName,
                 recentAppreciations: appreciations.map(a => a.message),
             };
 
@@ -822,27 +902,27 @@ const PlanningModal = ({ event, partner, currentUser, onClose }) => {
                 eventType: event.type,
                 eventDate: event.date,
                 partnerContext,
-                currentUserName: currentUser?.name,
+                currentUserName: myDisplayName,
             });
 
             setSuggestions(response.data.suggestions || []);
         } catch (err) {
             console.error('Failed to generate suggestions:', err);
             // Fallback to local suggestions if API fails
-            setSuggestions(getLocalSuggestions(event, partner));
+            setSuggestions(getLocalSuggestions(event, partnerDisplayName));
         } finally {
             setIsLoading(false);
         }
     };
 
     // Fallback local suggestions based on event type
-    const getLocalSuggestions = (event, partner) => {
-        const partnerName = partner?.name || 'your partner';
+    const getLocalSuggestions = (event, partnerName) => {
+        const name = partnerName || 'your partner';
         const eventType = event.type || 'holiday';
         
         const suggestions = {
             birthday: [
-                { emoji: '🎂', title: 'Bake a Homemade Cake', description: `Surprise ${partnerName} with their favorite cake flavor` },
+                { emoji: '🎂', title: 'Bake a Homemade Cake', description: `Surprise ${name} with their favorite cake flavor` },
                 { emoji: '📝', title: 'Love Letter Box', description: 'Write 10 reasons why you love them, one for each year' },
                 { emoji: '🎁', title: 'Experience Gift', description: 'Plan a surprise adventure - escape room, pottery class, or cooking lesson' },
             ],
@@ -852,7 +932,7 @@ const PlanningModal = ({ event, partner, currentUser, onClose }) => {
                 { emoji: '✉️', title: 'Future Letter', description: 'Write letters to open on your next anniversary' },
             ],
             holiday: [
-                { emoji: '🌟', title: 'Cozy Night In', description: `Set up a movie marathon with ${partnerName}'s favorite snacks` },
+                { emoji: '🌟', title: 'Cozy Night In', description: `Set up a movie marathon with ${name}'s favorite snacks` },
                 { emoji: '🎄', title: 'DIY Gift Exchange', description: 'Make handmade gifts for each other with a budget limit' },
                 { emoji: '🍳', title: 'Cook Together', description: 'Try a new recipe together - make it a fun cooking date' },
             ],
@@ -862,7 +942,7 @@ const PlanningModal = ({ event, partner, currentUser, onClose }) => {
                 { emoji: '💆', title: 'Spa Night', description: 'Set up a home spa with face masks, massages, and relaxation' },
             ],
             custom: [
-                { emoji: '💐', title: 'Surprise Flowers', description: `Get ${partnerName}'s favorite flowers delivered` },
+                { emoji: '💐', title: 'Surprise Flowers', description: `Get ${name}'s favorite flowers delivered` },
                 { emoji: '🍽️', title: 'Fancy Dinner', description: 'Cook an elaborate meal or book their favorite restaurant' },
                 { emoji: '🎵', title: 'Playlist Gift', description: 'Create a playlist of songs that remind you of them' },
             ],
@@ -897,7 +977,7 @@ const PlanningModal = ({ event, partner, currentUser, onClose }) => {
                 </div>
 
                 <p className="text-neutral-500 text-sm">
-                    ✨ Here are some ideas to make this day special for {partner?.name || 'your partner'}!
+                    ✨ Here are some ideas to make this day special for {partnerDisplayName || 'your partner'}!
                 </p>
 
                 {isLoading ? (

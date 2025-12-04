@@ -1,48 +1,85 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Heart, Coffee, TrendingUp, Sparkles, Star, Gift, X, Check, Scale, History, MessageCircle } from 'lucide-react';
+import { Heart, Coffee, TrendingUp, Sparkles, Star, Gift, X, Check, Scale, History, MessageCircle, Lock, BookOpen, Flame } from 'lucide-react';
 import useAppStore from '../store/useAppStore';
+import useAuthStore from '../store/useAuthStore';
+import api from '../services/api';
 
 const DashboardPage = () => {
     const navigate = useNavigate();
     const { currentUser, users, logGoodDeed, caseHistory } = useAppStore();
+    const { hasPartner, profile, partner: connectedPartner, user: authUser } = useAuthStore();
     const [showGoodDeedModal, setShowGoodDeedModal] = useState(false);
+    const [questionStreak, setQuestionStreak] = useState(0);
 
-    // Get partner name for good deed display
-    const partner = users?.find(u => u.id !== currentUser?.id);
-    const partnerName = partner?.name || 'your partner';
+    // Get partner name - prefer connected partner from auth store
+    const partnerName = connectedPartner?.display_name || users?.find(u => u.id !== currentUser?.id)?.name || 'your partner';
     const [goodDeedText, setGoodDeedText] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
 
-    const vibeScore = 75;
-    
-    // Calculate actual days together from anniversary date
+    // Fetch question streak
+    useEffect(() => {
+        const fetchStreak = async () => {
+            if (!authUser?.id || !connectedPartner?.id) return;
+            try {
+                const response = await api.get('/daily-questions/history', {
+                    params: { userId: authUser.id, partnerId: connectedPartner.id }
+                });
+                // Calculate streak from history
+                const history = response.data || [];
+                let streak = 0;
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                
+                // Sort by date descending
+                const sorted = history
+                    .filter(q => q.my_answer && q.partner_answer)
+                    .sort((a, b) => new Date(b.assigned_date) - new Date(a.assigned_date));
+                
+                for (let i = 0; i < sorted.length; i++) {
+                    const questionDate = new Date(sorted[i].assigned_date + 'T00:00:00');
+                    const expectedDate = new Date(today);
+                    expectedDate.setDate(expectedDate.getDate() - i);
+                    
+                    if (questionDate.toDateString() === expectedDate.toDateString()) {
+                        streak++;
+                    } else {
+                        break;
+                    }
+                }
+                setQuestionStreak(streak);
+            } catch (err) {
+                console.error('Failed to fetch streak:', err);
+            }
+        };
+        fetchStreak();
+    }, [authUser?.id, connectedPartner?.id]);
+
+    // Calculate actual days together from anniversary date (prefer Supabase profile)
     const getDaysTogether = () => {
-        // Try to get anniversary from current user's profile first, then partner's
-        const currentUserProfile = localStorage.getItem(`catjudge_profile_${currentUser?.id}`);
-        const partnerProfile = localStorage.getItem(`catjudge_profile_${partner?.id}`);
+        // Prefer anniversary from Supabase profile
+        let anniversaryDate = profile?.anniversary_date;
         
-        let anniversaryDate = null;
-        if (currentUserProfile) {
-            const parsed = JSON.parse(currentUserProfile);
-            if (parsed.anniversaryDate) anniversaryDate = parsed.anniversaryDate;
+        // Fallback to localStorage
+        if (!anniversaryDate) {
+            const currentUserProfile = localStorage.getItem(`catjudge_profile_${currentUser?.id}`);
+            if (currentUserProfile) {
+                const parsed = JSON.parse(currentUserProfile);
+                if (parsed.anniversaryDate) anniversaryDate = parsed.anniversaryDate;
+            }
         }
-        if (!anniversaryDate && partnerProfile) {
-            const parsed = JSON.parse(partnerProfile);
-            if (parsed.anniversaryDate) anniversaryDate = parsed.anniversaryDate;
-        }
-        
+
         if (!anniversaryDate) return null;
-        
+
         const start = new Date(anniversaryDate);
         const today = new Date();
         const diffTime = today.getTime() - start.getTime();
         const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
         return diffDays >= 0 ? diffDays : null;
     };
-    
+
     const daysTogether = getDaysTogether();
 
     const handleLogGoodDeed = async () => {
@@ -87,7 +124,7 @@ const DashboardPage = () => {
                 </motion.span>
                 <div>
                     <h1 className="text-xl font-bold text-neutral-800">
-                        Hey, <span className="text-gradient">{currentUser?.name}</span>!
+                        Hey, <span className="text-gradient">{profile?.display_name || currentUser?.display_name || currentUser?.name || 'Partner'}</span>!
                     </h1>
                     <p className="text-neutral-500 text-sm">The judge is watching 🐱</p>
                 </div>
@@ -95,19 +132,6 @@ const DashboardPage = () => {
 
             {/* Stats Row */}
             <div className="grid grid-cols-2 gap-3">
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => navigate('/economy')}
-                    className="glass-card p-4 bg-gradient-to-br from-amber-50/80 to-white/60 cursor-pointer"
-                >
-                    <div className="flex items-center gap-2 mb-1">
-                        <Coffee className="w-5 h-5 text-amber-500" />
-                        <span className="text-2xl font-bold text-neutral-800">{currentUser?.kibbleBalance || 0}</span>
-                    </div>
-                    <span className="text-xs text-neutral-500 font-medium">Kibble</span>
-                </motion.div>
                 <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -125,48 +149,26 @@ const DashboardPage = () => {
                         {daysTogether !== null ? 'Days Together' : 'Set Anniversary →'}
                     </span>
                 </motion.div>
-            </div>
-
-            {/* Vibe Meter */}
-            <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-                className="glass-card p-4"
-            >
-                <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                        <motion.div
-                            animate={{ scale: [1, 1.15, 1] }}
-                            transition={{ duration: 1, repeat: Infinity }}
-                        >
-                            <Heart className="w-5 h-5 text-pink-400 fill-pink-400" />
-                        </motion.div>
-                        <span className="font-bold text-neutral-700">Relationship Vibe</span>
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => navigate('/daily-meow/history')}
+                    className="glass-card p-4 bg-gradient-to-br from-orange-50/80 to-amber-50/60 cursor-pointer"
+                >
+                    <div className="flex items-center gap-2 mb-1">
+                        <Flame className="w-5 h-5 text-orange-500" />
+                        <span className="text-2xl font-bold text-neutral-800">{questionStreak}</span>
                     </div>
-                    <span className="text-2xl font-bold text-gradient">{vibeScore}%</span>
-                </div>
-
-                {/* Progress Bar */}
-                <div className="h-3 bg-neutral-100 rounded-full overflow-hidden">
-                    <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${vibeScore}%` }}
-                        transition={{ duration: 1, ease: "easeOut", delay: 0.3 }}
-                        className="h-full bg-gradient-to-r from-court-gold via-court-maroon to-court-goldDark rounded-full"
-                    />
-                </div>
-
-                <p className="text-center text-xs text-neutral-400 mt-3 italic">
-                    "Purr-fectly acceptable... for now." 🐱
-                </p>
-            </motion.div>
+                    <span className="text-xs text-neutral-500 font-medium">Question Streak 🔥</span>
+                </motion.div>
+            </div>
 
             {/* Judge Card */}
             <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
+                transition={{ delay: 0.1 }}
                 onClick={() => navigate('/courtroom')}
                 className="glass-card p-5 text-center cursor-pointer"
             >
@@ -188,6 +190,31 @@ const DashboardPage = () => {
                 </span>
             </motion.div>
 
+            {/* Today's Question - Featured Card */}
+            <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15 }}
+                onClick={() => navigate('/daily-meow')}
+                className="glass-card p-5 text-center cursor-pointer bg-gradient-to-br from-court-gold/25 to-court-cream/70 border border-court-gold/40"
+            >
+                <motion.div
+                    animate={{ rotate: [0, 5, -5, 0] }}
+                    transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                    className="relative inline-block mb-3"
+                >
+                    <div className="w-16 h-16 bg-white/90 rounded-2xl flex items-center justify-center shadow-soft mx-auto">
+                        <MessageCircle className="w-8 h-8 text-court-gold" />
+                    </div>
+                </motion.div>
+
+                <h2 className="font-bold text-neutral-800 mb-1">Today's Question</h2>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-court-gold/20 text-court-brown rounded-full text-xs font-bold">
+                    <span className="w-1.5 h-1.5 bg-court-gold rounded-full animate-pulse" />
+                    Share your thoughts 🐱
+                </span>
+            </motion.div>
+
             {/* Quick Actions */}
             <div className="space-y-3">
                 <h3 className="font-bold text-neutral-600 text-sm flex items-center gap-1.5">
@@ -196,16 +223,21 @@ const DashboardPage = () => {
                 </h3>
                 <div className="grid grid-cols-2 gap-3">
                     <motion.button
-                        whileTap={{ scale: 0.97 }}
-                        onClick={() => setShowGoodDeedModal(true)}
-                        className="glass-card p-4 text-left relative overflow-hidden active:bg-white/90 transition-colors"
+                        whileTap={hasPartner ? { scale: 0.97 } : {}}
+                        onClick={() => hasPartner ? setShowGoodDeedModal(true) : navigate('/connect')}
+                        className={`glass-card p-4 text-left relative overflow-hidden transition-colors ${hasPartner ? 'active:bg-white/90' : 'opacity-75'}`}
                     >
-                        <span className="absolute top-2 right-2 text-lg opacity-50">💕</span>
+                        {!hasPartner && (
+                            <div className="absolute top-2 right-2 w-5 h-5 bg-neutral-200 rounded-full flex items-center justify-center">
+                                <Lock className="w-3 h-3 text-neutral-500" />
+                            </div>
+                        )}
+                        {hasPartner && <span className="absolute top-2 right-2 text-lg opacity-50">💕</span>}
                         <div className="w-10 h-10 bg-white/80 rounded-xl flex items-center justify-center shadow-soft mb-2">
-                            <Heart className="w-5 h-5 text-pink-500" />
+                            <Heart className={`w-5 h-5 ${hasPartner ? 'text-pink-500' : 'text-neutral-400'}`} />
                         </div>
-                        <div className="font-bold text-neutral-800 text-sm">Show Appreciation</div>
-                        <div className="text-xs text-neutral-500">Thank partner</div>
+                        <div className={`font-bold text-sm ${hasPartner ? 'text-neutral-800' : 'text-neutral-500'}`}>Show Appreciation</div>
+                        <div className="text-xs text-neutral-500">{hasPartner ? 'Thank partner' : 'Connect first'}</div>
                     </motion.button>
                     <motion.button
                         whileTap={{ scale: 0.97 }}
@@ -221,19 +253,19 @@ const DashboardPage = () => {
                     </motion.button>
                 </div>
 
-                {/* Additional Actions */}
+                {/* Second Row - View Appreciations and History */}
                 <div className="grid grid-cols-2 gap-3">
                     <motion.button
                         whileTap={{ scale: 0.97 }}
-                        onClick={() => navigate('/daily-meow')}
-                        className="glass-card p-4 text-left relative overflow-hidden active:bg-white/90 transition-colors bg-gradient-to-br from-amber-50/60 to-orange-50/60"
+                        onClick={() => navigate('/appreciations')}
+                        className="glass-card p-4 text-left relative overflow-hidden active:bg-white/90 transition-colors bg-gradient-to-br from-violet-50/60 to-pink-50/60"
                     >
-                        <span className="absolute top-2 right-2 text-lg opacity-50">💬</span>
+                        <span className="absolute top-2 right-2 text-lg opacity-50">💕</span>
                         <div className="w-10 h-10 bg-white/80 rounded-xl flex items-center justify-center shadow-soft mb-2">
-                            <MessageCircle className="w-5 h-5 text-amber-500" />
+                            <TrendingUp className="w-5 h-5 text-pink-500" />
                         </div>
-                        <div className="font-bold text-neutral-800 text-sm">Daily Question</div>
-                        <div className="text-xs text-neutral-500">Answer together</div>
+                        <div className="font-bold text-neutral-800 text-sm">View Appreciations</div>
+                        <div className="text-xs text-neutral-500">From {partnerName}</div>
                     </motion.button>
                     <motion.button
                         whileTap={{ scale: 0.97 }}
@@ -244,25 +276,25 @@ const DashboardPage = () => {
                         <div className="w-10 h-10 bg-white/80 rounded-xl flex items-center justify-center shadow-soft mb-2">
                             <History className="w-5 h-5 text-green-500" />
                         </div>
-                        <div className="font-bold text-neutral-800 text-sm">History</div>
+                        <div className="font-bold text-neutral-800 text-sm">Trial History</div>
                         <div className="text-xs text-neutral-500">{caseHistory?.length || 0} cases</div>
                     </motion.button>
                 </div>
 
-                {/* View Appreciations */}
+                {/* View Past Questions */}
                 <motion.button
                     whileTap={{ scale: 0.97 }}
-                    onClick={() => navigate('/appreciations')}
-                    className="glass-card p-4 text-left relative overflow-hidden active:bg-white/90 transition-colors w-full bg-gradient-to-r from-violet-50/60 to-pink-50/60"
+                    onClick={() => navigate('/daily-meow/history')}
+                    className="glass-card p-4 text-left relative overflow-hidden active:bg-white/90 transition-colors w-full bg-gradient-to-r from-court-cream/60 to-court-tan/40 border border-court-gold/20"
                 >
-                    <span className="absolute top-2 right-2 text-lg opacity-50">💕</span>
+                    <span className="absolute top-2 right-2 text-lg opacity-50">📜</span>
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-white/80 rounded-xl flex items-center justify-center shadow-soft">
-                            <TrendingUp className="w-5 h-5 text-pink-500" />
+                            <BookOpen className="w-5 h-5 text-court-brown" />
                         </div>
                         <div>
-                            <div className="font-bold text-neutral-800 text-sm">View Appreciations</div>
-                            <div className="text-xs text-neutral-500">See what {partnerName} appreciates about you</div>
+                            <div className="font-bold text-neutral-800 text-sm">Question Archives</div>
+                            <div className="text-xs text-neutral-500">Relive your daily conversations</div>
                         </div>
                     </div>
                 </motion.button>

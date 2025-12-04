@@ -11,20 +11,40 @@ const AuthCallbackPage = () => {
     useEffect(() => {
         const handleCallback = async () => {
             // Wait for Supabase to process the OAuth callback
-            await initialize();
-            
-            // Check state after initialization
-            const state = useAuthStore.getState();
-            
-            if (state.isAuthenticated) {
-                if (state.onboardingComplete) {
-                    navigate('/');
-                } else {
-                    navigate('/onboarding');
+            // We DON'T call initialize() here because App.jsx already does it
+            // We just wait for the store to update
+
+            // We need to wait for the store to update and loading to finish
+            // Poll for a few seconds if needed
+            let attempts = 0;
+            const maxAttempts = 20; // 10 seconds
+
+            const checkState = setInterval(() => {
+                const state = useAuthStore.getState();
+                attempts++;
+
+                // If authenticated, we're good to go!
+                if (state.isAuthenticated) {
+                    clearInterval(checkState);
+                    if (state.onboardingComplete) {
+                        navigate('/');
+                    } else {
+                        navigate('/onboarding');
+                    }
+                    return;
                 }
-            } else {
-                navigate('/signin');
-            }
+
+                // If not authenticated yet, we keep waiting even if isLoading is false
+                // This handles the race condition where initialize() finishes (no session found yet)
+                // BEFORE the OAuth callback is processed by onAuthStateChange
+
+                // Only give up after the max attempts (10 seconds)
+                if (attempts >= maxAttempts) {
+                    clearInterval(checkState);
+                    console.error('Auth callback timed out - no session found');
+                    navigate('/signin');
+                }
+            }, 500);
         };
 
         // Small delay to ensure Supabase has processed the callback
@@ -38,7 +58,7 @@ const AuthCallbackPage = () => {
                 transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
                 className="mb-6"
             >
-                <div 
+                <div
                     className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg"
                     style={{ background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' }}
                 >

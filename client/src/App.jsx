@@ -12,6 +12,8 @@ import SignUpPage from './pages/SignUpPage';
 import OnboardingPage from './pages/OnboardingPage';
 import AuthCallbackPage from './pages/AuthCallbackPage';
 import ConnectPartnerPage from './pages/ConnectPartnerPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 
 // App Pages
 import CourtroomPage from './pages/CourtroomPage';
@@ -22,6 +24,7 @@ import ProfilesPage from './pages/ProfilesPage';
 import CalendarPage from './pages/CalendarPage';
 import DashboardPage from './pages/DashboardPage';
 import DailyMeowPage from './pages/DailyMeowPage';
+import DailyMeowHistoryPage from './pages/DailyMeowHistoryPage';
 import EconomyPage from './pages/EconomyPage';
 
 // Components
@@ -31,24 +34,49 @@ import PartnerRequestModal from './components/PartnerRequestModal';
 import useAuthStore from './store/useAuthStore';
 
 // Loading Screen Component
-const LoadingScreen = () => (
-    <div className="min-h-screen bg-gradient-to-br from-court-cream via-white to-court-tan/30 flex flex-col items-center justify-center">
-        <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-            className="mb-6"
-        >
-            <div 
-                className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg"
-                style={{ background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' }}
+const LoadingScreen = () => {
+    const [showReset, setShowReset] = React.useState(false);
+
+    React.useEffect(() => {
+        const timer = setTimeout(() => setShowReset(true), 5000);
+        return () => clearTimeout(timer);
+    }, []);
+
+    const handleReset = () => {
+        localStorage.clear();
+        window.location.href = '/signin';
+    };
+
+    return (
+        <div className="min-h-screen bg-gradient-to-br from-court-cream via-white to-court-tan/30 flex flex-col items-center justify-center">
+            <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                className="mb-6"
             >
-                <Sparkles className="w-8 h-8 text-white" />
-            </div>
-        </motion.div>
-        <h2 className="text-xl font-bold text-neutral-700">Loading Kitty Court...</h2>
-        <p className="text-neutral-500 mt-2">🐱</p>
-    </div>
-);
+                <div
+                    className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg"
+                    style={{ background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' }}
+                >
+                    <Sparkles className="w-8 h-8 text-white" />
+                </div>
+            </motion.div>
+            <h2 className="text-xl font-bold text-neutral-700">Loading Kitty Court...</h2>
+            <p className="text-neutral-500 mt-2">🐱</p>
+
+            {showReset && (
+                <motion.button
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    onClick={handleReset}
+                    className="mt-8 px-6 py-2 bg-white border border-neutral-200 rounded-full text-sm text-neutral-500 hover:bg-neutral-50 hover:text-red-500 transition-colors shadow-sm"
+                >
+                    Taking too long? Tap to Reset
+                </motion.button>
+            )}
+        </div>
+    );
+};
 
 // Protected Route Component - Now allows access without partner (with restrictions)
 const ProtectedRoute = ({ children }) => {
@@ -75,15 +103,20 @@ const ProtectedRoute = ({ children }) => {
 // App Routes Component
 const AppRoutes = () => {
     const { initialize, isLoading, isAuthenticated, onboardingComplete, profile, pendingRequests, hasPartner } = useAuthStore();
+    const [initialized, setInitialized] = React.useState(false);
 
     useEffect(() => {
+        // Only initialize once
+        if (initialized) return;
+        
         console.log('[App] Calling initialize...');
+        setInitialized(true);
         initialize().then(() => {
             console.log('[App] Initialize completed');
         }).catch((err) => {
             console.error('[App] Initialize failed:', err);
         });
-    }, [initialize]);
+    }, [initialized, initialize]);
 
     console.log('[App] Render - isLoading:', isLoading, 'isAuthenticated:', isAuthenticated);
 
@@ -95,7 +128,7 @@ const AppRoutes = () => {
         <>
             {/* Partner Request Modal - shown globally when there are pending requests */}
             {isAuthenticated && pendingRequests?.length > 0 && <PartnerRequestModal />}
-            
+
             <Routes>
                 {/* Public Routes */}
                 <Route path="/signin" element={
@@ -110,19 +143,25 @@ const AppRoutes = () => {
                 } />
                 <Route path="/auth/callback" element={<AuthCallbackPage />} />
 
+                {/* Password Reset Routes */}
+                <Route path="/forgot-password" element={
+                    isAuthenticated ? <Navigate to="/" replace /> : <ForgotPasswordPage />
+                } />
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
+
                 {/* Onboarding (requires auth, but not full onboarding) */}
                 <Route path="/onboarding" element={
-                    !isAuthenticated ? <Navigate to="/signin" replace /> : 
-                    onboardingComplete ? <Navigate to="/" replace /> : 
-                    <OnboardingPage />
+                    !isAuthenticated ? <Navigate to="/signin" replace /> :
+                        onboardingComplete ? <Navigate to="/" replace /> :
+                            <OnboardingPage />
                 } />
 
                 {/* Connect Partner (requires auth + onboarding, can access anytime if not connected) */}
                 <Route path="/connect" element={
                     !isAuthenticated ? <Navigate to="/signin" replace /> :
-                    !onboardingComplete ? <Navigate to="/onboarding" replace /> :
-                    hasPartner ? <Navigate to="/" replace /> :
-                    <ConnectPartnerPage />
+                        !onboardingComplete ? <Navigate to="/onboarding" replace /> :
+                            hasPartner ? <Navigate to="/" replace /> :
+                                <ConnectPartnerPage />
                 } />
 
                 {/* Protected App Routes - accessible without partner (features restricted) */}
@@ -139,6 +178,7 @@ const AppRoutes = () => {
                     <Route path="profile" element={<ProfilesPage />} />
                     <Route path="calendar" element={<CalendarPage />} />
                     <Route path="daily-meow" element={<DailyMeowPage />} />
+                    <Route path="daily-meow/history" element={<DailyMeowHistoryPage />} />
                     <Route path="economy" element={<EconomyPage />} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Route>

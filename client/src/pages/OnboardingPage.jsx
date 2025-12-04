@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { 
-    ArrowRight, ArrowLeft, Sparkles, Heart, 
-    Calendar, Camera, MessageCircle, Zap, 
+import {
+    ArrowRight, ArrowLeft, Sparkles, Heart,
+    Calendar, Camera, MessageCircle, Zap,
     Check, User, Gift, Coffee, Moon, Sun,
     AlertTriangle
 } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
+import { validateDate } from '../utils/helpers';
 
 // Onboarding Steps Configuration
 const ONBOARDING_STEPS = [
@@ -140,10 +141,10 @@ const ONBOARDING_STEPS = [
 
 const OnboardingPage = () => {
     const navigate = useNavigate();
-    const { 
-        onboardingStep, 
-        setOnboardingStep, 
-        onboardingData, 
+    const {
+        onboardingStep,
+        setOnboardingStep,
+        onboardingData,
         updateOnboardingData,
         completeOnboarding,
         profile
@@ -153,6 +154,7 @@ const OnboardingPage = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showConnectChoice, setShowConnectChoice] = useState(false);
     const [saveError, setSaveError] = useState(null);
+    const [birthdayError, setBirthdayError] = useState(null);
 
     const currentStepData = ONBOARDING_STEPS[onboardingStep];
     const totalSteps = ONBOARDING_STEPS.length;
@@ -161,7 +163,7 @@ const OnboardingPage = () => {
     const handleNext = async () => {
         // Clear any previous error
         setSaveError(null);
-        
+
         // Validation
         if (currentStepData.field) {
             const value = onboardingData[currentStepData.field];
@@ -169,6 +171,15 @@ const OnboardingPage = () => {
                 // Allow skipping optional fields
                 if (!['petPeeves'].includes(currentStepData.field)) {
                     return; // Required field is empty
+                }
+            }
+            
+            // Validate birthday date
+            if (currentStepData.field === 'birthday' && value) {
+                const validation = validateDate(value);
+                if (!validation.isValid) {
+                    setBirthdayError(validation.error);
+                    return;
                 }
             }
         }
@@ -181,21 +192,24 @@ const OnboardingPage = () => {
                 console.log('[OnboardingPage] Calling completeOnboarding...');
                 const result = await completeOnboarding();
                 console.log('[OnboardingPage] completeOnboarding returned:', result);
-                
+
                 if (result.error) {
                     console.error('[OnboardingPage] Error:', result.error);
                     setSaveError(typeof result.error === 'string' ? result.error : 'Failed to save profile. Please try again.');
-                    setIsSubmitting(false);
+                    // Don't set isSubmitting to false here, let the finally block handle it
                     return;
                 }
-                
+
                 // Success - show connect choice
                 console.log('[OnboardingPage] Success! Showing connect choice...');
-                setIsSubmitting(false);
                 setShowConnectChoice(true);
             } catch (err) {
                 console.error('[OnboardingPage] Unexpected error:', err);
                 setSaveError('An unexpected error occurred. Please try again.');
+            } finally {
+                // Only stop submitting if we encountered an error
+                // If success (showConnectChoice is true), we want to keep the "success" state or transition smoothly
+                // But if we're showing the choice, we're technically done "submitting"
                 setIsSubmitting(false);
             }
         } else {
@@ -267,7 +281,7 @@ const OnboardingPage = () => {
                         </motion.div>
                         <div className="space-y-4">
                             <p className="text-neutral-600">
-                                Kitty Court is your playful space for resolving relationship 
+                                Kitty Court is your playful space for resolving relationship
                                 disputes with humor and love.
                             </p>
                             <div className="flex flex-wrap justify-center gap-2">
@@ -323,10 +337,34 @@ const OnboardingPage = () => {
                             <input
                                 type="date"
                                 value={onboardingData.birthday || ''}
-                                onChange={(e) => updateOnboardingData({ birthday: e.target.value })}
-                                className="w-full pl-12 pr-4 py-4 bg-white border-2 border-neutral-200 rounded-2xl text-neutral-700 text-lg focus:outline-none focus:border-court-gold focus:ring-2 focus:ring-court-gold/20 transition-all"
+                                onChange={(e) => {
+                                    const value = e.target.value;
+                                    updateOnboardingData({ birthday: value });
+                                    
+                                    // Validate the date
+                                    if (value) {
+                                        const validation = validateDate(value);
+                                        setBirthdayError(validation.isValid ? null : validation.error);
+                                    } else {
+                                        setBirthdayError(null);
+                                    }
+                                }}
+                                className={`w-full pl-12 pr-4 py-4 bg-white border-2 rounded-2xl text-neutral-700 text-lg focus:outline-none focus:ring-2 transition-all ${
+                                    birthdayError 
+                                        ? 'border-red-300 focus:border-red-400 focus:ring-red-200' 
+                                        : 'border-neutral-200 focus:border-court-gold focus:ring-court-gold/20'
+                                }`}
                             />
                         </div>
+                        {birthdayError && (
+                            <p className="text-sm text-red-500 text-center flex items-center justify-center gap-1">
+                                <AlertTriangle className="w-4 h-4" />
+                                {birthdayError}
+                            </p>
+                        )}
+                        <p className="text-sm text-neutral-400 text-center">
+                            Your partner will be reminded to wish you a happy birthday! 🎈
+                        </p>
                     </motion.div>
                 );
 
@@ -347,7 +385,7 @@ const OnboardingPage = () => {
                             >
                                 <Heart className="w-10 h-10 text-white" />
                             </motion.div>
-                            
+
                             <div>
                                 <h3 className="text-xl font-bold text-neutral-800 mb-2">
                                     Ready to connect with your partner? 💕
@@ -356,7 +394,7 @@ const OnboardingPage = () => {
                                     You can share your unique code or enter theirs to link your accounts.
                                 </p>
                             </div>
-                            
+
                             {/* Partner Code Display */}
                             {profile?.partner_code && (
                                 <motion.div
@@ -371,7 +409,7 @@ const OnboardingPage = () => {
                                     </p>
                                 </motion.div>
                             )}
-                            
+
                             {/* Connect Now Button */}
                             <motion.button
                                 initial={{ opacity: 0, y: 10 }}
@@ -385,7 +423,7 @@ const OnboardingPage = () => {
                                 <Heart className="w-5 h-5" />
                                 Connect with Partner Now
                             </motion.button>
-                            
+
                             {/* Connect Later Button */}
                             <motion.button
                                 initial={{ opacity: 0 }}
@@ -397,7 +435,7 @@ const OnboardingPage = () => {
                             >
                                 I'll connect later
                             </motion.button>
-                            
+
                             <motion.p
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
@@ -409,7 +447,7 @@ const OnboardingPage = () => {
                         </motion.div>
                     );
                 }
-                
+
                 // Initial complete state (before save)
                 return (
                     <motion.div
@@ -426,7 +464,7 @@ const OnboardingPage = () => {
                         >
                             <Check className="w-12 h-12 text-white" />
                         </motion.div>
-                        
+
                         <div className="flex flex-wrap justify-center gap-3">
                             <div className="px-4 py-2 bg-white rounded-xl shadow-sm">
                                 <p className="text-xs text-neutral-400">Name</p>
@@ -440,7 +478,7 @@ const OnboardingPage = () => {
                                 </p>
                             </div>
                         </div>
-                        
+
                         {/* Error message */}
                         {saveError && (
                             <motion.div
@@ -475,11 +513,10 @@ const OnboardingPage = () => {
                                         transition={{ delay: index * 0.05 }}
                                         whileTap={{ scale: 0.97 }}
                                         onClick={() => handleOptionSelect(option.id)}
-                                        className={`p-4 rounded-2xl text-left transition-all border-2 ${
-                                            isOptionSelected(option.id)
+                                        className={`p-4 rounded-2xl text-left transition-all border-2 ${isOptionSelected(option.id)
                                                 ? 'border-court-gold bg-court-cream/50 shadow-md'
                                                 : 'border-neutral-200 bg-white hover:border-neutral-300 hover:shadow-sm'
-                                        }`}
+                                            }`}
                                     >
                                         <div className="flex items-start gap-3">
                                             <span className="text-2xl">{option.emoji}</span>
@@ -505,7 +542,7 @@ const OnboardingPage = () => {
                                     </motion.button>
                                 ))}
                             </div>
-                            
+
                             {/* Custom input for multi-select */}
                             {currentStepData.allowCustom && (
                                 <motion.div
@@ -611,7 +648,7 @@ const OnboardingPage = () => {
                                 <ArrowLeft className="w-5 h-5" />
                             </motion.button>
                         )}
-                        
+
                         <motion.button
                             whileTap={{ scale: 0.97 }}
                             onClick={handleNext}

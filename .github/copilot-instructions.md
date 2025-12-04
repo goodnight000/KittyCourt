@@ -8,7 +8,7 @@ Couples dispute resolution app with AI "Judge Mittens" persona. Monorepo structu
 - **`server/`** - Express 5 API with Judge Engine pipeline
 - **`supabase/`** - Production database schema (auth + profiles + pgvector)
 
-**Core Flow**: Partners connect via partner codes → submit disputes asynchronously → Judge Mittens delivers psychologically-grounded verdicts using Gottman Method + NVC principles.
+**Core Flow**: Partners connect via partner codes → set anniversary date → submit disputes asynchronously → Judge Mittens delivers psychologically-grounded verdicts using Gottman Method + NVC principles.
 
 ## Development Commands
 
@@ -44,21 +44,46 @@ Key files: `prompts.js` (psychological framework), `jsonSchemas.js` (structured 
 Two Zustand stores with `persist` middleware:
 
 ```javascript
-// useAuthStore.js - Supabase auth, partner connection, onboarding
-const { user, profile, partner, hasPartner, signIn, connectPartner } = useAuthStore();
+// useAuthStore.js - Supabase auth, partner connection, onboarding, anniversary
+const { user, profile, partner, hasPartner, signIn, acceptRequest } = useAuthStore();
 
 // useAppStore.js - Court sessions, cases, verdicts, kibble economy
+// IMPORTANT: Uses auth store for user identification, NOT legacy User A/B pattern
 const { courtSession, activeCase, generateVerdict, submitSide } = useAppStore();
 ```
 
 **Case status flow**: `DRAFT → LOCKED_A → DELIBERATING → RESOLVED`
 
-## Database: Supabase (Production) vs Prisma (Local)
+## Data Isolation Per Couple
 
-- **Production**: `supabase/migrations/001_initial_schema.sql` - uses `auth.users` + `profiles` table with partner codes
-- **Local dev**: `server/prisma/schema.prisma` (SQLite) - simplified, no auth
+All couple-specific data is isolated:
+- **Supabase RLS**: `get_my_partner_id()` function enables secure couple-scoped policies
+- **Backend filtering**: Cases API accepts `userAId` and `userBId` query params
+- **Cases/Appreciations/Calendar**: Scoped by `user_a_id`/`user_b_id` or `created_by`
 
-Partner connection uses 12-char `partner_code` on profiles table with request/accept flow.
+**Anniversary Date**: Set when accepting partner request (immutable via DB trigger). Stored on both partners' profiles.
+
+## Database: Supabase Only
+
+All data is stored in Supabase PostgreSQL with Row Level Security (RLS).
+- `supabase/migrations/*.sql` - Database schema and functions
+
+Key migrations:
+- `001_initial_schema.sql` - Core tables and RLS
+- `002_fix_rls_recursion.sql` - `get_my_partner_id()` function
+- `003_add_anniversary_and_couple_isolation.sql` - Anniversary date + couple RLS policies
+- `005_daily_questions_and_full_schema.sql` - Daily questions system
+- `006_add_vector_memory_support.sql` - pgvector for AI memory
+- `008_fix_duplicate_key_and_mood.sql` - Immutable mood, reward redemptions
+
+## Partner Connection Flow
+
+1. User A shares `partner_code` with User B
+2. User B enters code in Connect Partner page
+3. User A sees `PartnerRequestModal` 
+4. User A enters **anniversary date** (immutable) and accepts
+5. Both profiles updated with `partner_id` and `anniversary_date`
+6. Calendar event created for anniversary (yearly recurring)
 
 ## Styling System
 
@@ -67,33 +92,20 @@ Tailwind CSS with court-themed palette in `tailwind.config.js`:
 - Legacy: `blush`, `lavender`, `cream`, `mint`, `peach`
 - Key classes: `glass-card`, `text-gradient`, `btn-primary`, `shadow-soft`
 
-```jsx
-<GlassCard variant="gradient" accent="pink">...</GlassCard>  // Component
-<div className="glass-card p-4">...</div>                     // Utility class
-```
-
 ## Component Patterns
 
 - All pages use Framer Motion for transitions (see `MainLayout.jsx`)
 - Modals: `z-[60]` to appear above bottom dock (`z-40`), add `pb-20` for safe area
-- `GlassCard.jsx` - variants: `default`, `gradient`, `elevated`, `glow`, `pastel`
-- `RequirePartner.jsx` - HOC that blocks access until partner connected
+- `RequirePartner.jsx` - Wrapper that blocks access until partner connected
+- User names: Always use `profile?.display_name` or `partner?.display_name`, never "User A/B"
 
 ## API Structure
 
 - `/api/judge/deliberate` - Main verdict endpoint (POST)
 - `/api/memory/*` - Profile and memory management
 - `/api/court-sessions/*` - Real-time session coordination
-- `/api/users`, `/api/cases` - CRUD operations
-
-## Testing
-
-Test cases for AI verdicts in `test-cases.json` (root). Client tests:
-```javascript
-beforeEach(() => {
-    useAppStore.setState({ /* reset state */ });
-});
-```
+- `/api/cases?userAId=&userBId=` - Case history filtered by couple
+- `/api/appreciations/:userId` - Appreciations received by user
 
 ## Mobile-First Considerations
 

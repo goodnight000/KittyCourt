@@ -54,23 +54,10 @@ const MainLayout = () => {
                         <span className="text-lg font-bold text-gradient font-display">Cat Judge</span>
                     </div>
 
-                    {/* User Toggle Pills */}
-                    <div className="flex bg-court-cream rounded-full p-1 gap-1">
-                        {users.map((u) => (
-                            <button
-                                key={u.id}
-                                onClick={() => switchUser(u.id)}
-                                className={clsx(
-                                    "px-3 py-1.5 rounded-full text-xs font-bold transition-all duration-200",
-                                    currentUser.id === u.id
-                                        ? "bg-gradient-to-r from-court-gold to-court-goldDark text-white shadow-sm"
-                                        : "text-court-brownLight active:bg-white/50"
-                                )}
-                            >
-                                {u.name}
-                            </button>
-                        ))}
-                    </div>
+                    {/* User Toggle Pills - REMOVED */}
+                    {/* <div className="flex bg-court-cream rounded-full p-1 gap-1">
+                        ...
+                    </div> */}
                 </div>
             </motion.header>
 
