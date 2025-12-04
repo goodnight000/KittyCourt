@@ -51,44 +51,44 @@ app.use('/api/daily-questions', dailyQuestionsRoutes);
 app.post('/api/court-sessions', async (req, res) => {
     try {
         const { createdBy, partnerId } = req.body;
-        
+
         if (!createdBy) {
             return res.status(400).json({ error: 'createdBy (user ID) is required' });
         }
-        
+
         const supabase = requireSupabase();
-        
+
         // Expire old sessions
         await supabase
             .from('court_sessions')
             .update({ status: 'CLOSED' })
             .eq('status', 'WAITING')
             .lt('expires_at', new Date().toISOString());
-        
+
         // Check for existing active session for this couple
         let query = supabase
             .from('court_sessions')
             .select('*')
             .in('status', ['WAITING', 'IN_SESSION']);
-        
+
         if (partnerId) {
             query = query.or(`created_by.eq.${createdBy},partner_id.eq.${createdBy},created_by.eq.${partnerId},partner_id.eq.${partnerId}`);
         } else {
             query = query.or(`created_by.eq.${createdBy},partner_id.eq.${createdBy}`);
         }
-        
+
         const { data: existingSessions } = await query;
-        
+
         if (existingSessions && existingSessions.length > 0) {
-            return res.status(400).json({ 
+            return res.status(400).json({
                 error: 'A court session is already active for this couple',
                 session: existingSessions[0]
             });
         }
-        
+
         // Create new session that expires in 24 hours
         const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-        
+
         const { data: session, error } = await supabase
             .from('court_sessions')
             .insert({
@@ -103,9 +103,9 @@ app.post('/api/court-sessions', async (req, res) => {
             })
             .select()
             .single();
-        
+
         if (error) throw error;
-        
+
         res.json(session);
     } catch (error) {
         console.error('Error creating court session:', error);
@@ -117,16 +117,16 @@ app.post('/api/court-sessions', async (req, res) => {
 app.get('/api/court-sessions/active', async (req, res) => {
     try {
         const { userId, partnerId } = req.query;
-        
+
         const supabase = requireSupabase();
-        
+
         // Expire old sessions first
         await supabase
             .from('court_sessions')
             .update({ status: 'CLOSED' })
             .eq('status', 'WAITING')
             .lt('expires_at', new Date().toISOString());
-        
+
         // Build query to find sessions relevant to this couple
         let query = supabase
             .from('court_sessions')
@@ -134,17 +134,17 @@ app.get('/api/court-sessions/active', async (req, res) => {
             .in('status', ['WAITING', 'IN_SESSION'])
             .order('created_at', { ascending: false })
             .limit(1);
-        
+
         if (userId && partnerId) {
             query = query.or(`and(created_by.eq.${userId},partner_id.eq.${partnerId}),and(created_by.eq.${partnerId},partner_id.eq.${userId}),and(created_by.eq.${userId},partner_id.is.null),and(created_by.eq.${partnerId},partner_id.is.null)`);
         } else if (userId) {
             query = query.or(`created_by.eq.${userId},partner_id.eq.${userId}`);
         }
-        
+
         const { data: sessions, error } = await query;
-        
+
         if (error) throw error;
-        
+
         res.json(sessions?.[0] || null);
     } catch (error) {
         console.error('Error getting active session:', error);
@@ -157,45 +157,45 @@ app.post('/api/court-sessions/:id/join', async (req, res) => {
     try {
         const { userId } = req.body;
         const sessionId = req.params.id;
-        
+
         const supabase = requireSupabase();
-        
+
         const { data: session, error: fetchError } = await supabase
             .from('court_sessions')
             .select('*')
             .eq('id', sessionId)
             .single();
-        
+
         if (fetchError || !session) {
             return res.status(404).json({ error: 'Session not found' });
         }
-        
+
         if (session.status === 'CLOSED') {
             return res.status(400).json({ error: 'Session has expired' });
         }
-        
+
         // Determine if this user is the creator or the partner
         const isCreator = session.created_by === userId;
         const isPartner = session.partner_id === userId || (!session.partner_id && session.created_by !== userId);
-        
+
         if (!isCreator && !isPartner) {
             return res.status(403).json({ error: 'You are not part of this court session' });
         }
-        
+
         // Update the appropriate joined field
-        const updateData = isCreator 
+        const updateData = isCreator
             ? { creator_joined: true, user_a_joined: true }
             : { partner_joined: true, user_b_joined: true, partner_id: userId };
-        
+
         const { data: updatedSession, error: updateError } = await supabase
             .from('court_sessions')
             .update(updateData)
             .eq('id', sessionId)
             .select()
             .single();
-        
+
         if (updateError) throw updateError;
-        
+
         // If both have joined, start the session
         if (updatedSession.creator_joined && updatedSession.partner_joined) {
             const { data: startedSession, error: startError } = await supabase
@@ -204,11 +204,11 @@ app.post('/api/court-sessions/:id/join', async (req, res) => {
                 .eq('id', sessionId)
                 .select()
                 .single();
-            
+
             if (startError) throw startError;
             return res.json(startedSession);
         }
-        
+
         res.json(updatedSession);
     } catch (error) {
         console.error('Error joining session:', error);
@@ -221,68 +221,68 @@ app.post('/api/court-sessions/:id/settle', async (req, res) => {
     try {
         const { userId } = req.body;
         const sessionId = req.params.id;
-        
+
         if (!userId) {
             return res.status(400).json({ error: 'userId is required' });
         }
-        
+
         const supabase = requireSupabase();
-        
+
         // Get current session
         const { data: session, error: getError } = await supabase
             .from('court_sessions')
             .select('*')
             .eq('id', sessionId)
             .single();
-        
+
         if (getError) throw getError;
-        
+
         if (!session) {
             return res.status(404).json({ error: 'Session not found' });
         }
-        
+
         if (session.status !== 'IN_SESSION') {
             return res.status(400).json({ error: 'Can only settle during an active session' });
         }
-        
+
         // Determine if user is creator or partner
         const isCreator = session.created_by === userId;
         const isPartner = session.partner_id === userId;
-        
+
         if (!isCreator && !isPartner) {
             return res.status(403).json({ error: 'User is not part of this session' });
         }
-        
+
         // Track settle requests (we'll use a simple approach with session metadata)
         const currentSettleRequests = session.settle_requests || { creator: false, partner: false };
-        
+
         if (isCreator) {
             currentSettleRequests.creator = true;
         } else {
             currentSettleRequests.partner = true;
         }
-        
+
         // Check if both have requested to settle
         const bothSettled = currentSettleRequests.creator && currentSettleRequests.partner;
-        
+
         // Update session with settle request
         const { data: updatedSession, error: updateError } = await supabase
             .from('court_sessions')
-            .update({ 
+            .update({
                 settle_requests: currentSettleRequests,
                 status: bothSettled ? 'SETTLED' : session.status
             })
             .eq('id', sessionId)
             .select()
             .single();
-        
+
         if (updateError) throw updateError;
-        
+
         res.json({
             ...updatedSession,
             settled: bothSettled,
-            message: bothSettled 
-                ? 'Both parties agreed to settle. Case dismissed.' 
+            message: bothSettled
+                ? 'Both parties agreed to settle. Case dismissed.'
                 : 'Settlement requested. Waiting for partner to agree.'
         });
     } catch (error) {
@@ -296,18 +296,18 @@ app.post('/api/court-sessions/:id/close', async (req, res) => {
     try {
         const { caseId } = req.body;
         const sessionId = req.params.id;
-        
+
         const supabase = requireSupabase();
-        
+
         const { data: session, error } = await supabase
             .from('court_sessions')
             .update({ status: 'CLOSED', case_id: caseId })
             .eq('id', sessionId)
             .select()
             .single();
-        
+
         if (error) throw error;
-        
+
         res.json(session);
     } catch (error) {
         console.error('Error closing session:', error);
@@ -320,15 +320,15 @@ app.post('/api/court-sessions/:id/close', async (req, res) => {
 // Submit a Case (or update it)
 app.post('/api/cases', async (req, res) => {
     try {
-        const { 
+        const {
             id,
             userAId,
             userBId,
-            userAInput, 
-            userAFeelings, 
-            userBInput, 
-            userBFeelings, 
-            status, 
+            userAInput,
+            userAFeelings,
+            userBInput,
+            userBFeelings,
+            status,
             verdict,
             caseTitle,
             severityLevel,
@@ -342,11 +342,11 @@ app.post('/api/cases', async (req, res) => {
             // Update existing case
             const { data: updated, error: updateError } = await supabase
                 .from('cases')
-                .update({ 
-                    user_a_input: userAInput, 
-                    user_a_feelings: userAFeelings, 
-                    user_b_input: userBInput, 
-                    user_b_feelings: userBFeelings, 
+                .update({
+                    user_a_input: userAInput,
+                    user_a_feelings: userAFeelings,
+                    user_b_input: userBInput,
+                    user_b_feelings: userBFeelings,
                     status,
                     case_title: caseTitle,
                     severity_level: severityLevel,
@@ -356,23 +356,23 @@ app.post('/api/cases', async (req, res) => {
                 .eq('id', id)
                 .select()
                 .single();
-            
+
             if (updateError) throw updateError;
-            
+
             // If verdict provided, create a new verdict record
             if (verdict) {
                 const { count } = await supabase
                     .from('verdicts')
                     .select('*', { count: 'exact', head: true })
                     .eq('case_id', id);
-                
+
                 await supabase.from('verdicts').insert({
                     case_id: id,
                     version: (count || 0) + 1,
                     content: typeof verdict === 'string' ? JSON.parse(verdict) : verdict
                 });
             }
-            
+
             // Fetch with verdicts
             const { data: result } = await supabase
                 .from('cases')
@@ -380,7 +380,7 @@ app.post('/api/cases', async (req, res) => {
                 .eq('id', id)
                 .order('version', { foreignTable: 'verdicts', ascending: false })
                 .single();
-            
+
             return res.json(transformCase(result));
         } else {
             // Create new case
@@ -401,9 +401,9 @@ app.post('/api/cases', async (req, res) => {
                 })
                 .select()
                 .single();
-            
+
             if (insertError) throw insertError;
-            
+
             // If verdict provided, create the first verdict record
             if (verdict) {
                 await supabase.from('verdicts').insert({
@@ -412,7 +412,7 @@ app.post('/api/cases', async (req, res) => {
                     content: typeof verdict === 'string' ? JSON.parse(verdict) : verdict
                 });
             }
-            
+
             // Fetch with verdicts
             const { data: result } = await supabase
                 .from('cases')
@@ -420,7 +420,7 @@ app.post('/api/cases', async (req, res) => {
                 .eq('id', newCase.id)
                 .order('version', { foreignTable: 'verdicts', ascending: false })
                 .single();
-            
+
             return res.json(transformCase(result));
         }
     } catch (error) {
@@ -434,14 +434,14 @@ app.post('/api/cases/:id/addendum', async (req, res) => {
     try {
         const { addendumBy, addendumText, verdict, caseTitle, severityLevel, primaryHissTag, shortResolution } = req.body;
         const caseId = req.params.id;
-        
+
         const supabase = requireSupabase();
-        
+
         const { count } = await supabase
             .from('verdicts')
             .select('*', { count: 'exact', head: true })
             .eq('case_id', caseId);
-        
+
         // Create new verdict with addendum info
         await supabase.from('verdicts').insert({
             case_id: caseId,
@@ -450,7 +450,7 @@ app.post('/api/cases/:id/addendum', async (req, res) => {
             addendum_by: addendumBy,
             addendum_text: addendumText
         });
-        
+
         // Update case metadata with latest
         if (caseTitle || severityLevel || primaryHissTag || shortResolution) {
             await supabase.from('cases').update({
@@ -460,7 +460,7 @@ app.post('/api/cases/:id/addendum', async (req, res) => {
                 short_resolution: shortResolution || undefined
             }).eq('id', caseId);
         }
-        
+
         // Fetch updated case
         const { data: result } = await supabase
             .from('cases')
@@ -468,7 +468,7 @@ app.post('/api/cases/:id/addendum', async (req, res) => {
             .eq('id', caseId)
             .order('version', { foreignTable: 'verdicts', ascending: false })
             .single();
-        
+
         res.json(transformCase(result));
     } catch (error) {
         console.error('Error adding addendum:', error);
@@ -480,25 +480,25 @@ app.post('/api/cases/:id/addendum', async (req, res) => {
 app.get('/api/cases', async (req, res) => {
     try {
         const { userAId, userBId } = req.query;
-        
+
         const supabase = requireSupabase();
-        
+
         let query = supabase
             .from('cases')
             .select(`*, verdicts(*)`)
             .order('created_at', { ascending: false });
-        
+
         if (userAId && userBId) {
             query = query.or(`and(user_a_id.eq.${userAId},user_b_id.eq.${userBId}),and(user_a_id.eq.${userBId},user_b_id.eq.${userAId})`);
         } else if (userAId || userBId) {
             const userId = userAId || userBId;
             query = query.or(`user_a_id.eq.${userId},user_b_id.eq.${userId}`);
         }
-        
+
         const { data: cases, error } = await query;
-        
+
         if (error) throw error;
-        
+
         res.json(cases.map(transformCase));
     } catch (error) {
         console.error('Error fetching cases:', error);
@@ -510,18 +510,18 @@ app.get('/api/cases', async (req, res) => {
 app.get('/api/cases/:id', async (req, res) => {
     try {
         const supabase = requireSupabase();
-        
+
         const { data: caseItem, error } = await supabase
             .from('cases')
             .select(`*, verdicts(*)`)
             .eq('id', req.params.id)
             .order('version', { foreignTable: 'verdicts', ascending: false })
             .single();
-        
+
         if (error || !caseItem) {
             return res.status(404).json({ error: 'Case not found' });
         }
-        
+
         res.json(transformCase(caseItem));
     } catch (error) {
         console.error('Error fetching case:', error);
@@ -532,10 +532,10 @@ app.get('/api/cases/:id', async (req, res) => {
 // Helper to transform case data for client
 function transformCase(c) {
     if (!c) return null;
-    
+
     const verdicts = c.verdicts || [];
     verdicts.sort((a, b) => b.version - a.version);
-    
+
     return {
         id: c.id,
         userAId: c.user_a_id,
@@ -581,7 +581,7 @@ app.post('/api/economy/transaction', async (req, res) => {
             .insert({ user_id: userId, amount, type, description })
             .select()
             .single();
-        
+
         if (insertError) throw insertError;
 
         // Calculate new balance from all transactions
@@ -589,7 +589,7 @@ app.post('/api/economy/transaction', async (req, res) => {
             .from('transactions')
             .select('amount')
             .eq('user_id', userId);
-        
+
         const newBalance = (allTransactions || []).reduce((sum, t) => sum + t.amount, 0);
 
         res.json({ transaction, newBalance });
@@ -603,16 +603,16 @@ app.post('/api/economy/transaction', async (req, res) => {
 app.get('/api/economy/balance/:userId', async (req, res) => {
     try {
         const { userId } = req.params;
-        
+
         const supabase = requireSupabase();
-        
+
         const { data: transactions } = await supabase
             .from('transactions')
             .select('amount')
             .eq('user_id', userId);
-        
+
         const balance = (transactions || []).reduce((sum, t) => sum + t.amount, 0);
-        
+
         res.json({ userId, balance });
     } catch (error) {
         console.error('Error fetching balance:', error);
@@ -644,7 +644,7 @@ app.post('/api/appreciations', async (req, res) => {
             })
             .select()
             .single();
-        
+
         if (insertError) throw insertError;
 
         // Award kibble via transaction
@@ -664,18 +664,18 @@ app.post('/api/appreciations', async (req, res) => {
             .from('transactions')
             .select('amount')
             .eq('user_id', toUserId);
-        
+
         const newBalance = (allTransactions || []).reduce((sum, t) => sum + t.amount, 0);
 
-        res.json({ 
+        res.json({
             appreciation: {
                 ...appreciation,
                 fromUserId: appreciation.from_user_id,
                 toUserId: appreciation.to_user_id,
                 kibbleAmount: appreciation.kibble_amount
-            }, 
-            transaction, 
-            newBalance 
+            },
+            transaction,
+            newBalance
         });
     } catch (error) {
         console.error('Error creating appreciation:', error);
@@ -687,15 +687,15 @@ app.post('/api/appreciations', async (req, res) => {
 app.get('/api/appreciations/:userId', async (req, res) => {
     try {
         const { userId } = req.params;
-        
+
         const supabase = requireSupabase();
-        
+
         const { data: appreciations, error } = await supabase
             .from('appreciations')
             .select('*')
             .eq('to_user_id', userId)
             .order('created_at', { ascending: false });
-        
+
         if (error) throw error;
 
         // Transform to camelCase
@@ -721,25 +721,25 @@ app.get('/api/appreciations/:userId', async (req, res) => {
 app.get('/api/calendar/events', async (req, res) => {
     try {
         const { userId, partnerId } = req.query;
-        
+
         const supabase = requireSupabase();
-        
+
         let query = supabase
             .from('calendar_events')
             .select('*')
             .order('event_date', { ascending: true });
-        
+
         // Filter by couple if IDs provided
         if (userId && partnerId) {
             query = query.or(`created_by.eq.${userId},created_by.eq.${partnerId}`);
         } else if (userId) {
             query = query.eq('created_by', userId);
         }
-        
+
         const { data: events, error } = await query;
-        
+
         if (error) throw error;
-        
+
         // Transform to camelCase
         const transformed = events.map(e => ({
             id: e.id,
@@ -753,7 +753,7 @@ app.get('/api/calendar/events', async (req, res) => {
             recurrencePattern: e.recurrence_pattern,
             createdAt: e.created_at
         }));
-        
+
         res.json(transformed);
     } catch (error) {
         console.error('Error fetching events:', error);
@@ -764,9 +764,9 @@ app.get('/api/calendar/events', async (req, res) => {
 app.post('/api/calendar/events', async (req, res) => {
     try {
         const { title, date, type, emoji, isRecurring, createdBy, notes } = req.body;
-        
+
         const supabase = requireSupabase();
-        
+
         const { data: event, error } = await supabase
             .from('calendar_events')
             .insert({
@@ -780,9 +780,9 @@ app.post('/api/calendar/events', async (req, res) => {
             })
             .select()
             .single();
-        
+
         if (error) throw error;
-        
+
         res.json({
             id: event.id,
             createdBy: event.created_by,
@@ -804,9 +804,9 @@ app.put('/api/calendar/events/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const { title, date, type, emoji, isRecurring, notes } = req.body;
-        
+
         const supabase = requireSupabase();
-        
+
         const { data: event, error } = await supabase
             .from('calendar_events')
             .update({
@@ -820,9 +820,9 @@ app.put('/api/calendar/events/:id', async (req, res) => {
             .eq('id', id)
             .select()
             .single();
-        
+
         if (error) throw error;
-        
+
         res.json({
             id: event.id,
             createdBy: event.created_by,
@@ -842,16 +842,16 @@ app.put('/api/calendar/events/:id', async (req, res) => {
 app.delete('/api/calendar/events/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        
+
         const supabase = requireSupabase();
-        
+
         const { error } = await supabase
             .from('calendar_events')
             .delete()
             .eq('id', id);
-        
+
         if (error) throw error;
-        
+
         res.json({ success: true });
     } catch (error) {
         console.error('Error deleting event:', error);
@@ -863,7 +863,7 @@ app.delete('/api/calendar/events/:id', async (req, res) => {
 app.post('/api/calendar/plan-event', async (req, res) => {
     try {
         const { eventTitle, eventType, eventDate, partnerContext, currentUserName } = req.body;
-        
+
         // Build context from partner info
         const loveLanguageMap = {
             'words': 'Words of Affirmation - they love compliments and verbal appreciation',
@@ -872,18 +872,18 @@ app.post('/api/calendar/plan-event', async (req, res) => {
             'time': 'Quality Time - they value undivided attention together',
             'touch': 'Physical Touch - hugs, hand-holding, and closeness matter most',
         };
-        
+
         const loveLanguageContext = partnerContext.loveLanguage && loveLanguageMap[partnerContext.loveLanguage]
             ? `Their love language is ${loveLanguageMap[partnerContext.loveLanguage]}.`
             : '';
-        
+
         const appreciationsContext = partnerContext.recentAppreciations?.length > 0
             ? `Recently, ${partnerContext.name} has appreciated these things: ${partnerContext.recentAppreciations.join(', ')}.`
             : '';
 
         // Use OpenRouter to generate personalized suggestions
         const { callOpenRouter } = require('./lib/openrouter');
-        
+
         const prompt = `You are a romantic relationship advisor helping someone plan a special ${eventTitle} for their partner.
 
 Partner Info:
@@ -915,7 +915,7 @@ Example format:
 
             // Parse the response
             const content = response.choices[0]?.message?.content || '[]';
-            
+
             // Try to extract JSON from the response
             const jsonMatch = content.match(/\[[\s\S]*\]/);
             if (jsonMatch) {
@@ -929,7 +929,7 @@ Example format:
         // Fallback suggestions if AI fails
         const fallbackSuggestions = getFallbackSuggestions(eventType, partnerContext.name);
         res.json({ suggestions: fallbackSuggestions });
-        
+
     } catch (error) {
         console.error('Planning error:', error);
         res.status(500).json({ error: error.message });
@@ -966,20 +966,33 @@ function getFallbackSuggestions(eventType, partnerName) {
             { emoji: '🍽️', title: 'Fancy Home Dinner', description: `Cook an elaborate candlelit dinner at home` },
         ],
     };
-    
+
     return suggestions[eventType] || suggestions.custom;
 }
 
+// Root endpoint - for easy verification
+app.get('/', (req, res) => {
+    res.json({
+        name: 'Kitty Court API',
+        version: '1.0.0',
+        status: 'running',
+        endpoints: {
+            health: '/api/health',
+            judge: '/api/judge/health'
+        }
+    });
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
-    res.json({ 
-        status: 'ok', 
+    res.json({
+        status: 'ok',
         supabase: isSupabaseConfigured(),
         timestamp: new Date().toISOString()
     });
 });
 
-app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server running on port ${PORT}`);
     console.log(`Supabase configured: ${isSupabaseConfigured()}`);
 });
