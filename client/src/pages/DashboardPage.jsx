@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Heart, Coffee, TrendingUp, Sparkles, Star, Gift, X, Check, Scale, History, MessageCircle, Lock, BookOpen, Flame } from 'lucide-react';
+import { Heart, Coffee, TrendingUp, Sparkles, Star, Gift, X, Check, Scale, History, MessageCircle, Lock, BookOpen, Flame, ArrowRight } from 'lucide-react';
 import useAppStore from '../store/useAppStore';
 import useAuthStore from '../store/useAuthStore';
 import api from '../services/api';
@@ -32,17 +32,17 @@ const DashboardPage = () => {
                 let streak = 0;
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
-                
+
                 // Sort by date descending
                 const sorted = history
                     .filter(q => q.my_answer && q.partner_answer)
                     .sort((a, b) => new Date(b.assigned_date) - new Date(a.assigned_date));
-                
+
                 for (let i = 0; i < sorted.length; i++) {
                     const questionDate = new Date(sorted[i].assigned_date + 'T00:00:00');
                     const expectedDate = new Date(today);
                     expectedDate.setDate(expectedDate.getDate() - i);
-                    
+
                     if (questionDate.toDateString() === expectedDate.toDateString()) {
                         streak++;
                     } else {
@@ -61,7 +61,7 @@ const DashboardPage = () => {
     const getDaysTogether = () => {
         // Prefer anniversary from Supabase profile
         let anniversaryDate = profile?.anniversary_date;
-        
+
         // Fallback to localStorage
         if (!anniversaryDate) {
             const currentUserProfile = localStorage.getItem(`catjudge_profile_${currentUser?.id}`);
@@ -108,196 +108,218 @@ const DashboardPage = () => {
     ];
 
     return (
-        <div className="space-y-5">
-            {/* Welcome */}
-            <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex items-center gap-3"
-            >
-                <motion.span
-                    animate={{ rotate: [0, 14, 0] }}
-                    transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 2 }}
-                    className="text-2xl"
-                >
-                    👋
-                </motion.span>
-                <div>
-                    <h1 className="text-xl font-bold text-neutral-800">
-                        Hey, <span className="text-gradient">{profile?.display_name || currentUser?.display_name || currentUser?.name || 'Partner'}</span>!
-                    </h1>
-                    <p className="text-neutral-500 text-sm">The judge is watching 🐱</p>
-                </div>
-            </motion.div>
-
-            {/* Stats Row */}
-            <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-6">
+            {/* Welcome & Stats Section */}
+            <div className="space-y-4">
                 <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => navigate('/profiles')}
-                    className="glass-card p-4 bg-gradient-to-br from-violet-50/80 to-white/60 cursor-pointer"
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center justify-between"
                 >
-                    <div className="flex items-center gap-2 mb-1">
-                        <Heart className="w-5 h-5 text-pink-500" />
-                        <span className="text-2xl font-bold text-neutral-800">
-                            {daysTogether !== null ? daysTogether : '?'}
-                        </span>
+                    <div>
+                        <h1 className="text-2xl font-bold text-neutral-800">
+                            Hey, <span className="text-gradient">{profile?.display_name || currentUser?.display_name || currentUser?.name || 'Love'}</span>
+                        </h1>
+                        <p className="text-neutral-500 text-sm mt-0.5">Welcome back 💕</p>
                     </div>
-                    <span className="text-xs text-neutral-500 font-medium">
-                        {daysTogether !== null ? 'Days Together' : 'Set Anniversary →'}
-                    </span>
                 </motion.div>
+
+                {/* Stats Strip - Prominent at top */}
                 <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => navigate('/daily-meow/history')}
-                    className="glass-card p-4 bg-gradient-to-br from-orange-50/80 to-amber-50/60 cursor-pointer"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.05 }}
+                    className="flex gap-3"
                 >
-                    <div className="flex items-center gap-2 mb-1">
-                        <Flame className="w-5 h-5 text-orange-500" />
-                        <span className="text-2xl font-bold text-neutral-800">{questionStreak}</span>
-                    </div>
-                    <span className="text-xs text-neutral-500 font-medium">Question Streak 🔥</span>
+                    <motion.div
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => navigate('/profile')}
+                        className="flex-1 bg-gradient-to-br from-pink-50 to-rose-50/80 rounded-2xl p-4 border border-pink-100/50 cursor-pointer shadow-sm relative overflow-hidden"
+                    >
+                        <div className="relative z-10 flex items-center gap-3">
+                            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-soft text-pink-500">
+                                <Heart className="w-5 h-5 fill-current" />
+                            </div>
+                            <div>
+                                <div className="text-2xl font-bold text-neutral-800 leading-none mb-1">
+                                    {daysTogether !== null ? daysTogether : '?'}
+                                </div>
+                                <div className="text-xs text-neutral-500 font-bold uppercase tracking-wide">Days Together</div>
+                            </div>
+                        </div>
+                        {/* Decorative background icon */}
+                        <Heart className="absolute -bottom-4 -right-4 w-24 h-24 text-pink-100/50 rotate-12" />
+                    </motion.div>
+
+                    <motion.div
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => navigate('/daily-meow/history')}
+                        className="flex-1 bg-gradient-to-br from-orange-50 to-amber-50/80 rounded-2xl p-4 border border-orange-100/50 cursor-pointer shadow-sm relative overflow-hidden"
+                    >
+                        <div className="relative z-10 flex items-center gap-3">
+                            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-soft text-orange-500">
+                                <Flame className="w-5 h-5 fill-current" />
+                            </div>
+                            <div>
+                                <div className="text-2xl font-bold text-neutral-800 leading-none mb-1">{questionStreak}</div>
+                                <div className="text-xs text-neutral-500 font-bold uppercase tracking-wide">Day Streak</div>
+                            </div>
+                        </div>
+                        {/* Decorative background icon */}
+                        <Flame className="absolute -bottom-4 -right-4 w-24 h-24 text-orange-100/50 rotate-12" />
+                    </motion.div>
                 </motion.div>
             </div>
 
-            {/* Judge Card */}
-            <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-                onClick={() => navigate('/courtroom')}
-                className="glass-card p-5 text-center cursor-pointer"
-            >
-                <motion.div
-                    animate={{ y: [0, -6, 0] }}
-                    transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
-                    className="relative inline-block mb-3"
-                >
-                    <div className="w-20 h-20 rounded-3xl overflow-hidden shadow-soft mx-auto">
-                        <img src="/assets/avatars/judge_whiskers.png" alt="Judge Whiskers" className="w-full h-full object-cover" />
-                    </div>
+            {/* Main Features - The "Important Elements" */}
+            <div className="space-y-4">
+                <h3 className="font-bold text-neutral-400 text-xs uppercase tracking-wider px-1">Core Features</h3>
 
-                </motion.div>
+                <div className="grid grid-cols-1 gap-4">
+                    {/* Judge Whiskers Card - Large & Premium */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.1 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => navigate('/courtroom')}
+                        className="relative overflow-hidden rounded-[2rem] cursor-pointer group shadow-lg"
+                        style={{
+                            background: 'linear-gradient(135deg, #8B5CF6 0%, #6D28D9 50%, #5B21B6 100%)',
+                            minHeight: '160px'
+                        }}
+                    >
+                        {/* Decorative circles */}
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/4 blur-3xl" />
+                        <div className="absolute bottom-0 left-0 w-40 h-40 bg-black/10 rounded-full translate-y-1/3 -translate-x-1/4 blur-2xl" />
 
-                <h2 className="font-bold text-neutral-800 mb-1">Judge Whiskers</h2>
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-violet-50 text-violet-600 rounded-full text-xs font-bold">
-                    <span className="w-1.5 h-1.5 bg-violet-400 rounded-full animate-pulse" />
-                    Tap to file a case
-                </span>
-            </motion.div>
+                        <div className="relative p-6 h-full flex items-center justify-between">
+                            <div className="flex-1 pr-4">
+                                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white/10 backdrop-blur-md rounded-full border border-white/20 mb-3">
+                                    <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
+                                    <span className="text-white/90 text-[10px] font-bold uppercase tracking-wide">Court is in Session</span>
+                                </div>
+                                <h3 className="text-white font-bold text-2xl leading-tight mb-1">File a Case</h3>
+                                <p className="text-white/70 text-sm font-medium">Let Judge Whiskers decide who's right.</p>
 
-            {/* Today's Question - Featured Card */}
-            <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.15 }}
-                onClick={() => navigate('/daily-meow')}
-                className="glass-card p-5 text-center cursor-pointer bg-gradient-to-br from-court-gold/25 to-court-cream/70 border border-court-gold/40"
-            >
-                <motion.div
-                    animate={{ rotate: [0, 5, -5, 0] }}
-                    transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                    className="relative inline-block mb-3"
-                >
-                    <div className="w-16 h-16 bg-white/90 rounded-2xl flex items-center justify-center shadow-soft mx-auto">
-                        <MessageCircle className="w-8 h-8 text-court-gold" />
-                    </div>
-                </motion.div>
+                                <div className="mt-4 inline-flex items-center gap-2 text-white/90 text-sm font-bold group-hover:gap-3 transition-all">
+                                    Enter Courtroom <ArrowRight className="w-4 h-4" />
+                                </div>
+                            </div>
 
-                <h2 className="font-bold text-neutral-800 mb-1">Today's Question</h2>
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-court-gold/20 text-court-brown rounded-full text-xs font-bold">
-                    <span className="w-1.5 h-1.5 bg-court-gold rounded-full animate-pulse" />
-                    Share your thoughts 🐱
-                </span>
-            </motion.div>
+                            {/* Judge Avatar */}
+                            <motion.div
+                                animate={{ y: [0, -5, 0] }}
+                                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                                className="w-24 h-24 rounded-2xl overflow-hidden border-4 border-white/20 shadow-xl rotate-3 shrink-0"
+                            >
+                                <img
+                                    src="/assets/avatars/judge_whiskers.png"
+                                    alt="Judge Whiskers"
+                                    className="w-full h-full object-cover"
+                                />
+                            </motion.div>
+                        </div>
+                    </motion.div>
 
-            {/* Quick Actions */}
-            <div className="space-y-3">
-                <h3 className="font-bold text-neutral-600 text-sm flex items-center gap-1.5">
-                    <Sparkles className="w-4 h-4 text-amber-400" />
-                    Quick Actions
-                </h3>
-                <div className="grid grid-cols-2 gap-3">
+                    {/* Daily Question Card - Large & Premium */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.15 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => navigate('/daily-meow')}
+                        className="relative overflow-hidden rounded-[2rem] cursor-pointer group shadow-lg"
+                        style={{
+                            background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 50%, #B45309 100%)',
+                            minHeight: '160px'
+                        }}
+                    >
+                        {/* Decorative circles */}
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/4 blur-3xl" />
+                        <div className="absolute bottom-0 left-0 w-40 h-40 bg-black/10 rounded-full translate-y-1/3 -translate-x-1/4 blur-2xl" />
+
+                        <div className="relative p-6 h-full flex items-center justify-between">
+                            <div className="flex-1 pr-4">
+                                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white/10 backdrop-blur-md rounded-full border border-white/20 mb-3">
+                                    <Sparkles className="w-3 h-3 text-yellow-200" />
+                                    <span className="text-white/90 text-[10px] font-bold uppercase tracking-wide">Daily Connection</span>
+                                </div>
+                                <h3 className="text-white font-bold text-2xl leading-tight mb-1">Daily Question</h3>
+                                <p className="text-white/70 text-sm font-medium">Spark meaningful conversations.</p>
+
+                                <div className="mt-4 inline-flex items-center gap-2 text-white/90 text-sm font-bold group-hover:gap-3 transition-all">
+                                    Answer Now <ArrowRight className="w-4 h-4" />
+                                </div>
+                            </div>
+
+                            {/* Icon */}
+                            <motion.div
+                                animate={{ rotate: [0, 5, -5, 0] }}
+                                transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+                                className="w-24 h-24 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/20 shadow-xl -rotate-3 shrink-0"
+                            >
+                                <MessageCircle className="w-10 h-10 text-white" />
+                            </motion.div>
+                        </div>
+                    </motion.div>
+                </div>
+            </div>
+
+            {/* Quick Actions - Compact Grid */}
+            <div className="space-y-4">
+                <h3 className="font-bold text-neutral-400 text-xs uppercase tracking-wider px-1">Quick Actions</h3>
+
+                <div className="grid grid-cols-4 gap-3">
                     <motion.button
-                        whileTap={hasPartner ? { scale: 0.97 } : {}}
+                        whileTap={{ scale: 0.95 }}
                         onClick={() => hasPartner ? setShowGoodDeedModal(true) : navigate('/connect')}
-                        className={`glass-card p-4 text-left relative overflow-hidden transition-colors ${hasPartner ? 'active:bg-white/90' : 'opacity-75'}`}
+                        className="glass-card p-3 flex flex-col items-center gap-2 relative bg-white/50 hover:bg-white/80 transition-colors"
                     >
                         {!hasPartner && (
-                            <div className="absolute top-2 right-2 w-5 h-5 bg-neutral-200 rounded-full flex items-center justify-center">
-                                <Lock className="w-3 h-3 text-neutral-500" />
+                            <div className="absolute top-1 right-1 w-4 h-4 bg-neutral-200 rounded-full flex items-center justify-center">
+                                <Lock className="w-2.5 h-2.5 text-neutral-500" />
                             </div>
                         )}
-                        {hasPartner && <span className="absolute top-2 right-2 text-lg opacity-50">💕</span>}
-                        <div className="w-10 h-10 bg-white/80 rounded-xl flex items-center justify-center shadow-soft mb-2">
-                            <Heart className={`w-5 h-5 ${hasPartner ? 'text-pink-500' : 'text-neutral-400'}`} />
+                        <div className="w-10 h-10 bg-pink-50 rounded-xl flex items-center justify-center text-pink-500">
+                            <Heart className={`w-5 h-5 ${hasPartner ? 'fill-current' : 'text-neutral-400'}`} />
                         </div>
-                        <div className={`font-bold text-sm ${hasPartner ? 'text-neutral-800' : 'text-neutral-500'}`}>Show Appreciation</div>
-                        <div className="text-xs text-neutral-500">{hasPartner ? 'Thank partner' : 'Connect first'}</div>
+                        <span className="text-[10px] font-bold text-neutral-600 text-center leading-tight uppercase tracking-wide">Appreciate</span>
                     </motion.button>
-                    <motion.button
-                        whileTap={{ scale: 0.97 }}
-                        onClick={() => navigate('/economy')}
-                        className="glass-card p-4 text-left relative overflow-hidden active:bg-white/90 transition-colors"
-                    >
-                        <span className="absolute top-2 right-2 text-lg opacity-50">🎁</span>
-                        <div className="w-10 h-10 bg-white/80 rounded-xl flex items-center justify-center shadow-soft mb-2">
-                            <Gift className="w-5 h-5 text-pink-500" />
-                        </div>
-                        <div className="font-bold text-neutral-800 text-sm">Redeem</div>
-                        <div className="text-xs text-neutral-500">Use Kibble</div>
-                    </motion.button>
-                </div>
 
-                {/* Second Row - View Appreciations and History */}
-                <div className="grid grid-cols-2 gap-3">
                     <motion.button
-                        whileTap={{ scale: 0.97 }}
+                        whileTap={{ scale: 0.95 }}
                         onClick={() => navigate('/appreciations')}
-                        className="glass-card p-4 text-left relative overflow-hidden active:bg-white/90 transition-colors bg-gradient-to-br from-violet-50/60 to-pink-50/60"
+                        className="glass-card p-3 flex flex-col items-center gap-2 bg-white/50 hover:bg-white/80 transition-colors"
                     >
-                        <span className="absolute top-2 right-2 text-lg opacity-50">💕</span>
-                        <div className="w-10 h-10 bg-white/80 rounded-xl flex items-center justify-center shadow-soft mb-2">
-                            <TrendingUp className="w-5 h-5 text-pink-500" />
+                        <div className="w-10 h-10 bg-violet-50 rounded-xl flex items-center justify-center text-violet-500">
+                            <TrendingUp className="w-5 h-5" />
                         </div>
-                        <div className="font-bold text-neutral-800 text-sm">View Appreciations</div>
-                        <div className="text-xs text-neutral-500">From {partnerName}</div>
+                        <span className="text-[10px] font-bold text-neutral-600 text-center leading-tight uppercase tracking-wide">Received</span>
                     </motion.button>
+
                     <motion.button
-                        whileTap={{ scale: 0.97 }}
+                        whileTap={{ scale: 0.95 }}
                         onClick={() => navigate('/history')}
-                        className="glass-card p-4 text-left relative overflow-hidden active:bg-white/90 transition-colors"
+                        className="glass-card p-3 flex flex-col items-center gap-2 bg-white/50 hover:bg-white/80 transition-colors"
                     >
-                        <span className="absolute top-2 right-2 text-lg opacity-50">📜</span>
-                        <div className="w-10 h-10 bg-white/80 rounded-xl flex items-center justify-center shadow-soft mb-2">
-                            <History className="w-5 h-5 text-green-500" />
+                        <div className="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center text-green-500">
+                            <History className="w-5 h-5" />
                         </div>
-                        <div className="font-bold text-neutral-800 text-sm">Trial History</div>
-                        <div className="text-xs text-neutral-500">{caseHistory?.length || 0} cases</div>
+                        <span className="text-[10px] font-bold text-neutral-600 text-center leading-tight uppercase tracking-wide">History</span>
+                    </motion.button>
+
+                    <motion.button
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => navigate('/economy')}
+                        className="glass-card p-3 flex flex-col items-center gap-2 bg-white/50 hover:bg-white/80 transition-colors"
+                    >
+                        <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center text-amber-500">
+                            <Gift className="w-5 h-5 fill-current" />
+                        </div>
+                        <span className="text-[10px] font-bold text-neutral-600 text-center leading-tight uppercase tracking-wide">Redeem</span>
                     </motion.button>
                 </div>
-
-                {/* View Past Questions */}
-                <motion.button
-                    whileTap={{ scale: 0.97 }}
-                    onClick={() => navigate('/daily-meow/history')}
-                    className="glass-card p-4 text-left relative overflow-hidden active:bg-white/90 transition-colors w-full bg-gradient-to-r from-court-cream/60 to-court-tan/40 border border-court-gold/20"
-                >
-                    <span className="absolute top-2 right-2 text-lg opacity-50">📜</span>
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-white/80 rounded-xl flex items-center justify-center shadow-soft">
-                            <BookOpen className="w-5 h-5 text-court-brown" />
-                        </div>
-                        <div>
-                            <div className="font-bold text-neutral-800 text-sm">Question Archives</div>
-                            <div className="text-xs text-neutral-500">Relive your daily conversations</div>
-                        </div>
-                    </div>
-                </motion.button>
             </div>
 
             {/* Good Deed Modal */}

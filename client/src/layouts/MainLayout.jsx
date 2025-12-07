@@ -44,13 +44,6 @@ const MainLayout = () => {
                 <div className="flex items-center justify-between px-4 h-14">
                     {/* Logo */}
                     <div className="flex items-center gap-2.5">
-                        <div className="w-9 h-9 rounded-xl overflow-hidden shadow-soft border border-court-gold/30">
-                            <img
-                                src="/assets/avatars/judge_whiskers.png"
-                                alt="Judge Whiskers"
-                                className="w-full h-full object-cover"
-                            />
-                        </div>
                         <span className="text-lg font-bold text-gradient font-display">Pause</span>
                     </div>
 

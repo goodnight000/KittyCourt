@@ -140,7 +140,7 @@ const useAuthStore = create(
                             isLoading: false,
                             initTimeout: null
                         });
-                        
+
                         // Set up real-time subscriptions after authentication
                         setTimeout(() => {
                             get().setupRealtimeSubscriptions();
@@ -185,7 +185,7 @@ const useAuthStore = create(
                         console.error('[Auth] Sign in error:', error);
                         return { error };
                     }
-                    
+
                     console.log('[Auth] Sign in successful, user:', data.user?.id);
 
                     // Fetch profile - don't fail sign-in if profile fetch fails
@@ -193,9 +193,23 @@ const useAuthStore = create(
                     let partner = null;
                     try {
                         console.log('[Auth] Fetching profile for user:', data.user.id);
-                        const { data: profileData, error: profileError } = await getProfile(data.user.id);
+
+                        // Add timeout to prevent hanging if Supabase is slow
+                        const timeoutPromise = new Promise((_, reject) =>
+                            setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
+                        );
+
+                        const profileResult = await Promise.race([
+                            getProfile(data.user.id),
+                            timeoutPromise
+                        ]).catch(err => {
+                            console.warn('[Auth] Profile fetch timed out or failed:', err.message);
+                            return { data: null, error: err };
+                        });
+
+                        const { data: profileData, error: profileError } = profileResult;
                         console.log('[Auth] Profile fetch result:', { profileData, profileError });
-                        
+
                         if (profileError) {
                             console.warn('[Auth] Failed to fetch profile:', profileError);
                             // If profile doesn't exist, create one
@@ -219,7 +233,7 @@ const useAuthStore = create(
                         } else {
                             profile = profileData;
                         }
-                        
+
                         // Get partner if connected
                         if (profile?.partner_id) {
                             try {
@@ -239,7 +253,7 @@ const useAuthStore = create(
                         onboardingComplete: profile?.onboarding_complete || false,
                         hasPartner: !!profile?.partner_id
                     });
-                    
+
                     set({
                         user: data.user,
                         session: data.session,
@@ -250,12 +264,12 @@ const useAuthStore = create(
                         onboardingComplete: profile?.onboarding_complete || false,
                         isLoading: false
                     });
-                    
+
                     // Set up real-time subscriptions
                     setTimeout(() => {
                         get().setupRealtimeSubscriptions();
                     }, 100);
-                    
+
                     console.log('[Auth] State set complete, returning success');
                     return { data };
                 } catch (e) {
@@ -508,7 +522,7 @@ const useAuthStore = create(
 
                 try {
                     const { data: profile } = await getProfile(user.id);
-                    
+
                     // Check if partner was just connected
                     let partner = null;
                     if (profile?.partner_id) {
@@ -523,7 +537,7 @@ const useAuthStore = create(
                         onboardingComplete: profile?.onboarding_complete || false,
                         sentRequest: profile?.partner_id ? null : get().sentRequest // Clear sent request if connected
                     });
-                    
+
                     console.log('[Auth] Profile refreshed, hasPartner:', !!profile?.partner_id);
                 } catch (e) {
                     console.warn('[Auth] Failed to refresh profile:', e);
@@ -541,7 +555,7 @@ const useAuthStore = create(
                 const profileSub = subscribeToProfileChanges(user.id, (payload) => {
                     console.log('[Auth] Profile changed:', payload);
                     const newProfile = payload.new;
-                    
+
                     // If partner_id just became set, refresh to get partner details
                     if (newProfile?.partner_id && !get().hasPartner) {
                         console.log('[Auth] Partner connected! Refreshing profile...');
@@ -644,7 +658,7 @@ supabase.auth.onAuthStateChange(async (event, session) => {
                 onboardingComplete: profile?.onboarding_complete || false,
                 isLoading: false
             });
-            
+
             // Set up real-time subscriptions
             setTimeout(() => {
                 useAuthStore.getState().setupRealtimeSubscriptions();
