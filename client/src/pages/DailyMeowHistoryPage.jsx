@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { 
-    ArrowLeft, Heart, Calendar, Sparkles, BookOpen, 
+import {
+    ArrowLeft, Heart, Calendar, Sparkles, BookOpen,
     ChevronRight, Search
 } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 import api from '../services/api';
+import { ChevronLeft } from 'lucide-react';
 
 // Mood options for display
 const MOOD_OPTIONS = [
@@ -35,12 +36,12 @@ const MOOD_OPTIONS = [
 const DailyMeowHistoryPage = () => {
     const navigate = useNavigate();
     const { user: authUser, profile, partner: connectedPartner } = useAuthStore();
-    
+
     const myId = authUser?.id;
     const partnerId = connectedPartner?.id;
     const partnerDisplayName = connectedPartner?.display_name || 'Your partner';
     const myDisplayName = profile?.display_name || 'You';
-    
+
     // State
     const [loading, setLoading] = useState(true);
     const [history, setHistory] = useState([]);
@@ -50,7 +51,7 @@ const DailyMeowHistoryPage = () => {
 
     const fetchHistory = useCallback(async () => {
         if (!myId || !partnerId) return;
-        
+
         try {
             setLoading(true);
             const response = await api.get('/daily-questions/history', {
@@ -71,18 +72,18 @@ const DailyMeowHistoryPage = () => {
     }, [fetchHistory, myId, partnerId]);
 
     const getMoodData = (moodId) => MOOD_OPTIONS.find(m => m.id === moodId);
-    
+
     const formatDate = (dateStr) => {
         const date = new Date(dateStr);
         const now = new Date();
         const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
-        
+
         if (diffDays === 0) return 'Today';
         if (diffDays === 1) return 'Yesterday';
         if (diffDays < 7) return date.toLocaleDateString('en-US', { weekday: 'long' });
-        
-        return date.toLocaleDateString('en-US', { 
-            month: 'short', 
+
+        return date.toLocaleDateString('en-US', {
+            month: 'short',
             day: 'numeric',
             year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
         });
@@ -90,9 +91,9 @@ const DailyMeowHistoryPage = () => {
 
     const formatFullDate = (dateStr) => {
         const date = new Date(dateStr);
-        return date.toLocaleDateString('en-US', { 
+        return date.toLocaleDateString('en-US', {
             weekday: 'long',
-            month: 'long', 
+            month: 'long',
             day: 'numeric',
             year: 'numeric'
         });
@@ -103,7 +104,7 @@ const DailyMeowHistoryPage = () => {
         // Apply filter
         if (filter === 'completed' && (!item.my_answer || !item.partner_answer)) return false;
         if (filter === 'mine-only' && !item.my_answer) return false;
-        
+
         // Apply search
         if (searchQuery) {
             const query = searchQuery.toLowerCase();
@@ -112,7 +113,7 @@ const DailyMeowHistoryPage = () => {
             const matchesPartnerAnswer = item.partner_answer?.answer?.toLowerCase().includes(query);
             return matchesQuestion || matchesMyAnswer || matchesPartnerAnswer;
         }
-        
+
         return true;
     });
 
@@ -120,7 +121,7 @@ const DailyMeowHistoryPage = () => {
     const groupedHistory = filteredHistory.reduce((groups, item) => {
         const date = new Date(item.assigned_date);
         const monthYear = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-        
+
         if (!groups[monthYear]) {
             groups[monthYear] = [];
         }
@@ -137,14 +138,14 @@ const DailyMeowHistoryPage = () => {
         let streak = 0;
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        
+
         for (let i = 0; i < hist.length; i++) {
             const itemDate = new Date(hist[i].assigned_date);
             itemDate.setHours(0, 0, 0, 0);
-            
+
             const expectedDate = new Date(today);
             expectedDate.setDate(expectedDate.getDate() - i);
-            
+
             if (itemDate.getTime() === expectedDate.getTime() && hist[i].my_answer) {
                 streak++;
             } else {
@@ -155,25 +156,25 @@ const DailyMeowHistoryPage = () => {
     }
 
     return (
-        <div className="min-h-[calc(100dvh-80px)] flex flex-col bg-gradient-to-b from-court-cream/50 via-white to-court-tan/30">
+        <div className="space-y-5">
             {/* Header */}
             <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="sticky top-0 z-10 bg-white/80 backdrop-blur-lg border-b border-neutral-100 px-4 py-3"
+
             >
-                <div className="flex items-center justify-between">
-                    <button
+                <div className="flex items-center gap-3">
+                    <motion.button
+                        whileTap={{ scale: 0.95 }}
                         onClick={() => navigate(-1)}
-                        className="flex items-center gap-2 text-neutral-600 hover:text-neutral-800"
+                        className="w-10 h-10 bg-white/80 rounded-xl flex items-center justify-center shadow-soft"
                     >
-                        <ArrowLeft className="w-5 h-5" />
-                        <span className="font-medium">Back</span>
-                    </button>
-                    <h1 className="text-lg font-bold text-court-brown">
-                        Question Archives
-                    </h1>
-                    <div className="w-16" /> {/* Spacer for centering */}
+                        <ChevronLeft className="w-5 h-5 text-neutral-600" />
+                    </motion.button>
+                    <div>
+                        <h1 className="text-xl font-bold text-gradient">Question Archives</h1>
+                        <p className="text-neutral-500 text-sm">The Deepest of memories and secrets shared together</p>
+                    </div>
                 </div>
             </motion.div>
 
@@ -188,13 +189,13 @@ const DailyMeowHistoryPage = () => {
                     {/* Decorative elements */}
                     <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
                     <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full translate-y-1/2 -translate-x-1/2" />
-                    
+
                     <div className="relative">
                         <div className="flex items-center gap-2 mb-3">
                             <BookOpen className="w-5 h-5" />
                             <span className="font-bold">Your Journey Together</span>
                         </div>
-                        
+
                         <div className="grid grid-cols-2 gap-4">
                             <div className="text-center">
                                 <div className="text-3xl font-bold">{totalAnswered}</div>
@@ -252,7 +253,7 @@ const DailyMeowHistoryPage = () => {
                             {searchQuery ? 'No matches found' : 'Your story begins here'}
                         </h3>
                         <p className="text-neutral-500 text-sm max-w-xs mx-auto">
-                            {searchQuery 
+                            {searchQuery
                                 ? 'Try a different search term'
                                 : 'Answer daily questions together to build your shared story'}
                         </p>
@@ -281,12 +282,12 @@ const DailyMeowHistoryPage = () => {
                                         const isCompleted = item.my_answer && item.partner_answer;
                                         const myMood = getMoodData(item.my_answer?.mood);
                                         const partnerMood = getMoodData(item.partner_answer?.mood);
-                                        
+
                                         // Stripe color based on completion status
-                                        const stripeColor = isCompleted 
-                                            ? 'bg-emerald-400' 
+                                        const stripeColor = isCompleted
+                                            ? 'bg-emerald-400'
                                             : 'bg-amber-400';
-                                        
+
                                         return (
                                             <motion.button
                                                 key={item.id}
@@ -299,21 +300,21 @@ const DailyMeowHistoryPage = () => {
                                             >
                                                 {/* Colored Status Stripe */}
                                                 <div className={`w-1.5 ${stripeColor} flex-shrink-0`} />
-                                                
+
                                                 <div className="flex-1 p-4">
                                                     <div className="flex items-start gap-3">
                                                         {/* Emoji */}
                                                         <div className="w-10 h-10 bg-gradient-to-br from-violet-50 to-pink-50 rounded-xl flex items-center justify-center flex-shrink-0">
                                                             <span className="text-xl">{item.emoji || '💭'}</span>
                                                         </div>
-                                                        
+
                                                         {/* Content */}
                                                         <div className="flex-1 min-w-0">
                                                             {/* Question Text */}
                                                             <p className="text-sm font-bold text-neutral-800 line-clamp-2 leading-snug mb-1.5 group-hover:text-violet-700 transition-colors">
                                                                 {item.question}
                                                             </p>
-                                                            
+
                                                             {/* Badges Row */}
                                                             <div className="flex flex-wrap items-center gap-1.5 mb-2">
                                                                 {isCompleted ? (
@@ -330,7 +331,7 @@ const DailyMeowHistoryPage = () => {
                                                                         Your Turn
                                                                     </span>
                                                                 )}
-                                                                
+
                                                                 {/* Category badge if available */}
                                                                 {item.category && (
                                                                     <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-neutral-100 text-neutral-600">
@@ -338,7 +339,7 @@ const DailyMeowHistoryPage = () => {
                                                                     </span>
                                                                 )}
                                                             </div>
-                                                            
+
                                                             {/* Mood indicators */}
                                                             {(myMood || partnerMood) && (
                                                                 <div className="flex items-center gap-1 text-xs text-neutral-500">
@@ -348,14 +349,14 @@ const DailyMeowHistoryPage = () => {
                                                                     {partnerMood && <span>{partnerMood.emoji}</span>}
                                                                 </div>
                                                             )}
-                                                            
+
                                                             {/* Date */}
                                                             <div className="flex items-center gap-1 text-[10px] text-neutral-400 mt-2">
                                                                 <Calendar className="w-3 h-3" />
                                                                 {formatDate(item.assigned_date)}
                                                             </div>
                                                         </div>
-                                                        
+
                                                         {/* Arrow Icon */}
                                                         <div className="flex-shrink-0 mt-1">
                                                             <ChevronRight className="w-5 h-5 text-neutral-300 group-hover:text-violet-400 transition-colors" />

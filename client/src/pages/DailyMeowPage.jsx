@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { 
-    Sparkles, Heart, Check, Clock, History, 
+import {
+    Sparkles, Heart, Check, Clock, History,
     Cat, Edit3, Send, Lock, AlertCircle, RefreshCw, BookOpen, ChevronRight
 } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
@@ -38,21 +38,21 @@ const MOOD_OPTIONS = [
 const DailyMeowPage = () => {
     const navigate = useNavigate();
     const { hasPartner, user: authUser, profile, partner: connectedPartner } = useAuthStore();
-    
+
     const myId = authUser?.id;
     const partnerId = connectedPartner?.id;
     const partnerDisplayName = connectedPartner?.display_name || 'Your partner';
-    
+
     // Ref to prevent duplicate fetches
     const hasFetched = useRef(false);
-    
+
     // State
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [todaysQuestion, setTodaysQuestion] = useState(null);
     const [answer, setAnswer] = useState('');
-    const [selectedMood, setSelectedMood] = useState(null);
-    const [moodLocked, setMoodLocked] = useState(false); // Once mood is set, it's locked
+    const [selectedMoods, setSelectedMoods] = useState([]); // Array for 1-3 moods
+    const [moodLocked, setMoodLocked] = useState(false); // Only lock after submission
     const [isEditing, setIsEditing] = useState(false);
     const [editingAnswer, setEditingAnswer] = useState('');
     const [submitting, setSubmitting] = useState(false);
@@ -75,40 +75,42 @@ const DailyMeowPage = () => {
         if (!myId || !partnerId) {
             return;
         }
-        
+
         try {
             setLoading(true);
             setError(null);
             const response = await api.get('/daily-questions/today', {
                 params: { userId: myId, partnerId }
             });
-            
+
             // Validate the response has the expected structure
             if (!response.data) {
                 setError('No data received from server');
                 return;
             }
-            
+
             // The API returns the question directly on response.data
             const questionData = response.data;
-            
+
             if (!questionData.assignment_id || !questionData.question) {
                 console.error('DailyMeow: Invalid response structure', questionData);
                 setError('Invalid question data received');
                 return;
             }
-            
+
             setTodaysQuestion(questionData);
-            
+
             // Determine initial state based on existing answer
             if (questionData.my_answer) {
                 setAnswer(questionData.my_answer.answer || '');
-                setSelectedMood(questionData.my_answer.mood || null);
-                setMoodLocked(!!questionData.my_answer.mood);
+                // Handle both single mood (legacy) and multi-mood
+                const existingMoods = questionData.my_answer.moods || (questionData.my_answer.mood ? [questionData.my_answer.mood] : []);
+                setSelectedMoods(existingMoods);
+                setMoodLocked(existingMoods.length > 0);
                 setStep('done');
             } else {
                 setAnswer('');
-                setSelectedMood(null);
+                setSelectedMoods([]);
                 setMoodLocked(false);
                 setStep('mood');
             }
@@ -154,31 +156,46 @@ const DailyMeowPage = () => {
     }
 
     const handleMoodSelect = (mood) => {
-        if (moodLocked) return; // Cannot change once locked
-        setSelectedMood(mood.id);
+        if (moodLocked) return; // Cannot change after submission
+
+        setSelectedMoods(prev => {
+            // If already selected, remove it
+            if (prev.includes(mood.id)) {
+                return prev.filter(m => m !== mood.id);
+            }
+            // If less than 3 selected, add it
+            if (prev.length < 3) {
+                return [...prev, mood.id];
+            }
+            // Already have 3, don't add more
+            return prev;
+        });
     };
 
     const confirmMood = () => {
-        if (!selectedMood) return;
-        setMoodLocked(true);
+        if (selectedMoods.length === 0) return;
+        // Don't lock moods here - only lock on submit
         setStep('answer');
     };
 
     const handleSubmit = async () => {
-        if (!answer.trim() || !todaysQuestion?.assignment_id || !selectedMood) return;
-        
+        if (!answer.trim() || !todaysQuestion?.assignment_id || selectedMoods.length === 0) return;
+
         try {
             setSubmitting(true);
+            // Lock moods on submission
+            setMoodLocked(true);
             await api.post('/daily-questions/answer', {
                 userId: myId,
                 assignmentId: todaysQuestion.assignment_id,
                 answer: answer.trim(),
-                mood: selectedMood
+                mood: selectedMoods[0], // Primary mood for backward compatibility
+                moods: selectedMoods // All selected moods
             });
-            
+
             setShowSuccess(true);
             setTimeout(() => setShowSuccess(false), 2000);
-            
+
             await fetchTodaysQuestion();
         } catch (err) {
             console.error('Error submitting answer:', err);
@@ -190,18 +207,18 @@ const DailyMeowPage = () => {
 
     const handleEdit = async () => {
         if (!editingAnswer.trim() || !todaysQuestion?.my_answer?.id) return;
-        
+
         try {
             setSubmitting(true);
             // Note: mood is NOT included - it cannot be changed
             await api.put(`/daily-questions/answer/${todaysQuestion.my_answer.id}`, {
                 answer: editingAnswer.trim()
             });
-            
+
             setIsEditing(false);
             setShowSuccess(true);
             setTimeout(() => setShowSuccess(false), 2000);
-            
+
             await fetchTodaysQuestion();
         } catch (err) {
             console.error('Error editing answer:', err);
@@ -217,21 +234,21 @@ const DailyMeowPage = () => {
     };
 
     const getMoodData = (moodId) => MOOD_OPTIONS.find(m => m.id === moodId);
-    
+
     const formatDate = (dateStr) => {
         const date = new Date(dateStr);
-        return date.toLocaleDateString('en-US', { 
+        return date.toLocaleDateString('en-US', {
             weekday: 'long',
-            month: 'long', 
+            month: 'long',
             day: 'numeric'
         });
     };
-    
+
     const formatEditedDate = (dateStr) => {
         if (!dateStr) return null;
         const date = new Date(dateStr);
-        return date.toLocaleDateString('en-US', { 
-            month: 'short', 
+        return date.toLocaleDateString('en-US', {
+            month: 'short',
             day: 'numeric'
         });
     };
@@ -240,7 +257,7 @@ const DailyMeowPage = () => {
     const partnerHasAnswered = !!todaysQuestion?.partner_answer;
     const bothAnswered = hasAnswered && partnerHasAnswered;
     const isBacklog = todaysQuestion?.is_backlog;
-    const currentMoodData = getMoodData(selectedMood);
+    const currentMoodData = selectedMoods.length > 0 ? getMoodData(selectedMoods[0]) : null;
 
     return (
         <div className="min-h-[calc(100dvh-120px)] flex flex-col">
@@ -352,16 +369,15 @@ const DailyMeowPage = () => {
                     )}
 
                     {/* Question Card */}
-                    <motion.div 
+                    <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className={`glass-card overflow-hidden flex-1 flex flex-col ${
-                            currentMoodData ? `bg-gradient-to-br ${currentMoodData.color}` : ''
-                        }`}
+                        className={`glass-card overflow-hidden flex-1 flex flex-col ${currentMoodData ? `bg-gradient-to-br ${currentMoodData.color}` : ''
+                            }`}
                     >
                         {/* Question Header */}
                         <div className="p-5 text-center border-b border-white/50">
-                            <motion.span 
+                            <motion.span
                                 className="text-5xl block mb-3"
                                 animate={{ scale: [1, 1.1, 1] }}
                                 transition={{ duration: 2, repeat: Infinity }}
@@ -392,25 +408,24 @@ const DailyMeowPage = () => {
                                         <div className="text-center mb-4">
                                             <h3 className="text-lg font-bold text-neutral-800">How are you feeling today?</h3>
                                             <p className="text-sm text-neutral-500 mt-1">
-                                                Choose your mood before answering
+                                                Select 1-3 moods ({selectedMoods.length}/3 selected)
                                             </p>
                                             <p className="text-xs text-amber-600 mt-2 flex items-center justify-center gap-1">
                                                 <Lock className="w-3 h-3" />
-                                                Your mood cannot be changed after selection
+                                                Your moods will be locked after submitting
                                             </p>
                                         </div>
-                                        
+
                                         <div className="grid grid-cols-4 gap-2 flex-1 content-start">
                                             {MOOD_OPTIONS.map((mood) => (
                                                 <motion.button
                                                     key={mood.id}
                                                     whileTap={{ scale: 0.95 }}
                                                     onClick={() => handleMoodSelect(mood)}
-                                                    className={`aspect-square rounded-2xl flex flex-col items-center justify-center p-1 transition-all ${
-                                                        selectedMood === mood.id
+                                                    className={`aspect-square rounded-2xl flex flex-col items-center justify-center p-1 transition-all ${selectedMoods.includes(mood.id)
                                                             ? `bg-gradient-to-br ${mood.color} ring-2 ring-amber-400 shadow-md`
                                                             : 'bg-white/60 hover:bg-white/80'
-                                                    }`}
+                                                        }`}
                                                 >
                                                     <span className="text-2xl">{mood.emoji}</span>
                                                     <span className="text-[10px] text-neutral-600 font-medium mt-0.5">{mood.label}</span>
@@ -421,16 +436,18 @@ const DailyMeowPage = () => {
                                         <motion.button
                                             whileTap={{ scale: 0.98 }}
                                             onClick={confirmMood}
-                                            disabled={!selectedMood}
+                                            disabled={selectedMoods.length === 0}
                                             className="mt-4 w-full py-4 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold rounded-2xl shadow-lg disabled:opacity-40 disabled:saturate-50 flex items-center justify-center gap-2"
                                         >
-                                            {selectedMood ? (
+                                            {selectedMoods.length > 0 ? (
                                                 <>
-                                                    <span className="text-xl">{getMoodData(selectedMood)?.emoji}</span>
-                                                    I'm feeling {getMoodData(selectedMood)?.label}
+                                                    <span className="text-xl flex gap-1">
+                                                        {selectedMoods.map(m => getMoodData(m)?.emoji).join('')}
+                                                    </span>
+                                                    Continue with {selectedMoods.length} mood{selectedMoods.length > 1 ? 's' : ''}
                                                 </>
                                             ) : (
-                                                'Select your mood to continue'
+                                                'Select at least 1 mood to continue'
                                             )}
                                         </motion.button>
                                     </motion.div>
@@ -445,13 +462,20 @@ const DailyMeowPage = () => {
                                         exit={{ opacity: 0, x: -20 }}
                                         className="flex-1 flex flex-col"
                                     >
-                                        {/* Locked Mood Display */}
+                                        {/* Selected Moods Display (can still change) */}
                                         <div className="flex items-center justify-center gap-2 mb-4 px-4 py-2 bg-white/60 rounded-xl">
-                                            <span className="text-xl">{currentMoodData?.emoji}</span>
-                                            <span className="text-sm font-medium text-neutral-700">
-                                                Feeling {currentMoodData?.label}
+                                            <span className="text-xl flex gap-1">
+                                                {selectedMoods.map(m => getMoodData(m)?.emoji).join('')}
                                             </span>
-                                            <Lock className="w-3 h-3 text-neutral-400 ml-1" />
+                                            <span className="text-sm font-medium text-neutral-700">
+                                                {selectedMoods.length} mood{selectedMoods.length > 1 ? 's' : ''} selected
+                                            </span>
+                                            <button
+                                                onClick={() => setStep('mood')}
+                                                className="text-xs text-amber-600 underline ml-2"
+                                            >
+                                                Change
+                                            </button>
                                         </div>
 
                                         <div className="flex items-center justify-between mb-2">
@@ -472,7 +496,7 @@ const DailyMeowPage = () => {
                                         <motion.button
                                             whileTap={{ scale: 0.98 }}
                                             onClick={handleSubmit}
-                                            disabled={!answer.trim() || submitting}
+                                            disabled={!answer.trim() || submitting || selectedMoods.length === 0}
                                             className="mt-4 w-full py-4 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold rounded-2xl shadow-lg disabled:opacity-40 disabled:saturate-50 flex items-center justify-center gap-2"
                                         >
                                             {submitting ? (
@@ -519,8 +543,10 @@ const DailyMeowPage = () => {
                                             <div className="flex items-center justify-between mb-2">
                                                 <div className="flex items-center gap-2">
                                                     <span className="text-sm font-bold text-amber-700">Your answer</span>
-                                                    {selectedMood && (
-                                                        <span className="text-lg">{getMoodData(selectedMood)?.emoji}</span>
+                                                    {selectedMoods.length > 0 && (
+                                                        <span className="text-lg flex gap-0.5">
+                                                            {selectedMoods.map(m => getMoodData(m)?.emoji).join('')}
+                                                        </span>
                                                     )}
                                                 </div>
                                                 <button
@@ -542,7 +568,7 @@ const DailyMeowPage = () => {
 
                                         {/* Partner's Answer or Waiting */}
                                         {bothAnswered ? (
-                                            <motion.div 
+                                            <motion.div
                                                 initial={{ opacity: 0, y: 10 }}
                                                 animate={{ opacity: 1, y: 0 }}
                                                 className="bg-white/70 rounded-2xl p-4 border border-pink-200 shadow-sm"

@@ -171,156 +171,167 @@ const DashboardPage = () => {
                 </motion.div>
             </div>
 
-            {/* Main Features - The "Important Elements" */}
-            <div className="space-y-4">
-                <h3 className="font-bold text-neutral-400 text-xs uppercase tracking-wider px-1">Core Features</h3>
+            {/* Main Features - Side by Side Cards */}
+            <div className="grid grid-cols-2 gap-3">
+                {/* File a Case Card */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => navigate('/courtroom')}
+                    className="relative overflow-hidden rounded-3xl cursor-pointer group shadow-lg h-36"
+                    style={{ background: 'linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%)' }}
+                >
+                    {/* Decorative circle */}
+                    <div className="absolute top-1/2 right-0 w-40 h-40 bg-white/5 rounded-full translate-x-1/3 blur-2xl" />
 
-                <div className="grid grid-cols-1 gap-4">
-                    {/* Judge Whiskers Card - Large & Premium */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.1 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => navigate('/courtroom')}
-                        className="relative overflow-hidden rounded-[2rem] cursor-pointer group shadow-lg"
-                        style={{
-                            background: 'linear-gradient(135deg, #8B5CF6 0%, #6D28D9 50%, #5B21B6 100%)',
-                            minHeight: '160px'
-                        }}
-                    >
-                        {/* Decorative circles */}
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/4 blur-3xl" />
-                        <div className="absolute bottom-0 left-0 w-40 h-40 bg-black/10 rounded-full translate-y-1/3 -translate-x-1/4 blur-2xl" />
+                    <div className="relative h-full p-4 flex flex-col">
+                        {/* Large Avatar - Top Left */}
+                        <motion.div
+                            animate={{ y: [0, -3, 0] }}
+                            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                            className="w-12 h-12 rounded-xl overflow-hidden border-2 border-white/30 shadow-lg mb-auto"
+                        >
+                            <img
+                                src="/assets/avatars/judge_whiskers.png"
+                                alt="Judge Whiskers"
+                                className="w-full h-full object-cover"
+                            />
+                        </motion.div>
 
-                        <div className="relative p-6 h-full flex items-center justify-between">
-                            <div className="flex-1 pr-4">
-                                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white/10 backdrop-blur-md rounded-full border border-white/20 mb-3">
-                                    <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
-                                    <span className="text-white/90 text-[10px] font-bold uppercase tracking-wide">Court is in Session</span>
-                                </div>
-                                <h3 className="text-white font-bold text-2xl leading-tight mb-1">File a Case</h3>
-                                <p className="text-white/70 text-sm font-medium">Let Judge Whiskers decide who's right.</p>
-
-                                <div className="mt-4 inline-flex items-center gap-2 text-white/90 text-sm font-bold group-hover:gap-3 transition-all">
-                                    Enter Courtroom <ArrowRight className="w-4 h-4" />
-                                </div>
-                            </div>
-
-                            {/* Judge Avatar */}
-                            <motion.div
-                                animate={{ y: [0, -5, 0] }}
-                                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                                className="w-24 h-24 rounded-2xl overflow-hidden border-4 border-white/20 shadow-xl rotate-3 shrink-0"
-                            >
-                                <img
-                                    src="/assets/avatars/judge_whiskers.png"
-                                    alt="Judge Whiskers"
-                                    className="w-full h-full object-cover"
-                                />
-                            </motion.div>
+                        {/* Ready Badge - Top Right */}
+                        <div className="absolute top-4 right-4 inline-flex items-center gap-1.5 px-2.5 py-1 bg-white/15 backdrop-blur-sm rounded-full">
+                            <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
+                            <span className="text-white/90 text-[10px] font-bold">Ready</span>
                         </div>
-                    </motion.div>
 
-                    {/* Daily Question Card - Large & Premium */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.15 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => navigate('/daily-meow')}
-                        className="relative overflow-hidden rounded-[2rem] cursor-pointer group shadow-lg"
-                        style={{
-                            background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 50%, #B45309 100%)',
-                            minHeight: '160px'
-                        }}
-                    >
-                        {/* Decorative circles */}
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/4 blur-3xl" />
-                        <div className="absolute bottom-0 left-0 w-40 h-40 bg-black/10 rounded-full translate-y-1/3 -translate-x-1/4 blur-2xl" />
-
-                        <div className="relative p-6 h-full flex items-center justify-between">
-                            <div className="flex-1 pr-4">
-                                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white/10 backdrop-blur-md rounded-full border border-white/20 mb-3">
-                                    <Sparkles className="w-3 h-3 text-yellow-200" />
-                                    <span className="text-white/90 text-[10px] font-bold uppercase tracking-wide">Daily Connection</span>
-                                </div>
-                                <h3 className="text-white font-bold text-2xl leading-tight mb-1">Daily Question</h3>
-                                <p className="text-white/70 text-sm font-medium">Spark meaningful conversations.</p>
-
-                                <div className="mt-4 inline-flex items-center gap-2 text-white/90 text-sm font-bold group-hover:gap-3 transition-all">
-                                    Answer Now <ArrowRight className="w-4 h-4" />
-                                </div>
-                            </div>
-
-                            {/* Icon */}
-                            <motion.div
-                                animate={{ rotate: [0, 5, -5, 0] }}
-                                transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-                                className="w-24 h-24 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/20 shadow-xl -rotate-3 shrink-0"
-                            >
-                                <MessageCircle className="w-10 h-10 text-white" />
-                            </motion.div>
+                        {/* Title at Bottom */}
+                        <div>
+                            <h3 className="text-white font-bold text-lg leading-tight">File a Case</h3>
+                            <p className="text-white/60 text-xs mt-0.5">Let Judge Whiskers decide</p>
                         </div>
-                    </motion.div>
-                </div>
+                    </div>
+                </motion.div>
+
+                {/* Daily Question Card */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.15 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => navigate('/daily-meow')}
+                    className="relative overflow-hidden rounded-3xl cursor-pointer group shadow-lg h-36"
+                    style={{ background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' }}
+                >
+                    {/* Decorative circle */}
+                    <div className="absolute top-1/2 right-0 w-40 h-40 bg-white/5 rounded-full translate-x-1/3 blur-2xl" />
+
+                    <div className="relative h-full p-4 flex flex-col">
+                        {/* Large Icon - Top Left */}
+                        <motion.div
+                            animate={{ rotate: [0, 5, -5, 0] }}
+                            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                            className="w-12 h-12 rounded-xl overflow-hidden border-2 border-white/30 shadow-lg mb-auto"
+                        >
+                            <img
+                                src="/assets/avatars/daily_question.png"
+                                alt="Daily Question"
+                                className="w-full h-full object-cover"
+                            />
+                        </motion.div>
+
+                        {/* NEW Badge - Top Right */}
+                        <div className="absolute top-4 right-4 px-2.5 py-1 bg-white/20 backdrop-blur-sm rounded-full">
+                            <span className="text-white text-[10px] font-bold">NEW</span>
+                        </div>
+
+                        {/* Title at Bottom */}
+                        <div>
+                            <h3 className="text-white font-bold text-lg leading-tight">Daily Question</h3>
+                            <p className="text-white/60 text-xs mt-0.5">Share your thoughts</p>
+                        </div>
+                    </div>
+                </motion.div>
             </div>
 
             {/* Quick Actions - Compact Grid */}
-            <div className="space-y-4">
+            <div className="space-y-3">
                 <h3 className="font-bold text-neutral-400 text-xs uppercase tracking-wider px-1">Quick Actions</h3>
 
-                <div className="grid grid-cols-4 gap-3">
+                <div className="grid grid-cols-4 gap-2">
                     <motion.button
                         whileTap={{ scale: 0.95 }}
                         onClick={() => hasPartner ? setShowGoodDeedModal(true) : navigate('/connect')}
-                        className="glass-card p-3 flex flex-col items-center gap-2 relative bg-white/50 hover:bg-white/80 transition-colors"
+                        className="glass-card p-2 flex flex-col items-center gap-1.5 relative bg-white/50 hover:bg-white/80 transition-colors"
                     >
                         {!hasPartner && (
-                            <div className="absolute top-1 right-1 w-4 h-4 bg-neutral-200 rounded-full flex items-center justify-center">
-                                <Lock className="w-2.5 h-2.5 text-neutral-500" />
+                            <div className="absolute top-1 right-1 w-3 h-3 bg-neutral-200 rounded-full flex items-center justify-center">
+                                <Lock className="w-2 h-2 text-neutral-500" />
                             </div>
                         )}
-                        <div className="w-10 h-10 bg-pink-50 rounded-xl flex items-center justify-center text-pink-500">
-                            <Heart className={`w-5 h-5 ${hasPartner ? 'fill-current' : 'text-neutral-400'}`} />
+                        <div className="w-9 h-9 bg-pink-50 rounded-xl flex items-center justify-center text-pink-500">
+                            <Heart className={`w-4 h-4 ${hasPartner ? 'fill-current' : 'text-neutral-400'}`} />
                         </div>
-                        <span className="text-[10px] font-bold text-neutral-600 text-center leading-tight uppercase tracking-wide">Appreciate</span>
+                        <span className="text-[9px] font-bold text-neutral-600 text-center leading-tight">Appreciate</span>
                     </motion.button>
 
                     <motion.button
                         whileTap={{ scale: 0.95 }}
                         onClick={() => navigate('/appreciations')}
-                        className="glass-card p-3 flex flex-col items-center gap-2 bg-white/50 hover:bg-white/80 transition-colors"
+                        className="glass-card p-2 flex flex-col items-center gap-1.5 bg-white/50 hover:bg-white/80 transition-colors"
                     >
-                        <div className="w-10 h-10 bg-violet-50 rounded-xl flex items-center justify-center text-violet-500">
-                            <TrendingUp className="w-5 h-5" />
+                        <div className="w-9 h-9 bg-violet-50 rounded-xl flex items-center justify-center text-violet-500">
+                            <Gift className="w-4 h-4" />
                         </div>
-                        <span className="text-[10px] font-bold text-neutral-600 text-center leading-tight uppercase tracking-wide">Received</span>
+                        <span className="text-[9px] font-bold text-neutral-600 text-center leading-tight">Love Notes</span>
                     </motion.button>
 
                     <motion.button
                         whileTap={{ scale: 0.95 }}
                         onClick={() => navigate('/history')}
-                        className="glass-card p-3 flex flex-col items-center gap-2 bg-white/50 hover:bg-white/80 transition-colors"
+                        className="glass-card p-2 flex flex-col items-center gap-1.5 bg-white/50 hover:bg-white/80 transition-colors"
                     >
-                        <div className="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center text-green-500">
-                            <History className="w-5 h-5" />
+                        <div className="w-9 h-9 bg-green-50 rounded-xl flex items-center justify-center text-green-500">
+                            <History className="w-4 h-4" />
                         </div>
-                        <span className="text-[10px] font-bold text-neutral-600 text-center leading-tight uppercase tracking-wide">History</span>
+                        <span className="text-[9px] font-bold text-neutral-600 text-center leading-tight">Cases</span>
                     </motion.button>
 
                     <motion.button
                         whileTap={{ scale: 0.95 }}
                         onClick={() => navigate('/economy')}
-                        className="glass-card p-3 flex flex-col items-center gap-2 bg-white/50 hover:bg-white/80 transition-colors"
+                        className="glass-card p-2 flex flex-col items-center gap-1.5 bg-white/50 hover:bg-white/80 transition-colors"
                     >
-                        <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center text-amber-500">
-                            <Gift className="w-5 h-5 fill-current" />
+                        <div className="w-9 h-9 bg-orange-50 rounded-xl flex items-center justify-center text-orange-500">
+                            <Sparkles className="w-4 h-4" />
                         </div>
-                        <span className="text-[10px] font-bold text-neutral-600 text-center leading-tight uppercase tracking-wide">Redeem</span>
+                        <span className="text-[9px] font-bold text-neutral-600 text-center leading-tight">Redeem</span>
                     </motion.button>
                 </div>
             </div>
+
+            {/* Question Archives - Horizontal Banner */}
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => navigate('/daily-meow/history')}
+                className="relative overflow-hidden rounded-2xl cursor-pointer shadow-md"
+                style={{ background: '#fdfcfa' }}
+            >
+                <div className="flex items-center gap-4 p-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-amber-100 to-amber-200 rounded-xl flex items-center justify-center shadow-soft border border-amber-200/50">
+                        <BookOpen className="w-6 h-6 text-amber-600" />
+                    </div>
+                    <div className="flex-1">
+                        <h3 className="font-bold text-neutral-800 text-sm">Question Archives</h3>
+                        <p className="text-neutral-500 text-xs mt-0.5">Time travel to your past memories 💭</p>
+                    </div>
+                    <ArrowRight className="w-5 h-5 text-neutral-400" />
+                </div>
+            </motion.div>
 
             {/* Good Deed Modal */}
             <AnimatePresence>

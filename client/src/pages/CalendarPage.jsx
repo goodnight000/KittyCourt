@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { 
+import {
     ChevronLeft, ChevronRight, Plus, X, Check, Calendar,
     Heart, Cake, Star, Gift, PartyPopper, Sparkles, Trash2,
     Lightbulb, Wand2, Loader2, AlertTriangle
@@ -22,8 +22,8 @@ const EVENT_TYPES = [
 const EMOJI_OPTIONS = ['🎂', '💕', '🎉', '🌙', '📅', '🎁', '💐', '🍰', '🎊', '✨', '🌸', '🌈'];
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 
-                'July', 'August', 'September', 'October', 'November', 'December'];
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'];
 
 // Default holidays that couples typically celebrate
 const getDefaultHolidays = (year) => [
@@ -43,13 +43,13 @@ const CalendarPage = () => {
     const navigate = useNavigate();
     const { currentUser } = useAppStore();
     const { user: authUser, profile, partner: connectedPartner, hasPartner } = useAuthStore();
-    
+
     // Build users array from auth store
     const myId = authUser?.id || currentUser?.id;
     const myDisplayName = profile?.display_name || profile?.name || 'You';
     const partnerId = connectedPartner?.id;
     const partnerDisplayName = connectedPartner?.display_name || connectedPartner?.name || 'Partner';
-    
+
     const [currentDate, setCurrentDate] = useState(new Date());
     const [events, setEvents] = useState([]);
     const [selectedDate, setSelectedDate] = useState(null);
@@ -67,7 +67,7 @@ const CalendarPage = () => {
     const getPersonalEvents = () => {
         const personalEvents = [];
         const currentYear = new Date().getFullYear();
-        
+
         // Build users array from auth store
         const users = [];
         if (profile) {
@@ -76,10 +76,10 @@ const CalendarPage = () => {
         if (connectedPartner) {
             users.push({ id: partnerId, name: partnerDisplayName, ...connectedPartner });
         }
-        
+
         users.forEach(user => {
             const displayName = user.display_name || user.name || 'User';
-            
+
             // Add birthday events (from profile data if available)
             const birthday = user.birthday || user.birth_date;
             if (birthday) {
@@ -103,13 +103,13 @@ const CalendarPage = () => {
                     isPersonal: true,
                 });
             }
-            
+
             // Add anniversary (only from current user's profile to avoid duplicates)
             const anniversaryDate = user.anniversary_date || user.anniversaryDate;
             if (anniversaryDate && user.id === myId) {
                 // Parse as local date
-                const anniv = anniversaryDate.includes('T') 
-                    ? new Date(anniversaryDate) 
+                const anniv = anniversaryDate.includes('T')
+                    ? new Date(anniversaryDate)
                     : new Date(anniversaryDate + 'T00:00:00');
                 personalEvents.push({
                     id: `anniversary_${currentYear}`,
@@ -129,7 +129,7 @@ const CalendarPage = () => {
                 });
             }
         });
-        
+
         return personalEvents;
     };
 
@@ -137,24 +137,24 @@ const CalendarPage = () => {
         try {
             const response = await api.get('/calendar/events');
             const dbEvents = response.data;
-            
+
             // Get default holidays for current and next year
             const currentYear = new Date().getFullYear();
             const defaultEvents = [
                 ...getDefaultHolidays(currentYear),
                 ...getDefaultHolidays(currentYear + 1)
             ];
-            
+
             // Get personal events (birthdays, anniversary) from profiles
             const personalEvents = getPersonalEvents();
-            
+
             // Check which default holidays are already in the database
             const existingTitles = dbEvents.map(e => e.title);
             const newDefaults = defaultEvents.filter(d => !existingTitles.includes(d.title));
-            
+
             // Combine all events
             setEvents([
-                ...dbEvents, 
+                ...dbEvents,
                 ...newDefaults.map(d => ({ ...d, id: `default_${d.title}` })),
                 ...personalEvents
             ]);
@@ -204,26 +204,26 @@ const CalendarPage = () => {
         const lastDay = new Date(year, month + 1, 0);
         const daysInMonth = lastDay.getDate();
         const startingDay = firstDay.getDay();
-        
+
         const days = [];
-        
+
         // Previous month days
         const prevMonthLastDay = new Date(year, month, 0).getDate();
         for (let i = startingDay - 1; i >= 0; i--) {
             days.push({ day: prevMonthLastDay - i, currentMonth: false, date: new Date(year, month - 1, prevMonthLastDay - i) });
         }
-        
+
         // Current month days
         for (let i = 1; i <= daysInMonth; i++) {
             days.push({ day: i, currentMonth: true, date: new Date(year, month, i) });
         }
-        
+
         // Next month days
         const remainingDays = 42 - days.length;
         for (let i = 1; i <= remainingDays; i++) {
             days.push({ day: i, currentMonth: false, date: new Date(year, month + 1, i) });
         }
-        
+
         return days;
     };
 
@@ -232,20 +232,20 @@ const CalendarPage = () => {
             // Parse date string as local date by appending T00:00:00
             // This prevents timezone shift when parsing "YYYY-MM-DD" strings
             const dateStr = event.date;
-            const eventDate = dateStr.includes('T') 
-                ? new Date(dateStr) 
+            const eventDate = dateStr.includes('T')
+                ? new Date(dateStr)
                 : new Date(dateStr + 'T00:00:00');
             return eventDate.getDate() === date.getDate() &&
-                   eventDate.getMonth() === date.getMonth() &&
-                   eventDate.getFullYear() === date.getFullYear();
+                eventDate.getMonth() === date.getMonth() &&
+                eventDate.getFullYear() === date.getFullYear();
         });
     };
 
     const isToday = (date) => {
         const today = new Date();
         return date.getDate() === today.getDate() &&
-               date.getMonth() === today.getMonth() &&
-               date.getFullYear() === today.getFullYear();
+            date.getMonth() === today.getMonth() &&
+            date.getFullYear() === today.getFullYear();
     };
 
     const navigateMonth = (direction) => {
@@ -344,7 +344,7 @@ const CalendarPage = () => {
                         const dayEvents = getEventsForDate(dayInfo.date);
                         const hasEvents = dayEvents.length > 0;
                         const today = isToday(dayInfo.date);
-                        
+
                         return (
                             <motion.button
                                 key={index}
@@ -389,7 +389,7 @@ const CalendarPage = () => {
                     <Sparkles className="w-4 h-4 text-amber-400" />
                     Upcoming Events
                 </h3>
-                
+
                 {upcomingEvents.length === 0 ? (
                     <motion.div
                         initial={{ opacity: 0 }}
@@ -409,9 +409,9 @@ const CalendarPage = () => {
                 ) : (
                     <div className="space-y-2">
                         {upcomingEvents.map((event, index) => (
-                            <EventCard 
-                                key={event.id} 
-                                event={event} 
+                            <EventCard
+                                key={event.id}
+                                event={event}
                                 delay={index * 0.05}
                                 onClick={() => setShowEventDetails([event])}
                                 onPlanClick={(e) => {
@@ -457,8 +457,8 @@ const CalendarPage = () => {
                         onDelete={deleteEvent}
                         onClose={() => setShowEventDetails(null)}
                         onAddMore={() => {
-                            setSelectedDate(showEventDetails[0].date.includes('T') 
-                                ? new Date(showEventDetails[0].date) 
+                            setSelectedDate(showEventDetails[0].date.includes('T')
+                                ? new Date(showEventDetails[0].date)
                                 : new Date(showEventDetails[0].date + 'T00:00:00'));
                             setShowEventDetails(null);
                             setShowAddModal(true);
@@ -480,13 +480,21 @@ const EventCard = ({ event, delay, onClick, onPlanClick, showPlanButton }) => {
     const eventDate = dateStr?.includes('T') ? new Date(dateStr) : new Date(dateStr + 'T00:00:00');
     const isToday = new Date().toDateString() === eventDate.toDateString();
     const isSoon = eventDate.getTime() - new Date().getTime() < 7 * 24 * 60 * 60 * 1000;
-    
+
     const colorClasses = {
-        pink: 'from-pink-50 to-pink-100/50 border-pink-200',
-        red: 'from-red-50 to-red-100/50 border-red-200',
-        amber: 'from-amber-50 to-amber-100/50 border-amber-200',
-        violet: 'from-violet-50 to-violet-100/50 border-violet-200',
-        blue: 'from-blue-50 to-blue-100/50 border-blue-200',
+        pink: 'from-pink-50 via-pink-50/80 to-rose-50/60 border-pink-200/60',
+        red: 'from-red-50 via-red-50/80 to-orange-50/60 border-red-200/60',
+        amber: 'from-amber-50 via-amber-50/80 to-yellow-50/60 border-amber-200/60',
+        violet: 'from-violet-50 via-violet-50/80 to-purple-50/60 border-violet-200/60',
+        blue: 'from-blue-50 via-blue-50/80 to-cyan-50/60 border-blue-200/60',
+    };
+
+    const iconBgColors = {
+        pink: 'bg-gradient-to-br from-pink-100 to-pink-200',
+        red: 'bg-gradient-to-br from-red-100 to-red-200',
+        amber: 'bg-gradient-to-br from-amber-100 to-amber-200',
+        violet: 'bg-gradient-to-br from-violet-100 to-violet-200',
+        blue: 'bg-gradient-to-br from-blue-100 to-blue-200',
     };
 
     return (
@@ -494,33 +502,51 @@ const EventCard = ({ event, delay, onClick, onPlanClick, showPlanButton }) => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay }}
-            className={`w-full glass-card p-4 bg-gradient-to-r ${colorClasses[eventType.color]} border`}
+            whileTap={{ scale: 0.99 }}
+            className={`w-full rounded-2xl p-4 bg-gradient-to-br ${colorClasses[eventType.color]} border shadow-sm hover:shadow-md transition-shadow cursor-pointer overflow-hidden relative`}
         >
-            <div className="flex items-center gap-3">
+            {/* Subtle decorative element */}
+            <div className="absolute top-0 right-0 w-24 h-24 bg-white/20 rounded-full -translate-y-1/2 translate-x-1/2 blur-xl" />
+
+            <div className="flex items-center gap-4 relative z-10">
+                {/* Larger Emoji Container */}
                 <motion.button
                     whileTap={{ scale: 0.95 }}
+                    whileHover={{ rotate: [0, -5, 5, 0] }}
                     onClick={onClick}
-                    className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-2xl shadow-soft"
+                    className={`w-14 h-14 ${iconBgColors[eventType.color]} rounded-2xl flex items-center justify-center text-3xl shadow-md border border-white/50`}
                 >
                     {event.emoji}
                 </motion.button>
+
                 <div className="flex-1 min-w-0" onClick={onClick}>
-                    <h4 className="font-bold text-neutral-800 text-sm truncate">{event.title}</h4>
-                    <p className="text-neutral-500 text-xs">
-                        {isToday ? '🎉 Today!' : eventDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                    <div className="flex items-center gap-2">
+                        <h4 className="font-bold text-neutral-800 text-base truncate">{event.title}</h4>
+                        {isToday && (
+                            <motion.span
+                                animate={{ scale: [1, 1.1, 1] }}
+                                transition={{ duration: 1.5, repeat: Infinity }}
+                                className="text-xs bg-gradient-to-r from-amber-400 to-orange-400 text-white px-2 py-0.5 rounded-full font-bold shadow-sm"
+                            >
+                                Today!
+                            </motion.span>
+                        )}
+                    </div>
+                    <p className="text-neutral-500 text-sm mt-0.5 flex items-center gap-1">
+                        <span className="inline-block w-1.5 h-1.5 rounded-full bg-current opacity-50" />
+                        {eventDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
                     </p>
                 </div>
-                {isToday && (
-                    <motion.div
-                        animate={{ scale: [1, 1.2, 1] }}
-                        transition={{ duration: 1, repeat: Infinity }}
-                        className="text-xl"
-                    >
-                        ✨
-                    </motion.div>
+
+                {isSoon && !isToday && (
+                    <div className="absolute top-2 right-2">
+                        <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold">
+                            Soon
+                        </span>
+                    </div>
                 )}
             </div>
-            
+
             {/* Plan Button - show for all upcoming events */}
             {showPlanButton && (
                 <motion.button
@@ -528,15 +554,14 @@ const EventCard = ({ event, delay, onClick, onPlanClick, showPlanButton }) => {
                     animate={{ opacity: 1 }}
                     whileTap={{ scale: 0.97 }}
                     onClick={onPlanClick}
-                    className={`w-full mt-3 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 ${
-                        isSoon 
-                            ? 'text-white shadow-md' 
-                            : 'bg-white/80 text-court-brown border border-court-tan shadow-soft'
-                    }`}
+                    className={`w-full mt-4 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 ${isSoon
+                            ? 'text-white shadow-lg'
+                            : 'bg-white/80 text-court-brown border border-court-tan/50 shadow-soft hover:bg-white'
+                        }`}
                     style={isSoon ? { background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' } : {}}
                 >
                     <Wand2 className="w-4 h-4" />
-                    {isSoon ? 'Help Me Plan This! ✨' : 'Plan Ahead 📝'}
+                    {isSoon ? 'Help Me Plan This! ✨' : 'Plan Ahead'}
                 </motion.button>
             )}
         </motion.div>
@@ -547,7 +572,7 @@ const AddEventModal = ({ selectedDate, onAdd, onClose }) => {
     const [title, setTitle] = useState('');
     const [type, setType] = useState('custom');
     const [emoji, setEmoji] = useState('📅');
-    
+
     // Handle date initialization - use local date to avoid timezone shift
     const getInitialDate = () => {
         if (selectedDate) {
@@ -581,7 +606,7 @@ const AddEventModal = ({ selectedDate, onAdd, onClose }) => {
         const day = String(now.getDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
     };
-    
+
     const [date, setDate] = useState(getInitialDate);
     const [dateError, setDateError] = useState(null);
     const [isRecurring, setIsRecurring] = useState(false);
@@ -644,11 +669,10 @@ const AddEventModal = ({ selectedDate, onAdd, onClose }) => {
                                     setType(t.id);
                                     setEmoji(t.emoji);
                                 }}
-                                className={`px-3 py-2 rounded-xl text-sm font-medium flex items-center gap-1.5 transition-all ${
-                                    type === t.id
+                                className={`px-3 py-2 rounded-xl text-sm font-medium flex items-center gap-1.5 transition-all ${type === t.id
                                         ? 'bg-violet-100 ring-2 ring-violet-400 text-violet-700'
                                         : 'bg-neutral-50 text-neutral-600'
-                                }`}
+                                    }`}
                             >
                                 <span>{t.emoji}</span>
                                 {t.label}
@@ -676,11 +700,10 @@ const AddEventModal = ({ selectedDate, onAdd, onClose }) => {
                         type="date"
                         value={date}
                         onChange={(e) => handleDateChange(e.target.value)}
-                        className={`w-full bg-neutral-50 border-2 rounded-xl p-3 text-neutral-700 focus:ring-2 focus:outline-none text-sm ${
-                            dateError 
-                                ? 'border-red-300 focus:ring-red-200 focus:border-red-300' 
+                        className={`w-full bg-neutral-50 border-2 rounded-xl p-3 text-neutral-700 focus:ring-2 focus:outline-none text-sm ${dateError
+                                ? 'border-red-300 focus:ring-red-200 focus:border-red-300'
                                 : 'border-neutral-100 focus:ring-violet-200 focus:border-violet-300'
-                        }`}
+                            }`}
                     />
                     {dateError && (
                         <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
@@ -698,9 +721,8 @@ const AddEventModal = ({ selectedDate, onAdd, onClose }) => {
                             <button
                                 key={e}
                                 onClick={() => setEmoji(e)}
-                                className={`w-10 h-10 rounded-xl text-xl flex items-center justify-center transition-all ${
-                                    emoji === e ? 'bg-violet-100 ring-2 ring-violet-400' : 'bg-neutral-50'
-                                }`}
+                                className={`w-10 h-10 rounded-xl text-xl flex items-center justify-center transition-all ${emoji === e ? 'bg-violet-100 ring-2 ring-violet-400' : 'bg-neutral-50'
+                                    }`}
                             >
                                 {e}
                             </button>
@@ -711,14 +733,12 @@ const AddEventModal = ({ selectedDate, onAdd, onClose }) => {
                 {/* Recurring */}
                 <button
                     onClick={() => setIsRecurring(!isRecurring)}
-                    className={`w-full p-3 rounded-xl flex items-center justify-between transition-all ${
-                        isRecurring ? 'bg-pink-50 ring-2 ring-pink-300' : 'bg-neutral-50'
-                    }`}
+                    className={`w-full p-3 rounded-xl flex items-center justify-between transition-all ${isRecurring ? 'bg-pink-50 ring-2 ring-pink-300' : 'bg-neutral-50'
+                        }`}
                 >
                     <span className="text-sm font-medium text-neutral-700">🔄 Repeat yearly</span>
-                    <div className={`w-5 h-5 rounded-full flex items-center justify-center ${
-                        isRecurring ? 'bg-pink-400' : 'bg-neutral-200'
-                    }`}>
+                    <div className={`w-5 h-5 rounded-full flex items-center justify-center ${isRecurring ? 'bg-pink-400' : 'bg-neutral-200'
+                        }`}>
                         {isRecurring && <Check className="w-3 h-3 text-white" />}
                     </div>
                 </button>
@@ -752,7 +772,7 @@ const EventDetailsModal = ({ events, onDelete, onClose, onAddMore, currentUserId
     // Parse date string as local date to prevent timezone shift
     const dateStr = events[0].date;
     const eventDate = dateStr?.includes('T') ? new Date(dateStr) : new Date(dateStr + 'T00:00:00');
-    
+
     return (
         <motion.div
             initial={{ opacity: 0 }}
@@ -789,7 +809,7 @@ const EventDetailsModal = ({ events, onDelete, onClose, onAddMore, currentUserId
                         const isCreatedByMe = event.createdBy === currentUserId;
                         const creatorName = isCreatedByMe ? myDisplayName : partnerDisplayName;
                         const canDelete = isCreatedByMe && !event.isDefault && !event.isPersonal;
-                        
+
                         return (
                             <motion.div
                                 key={event.id}
@@ -827,9 +847,9 @@ const EventDetailsModal = ({ events, onDelete, onClose, onAddMore, currentUserId
                                             <p className="text-neutral-500 text-xs mt-2">{event.notes}</p>
                                         )}
                                         <p className="text-neutral-400 text-xs mt-2">
-                                            {event.isDefault ? '📅 Default Holiday' : 
-                                             event.isPersonal ? '💕 From Profile' :
-                                             `Added by ${creatorName || 'Unknown'}`}
+                                            {event.isDefault ? '📅 Default Holiday' :
+                                                event.isPersonal ? '💕 From Profile' :
+                                                    `Added by ${creatorName || 'Unknown'}`}
                                         </p>
                                     </div>
                                     {canDelete && (
@@ -845,7 +865,7 @@ const EventDetailsModal = ({ events, onDelete, onClose, onAddMore, currentUserId
                         );
                     })}
                 </div>
-                
+
                 {/* Add More Events Button */}
                 <button
                     onClick={onAddMore}
@@ -872,13 +892,13 @@ const PlanningModal = ({ event, partnerId, partnerDisplayName, myDisplayName, on
     const generateSuggestions = async () => {
         setIsLoading(true);
         setError(null);
-        
+
         try {
             // Try to get partner profile info from localStorage
             const partnerProfileKey = `catjudge_profile_${partnerId}`;
             const partnerProfile = localStorage.getItem(partnerProfileKey);
             const parsedProfile = partnerProfile ? JSON.parse(partnerProfile) : {};
-            
+
             // Get appreciation history for context
             let appreciations = [];
             try {
@@ -919,7 +939,7 @@ const PlanningModal = ({ event, partnerId, partnerDisplayName, myDisplayName, on
     const getLocalSuggestions = (event, partnerName) => {
         const name = partnerName || 'your partner';
         const eventType = event.type || 'holiday';
-        
+
         const suggestions = {
             birthday: [
                 { emoji: '🎂', title: 'Bake a Homemade Cake', description: `Surprise ${name} with their favorite cake flavor` },

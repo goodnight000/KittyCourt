@@ -75,8 +75,8 @@ const HistoryPage = () => {
 
     const formatDate = (dateString) => {
         const date = new Date(dateString);
-        return date.toLocaleDateString('en-US', { 
-            month: 'short', 
+        return date.toLocaleDateString('en-US', {
+            month: 'short',
             day: 'numeric',
             hour: '2-digit',
             minute: '2-digit'
@@ -130,10 +130,10 @@ const HistoryPage = () => {
                         // Get severity config (fallback to friction if not set)
                         const severity = SEVERITY_CONFIG[caseItem.severityLevel] || SEVERITY_CONFIG.friction;
                         const SeverityIcon = severity.icon;
-                        
+
                         // Get the primary Horseman badge color
                         const horseBadgeClass = HORSEMAN_COLORS[caseItem.primaryHissTag] || 'bg-neutral-100 text-neutral-600';
-                        
+
                         // Count verdicts/addendums
                         const verdictCount = caseItem.allVerdicts?.length || 1;
                         const hasAddendums = verdictCount > 1;
@@ -150,7 +150,7 @@ const HistoryPage = () => {
                             >
                                 {/* Colored Severity Stripe */}
                                 <div className={`w-1.5 ${severity.stripe} flex-shrink-0`} />
-                                
+
                                 <div className="flex-1 p-4">
                                     <div className="flex items-start justify-between gap-3">
                                         <div className="flex-1 min-w-0">
@@ -158,7 +158,7 @@ const HistoryPage = () => {
                                             <h3 className="font-bold text-neutral-800 text-sm leading-snug mb-1.5 line-clamp-2">
                                                 {caseItem.caseTitle || `Case #${index + 1}`}
                                             </h3>
-                                            
+
                                             {/* Badges Row */}
                                             <div className="flex flex-wrap items-center gap-1.5 mb-2">
                                                 {/* Severity Badge */}
@@ -166,14 +166,14 @@ const HistoryPage = () => {
                                                     <SeverityIcon className="w-3 h-3" />
                                                     {severity.label}
                                                 </span>
-                                                
+
                                                 {/* Primary Horseman Badge */}
                                                 {caseItem.primaryHissTag && caseItem.primaryHissTag !== 'None' && (
                                                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${horseBadgeClass}`}>
                                                         {caseItem.primaryHissTag}
                                                     </span>
                                                 )}
-                                                
+
                                                 {/* Addendum Badge */}
                                                 {hasAddendums && (
                                                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-violet-100 text-violet-700">
@@ -182,7 +182,7 @@ const HistoryPage = () => {
                                                     </span>
                                                 )}
                                             </div>
-                                            
+
                                             {/* Short Resolution */}
                                             {caseItem.shortResolution && (
                                                 <p className="text-xs text-neutral-500 flex items-center gap-1">
@@ -190,14 +190,14 @@ const HistoryPage = () => {
                                                     {caseItem.shortResolution}
                                                 </p>
                                             )}
-                                            
+
                                             {/* Date */}
                                             <div className="flex items-center gap-1 text-[10px] text-neutral-400 mt-2">
                                                 <Calendar className="w-3 h-3" />
                                                 {formatDate(caseItem.createdAt)}
                                             </div>
                                         </div>
-                                        
+
                                         {/* Arrow Icon */}
                                         <div className="flex-shrink-0 mt-1">
                                             <ChevronRight className="w-5 h-5 text-neutral-400" />

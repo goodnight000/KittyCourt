@@ -94,7 +94,7 @@ const TabItem = ({ to, icon, label }) => (
         to={to}
         className={({ isActive }) =>
             clsx(
-                "flex flex-col items-center justify-center gap-1 transition-all duration-200",
+                "flex flex-col items-center justify-center gap-1 transition-all duration-200 relative",
                 isActive
                     ? "text-court-gold"
                     : "text-court-brownLight active:text-court-brown"
@@ -103,31 +103,35 @@ const TabItem = ({ to, icon, label }) => (
     >
         {({ isActive }) => (
             <div className="relative flex flex-col items-center">
-                {/* Circular touch target */}
-                <div className={clsx(
-                    "w-14 h-14 rounded-full flex items-center justify-center transition-all duration-200",
-                    isActive
-                        ? "bg-court-gold/15"
-                        : "active:bg-court-cream/50"
-                )}>
-                    {isActive && (
-                        <motion.div
-                            layoutId="activeTabCircle"
-                            className="absolute inset-0 bg-court-gold/10 rounded-full"
-                            transition={{ type: "spring", bounce: 0.15, duration: 0.5 }}
-                        />
-                    )}
-                    <span className="relative z-10">{icon}</span>
-                </div>
-                <span className="relative z-10 text-[10px] font-bold -mt-1">{label}</span>
-                {/* Active indicator dot */}
+                {/* Bouncy Bubble Indicator */}
                 {isActive && (
                     <motion.div
-                        layoutId="activeTabDot"
-                        className="w-1.5 h-1.5 bg-court-gold rounded-full mt-0.5"
-                        transition={{ type: "spring", bounce: 0.3, duration: 0.4 }}
+                        layoutId="activeDockBubble"
+                        className="absolute -inset-1 bg-gradient-to-br from-violet-100 via-purple-50 to-pink-50 rounded-2xl border border-violet-200/50 shadow-lg"
+                        style={{ zIndex: 0 }}
+                        transition={{
+                            type: "spring",
+                            stiffness: 300,
+                            damping: 20,
+                            mass: 0.8,
+                            bounce: 0.5
+                        }}
                     />
                 )}
+
+                {/* Icon container */}
+                <div className={clsx(
+                    "w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-200 relative z-10",
+                    isActive
+                        ? ""
+                        : "active:bg-court-cream/50"
+                )}>
+                    <span className="relative z-10">{icon}</span>
+                </div>
+                <span className={clsx(
+                    "relative z-10 text-[10px] font-bold -mt-1",
+                    isActive ? "text-court-gold" : ""
+                )}>{label}</span>
             </div>
         )}
     </NavLink>
