@@ -608,60 +608,54 @@ const useAppStore = create(
                 });
             },
 
-            // Accept the verdict - both users must accept
+            // Accept the verdict - each user can independently accept and celebrate
             acceptVerdict: async () => {
-                const { activeCase } = get();
+                const { activeCase, courtSession } = get();
                 if (!activeCase.verdict) return;
 
-                // Get auth user to determine who is accepting
-                const { user: authUser, profile, partner: connectedPartner } = await import('./useAuthStore').then(m => m.default.getState());
-                const isUserA = activeCase.initiatorId === authUser?.id || !activeCase.initiatorId;
-                const newCase = { ...activeCase };
+                // Get auth user info
+                const { user: authUser } = await import('./useAuthStore').then(m => m.default.getState());
 
-                if (isUserA) {
-                    newCase.userAAccepted = true;
-                } else {
-                    newCase.userBAccepted = true;
-                }
+                try {
+                    // Award kibble to the accepting user
+                    const kibbleReward = activeCase.verdict.kibbleReward || { userA: 10, userB: 10 };
+                    const isUserA = activeCase.initiatorId === authUser?.id || !activeCase.initiatorId;
+                    const reward = isUserA ? kibbleReward.userA : kibbleReward.userB;
 
-                set({ activeCase: newCase });
-
-                // If both have accepted, award kibble and show celebration
-                if (newCase.userAAccepted && newCase.userBAccepted) {
-                    try {
-                        // Award kibble to both users using their actual IDs
-                        const kibbleReward = activeCase.verdict.kibbleReward || { userA: 10, userB: 10 };
-
-                        if (authUser?.id) {
-                            await api.post('/economy/transaction', {
-                                userId: authUser.id,
-                                amount: kibbleReward.userA,
-                                type: 'EARN',
-                                description: 'Case resolved - verdict accepted'
-                            });
-                        }
-
-                        if (connectedPartner?.id) {
-                            await api.post('/economy/transaction', {
-                                userId: connectedPartner.id,
-                                amount: kibbleReward.userB,
-                                type: 'EARN',
-                                description: 'Case resolved - verdict accepted'
-                            });
-                        }
-
-                        // Refresh user balances
-                        await get().fetchUsers();
-
-                        // Show celebration
-                        set({ showCelebration: true });
-
-                    } catch (error) {
-                        console.error("Failed to award kibble", error);
+                    if (authUser?.id) {
+                        await api.post('/economy/transaction', {
+                            userId: authUser.id,
+                            amount: reward,
+                            type: 'EARN',
+                            description: 'Case resolved - verdict accepted'
+                        });
                     }
-                }
 
-                return newCase;
+                    // Refresh user balances
+                    await get().fetchUsers();
+
+                    // Close the court session
+                    if (courtSession?.id) {
+                        try {
+                            await api.post(`/court-sessions/${courtSession.id}/close`, {
+                                caseId: activeCase.id
+                            });
+                        } catch (e) {
+                            console.log('Session already closed or error closing:', e.message);
+                        }
+                    }
+
+                    // Clear the court session
+                    set({ courtSession: null });
+
+                    // Show celebration
+                    set({ showCelebration: true });
+
+                } catch (error) {
+                    console.error("Failed to accept verdict", error);
+                    // Still show celebration even if award fails
+                    set({ showCelebration: true, courtSession: null });
+                }
             },
 
             closeCelebration: async () => {
