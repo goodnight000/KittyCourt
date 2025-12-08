@@ -129,7 +129,8 @@ app.get('/api/court-sessions/active', async (req, res) => {
 
         // Build query to find sessions relevant to this couple
         // Include ALL active session states (not just WAITING/IN_SESSION)
-        const activeStatuses = ['WAITING', 'IN_SESSION', 'WAITING_FOR_PARTNER', 'WAITING_FOR_CREATOR', 'DELIBERATING'];
+        // Also include RESOLVED so users can see their verdict after refresh
+        const activeStatuses = ['WAITING', 'IN_SESSION', 'WAITING_FOR_PARTNER', 'WAITING_FOR_CREATOR', 'DELIBERATING', 'RESOLVED'];
         let query = supabase
             .from('court_sessions')
             .select('*')
@@ -243,8 +244,10 @@ app.post('/api/court-sessions/:id/settle', async (req, res) => {
             return res.status(404).json({ error: 'Session not found' });
         }
 
-        if (session.status !== 'IN_SESSION') {
-            return res.status(400).json({ error: 'Can only settle during an active session' });
+        // Allow settling during any active session state
+        const activeStates = ['IN_SESSION', 'WAITING_FOR_PARTNER', 'WAITING_FOR_CREATOR', 'DELIBERATING'];
+        if (!activeStates.includes(session.status)) {
+            return res.status(400).json({ error: `Can only settle during an active session. Current status: ${session.status}` });
         }
 
         // Determine if user is creator or partner

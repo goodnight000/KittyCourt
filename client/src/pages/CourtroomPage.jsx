@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import useAppStore from '../store/useAppStore';
 import useAuthStore from '../store/useAuthStore';
+import api from '../services/api';
 import RequirePartner from '../components/RequirePartner';
 import {
     Lock, Send, Scale, Heart, MessageCircle, RotateCcw, History,
@@ -1483,6 +1484,61 @@ const CourtroomPage = () => {
         checkActiveSession();
     }, []);
 
+    // Restore case data when session has a linked case (RESOLVED status)
+    // This handles the case when user refreshes after verdict was delivered
+    useEffect(() => {
+        const restoreCaseFromSession = async () => {
+            // If session is RESOLVED and has a case_id but activeCase is not populated
+            if (courtSession?.status === 'RESOLVED' && courtSession?.case_id) {
+                const { activeCase } = useAppStore.getState();
+
+                // Only fetch if we don't have the case data or it's stale
+                if (!activeCase?.id || activeCase.id !== courtSession.case_id || activeCase.status !== 'RESOLVED') {
+                    try {
+                        // Fetch the case from the database
+                        const response = await api.get(`/cases/${courtSession.case_id}`);
+                        const caseData = response.data;
+
+                        if (caseData) {
+                            // Use the loadCase function to restore the case state
+                            useAppStore.getState().loadCase(caseData);
+                        }
+                    } catch (error) {
+                        console.error('Failed to restore case:', error);
+                    }
+                }
+            }
+
+            // If session is DELIBERATING, ensure we have evidence from both users
+            if (courtSession?.status === 'DELIBERATING' && courtSession?.evidence_submissions) {
+                const { activeCase } = useAppStore.getState();
+                const evidence = courtSession.evidence_submissions;
+
+                // Update activeCase with evidence from server if missing
+                const needsUpdate =
+                    (!activeCase?.userAInput && evidence?.creator?.evidence) ||
+                    (!activeCase?.userBInput && evidence?.partner?.evidence);
+
+                if (needsUpdate) {
+                    useAppStore.setState({
+                        activeCase: {
+                            ...activeCase,
+                            userAInput: evidence?.creator?.evidence || activeCase?.userAInput || '',
+                            userAFeelings: evidence?.creator?.feelings || activeCase?.userAFeelings || '',
+                            userASubmitted: evidence?.creator?.submitted || false,
+                            userBInput: evidence?.partner?.evidence || activeCase?.userBInput || '',
+                            userBFeelings: evidence?.partner?.feelings || activeCase?.userBFeelings || '',
+                            userBSubmitted: evidence?.partner?.submitted || false,
+                            status: 'DELIBERATING'
+                        }
+                    });
+                }
+            }
+        };
+
+        restoreCaseFromSession();
+    }, [courtSession?.status, courtSession?.case_id, courtSession?.evidence_submissions]);
+
     // Poll for session updates when waiting for partner to join
     // This allows the creator to be notified when partner accepts the summons
     useEffect(() => {
@@ -1531,27 +1587,21 @@ const CourtroomPage = () => {
                     // Get partner's evidence and update local state for judging
                     const { activeCase } = useAppStore.getState();
 
-                    if (isCreator) {
-                        // I'm the creator, get partner's evidence
-                        const newCase = {
-                            ...activeCase,
-                            userBInput: updatedSession.evidence_submissions?.partner?.evidence || '',
-                            userBFeelings: updatedSession.evidence_submissions?.partner?.feelings || '',
-                            userBSubmitted: true,
-                            status: 'DELIBERATING'
-                        };
-                        useAppStore.setState({ activeCase: newCase });
-                    } else {
-                        // I'm the partner, get creator's evidence
-                        const newCase = {
-                            ...activeCase,
-                            userAInput: updatedSession.evidence_submissions?.creator?.evidence || '',
-                            userAFeelings: updatedSession.evidence_submissions?.creator?.feelings || '',
-                            userASubmitted: true,
-                            status: 'DELIBERATING'
-                        };
-                        useAppStore.setState({ activeCase: newCase });
-                    }
+                    // IMPORTANT: Copy BOTH users' evidence from courtSession to activeCase
+                    // This ensures generateVerdict has all the data even after a refresh
+                    const newCase = {
+                        ...activeCase,
+                        // Always get creator's evidence from session
+                        userAInput: updatedSession.evidence_submissions?.creator?.evidence || activeCase?.userAInput || '',
+                        userAFeelings: updatedSession.evidence_submissions?.creator?.feelings || activeCase?.userAFeelings || '',
+                        userASubmitted: true,
+                        // Always get partner's evidence from session
+                        userBInput: updatedSession.evidence_submissions?.partner?.evidence || activeCase?.userBInput || '',
+                        userBFeelings: updatedSession.evidence_submissions?.partner?.feelings || activeCase?.userBFeelings || '',
+                        userBSubmitted: true,
+                        status: 'DELIBERATING'
+                    };
+                    useAppStore.setState({ activeCase: newCase });
 
                     // Trigger verdict generation
                     useAppStore.getState().generateVerdict();

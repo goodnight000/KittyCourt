@@ -263,7 +263,9 @@ const useAppStore = create(
                         const newCase = { ...activeCase, userASubmitted: true, initiatorId: authUser?.id };
                         if (updatedSession.bothSubmitted) {
                             newCase.status = 'DELIBERATING';
-                            // Also store partner's evidence in local state for judging
+                            // Copy BOTH users' evidence to ensure generateVerdict has all data
+                            newCase.userAInput = updatedSession.evidence_submissions?.creator?.evidence || activeCase?.userAInput;
+                            newCase.userAFeelings = updatedSession.evidence_submissions?.creator?.feelings || activeCase?.userAFeelings;
                             newCase.userBInput = updatedSession.evidence_submissions?.partner?.evidence || activeCase?.userBInput;
                             newCase.userBFeelings = updatedSession.evidence_submissions?.partner?.feelings || activeCase?.userBFeelings;
                             newCase.userBSubmitted = true;
@@ -275,9 +277,11 @@ const useAppStore = create(
                         const newCase = { ...activeCase, userBSubmitted: true };
                         if (updatedSession.bothSubmitted) {
                             newCase.status = 'DELIBERATING';
-                            // Also store creator's evidence in local state for judging
+                            // Copy BOTH users' evidence to ensure generateVerdict has all data
                             newCase.userAInput = updatedSession.evidence_submissions?.creator?.evidence || activeCase?.userAInput;
                             newCase.userAFeelings = updatedSession.evidence_submissions?.creator?.feelings || activeCase?.userAFeelings;
+                            newCase.userBInput = updatedSession.evidence_submissions?.partner?.evidence || activeCase?.userBInput;
+                            newCase.userBFeelings = updatedSession.evidence_submissions?.partner?.feelings || activeCase?.userBFeelings;
                             newCase.userASubmitted = true;
                         } else {
                             newCase.status = 'LOCKED_B';
