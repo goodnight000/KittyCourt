@@ -342,6 +342,20 @@ const useAppStore = create(
                 const userBId = connectedPartner?.id || 'user-b';
 
                 try {
+                    // Debug logging - what evidence data do we have?
+                    console.log('[generateVerdict] Evidence data:', {
+                        userAInput: activeCase.userAInput,
+                        userBInput: activeCase.userBInput,
+                        userAFeelings: activeCase.userAFeelings,
+                        userBFeelings: activeCase.userBFeelings,
+                    });
+
+                    // Ensure we have evidence - use fallbacks if empty
+                    const userAEvidence = activeCase.userAInput?.trim() || 'No evidence provided';
+                    const userBEvidence = activeCase.userBInput?.trim() || 'No evidence provided';
+                    const userAStory = activeCase.userAFeelings?.trim() || 'I feel unheard.';
+                    const userBStory = activeCase.userBFeelings?.trim() || 'I feel blamed.';
+
                     // Call the real Judge Engine API
                     const response = await api.post('/judge/deliberate', {
                         caseId: activeCase.id || `case_${Date.now()}`,
@@ -351,15 +365,15 @@ const useAppStore = create(
                         },
                         submissions: {
                             userA: {
-                                cameraFacts: activeCase.userAInput,
+                                cameraFacts: userAEvidence,
                                 selectedPrimaryEmotion: 'Frustrated', // Could be enhanced with emotion picker
-                                theStoryIamTellingMyself: activeCase.userAFeelings || 'I feel unheard.',
+                                theStoryIamTellingMyself: userAStory,
                                 coreNeed: 'To be understood'
                             },
                             userB: {
-                                cameraFacts: activeCase.userBInput,
+                                cameraFacts: userBEvidence,
                                 selectedPrimaryEmotion: 'Misunderstood',
-                                theStoryIamTellingMyself: activeCase.userBFeelings || 'I feel blamed.',
+                                theStoryIamTellingMyself: userBStory,
                                 coreNeed: 'To be accepted'
                             }
                         }
