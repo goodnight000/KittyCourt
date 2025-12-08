@@ -340,8 +340,10 @@ app.post('/api/court-sessions/:id/submit-evidence', async (req, res) => {
             return res.status(404).json({ error: 'Session not found' });
         }
 
-        if (session.status !== 'IN_SESSION') {
-            return res.status(400).json({ error: 'Can only submit evidence during an active session' });
+        // Allow submission during active session states
+        const validStates = ['IN_SESSION', 'WAITING_FOR_PARTNER', 'WAITING_FOR_CREATOR'];
+        if (!validStates.includes(session.status)) {
+            return res.status(400).json({ error: `Can only submit evidence during an active session. Current status: ${session.status}` });
         }
 
         // Determine if user is creator or partner
