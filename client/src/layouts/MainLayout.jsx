@@ -32,30 +32,8 @@ const MainLayout = () => {
 
     return (
         <div className="min-h-screen min-h-[100dvh] flex flex-col font-sans">
-            {/* Status Bar Safe Area */}
-            <div className="safe-top bg-white/60 backdrop-blur-xl" />
-
-            {/* Top Header Bar */}
-            <motion.header
-                initial={{ y: -20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                className="sticky top-0 z-50 bg-white/70 backdrop-blur-xl border-b border-court-tan/30 shadow-soft"
-            >
-                <div className="flex items-center justify-between px-4 h-14">
-                    {/* Logo */}
-                    <div className="flex items-center gap-2.5">
-                        <span className="text-lg font-bold text-gradient font-display">Pause</span>
-                    </div>
-
-                    {/* User Toggle Pills - REMOVED */}
-                    {/* <div className="flex bg-court-cream rounded-full p-1 gap-1">
-                        ...
-                    </div> */}
-                </div>
-            </motion.header>
-
-            {/* Main Scrollable Content */}
-            <main className="flex-1 overflow-y-auto overscroll-contain">
+            {/* Main Scrollable Content - with safe area for Dynamic Island/notch */}
+            <main className="flex-1 overflow-y-auto overscroll-contain" style={{ paddingTop: 'env(safe-area-inset-top, 20px)' }}>
                 <div className="px-4 py-5 pb-28 max-w-lg mx-auto">
                     <AnimatePresence mode="wait">
                         <motion.div

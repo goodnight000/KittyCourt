@@ -12,27 +12,27 @@ import api from '../services/api';
 // 20 mood/feeling options with emojis - organized by positive/neutral/challenging
 const MOOD_OPTIONS = [
     // Positive moods
-    { id: 'happy', emoji: '😊', label: 'Happy', color: 'from-yellow-100 to-amber-100' },
-    { id: 'loved', emoji: '🥰', label: 'Loved', color: 'from-pink-100 to-rose-100' },
-    { id: 'grateful', emoji: '🙏', label: 'Grateful', color: 'from-amber-100 to-orange-100' },
-    { id: 'excited', emoji: '🤩', label: 'Excited', color: 'from-yellow-100 to-lime-100' },
-    { id: 'peaceful', emoji: '😌', label: 'Peaceful', color: 'from-cyan-100 to-teal-100' },
-    { id: 'playful', emoji: '😜', label: 'Playful', color: 'from-orange-100 to-amber-100' },
-    { id: 'cozy', emoji: '🥹', label: 'Cozy', color: 'from-amber-100 to-yellow-100' },
-    { id: 'romantic', emoji: '😍', label: 'Romantic', color: 'from-rose-100 to-pink-100' },
-    { id: 'silly', emoji: '🤪', label: 'Silly', color: 'from-lime-100 to-green-100' },
-    { id: 'hopeful', emoji: '✨', label: 'Hopeful', color: 'from-violet-100 to-purple-100' },
+    { id: 'happy', image: '/assets/emotions/happy.png', label: 'Happy', color: 'from-yellow-100 to-amber-100' },
+    { id: 'loved', image: '/assets/emotions/loved.png', label: 'Loved', color: 'from-pink-100 to-rose-100' },
+    { id: 'grateful', image: '/assets/emotions/grateful.png', label: 'Grateful', color: 'from-amber-100 to-orange-100' },
+    { id: 'excited', image: '/assets/emotions/excited.png', label: 'Excited', color: 'from-yellow-100 to-lime-100' },
+    { id: 'peaceful', image: '/assets/emotions/peaceful.png', label: 'Peaceful', color: 'from-cyan-100 to-teal-100' },
+    { id: 'playful', image: '/assets/emotions/playful.png', label: 'Playful', color: 'from-orange-100 to-amber-100' },
+    { id: 'cozy', image: '/assets/emotions/cozy.png', label: 'Cozy', color: 'from-amber-100 to-yellow-100' },
+    { id: 'romantic', image: '/assets/emotions/romantic.png', label: 'Romantic', color: 'from-rose-100 to-pink-100' },
+    { id: 'silly', image: '/assets/emotions/silly.png', label: 'Silly', color: 'from-lime-100 to-green-100' },
+    { id: 'hopeful', image: '/assets/emotions/hopeful.png', label: 'Hopeful', color: 'from-violet-100 to-purple-100' },
     // Neutral/Challenging moods
-    { id: 'tired', emoji: '😴', label: 'Tired', color: 'from-slate-100 to-gray-100' },
-    { id: 'stressed', emoji: '😩', label: 'Stressed', color: 'from-orange-100 to-red-100' },
-    { id: 'anxious', emoji: '😰', label: 'Anxious', color: 'from-blue-100 to-indigo-100' },
-    { id: 'sad', emoji: '😢', label: 'Sad', color: 'from-blue-100 to-slate-100' },
-    { id: 'frustrated', emoji: '😤', label: 'Frustrated', color: 'from-red-100 to-orange-100' },
-    { id: 'overwhelmed', emoji: '🤯', label: 'Overwhelmed', color: 'from-purple-100 to-pink-100' },
-    { id: 'lonely', emoji: '🥺', label: 'Lonely', color: 'from-indigo-100 to-blue-100' },
-    { id: 'confused', emoji: '😵‍💫', label: 'Confused', color: 'from-violet-100 to-fuchsia-100' },
-    { id: 'meh', emoji: '😐', label: 'Meh', color: 'from-gray-100 to-slate-100' },
-    { id: 'hangry', emoji: '🤤', label: 'Hangry', color: 'from-orange-100 to-yellow-100' },
+    { id: 'tired', image: '/assets/emotions/tired.png', label: 'Tired', color: 'from-slate-100 to-gray-100' },
+    { id: 'stressed', image: '/assets/emotions/stressed.png', label: 'Stressed', color: 'from-orange-100 to-red-100' },
+    { id: 'anxious', image: '/assets/emotions/anxious.png', label: 'Anxious', color: 'from-blue-100 to-indigo-100' },
+    { id: 'sad', image: '/assets/emotions/sad.png', label: 'Sad', color: 'from-blue-100 to-slate-100' },
+    { id: 'frustrated', image: '/assets/emotions/frustrated.png', label: 'Frustrated', color: 'from-red-100 to-orange-100' },
+    { id: 'overwhelmed', image: '/assets/emotions/overwhelmed.png', label: 'Overwhelmed', color: 'from-purple-100 to-pink-100' },
+    { id: 'lonely', image: '/assets/emotions/lonely.png', label: 'Lonely', color: 'from-indigo-100 to-blue-100' },
+    { id: 'confused', image: '/assets/emotions/confused.png', label: 'Confused', color: 'from-violet-100 to-fuchsia-100' },
+    { id: 'meh', image: '/assets/emotions/meh.png', label: 'Meh', color: 'from-gray-100 to-slate-100' },
+    { id: 'hangry', image: '/assets/emotions/hangry.png', label: 'Hangry', color: 'from-orange-100 to-yellow-100' },
 ];
 
 const DailyMeowPage = () => {
@@ -423,11 +423,19 @@ const DailyMeowPage = () => {
                                                     whileTap={{ scale: 0.95 }}
                                                     onClick={() => handleMoodSelect(mood)}
                                                     className={`aspect-square rounded-2xl flex flex-col items-center justify-center p-1 transition-all ${selectedMoods.includes(mood.id)
-                                                            ? `bg-gradient-to-br ${mood.color} ring-2 ring-amber-400 shadow-md`
-                                                            : 'bg-white/60 hover:bg-white/80'
+                                                        ? `bg-gradient-to-br ${mood.color} ring-2 ring-amber-400 shadow-md`
+                                                        : 'bg-white/60 hover:bg-white/80'
                                                         }`}
                                                 >
-                                                    <span className="text-2xl">{mood.emoji}</span>
+                                                    {mood.image ? (
+                                                        <img
+                                                            src={mood.image}
+                                                            alt={mood.label}
+                                                            className="w-16 h-16 object-contain"
+                                                        />
+                                                    ) : (
+                                                        <span className="text-2xl">{mood.emoji}</span>
+                                                    )}
                                                     <span className="text-[10px] text-neutral-600 font-medium mt-0.5">{mood.label}</span>
                                                 </motion.button>
                                             ))}
@@ -441,8 +449,15 @@ const DailyMeowPage = () => {
                                         >
                                             {selectedMoods.length > 0 ? (
                                                 <>
-                                                    <span className="text-xl flex gap-1">
-                                                        {selectedMoods.map(m => getMoodData(m)?.emoji).join('')}
+                                                    <span className="text-xl flex gap-1 items-center">
+                                                        {selectedMoods.map(m => {
+                                                            const mood = getMoodData(m);
+                                                            return mood?.image ? (
+                                                                <img key={m} src={mood.image} alt={mood.label} className="w-6 h-6 object-contain" />
+                                                            ) : (
+                                                                <span key={m}>{mood?.emoji}</span>
+                                                            );
+                                                        })}
                                                     </span>
                                                     Continue with {selectedMoods.length} mood{selectedMoods.length > 1 ? 's' : ''}
                                                 </>

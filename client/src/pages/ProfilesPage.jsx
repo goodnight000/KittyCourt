@@ -4,11 +4,12 @@ import { useNavigate } from 'react-router-dom';
 import {
     User, Heart, Calendar, Star, Settings, ChevronRight,
     Edit3, Check, X, Gift, Scale, Clock,
-    Coffee, TrendingUp, Award, Link2, Copy, Users, LogOut, Lock, MessageSquare
+    Coffee, TrendingUp, Award, Link2, Copy, Users, LogOut, Lock, MessageSquare, AlertTriangle
 } from 'lucide-react';
 import useAppStore from '../store/useAppStore';
 import useAuthStore from '../store/useAuthStore';
 import { validateBirthdayDate } from '../utils/helpers';
+import { upsertProfile } from '../services/supabase';
 
 const AVATAR_OPTIONS = [
     { id: 'cat_orange', emoji: '🐱', label: 'Orange Cat' },
@@ -32,7 +33,7 @@ const LOVE_LANGUAGES = [
 const ProfilesPage = () => {
     const navigate = useNavigate();
     const { currentUser, users, caseHistory, appreciations, fetchAppreciations } = useAppStore();
-    const { profile, partner: connectedPartner, hasPartner, signOut } = useAuthStore();
+    const { profile, partner: connectedPartner, hasPartner, signOut, refreshProfile, user: authUser } = useAuthStore();
     const partnerFromUsers = users?.find(u => u.id !== currentUser?.id);
 
     const [showEditModal, setShowEditModal] = useState(false);
@@ -43,7 +44,7 @@ const ProfilesPage = () => {
     const [profileData, setProfileData] = useState(() => {
         const stored = localStorage.getItem(`catjudge_profile_${currentUser?.id}`);
         const storedData = stored ? JSON.parse(stored) : {};
-        
+
         // Merge with Supabase profile data (Supabase takes priority for name/birthday/anniversary)
         return {
             nickname: profile?.display_name || storedData.nickname || '',
@@ -63,7 +64,7 @@ const ProfilesPage = () => {
         if (currentUser?.id) {
             const stored = localStorage.getItem(`catjudge_profile_${currentUser.id}`);
             const storedData = stored ? JSON.parse(stored) : {};
-            
+
             // Merge Supabase profile with localStorage (Supabase takes priority)
             setProfileData({
                 nickname: profile?.display_name || storedData.nickname || '',
@@ -76,9 +77,64 @@ const ProfilesPage = () => {
         }
     }, [currentUser?.id, profile]);
 
-    const saveProfile = (newData) => {
+    const saveProfile = async (newData) => {
+        console.log('[ProfilesPage] saveProfile called with:', newData);
+        console.log('[ProfilesPage] authUser?.id:', authUser?.id);
+
+        // Update local state immediately for responsive UI
         setProfileData(newData);
         localStorage.setItem(`catjudge_profile_${currentUser?.id}`, JSON.stringify(newData));
+        console.log('[ProfilesPage] Local state and localStorage updated');
+
+        // Persist to Supabase
+        if (authUser?.id) {
+            try {
+                // Build update object with only the fields we want to change
+                // Avoid sending anniversary_date if not changed (it's immutable once set)
+                const updateData = {
+                    display_name: newData.nickname || null,
+                    love_language: newData.loveLanguage || null,
+                    birthday: newData.birthday || null,
+                };
+
+                // Only include anniversary_date if it's being set for the first time
+                if (newData.anniversaryDate && !profile?.anniversary_date) {
+                    updateData.anniversary_date = newData.anniversaryDate;
+                }
+
+                // Include avatar_url if profile picture changed
+                if (newData.profilePicture) {
+                    updateData.avatar_url = newData.profilePicture;
+                }
+
+                console.log('[ProfilesPage] Updating profile with:', updateData);
+
+                // Use direct Supabase update instead of upsert to avoid RLS/constraint issues
+                const { supabase } = await import('../services/supabase');
+                const { data, error } = await supabase
+                    .from('profiles')
+                    .update(updateData)
+                    .eq('id', authUser.id)
+                    .select()
+                    .single();
+
+                console.log('[ProfilesPage] Supabase update response - data:', data, 'error:', error);
+
+                if (error) {
+                    console.error('[ProfilesPage] Failed to save profile to Supabase:', error);
+                } else {
+                    console.log('[ProfilesPage] Profile saved to Supabase successfully');
+                    // Refresh auth store profile to propagate changes throughout the app
+                    console.log('[ProfilesPage] Calling refreshProfile...');
+                    await refreshProfile();
+                    console.log('[ProfilesPage] refreshProfile completed');
+                }
+            } catch (err) {
+                console.error('[ProfilesPage] Exception saving profile:', err);
+            }
+        } else {
+            console.warn('[ProfilesPage] No authUser?.id, skipping Supabase save');
+        }
     };
 
     // Calculate relationship stats
@@ -155,9 +211,9 @@ const ProfilesPage = () => {
                                     className="w-20 h-20 bg-gradient-to-br from-violet-100 to-pink-100 rounded-2xl flex items-center justify-center text-4xl shadow-soft cursor-pointer relative overflow-hidden"
                                 >
                                     {profileData.profilePicture ? (
-                                        <img 
-                                            src={profileData.profilePicture} 
-                                            alt="Profile" 
+                                        <img
+                                            src={profileData.profilePicture}
+                                            alt="Profile"
                                             className="w-full h-full object-cover"
                                         />
                                     ) : (
@@ -492,8 +548,8 @@ const ProfilesPage = () => {
                 {showEditModal && (
                     <EditProfileModal
                         profileData={profileData}
-                        onSave={(data) => {
-                            saveProfile(data);
+                        onSave={async (data) => {
+                            await saveProfile(data);
                             setShowEditModal(false);
                         }}
                         onClose={() => setShowEditModal(false)}
@@ -575,19 +631,19 @@ const EditProfileModal = ({ profileData, onSave, onClose }) => {
 
     const handleImageUpload = async (file) => {
         if (!file) return;
-        
+
         // Validate file type
         if (!file.type.startsWith('image/')) {
             alert('Please select an image file');
             return;
         }
-        
+
         // Validate file size (max 5MB)
         if (file.size > 5 * 1024 * 1024) {
             alert('Image must be less than 5MB');
             return;
         }
-        
+
         setUploading(true);
         try {
             // Convert to base64 for preview and storage
@@ -654,9 +710,9 @@ const EditProfileModal = ({ profileData, onSave, onClose }) => {
                     <div className="flex items-center gap-4">
                         <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-violet-100 to-pink-100 flex items-center justify-center overflow-hidden shadow-soft">
                             {formData.profilePicture ? (
-                                <img 
-                                    src={formData.profilePicture} 
-                                    alt="Profile" 
+                                <img
+                                    src={formData.profilePicture}
+                                    alt="Profile"
                                     className="w-full h-full object-cover"
                                 />
                             ) : (
@@ -737,11 +793,10 @@ const EditProfileModal = ({ profileData, onSave, onClose }) => {
                         type="date"
                         value={formData.birthday}
                         onChange={(e) => handleBirthdayChange(e.target.value)}
-                        className={`w-full bg-neutral-50 border-2 rounded-xl p-3 text-neutral-700 focus:ring-2 focus:outline-none text-sm ${
-                            birthdayError 
-                                ? 'border-red-300 focus:ring-red-200 focus:border-red-300' 
-                                : 'border-neutral-100 focus:ring-violet-200 focus:border-violet-300'
-                        }`}
+                        className={`w-full bg-neutral-50 border-2 rounded-xl p-3 text-neutral-700 focus:ring-2 focus:outline-none text-sm ${birthdayError
+                            ? 'border-red-300 focus:ring-red-200 focus:border-red-300'
+                            : 'border-neutral-100 focus:ring-violet-200 focus:border-violet-300'
+                            }`}
                     />
                     {birthdayError && (
                         <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
@@ -777,11 +832,10 @@ const EditProfileModal = ({ profileData, onSave, onClose }) => {
                 <button
                     onClick={handleSave}
                     disabled={birthdayError || uploading}
-                    className={`w-full flex items-center justify-center gap-2 ${
-                        birthdayError || uploading 
-                            ? 'btn-secondary opacity-50 cursor-not-allowed' 
-                            : 'btn-primary'
-                    }`}
+                    className={`w-full flex items-center justify-center gap-2 ${birthdayError || uploading
+                        ? 'btn-secondary opacity-50 cursor-not-allowed'
+                        : 'btn-primary'
+                        }`}
                 >
                     <Check className="w-4 h-4" />
                     Save Profile

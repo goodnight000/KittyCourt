@@ -162,7 +162,7 @@ const DashboardPage = () => {
                             </div>
                             <div>
                                 <div className="text-2xl font-bold text-neutral-800 leading-none mb-1">{questionStreak}</div>
-                                <div className="text-xs text-neutral-500 font-bold uppercase tracking-wide">Day Streak</div>
+                                <div className="text-xs text-neutral-500 font-bold uppercase tracking-wide">Question Streak</div>
                             </div>
                         </div>
                         {/* Decorative background icon */}
@@ -180,7 +180,7 @@ const DashboardPage = () => {
                     transition={{ delay: 0.1 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => navigate('/courtroom')}
-                    className="relative overflow-hidden rounded-3xl cursor-pointer group shadow-lg h-36"
+                    className="relative overflow-hidden rounded-3xl cursor-pointer group shadow-lg h-52"
                     style={{ background: 'linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%)' }}
                 >
                     {/* Decorative circle */}
@@ -191,7 +191,7 @@ const DashboardPage = () => {
                         <motion.div
                             animate={{ y: [0, -3, 0] }}
                             transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                            className="w-12 h-12 rounded-xl overflow-hidden border-2 border-white/30 shadow-lg mb-auto"
+                            className="w-28 h-28 rounded-xl overflow-hidden mb-auto"
                         >
                             <img
                                 src="/assets/avatars/judge_whiskers.png"
@@ -221,7 +221,7 @@ const DashboardPage = () => {
                     transition={{ delay: 0.15 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => navigate('/daily-meow')}
-                    className="relative overflow-hidden rounded-3xl cursor-pointer group shadow-lg h-36"
+                    className="relative overflow-hidden rounded-3xl cursor-pointer group shadow-lg h-52"
                     style={{ background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' }}
                 >
                     {/* Decorative circle */}
@@ -232,7 +232,7 @@ const DashboardPage = () => {
                         <motion.div
                             animate={{ rotate: [0, 5, -5, 0] }}
                             transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                            className="w-12 h-12 rounded-xl overflow-hidden border-2 border-white/30 shadow-lg mb-auto"
+                            className="w-28 h-28 rounded-xl overflow-hidden border-2 border-white/30 shadow-lg mb-auto"
                         >
                             <img
                                 src="/assets/avatars/daily_question.png"

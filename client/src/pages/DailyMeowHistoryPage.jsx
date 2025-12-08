@@ -317,20 +317,6 @@ const DailyMeowHistoryPage = () => {
 
                                                             {/* Badges Row */}
                                                             <div className="flex flex-wrap items-center gap-1.5 mb-2">
-                                                                {isCompleted ? (
-                                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-50 text-emerald-600">
-                                                                        <Heart className="w-2.5 h-2.5" />
-                                                                        Both Answered
-                                                                    </span>
-                                                                ) : item.my_answer ? (
-                                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-50 text-amber-600">
-                                                                        Waiting for {partnerDisplayName}
-                                                                    </span>
-                                                                ) : (
-                                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-violet-50 text-violet-600">
-                                                                        Your Turn
-                                                                    </span>
-                                                                )}
 
                                                                 {/* Category badge if available */}
                                                                 {item.category && (
