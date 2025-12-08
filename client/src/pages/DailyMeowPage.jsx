@@ -436,7 +436,7 @@ const DailyMeowPage = () => {
                                                     ) : (
                                                         <span className="text-2xl">{mood.emoji}</span>
                                                     )}
-                                                    <span className="text-[10px] text-neutral-600 font-medium mt-0.5">{mood.label}</span>
+                                                    <span className="text-[14px] text-neutral-600 font-medium mt-0.5">{mood.label}</span>
                                                 </motion.button>
                                             ))}
                                         </div>

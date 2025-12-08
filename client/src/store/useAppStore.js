@@ -62,12 +62,12 @@ const useAppStore = create(
                 try {
                     // Get auth user and partner from auth store for proper filtering
                     const { user: authUser, partner: connectedPartner } = await import('./useAuthStore').then(m => m.default.getState());
-                    
+
                     // Build query params for couple-scoped session lookup
                     const params = new URLSearchParams();
                     if (authUser?.id) params.set('userId', authUser.id);
                     if (connectedPartner?.id) params.set('partnerId', connectedPartner.id);
-                    
+
                     const url = params.toString() ? `/court-sessions/active?${params.toString()}` : '/court-sessions/active';
                     const response = await api.get(url);
                     set({ courtSession: response.data });
@@ -81,17 +81,17 @@ const useAppStore = create(
             servePartner: async () => {
                 // Get auth user and partner from auth store
                 const { user: authUser, partner: connectedPartner } = await import('./useAuthStore').then(m => m.default.getState());
-                
+
                 if (!authUser?.id) {
                     throw new Error('You must be logged in to serve your partner');
                 }
-                
+
                 if (!connectedPartner?.id) {
                     throw new Error('You must connect with a partner first');
                 }
 
                 try {
-                    const response = await api.post('/court-sessions', { 
+                    const response = await api.post('/court-sessions', {
                         createdBy: authUser.id,
                         partnerId: connectedPartner.id
                     });
@@ -109,7 +109,7 @@ const useAppStore = create(
 
                 // Get auth user from auth store
                 const { user: authUser } = await import('./useAuthStore').then(m => m.default.getState());
-                
+
                 if (!authUser?.id) {
                     throw new Error('You must be logged in to join court');
                 }
@@ -154,27 +154,27 @@ const useAppStore = create(
 
                 // Get auth user from auth store
                 const { user: authUser } = await import('./useAuthStore').then(m => m.default.getState());
-                
+
                 if (!authUser?.id) {
                     throw new Error('You must be logged in to settle');
                 }
 
                 try {
-                    const response = await api.post(`/court-sessions/${courtSession.id}/settle`, { 
-                        userId: authUser.id 
+                    const response = await api.post(`/court-sessions/${courtSession.id}/settle`, {
+                        userId: authUser.id
                     });
                     const result = response.data;
-                    
+
                     // Update local session state
                     set({ courtSession: result });
-                    
+
                     // If both settled, reset the case and clear the session
                     if (result.settled) {
                         // Reset case without saving
                         get().resetCase();
                         set({ courtSession: null });
                     }
-                    
+
                     return result;
                 } catch (error) {
                     console.error("Failed to settle out of court", error);
@@ -201,21 +201,16 @@ const useAppStore = create(
             showCelebration: false, // For the celebration animation
             caseHistory: [],
 
-            updateCaseInput: async (input, field = 'facts') => {
+            // Synchronous version to prevent cursor jumping in text inputs
+            // The isUserA flag should be passed from the component to avoid async operations
+            updateCaseInput: (input, field = 'facts', isUserA = true) => {
                 const { activeCase } = get();
-                // Get auth user to determine which side they're on
-                const { user: authUser, profile, partner } = await import('./useAuthStore').then(m => m.default.getState());
-                
-                // User A is the one who initiated the connection (or first user alphabetically by ID)
-                // For simplicity, we'll use: current auth user = their side of the case
-                const isInitiator = activeCase.initiatorId === authUser?.id;
-                const isUserA = isInitiator || !activeCase.initiatorId; // Default to A if no initiator set
 
                 if (isUserA) {
                     if (field === 'facts') {
-                        set({ activeCase: { ...activeCase, userAInput: input, initiatorId: authUser?.id } });
+                        set({ activeCase: { ...activeCase, userAInput: input } });
                     } else {
-                        set({ activeCase: { ...activeCase, userAFeelings: input, initiatorId: authUser?.id } });
+                        set({ activeCase: { ...activeCase, userAFeelings: input } });
                     }
                 } else {
                     if (field === 'facts') {
@@ -226,32 +221,107 @@ const useAppStore = create(
                 }
             },
 
-            submitSide: async () => {
+            // Set the initiator when they first start typing (called once)
+            setInitiator: (initiatorId) => {
                 const { activeCase } = get();
-                const { user: authUser } = await import('./useAuthStore').then(m => m.default.getState());
-                const isUserA = activeCase.initiatorId === authUser?.id || !activeCase.initiatorId;
+                if (!activeCase?.initiatorId) {
+                    set({ activeCase: { ...activeCase, initiatorId } });
+                }
+            },
 
-                if (isUserA) {
-                    const newCase = { ...activeCase, userASubmitted: true, initiatorId: authUser?.id };
-                    // If B already submitted, go to deliberating
-                    if (activeCase.userBSubmitted) {
-                        newCase.status = 'DELIBERATING';
+            submitSide: async () => {
+                const { activeCase, courtSession } = get();
+                const { user: authUser } = await import('./useAuthStore').then(m => m.default.getState());
+
+                if (!courtSession?.id) {
+                    console.error('No active court session');
+                    return;
+                }
+
+                const isCreator = courtSession.created_by === authUser?.id;
+                const isUserA = activeCase?.initiatorId === authUser?.id || (!activeCase?.initiatorId && isCreator);
+
+                // Get the evidence from activeCase
+                const evidence = isUserA ? activeCase?.userAInput : activeCase?.userBInput;
+                const feelings = isUserA ? activeCase?.userAFeelings : activeCase?.userBFeelings;
+
+                try {
+                    // Submit evidence to backend
+                    const response = await api.post(`/court-sessions/${courtSession.id}/submit-evidence`, {
+                        userId: authUser?.id,
+                        evidence,
+                        feelings
+                    });
+
+                    const updatedSession = response.data;
+
+                    // Update local court session state
+                    set({ courtSession: updatedSession });
+
+                    // Update local activeCase state
+                    if (isUserA) {
+                        const newCase = { ...activeCase, userASubmitted: true, initiatorId: authUser?.id };
+                        if (updatedSession.bothSubmitted) {
+                            newCase.status = 'DELIBERATING';
+                            // Also store partner's evidence in local state for judging
+                            newCase.userBInput = updatedSession.evidence_submissions?.partner?.evidence || activeCase?.userBInput;
+                            newCase.userBFeelings = updatedSession.evidence_submissions?.partner?.feelings || activeCase?.userBFeelings;
+                            newCase.userBSubmitted = true;
+                        } else {
+                            newCase.status = 'LOCKED_A';
+                        }
                         set({ activeCase: newCase });
-                        get().generateVerdict();
                     } else {
-                        newCase.status = 'LOCKED_A';
+                        const newCase = { ...activeCase, userBSubmitted: true };
+                        if (updatedSession.bothSubmitted) {
+                            newCase.status = 'DELIBERATING';
+                            // Also store creator's evidence in local state for judging
+                            newCase.userAInput = updatedSession.evidence_submissions?.creator?.evidence || activeCase?.userAInput;
+                            newCase.userAFeelings = updatedSession.evidence_submissions?.creator?.feelings || activeCase?.userAFeelings;
+                            newCase.userASubmitted = true;
+                        } else {
+                            newCase.status = 'LOCKED_B';
+                        }
                         set({ activeCase: newCase });
                     }
-                } else {
-                    const newCase = { ...activeCase, userBSubmitted: true };
-                    // If A already submitted, go to deliberating
-                    if (activeCase.userASubmitted) {
-                        newCase.status = 'DELIBERATING';
-                        set({ activeCase: newCase });
+
+                    // If both submitted, trigger verdict generation
+                    if (updatedSession.bothSubmitted) {
                         get().generateVerdict();
+                    }
+                } catch (error) {
+                    console.error('Failed to submit evidence:', error);
+
+                    // Fallback to local-only submission if backend endpoint doesn't exist (404)
+                    // This ensures the app works even before the server is deployed with the new endpoint
+                    if (error.response?.status === 404) {
+                        console.log('Backend endpoint not available, falling back to local submission');
+
+                        if (isUserA) {
+                            const newCase = { ...activeCase, userASubmitted: true, initiatorId: authUser?.id };
+                            // If B already submitted, go to deliberating
+                            if (activeCase?.userBSubmitted) {
+                                newCase.status = 'DELIBERATING';
+                                set({ activeCase: newCase });
+                                get().generateVerdict();
+                            } else {
+                                newCase.status = 'LOCKED_A';
+                                set({ activeCase: newCase });
+                            }
+                        } else {
+                            const newCase = { ...activeCase, userBSubmitted: true };
+                            // If A already submitted, go to deliberating
+                            if (activeCase?.userASubmitted) {
+                                newCase.status = 'DELIBERATING';
+                                set({ activeCase: newCase });
+                                get().generateVerdict();
+                            } else {
+                                newCase.status = 'LOCKED_B';
+                                set({ activeCase: newCase });
+                            }
+                        }
                     } else {
-                        newCase.status = 'LOCKED_B';
-                        set({ activeCase: newCase });
+                        throw error;
                     }
                 }
             },
@@ -261,7 +331,7 @@ const useAppStore = create(
 
                 // Get real user names from auth store
                 const { user: authUser, profile, partner: connectedPartner } = await import('./useAuthStore').then(m => m.default.getState());
-                
+
                 const userAName = profile?.display_name || 'Partner A';
                 const userBName = connectedPartner?.display_name || 'Partner B';
                 const userAId = authUser?.id || 'user-a';
@@ -623,12 +693,12 @@ const useAppStore = create(
                 try {
                     // Get auth user and partner to filter cases for this couple
                     const { user: authUser, partner: connectedPartner } = await import('./useAuthStore').then(m => m.default.getState());
-                    
+
                     // Build query params for filtering
                     const params = new URLSearchParams();
                     if (authUser?.id) params.set('userAId', authUser.id);
                     if (connectedPartner?.id) params.set('userBId', connectedPartner.id);
-                    
+
                     const url = params.toString() ? `/cases?${params.toString()}` : '/cases';
                     const response = await api.get(url);
                     set({ caseHistory: response.data });
@@ -692,7 +762,7 @@ const useAppStore = create(
                 // Get auth user for the ID
                 const { user: authUser } = await import('./useAuthStore').then(m => m.default.getState());
                 const userId = authUser?.id || currentUser?.id;
-                
+
                 if (!userId) return;
                 if ((currentUser?.kibbleBalance || 0) < coupon.cost) {
                     throw new Error("Not enough kibble!");

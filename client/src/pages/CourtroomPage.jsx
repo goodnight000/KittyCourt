@@ -250,7 +250,7 @@ const CourtAtRest = ({ onServe, navigate }) => {
                 >
                     {/* Soft glow behind avatar */}
                     <div className="absolute inset-0 w-52 h-52 -left-2 -top-2 bg-court-gold/20 rounded-full blur-xl" />
-                    
+
                     {/* Cat Avatar */}
                     <div className="relative w-48 h-48 rounded-full mx-auto overflow-hidden shadow-xl border-4 border-court-gold/30">
                         <motion.div
@@ -265,7 +265,7 @@ const CourtAtRest = ({ onServe, navigate }) => {
                             />
                         </motion.div>
                     </div>
-                    
+
                     {/* Floating Zzz */}
                     <div className="absolute right-0 top-4">
                         {['z', 'Z', 'Z'].map((letter, i) => (
@@ -290,7 +290,7 @@ const CourtAtRest = ({ onServe, navigate }) => {
                             </motion.span>
                         ))}
                     </div>
-                    
+
                     {/* Soft breathing pulse */}
                     <motion.div
                         animate={{
@@ -705,7 +705,7 @@ const WaitingForPartner = ({ session, partnerName, myName, isCreator, onCancel }
                             <Users className="w-4 h-4 text-court-gold" />
                             <span className="text-sm font-bold text-court-brown">Court Attendance</span>
                         </div>
-                        
+
                         <div className="flex justify-center gap-8">
                             {/* You */}
                             <div className="text-center">
@@ -719,7 +719,7 @@ const WaitingForPartner = ({ session, partnerName, myName, isCreator, onCancel }
                                 <span className="text-xs font-medium text-court-brown">{displayMyName}</span>
                                 <div className="text-[10px] text-green-600 font-medium mt-0.5">Present</div>
                             </div>
-                            
+
                             {/* Divider */}
                             <div className="flex flex-col items-center justify-center">
                                 <div className="w-8 h-0.5 bg-court-tan" />
@@ -732,11 +732,11 @@ const WaitingForPartner = ({ session, partnerName, myName, isCreator, onCancel }
                                 </motion.div>
                                 <div className="w-8 h-0.5 bg-court-tan" />
                             </div>
-                            
+
                             {/* Partner */}
                             <div className="text-center">
                                 <motion.div
-                                    animate={{ 
+                                    animate={{
                                         boxShadow: [
                                             '0 0 0 0 rgba(201, 162, 39, 0)',
                                             '0 0 0 8px rgba(201, 162, 39, 0.3)',
@@ -759,14 +759,14 @@ const WaitingForPartner = ({ session, partnerName, myName, isCreator, onCancel }
                         {[0, 1, 2].map((i) => (
                             <motion.div
                                 key={i}
-                                animate={{ 
+                                animate={{
                                     y: [0, -8, 0],
                                     opacity: [0.4, 1, 0.4]
                                 }}
-                                transition={{ 
-                                    duration: 0.8, 
-                                    repeat: Infinity, 
-                                    delay: i * 0.15 
+                                transition={{
+                                    duration: 0.8,
+                                    repeat: Infinity,
+                                    delay: i * 0.15
                                 }}
                                 className="w-2.5 h-2.5 bg-court-gold rounded-full"
                             />
@@ -869,7 +869,7 @@ const SettleModal = ({ onConfirm, onCancel, partnerName, partnerWantsToSettle })
             >
                 {/* Icon */}
                 <motion.div
-                    animate={{ 
+                    animate={{
                         scale: [1, 1.1, 1],
                         rotate: [0, 5, -5, 0]
                     }}
@@ -888,12 +888,12 @@ const SettleModal = ({ onConfirm, onCancel, partnerName, partnerWantsToSettle })
                 <p className="text-neutral-500 text-sm mb-6">
                     {partnerWantsToSettle ? (
                         <>
-                            <span className="font-bold text-pink-500">{partnerName}</span> wants to settle this peacefully. 
+                            <span className="font-bold text-pink-500">{partnerName}</span> wants to settle this peacefully.
                             Choose love over winning?
                         </>
                     ) : (
                         <>
-                            Request to end this case without a verdict. 
+                            Request to end this case without a verdict.
                             Both you and <span className="font-bold text-pink-500">{partnerName}</span> must agree.
                         </>
                     )}
@@ -944,13 +944,13 @@ const SettleSuccessAnimation = ({ partnerName }) => {
                 <motion.div
                     key={i}
                     initial={{ y: window.innerHeight, x: Math.random() * window.innerWidth, opacity: 0 }}
-                    animate={{ 
-                        y: -100, 
+                    animate={{
+                        y: -100,
                         opacity: [0, 1, 1, 0],
                         rotate: Math.random() * 360
                     }}
-                    transition={{ 
-                        duration: 4 + Math.random() * 2, 
+                    transition={{
+                        duration: 4 + Math.random() * 2,
                         delay: Math.random() * 2,
                         repeat: Infinity
                     }}
@@ -1013,7 +1013,7 @@ const SettleSuccessAnimation = ({ partnerName }) => {
                         </div>
                     </div>
                     <p className="text-sm text-neutral-600 italic">
-                        "The strongest couples know when to put down their swords 
+                        "The strongest couples know when to put down their swords
                         and pick up each other's hearts."
                     </p>
                     <p className="text-xs text-neutral-400 mt-2">— Judge Whiskers</p>
@@ -1181,8 +1181,8 @@ const VerdictView = ({
                                     key={v.version}
                                     onClick={() => setSelectedVerdictVersion(v.version)}
                                     className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${(selectedVerdictVersion === 0 && idx === 0) || selectedVerdictVersion === v.version
-                                            ? 'bg-court-gold text-white'
-                                            : 'bg-court-cream text-court-brown hover:bg-court-tan'
+                                        ? 'bg-court-gold text-white'
+                                        : 'bg-court-cream text-court-brown hover:bg-court-tan'
                                         }`}
                                 >
                                     {v.addendumBy ? `+${v.version}` : `#${v.version}`}
@@ -1354,8 +1354,8 @@ const VerdictView = ({
                     <div className="flex flex-wrap justify-center gap-1.5">
                         {[...new Set([...(analysis.userA_Horsemen || []), ...(analysis.userB_Horsemen || [])])].filter(h => h !== 'None').map((horseman, i) => (
                             <span key={i} className={`text-xs px-2 py-1 rounded-full ${horseman === 'Contempt' || horseman === 'Stonewalling'
-                                    ? 'bg-court-maroon/20 text-court-maroon'
-                                    : 'bg-court-gold/20 text-court-goldDark'
+                                ? 'bg-court-maroon/20 text-court-maroon'
+                                : 'bg-court-gold/20 text-court-goldDark'
                                 }`}>
                                 {horseman}
                             </span>
@@ -1431,7 +1431,7 @@ const CourtroomPage = () => {
     const navigate = useNavigate();
     const { hasPartner, user: authUser, profile, partner: connectedPartner } = useAuthStore();
     const {
-        activeCase, currentUser, users, updateCaseInput, submitSide, resetCase,
+        activeCase, currentUser, users, updateCaseInput, setInitiator, submitSide, resetCase,
         courtSession, checkActiveSession, servePartner, joinCourt,
         isCourtAnimationPlaying, finishCourtAnimation, closeCourtSession,
         submitAddendum, acceptVerdict, showCelebration, closeCelebration,
@@ -1455,25 +1455,25 @@ const CourtroomPage = () => {
     const isInitiator = activeCase?.initiatorId === authUser?.id || (!activeCase?.initiatorId && isCreator);
     const isUserA = isInitiator;
     const currentUserRole = isUserA ? 'userA' : 'userB';
-    const myInput = isUserA ? activeCase.userAInput : activeCase.userBInput;
-    const myFeelings = isUserA ? activeCase.userAFeelings : activeCase.userBFeelings;
+    const myInput = isUserA ? (activeCase?.userAInput || '') : (activeCase?.userBInput || '');
+    const myFeelings = isUserA ? (activeCase?.userAFeelings || '') : (activeCase?.userBFeelings || '');
 
     // Get partner names for display from auth store (Supabase profiles)
     const myName = profile?.display_name || profile?.name || 'You';
     const partnerName = connectedPartner?.display_name || connectedPartner?.name || 'Your Partner';
-    
+
     // Check if partner has requested to settle
     const partnerWantsToSettle = courtSession?.settle_requests && (
-        (courtSession.settle_requests.creator && !isCreator) || 
+        (courtSession.settle_requests.creator && !isCreator) ||
         (courtSession.settle_requests.partner && isCreator)
     );
-    
+
     // Check if I have already requested to settle
     const iHaveRequestedSettle = courtSession?.settle_requests && (
-        (courtSession.settle_requests.creator && isCreator) || 
+        (courtSession.settle_requests.creator && isCreator) ||
         (courtSession.settle_requests.partner && !isCreator)
     );
-    
+
     // For verdict display: User A is initiator, User B is partner
     const userAName = isInitiator ? myName : partnerName;
     const userBName = isInitiator ? partnerName : myName;
@@ -1482,6 +1482,85 @@ const CourtroomPage = () => {
     useEffect(() => {
         checkActiveSession();
     }, []);
+
+    // Poll for session updates when waiting for partner to join
+    // This allows the creator to be notified when partner accepts the summons
+    useEffect(() => {
+        // Only poll if we have a session in WAITING status and current user is the creator
+        if (!courtSession || courtSession.status !== 'WAITING' || !isCreator) {
+            return;
+        }
+
+        const pollInterval = setInterval(async () => {
+            const updatedSession = await checkActiveSession();
+
+            // If session changed to IN_SESSION, trigger the animation
+            if (updatedSession && updatedSession.status === 'IN_SESSION') {
+                // Update store to trigger animation
+                useAppStore.setState({ isCourtAnimationPlaying: true });
+            }
+        }, 3000); // Poll every 3 seconds
+
+        return () => clearInterval(pollInterval);
+    }, [courtSession?.status, courtSession?.id, isCreator, checkActiveSession]);
+
+    // Poll for session updates when user has submitted evidence and is waiting for partner
+    useEffect(() => {
+        // Only poll if session is in a waiting state (waiting for partner's evidence)
+        const isWaitingForEvidence = courtSession?.status === 'WAITING_FOR_PARTNER' ||
+            courtSession?.status === 'WAITING_FOR_CREATOR' ||
+            courtSession?.status === 'IN_SESSION';
+
+        const iHaveSubmitted = isCreator
+            ? courtSession?.evidence_submissions?.creator?.submitted
+            : courtSession?.evidence_submissions?.partner?.submitted;
+
+        if (!courtSession?.id || !isWaitingForEvidence || !iHaveSubmitted) {
+            return;
+        }
+
+        const pollInterval = setInterval(async () => {
+            const updatedSession = await checkActiveSession();
+
+            if (updatedSession) {
+                // Check if both have now submitted
+                const bothSubmitted = updatedSession.evidence_submissions?.creator?.submitted &&
+                    updatedSession.evidence_submissions?.partner?.submitted;
+
+                if (bothSubmitted && updatedSession.status === 'DELIBERATING') {
+                    // Get partner's evidence and update local state for judging
+                    const { activeCase } = useAppStore.getState();
+
+                    if (isCreator) {
+                        // I'm the creator, get partner's evidence
+                        const newCase = {
+                            ...activeCase,
+                            userBInput: updatedSession.evidence_submissions?.partner?.evidence || '',
+                            userBFeelings: updatedSession.evidence_submissions?.partner?.feelings || '',
+                            userBSubmitted: true,
+                            status: 'DELIBERATING'
+                        };
+                        useAppStore.setState({ activeCase: newCase });
+                    } else {
+                        // I'm the partner, get creator's evidence
+                        const newCase = {
+                            ...activeCase,
+                            userAInput: updatedSession.evidence_submissions?.creator?.evidence || '',
+                            userAFeelings: updatedSession.evidence_submissions?.creator?.feelings || '',
+                            userASubmitted: true,
+                            status: 'DELIBERATING'
+                        };
+                        useAppStore.setState({ activeCase: newCase });
+                    }
+
+                    // Trigger verdict generation
+                    useAppStore.getState().generateVerdict();
+                }
+            }
+        }, 3000); // Poll every 3 seconds
+
+        return () => clearInterval(pollInterval);
+    }, [courtSession?.status, courtSession?.id, courtSession?.evidence_submissions, isCreator, checkActiveSession]);
 
     // Require partner to access courtroom
     if (!hasPartner) {
@@ -1732,7 +1811,7 @@ const CourtroomPage = () => {
                         </p>
 
                         <div className="bg-court-cream text-court-brown text-xs rounded-xl px-4 py-3 flex items-center justify-center gap-2">
-                            <span>💡</span> Switch users using the toggle at the top
+
                         </div>
                     </motion.div>
                 </div>
@@ -1744,7 +1823,7 @@ const CourtroomPage = () => {
     if (!courtSession || courtSession.status === 'CLOSED') {
         // Check if we have an active case in DRAFT with no substantial content
         const hasSubstantialContent = activeCase.userAInput?.trim() || activeCase.userBInput?.trim();
-        
+
         if (activeCase.status === 'DRAFT' && !hasSubstantialContent) {
             return <CourtAtRest onServe={handleServe} navigate={navigate} />;
         }
@@ -1754,25 +1833,25 @@ const CourtroomPage = () => {
 
     if (courtSession.status === 'WAITING') {
         // Check if current user has joined based on creator status
-        const hasJoined = isCreator 
+        const hasJoined = isCreator
             ? (courtSession.creatorJoined || courtSession.userAJoined)
             : (courtSession.partnerJoined || courtSession.userBJoined);
-        
+
         // If the current user is the creator, they're waiting for partner
         if (isCreator) {
-            return <WaitingForPartner 
-                session={courtSession} 
+            return <WaitingForPartner
+                session={courtSession}
                 partnerName={partnerName}
                 myName={myName}
                 isCreator={true}
-                onCancel={handleCancelSession} 
+                onCancel={handleCancelSession}
             />;
         } else {
             // Current user is the partner who received the summons
-            return <SummonsReceived 
-                session={courtSession} 
+            return <SummonsReceived
+                session={courtSession}
                 senderName={partnerName}
-                onJoin={handleJoin} 
+                onJoin={handleJoin}
             />;
         }
     }
@@ -1865,7 +1944,13 @@ const CourtroomPage = () => {
                     </label>
                     <textarea
                         value={myInput}
-                        onChange={(e) => updateCaseInput(e.target.value, 'facts')}
+                        onChange={(e) => {
+                            // Set initiator on first input if not already set
+                            if (!activeCase?.initiatorId && authUser?.id) {
+                                setInitiator(authUser.id);
+                            }
+                            updateCaseInput(e.target.value, 'facts', isUserA);
+                        }}
                         placeholder="What happened? (Be specific and factual)"
                         className="w-full h-28 bg-white/70 border-2 border-court-tan/50 rounded-xl p-3 text-court-brown placeholder:text-court-brownLight/60 focus:ring-2 focus:ring-court-gold/30 focus:border-court-gold focus:outline-none resize-none text-sm"
                     />
@@ -1879,7 +1964,13 @@ const CourtroomPage = () => {
                     </label>
                     <textarea
                         value={myFeelings}
-                        onChange={(e) => updateCaseInput(e.target.value, 'feelings')}
+                        onChange={(e) => {
+                            // Set initiator on first input if not already set
+                            if (!activeCase?.initiatorId && authUser?.id) {
+                                setInitiator(authUser.id);
+                            }
+                            updateCaseInput(e.target.value, 'feelings', isUserA);
+                        }}
                         placeholder="How did it make you feel? What story are you telling yourself?"
                         className="w-full h-20 bg-white/70 border-2 border-court-maroon/20 rounded-xl p-3 text-court-brown placeholder:text-court-brownLight/60 focus:ring-2 focus:ring-court-maroon/20 focus:border-court-maroon/40 focus:outline-none resize-none text-sm"
                     />
@@ -1903,11 +1994,10 @@ const CourtroomPage = () => {
                         whileTap={{ scale: 0.98 }}
                         onClick={() => setShowSettleModal(true)}
                         disabled={isSettling || iHaveRequestedSettle}
-                        className={`glass-card px-4 py-3 flex items-center justify-center gap-2 transition-colors disabled:opacity-50 ${
-                            iHaveRequestedSettle 
-                                ? 'bg-pink-100 text-pink-500' 
-                                : 'text-court-brownLight hover:text-court-brown hover:bg-white/80'
-                        }`}
+                        className={`glass-card px-4 py-3 flex items-center justify-center gap-2 transition-colors disabled:opacity-50 ${iHaveRequestedSettle
+                            ? 'bg-pink-100 text-pink-500'
+                            : 'text-court-brownLight hover:text-court-brown hover:bg-white/80'
+                            }`}
                         title={iHaveRequestedSettle ? 'Settlement Requested' : 'Settle Out of Court'}
                     >
                         <Handshake className="w-5 h-5" />
@@ -1942,13 +2032,12 @@ const CourtroomPage = () => {
                             initial={{ opacity: 0, y: -10 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -10 }}
-                            className={`flex items-center gap-2 p-3 rounded-xl text-sm ${
-                                settleMessage.includes('dismissed') 
-                                    ? 'bg-green-100 text-green-700' 
-                                    : settleMessage.includes('Failed')
-                                        ? 'bg-red-100 text-red-700'
-                                        : 'bg-court-cream text-court-brown'
-                            }`}
+                            className={`flex items-center gap-2 p-3 rounded-xl text-sm ${settleMessage.includes('dismissed')
+                                ? 'bg-green-100 text-green-700'
+                                : settleMessage.includes('Failed')
+                                    ? 'bg-red-100 text-red-700'
+                                    : 'bg-court-cream text-court-brown'
+                                }`}
                         >
                             <X className="w-4 h-4 flex-shrink-0" />
                             <span>{settleMessage}</span>
@@ -1965,7 +2054,7 @@ const CourtroomPage = () => {
             {/* Settle Modal */}
             <AnimatePresence>
                 {showSettleModal && (
-                    <SettleModal 
+                    <SettleModal
                         onConfirm={handleSettle}
                         onCancel={() => setShowSettleModal(false)}
                         partnerName={partnerName}

@@ -315,6 +315,103 @@ app.post('/api/court-sessions/:id/close', async (req, res) => {
     }
 });
 
+// Submit evidence for a court session
+app.post('/api/court-sessions/:id/submit-evidence', async (req, res) => {
+    try {
+        const { userId, evidence, feelings } = req.body;
+        const sessionId = req.params.id;
+
+        if (!userId) {
+            return res.status(400).json({ error: 'userId is required' });
+        }
+
+        const supabase = requireSupabase();
+
+        // Get current session
+        const { data: session, error: getError } = await supabase
+            .from('court_sessions')
+            .select('*')
+            .eq('id', sessionId)
+            .single();
+
+        if (getError) throw getError;
+
+        if (!session) {
+            return res.status(404).json({ error: 'Session not found' });
+        }
+
+        if (session.status !== 'IN_SESSION') {
+            return res.status(400).json({ error: 'Can only submit evidence during an active session' });
+        }
+
+        // Determine if user is creator or partner
+        const isCreator = session.created_by === userId;
+        const isPartner = session.partner_id === userId;
+
+        if (!isCreator && !isPartner) {
+            return res.status(403).json({ error: 'User is not part of this session' });
+        }
+
+        // Get current evidence submissions (or initialize)
+        const currentEvidence = session.evidence_submissions || {
+            creator: { submitted: false, evidence: '', feelings: '' },
+            partner: { submitted: false, evidence: '', feelings: '' }
+        };
+
+        // Update the appropriate user's evidence
+        if (isCreator) {
+            currentEvidence.creator = {
+                submitted: true,
+                evidence: evidence || '',
+                feelings: feelings || '',
+                submittedAt: new Date().toISOString()
+            };
+        } else {
+            currentEvidence.partner = {
+                submitted: true,
+                evidence: evidence || '',
+                feelings: feelings || '',
+                submittedAt: new Date().toISOString()
+            };
+        }
+
+        // Check if both have submitted
+        const bothSubmitted = currentEvidence.creator.submitted && currentEvidence.partner.submitted;
+
+        // Determine new status
+        let newStatus = session.status;
+        if (bothSubmitted) {
+            newStatus = 'DELIBERATING';
+        } else if (currentEvidence.creator.submitted && !currentEvidence.partner.submitted) {
+            newStatus = 'WAITING_FOR_PARTNER';
+        } else if (currentEvidence.partner.submitted && !currentEvidence.creator.submitted) {
+            newStatus = 'WAITING_FOR_CREATOR';
+        }
+
+        // Update session with evidence
+        const { data: updatedSession, error: updateError } = await supabase
+            .from('court_sessions')
+            .update({
+                evidence_submissions: currentEvidence,
+                status: newStatus
+            })
+            .eq('id', sessionId)
+            .select()
+            .single();
+
+        if (updateError) throw updateError;
+
+        res.json({
+            ...updatedSession,
+            bothSubmitted,
+            readyForJudging: bothSubmitted
+        });
+    } catch (error) {
+        console.error('Error submitting evidence:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // --- Cases with Verdicts ---
 
 // Submit a Case (or update it)
