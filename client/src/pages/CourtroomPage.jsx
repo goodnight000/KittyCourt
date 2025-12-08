@@ -14,29 +14,6 @@ import {
 
 // Waiting Screen Component - Calming breathing meditation while LLM deliberates
 const WaitingScreen = ({ isLoading }) => {
-    const audioRef = useRef(null);
-
-    useEffect(() => {
-        if (!isLoading) return;
-
-        // Initialize and play purring audio
-        audioRef.current = new Audio('/sounds/deep-purr.mp3');
-        audioRef.current.loop = true;
-        audioRef.current.volume = 0.4;
-
-        // Try to play (may be blocked by autoplay policy)
-        audioRef.current.play().catch(err => {
-            console.log('Audio autoplay blocked:', err);
-        });
-
-        return () => {
-            if (audioRef.current) {
-                audioRef.current.pause();
-                audioRef.current.currentTime = 0;
-                audioRef.current = null;
-            }
-        };
-    }, [isLoading]);
 
     if (!isLoading) return null;
 
@@ -1588,7 +1565,7 @@ const CourtroomPage = () => {
                     const { activeCase } = useAppStore.getState();
 
                     // IMPORTANT: Copy BOTH users' evidence from courtSession to activeCase
-                    // This ensures generateVerdict has all the data even after a refresh
+                    // This ensures the state is up-to-date when the verdict polling detects completion
                     const newCase = {
                         ...activeCase,
                         // Always get creator's evidence from session
@@ -1603,7 +1580,9 @@ const CourtroomPage = () => {
                     };
                     useAppStore.setState({ activeCase: newCase });
 
-                    // Trigger verdict generation
+                    // Note: generateVerdict is called by submitSide when bothSubmitted=true.
+                    // The isGeneratingVerdict lock in the store prevents duplicate calls.
+                    // We call it here as a backup in case the user refreshed before verdict was generated.
                     useAppStore.getState().generateVerdict();
                 }
             }
@@ -1611,6 +1590,49 @@ const CourtroomPage = () => {
 
         return () => clearInterval(pollInterval);
     }, [courtSession?.status, courtSession?.id, courtSession?.evidence_submissions, isCreator, checkActiveSession]);
+
+    // Poll for partner acceptance when current user has accepted but partner hasn't
+    useEffect(() => {
+        const hasAccepted = isUserA ? activeCase.userAAccepted : activeCase.userBAccepted;
+        const partnerHasAccepted = isUserA ? activeCase.userBAccepted : activeCase.userAAccepted;
+
+        // Only poll if: we're in resolved state, user has accepted, and partner hasn't
+        if (activeCase.status !== 'RESOLVED' || !hasAccepted || partnerHasAccepted || !courtSession?.id) {
+            return;
+        }
+
+        const pollInterval = setInterval(async () => {
+            const updatedSession = await checkActiveSession();
+
+            if (updatedSession?.verdict_acceptances) {
+                // Check if both have now accepted
+                const bothAccepted = updatedSession.verdict_acceptances.creator &&
+                    updatedSession.verdict_acceptances.partner;
+
+                if (bothAccepted) {
+                    // Partner accepted! Award kibble and celebrate
+                    const kibbleReward = activeCase.verdict?.kibbleReward || { userA: 10, userB: 10 };
+                    const reward = isUserA ? kibbleReward.userA : kibbleReward.userB;
+
+                    try {
+                        await api.post('/economy/transaction', {
+                            userId: authUser?.id,
+                            amount: reward,
+                            type: 'EARN',
+                            description: 'Case resolved - verdict accepted'
+                        });
+                    } catch (error) {
+                        console.log('Error awarding kibble:', error.message);
+                    }
+
+                    // Show celebration!
+                    useAppStore.setState({ showCelebration: true, courtSession: null });
+                }
+            }
+        }, 3000); // Poll every 3 seconds
+
+        return () => clearInterval(pollInterval);
+    }, [activeCase.status, activeCase.userAAccepted, activeCase.userBAccepted, isUserA, courtSession?.id, activeCase.verdict, authUser?.id, checkActiveSession]);
 
     // Require partner to access courtroom
     if (!hasPartner) {

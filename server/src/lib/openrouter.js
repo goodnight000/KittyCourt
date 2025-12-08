@@ -66,9 +66,9 @@ async function createChatCompletion({ model, messages, temperature = 0.7, maxTok
         };
     }
 
-    // Add reasoning parameter for models that support it (e.g., Grok, OpenAI o1/o3)
+    // Add reasoning parameter for models that support it (e.g., Grok, OpenAI o1/o3, DeepSeek R1)
     // This enables extended thinking/reasoning before generating the response
-    if (model.includes('grok') || model.includes('o1') || model.includes('o3')) {
+    if (model.includes('grok') || model.includes('o1') || model.includes('o3') || model.includes('deepseek-v3.2') || model.includes('deepseek-reasoner')) {
         body.reasoning = {
             effort: 'high' // Use high effort for maximum reasoning quality
         };

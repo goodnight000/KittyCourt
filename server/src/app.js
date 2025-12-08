@@ -419,6 +419,92 @@ app.post('/api/court-sessions/:id/submit-evidence', async (req, res) => {
     }
 });
 
+// Accept verdict - tracks which users have accepted the verdict
+// Case is only considered fully resolved when BOTH users accept
+app.post('/api/court-sessions/:id/accept-verdict', async (req, res) => {
+    try {
+        const { userId, caseId } = req.body;
+        const sessionId = req.params.id;
+
+        if (!userId) {
+            return res.status(400).json({ error: 'userId is required' });
+        }
+
+        const supabase = requireSupabase();
+
+        // Get current session
+        const { data: session, error: getError } = await supabase
+            .from('court_sessions')
+            .select('*')
+            .eq('id', sessionId)
+            .single();
+
+        if (getError) throw getError;
+
+        if (!session) {
+            return res.status(404).json({ error: 'Session not found' });
+        }
+
+        // Only allow accepting during RESOLVED or DELIBERATING status
+        const validStates = ['RESOLVED', 'DELIBERATING'];
+        if (!validStates.includes(session.status)) {
+            return res.status(400).json({ error: `Can only accept verdict when case is resolved. Current status: ${session.status}` });
+        }
+
+        // Determine if user is creator or partner
+        const isCreator = session.created_by === userId;
+        const isPartner = session.partner_id === userId;
+
+        if (!isCreator && !isPartner) {
+            return res.status(403).json({ error: 'User is not part of this session' });
+        }
+
+        // Track verdict acceptances (similar to settle_requests)
+        const currentAcceptances = session.verdict_acceptances || { creator: false, partner: false };
+
+        if (isCreator) {
+            currentAcceptances.creator = true;
+        } else {
+            currentAcceptances.partner = true;
+        }
+
+        // Check if both have accepted
+        const bothAccepted = currentAcceptances.creator && currentAcceptances.partner;
+
+        // Update session with acceptance key logic:
+        // 1. Update status to CLOSED only if both accepted
+        // 2. Link case_id if provided (critical for history)
+        const updateData = {
+            verdict_acceptances: currentAcceptances,
+            status: bothAccepted ? 'CLOSED' : 'RESOLVED'
+        };
+
+        if (caseId) {
+            updateData.case_id = caseId;
+        }
+
+        const { data: updatedSession, error: updateError } = await supabase
+            .from('court_sessions')
+            .update(updateData)
+            .eq('id', sessionId)
+            .select()
+            .single();
+
+        if (updateError) throw updateError;
+
+        res.json({
+            ...updatedSession,
+            bothAccepted,
+            message: bothAccepted
+                ? 'Both parties accepted the verdict. Case closed!'
+                : 'Verdict accepted. Waiting for partner to accept.'
+        });
+    } catch (error) {
+        console.error('Error accepting verdict:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // --- Cases with Verdicts ---
 
 // Submit a Case (or update it)

@@ -125,7 +125,7 @@ router.get('/health', (req, res) => {
     res.json({
         status: hasApiKey ? 'ready' : 'unconfigured',
         service: 'Judge Whiskers Court',
-        model: 'x-ai/grok-4.1-fast:free',
+        model: 'deepseek/deepseek-r1',
         message: hasApiKey
             ? 'Judge Whiskers is awake and ready to preside (via OpenRouter).'
             : 'Judge Whiskers requires an OpenRouter API key to function.',

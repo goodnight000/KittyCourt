@@ -4,7 +4,7 @@
  * This is the core deliberation pipeline that processes couple disputes
  * through a multi-step LLM chain based on Gottman Method and NVC principles.
  * 
- * Now using OpenRouter with x-ai/grok-4.1-fast:free model
+ * Now using OpenRouter with DeepSeek R1 reasoning model
  * 
  * Pipeline Steps:
  * 1. Safety Guardrail (Moderation API)
@@ -27,9 +27,9 @@ const { retrieveHistoricalContext, formatContextForPrompt, hasHistoricalContext 
 const { triggerBackgroundExtraction } = require('./stenographer');
 const { repairAndParseJSON } = require('./jsonRepair');
 
-// Configuration - Using OpenRouter with fast model for quick verdicts
+// Configuration - Using OpenRouter with DeepSeek R1 reasoning model
 const CONFIG = {
-    model: 'x-ai/grok-4.1-fast:free', // Grok's fast reasoning model via OpenRouter
+    model: 'deepseek/deepseek-v3.2', // DeepSeek's reasoning model via OpenRouter
     analysisTemperature: 0.5, // Lower temp for consistent clinical analysis
     verdictTemperature: 0.7,  // Higher temp for creative cat persona
     maxTokens: 10000,          // Sufficient for complete responses

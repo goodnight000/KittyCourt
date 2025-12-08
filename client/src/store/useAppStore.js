@@ -14,6 +14,7 @@ const useAppStore = create(
             // --- Court Session State ---
             courtSession: null, // Active court session
             isCourtAnimationPlaying: false,
+            isGeneratingVerdict: false, // Lock to prevent duplicate verdict generation
 
             // --- Actions ---
             fetchUsers: async () => {
@@ -70,8 +71,20 @@ const useAppStore = create(
 
                     const url = params.toString() ? `/court-sessions/active?${params.toString()}` : '/court-sessions/active';
                     const response = await api.get(url);
-                    set({ courtSession: response.data });
-                    return response.data;
+                    const session = response.data;
+                    set({ courtSession: session });
+
+                    // Fix for stuck state: If no active session on server, but local case is in active state, reset it
+                    if (!session) {
+                        const { activeCase, resetCase } = get();
+                        const activeStates = ['LOCKED_A', 'LOCKED_B', 'DELIBERATING'];
+                        if (activeCase && activeStates.includes(activeCase.status)) {
+                            console.log('[checkActiveSession] Detected stale active case state without server session. Resetting.');
+                            resetCase();
+                        }
+                    }
+
+                    return session;
                 } catch (error) {
                     console.error("Failed to check active session", error);
                     return null;
@@ -331,6 +344,13 @@ const useAppStore = create(
             },
 
             generateVerdict: async () => {
+                // Prevent duplicate calls with a lock
+                if (get().isGeneratingVerdict) {
+                    console.log('[generateVerdict] Already generating, skipping duplicate call');
+                    return;
+                }
+                set({ isGeneratingVerdict: true });
+
                 const { activeCase } = get();
 
                 // Get real user names from auth store
@@ -356,8 +376,7 @@ const useAppStore = create(
                     const userAStory = activeCase.userAFeelings?.trim() || 'I feel unheard.';
                     const userBStory = activeCase.userBFeelings?.trim() || 'I feel blamed.';
 
-                    // Call the real Judge Engine API
-                    const response = await api.post('/judge/deliberate', {
+                    const payload = {
                         caseId: activeCase.id || `case_${Date.now()}`,
                         participants: {
                             userA: { name: userAName, id: userAId },
@@ -377,7 +396,12 @@ const useAppStore = create(
                                 coreNeed: 'To be accepted'
                             }
                         }
-                    });
+                    };
+
+                    console.log('[generateVerdict] Sending payload:', JSON.stringify(payload, null, 2));
+
+                    // Call the real Judge Engine API
+                    const response = await api.post('/judge/deliberate', payload);
 
                     const judgeResponse = response.data;
 
@@ -449,14 +473,16 @@ const useAppStore = create(
                         }, ...get().caseHistory]
                     });
 
-                    // Close the court session
-                    get().closeCourtSession(savedCase.data.id);
+                    // NOTE: We do NOT close the court session here anymore.
+                    // The session remains open (but RESOLVED status) until BOTH users accept the verdict.
+                    // See acceptVerdict function.
 
                     // Refresh users to update balances
                     get().fetchUsers();
 
                 } catch (error) {
                     console.error("Failed to generate verdict", error);
+                    console.error("[generateVerdict] Server error details:", error.response?.data);
 
                     // Fallback verdict if API fails
                     const fallbackVerdict = {
@@ -483,6 +509,9 @@ const useAppStore = create(
                             allVerdicts: [{ version: 1, content: JSON.stringify(fallbackVerdict) }]
                         }
                     });
+                } finally {
+                    // Release the lock
+                    set({ isGeneratingVerdict: false });
                 }
             },
 
@@ -608,53 +637,77 @@ const useAppStore = create(
                 });
             },
 
-            // Accept the verdict - each user can independently accept and celebrate
+            // Accept the verdict - case is only fully resolved when BOTH users accept
             acceptVerdict: async () => {
                 const { activeCase, courtSession } = get();
                 if (!activeCase.verdict) return;
 
                 // Get auth user info
                 const { user: authUser } = await import('./useAuthStore').then(m => m.default.getState());
+                const isUserA = activeCase.initiatorId === authUser?.id || !activeCase.initiatorId;
+
+                // Update local acceptance state immediately for responsive UI
+                const newCase = {
+                    ...activeCase,
+                    userAAccepted: isUserA ? true : activeCase.userAAccepted,
+                    userBAccepted: !isUserA ? true : activeCase.userBAccepted,
+                };
+                set({ activeCase: newCase });
 
                 try {
-                    // Award kibble to the accepting user
-                    const kibbleReward = activeCase.verdict.kibbleReward || { userA: 10, userB: 10 };
-                    const isUserA = activeCase.initiatorId === authUser?.id || !activeCase.initiatorId;
-                    const reward = isUserA ? kibbleReward.userA : kibbleReward.userB;
-
-                    if (authUser?.id) {
-                        await api.post('/economy/transaction', {
+                    // Sync acceptance to backend
+                    if (courtSession?.id && authUser?.id) {
+                        const response = await api.post(`/court-sessions/${courtSession.id}/accept-verdict`, {
                             userId: authUser.id,
-                            amount: reward,
-                            type: 'EARN',
-                            description: 'Case resolved - verdict accepted'
+                            caseId: activeCase.id // Pass caseId to link it when closing
                         });
-                    }
 
-                    // Refresh user balances
-                    await get().fetchUsers();
+                        // Update session state from server
+                        set({ courtSession: response.data });
 
-                    // Close the court session
-                    if (courtSession?.id) {
-                        try {
-                            await api.post(`/court-sessions/${courtSession.id}/close`, {
-                                caseId: activeCase.id
+                        // Check if both have now accepted
+                        if (response.data.bothAccepted) {
+                            // Both accepted - award kibble and celebrate!
+                            const kibbleReward = activeCase.verdict.kibbleReward || { userA: 10, userB: 10 };
+                            const reward = isUserA ? kibbleReward.userA : kibbleReward.userB;
+
+                            await api.post('/economy/transaction', {
+                                userId: authUser.id,
+                                amount: reward,
+                                type: 'EARN',
+                                description: 'Case resolved - verdict accepted'
                             });
-                        } catch (e) {
-                            console.log('Session already closed or error closing:', e.message);
+
+                            // Refresh user balances
+                            await get().fetchUsers();
+
+                            // Show celebration and clear session
+                            set({ showCelebration: true, courtSession: null });
                         }
+                        // If only I accepted, the UI will show "waiting for partner"
+                        // based on the updated activeCase.userAAccepted/userBAccepted state
                     }
-
-                    // Clear the court session
-                    set({ courtSession: null });
-
-                    // Show celebration
-                    set({ showCelebration: true });
-
                 } catch (error) {
                     console.error("Failed to accept verdict", error);
-                    // Still show celebration even if award fails
-                    set({ showCelebration: true, courtSession: null });
+                    // Fallback: if endpoint doesn't exist yet, use old behavior
+                    if (error.response?.status === 404) {
+                        const kibbleReward = activeCase.verdict.kibbleReward || { userA: 10, userB: 10 };
+                        const reward = isUserA ? kibbleReward.userA : kibbleReward.userB;
+
+                        if (authUser?.id) {
+                            try {
+                                await api.post('/economy/transaction', {
+                                    userId: authUser.id,
+                                    amount: reward,
+                                    type: 'EARN',
+                                    description: 'Case resolved - verdict accepted'
+                                });
+                            } catch (e) {
+                                console.log('Error awarding kibble:', e.message);
+                            }
+                        }
+                        set({ showCelebration: true, courtSession: null });
+                    }
                 }
             },
 
