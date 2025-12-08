@@ -128,10 +128,12 @@ app.get('/api/court-sessions/active', async (req, res) => {
             .lt('expires_at', new Date().toISOString());
 
         // Build query to find sessions relevant to this couple
+        // Include ALL active session states (not just WAITING/IN_SESSION)
+        const activeStatuses = ['WAITING', 'IN_SESSION', 'WAITING_FOR_PARTNER', 'WAITING_FOR_CREATOR', 'DELIBERATING'];
         let query = supabase
             .from('court_sessions')
             .select('*')
-            .in('status', ['WAITING', 'IN_SESSION'])
+            .in('status', activeStatuses)
             .order('created_at', { ascending: false })
             .limit(1);
 
