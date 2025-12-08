@@ -1869,8 +1869,10 @@ const CourtroomPage = () => {
         }
     }
 
-    // Check court session status - Show Court at Rest when no active session
-    if (!courtSession || courtSession.status === 'CLOSED') {
+    // Check court session status - Show Court at Rest when no active session or session is finished
+    // CLOSED, SETTLED, and RESOLVED sessions should show the rest view
+    if (!courtSession || courtSession.status === 'CLOSED' || courtSession.status === 'SETTLED' ||
+        (courtSession.status === 'RESOLVED' && activeCase.status !== 'RESOLVED')) {
         // Check if we have an active case in DRAFT with no substantial content
         const hasSubstantialContent = activeCase.userAInput?.trim() || activeCase.userBInput?.trim();
 
