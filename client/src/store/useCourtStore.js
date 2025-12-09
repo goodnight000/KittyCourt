@@ -250,14 +250,34 @@ const useCourtStore = create(
                 const { activeCase, courtSession } = get();
                 const { user: authUser } = await getAuthState();
 
+                console.log('[CourtStore] submitEvidence called:', {
+                    hasSession: !!courtSession,
+                    sessionId: courtSession?.id,
+                    sessionStatus: courtSession?.status,
+                    userId: authUser?.id,
+                    activeCase: activeCase
+                });
+
                 if (!courtSession?.id) {
                     console.error('[CourtStore] No active session');
+                    return;
+                }
+
+                if (!authUser?.id) {
+                    console.error('[CourtStore] No authenticated user');
                     return;
                 }
 
                 const { isUserA } = await get().getRole();
                 const evidence = isUserA ? activeCase.userAInput : activeCase.userBInput;
                 const feelings = isUserA ? activeCase.userAFeelings : activeCase.userBFeelings;
+
+                console.log('[CourtStore] Submitting evidence:', {
+                    isUserA,
+                    evidence: evidence?.substring(0, 50) + '...',
+                    feelings: feelings?.substring(0, 50) + '...',
+                    endpoint: `/court-sessions/${courtSession.id}/submit-evidence`
+                });
 
                 try {
                     const response = await api.post(
@@ -291,7 +311,12 @@ const useCourtStore = create(
                         // Start verdict generation
                         get().generateVerdict();
                     } else {
-                        set({ activeCase: { ...activeCase, ...caseUpdate } });
+                        // Only I submitted → show waiting screen
+                        console.log('[CourtStore] First submission done, waiting for partner');
+                        set({
+                            activeCase: { ...activeCase, ...caseUpdate },
+                            phase: COURT_PHASES.SUBMITTING  // Show waiting for partner screen
+                        });
                     }
 
                     return updated;
@@ -314,21 +339,52 @@ const useCourtStore = create(
                     const { activeCase, courtSession } = get();
                     const { user: authUser, profile, partner } = await getAuthState();
 
-                    // Build payload for judge API
+                    // Determine names for userA (creator) and userB (partner)
+                    const isCreator = courtSession?.created_by === authUser?.id;
+                    const userAName = isCreator ? (profile?.display_name || profile?.name || 'Partner A')
+                        : (partner?.display_name || partner?.name || 'Partner A');
+                    const userBName = isCreator ? (partner?.display_name || partner?.name || 'Partner B')
+                        : (profile?.display_name || profile?.name || 'Partner B');
+
+                    // Get profile data for userA (creator) and userB (partner)
+                    const userAProfile = isCreator ? profile : partner;
+                    const userBProfile = isCreator ? partner : profile;
+
+                    // Build payload matching DeliberationInputSchema with profile context
                     const payload = {
-                        sessionId: courtSession?.id,
-                        coupleId: profile?.couple_id,
-                        userA: {
-                            id: activeCase.initiatorId || courtSession?.created_by,
-                            name: courtSession?.created_by === authUser?.id ? profile?.display_name : partner?.display_name,
-                            input: activeCase.userAInput,
-                            feelings: activeCase.userAFeelings
+                        participants: {
+                            userA: {
+                                id: activeCase.initiatorId || courtSession?.created_by,
+                                name: userAName,
+                                // Profile data for personalized verdicts
+                                loveLanguage: userAProfile?.love_language,
+                                communicationStyle: userAProfile?.communication_style,
+                                conflictStyle: userAProfile?.conflict_style,
+                                petPeeves: userAProfile?.pet_peeves || [],
+                                appreciationStyle: userAProfile?.appreciation_style
+                            },
+                            userB: {
+                                id: courtSession?.partner_id,
+                                name: userBName,
+                                // Profile data for personalized verdicts
+                                loveLanguage: userBProfile?.love_language,
+                                communicationStyle: userBProfile?.communication_style,
+                                conflictStyle: userBProfile?.conflict_style,
+                                petPeeves: userBProfile?.pet_peeves || [],
+                                appreciationStyle: userBProfile?.appreciation_style
+                            }
                         },
-                        userB: {
-                            id: courtSession?.partner_id,
-                            name: courtSession?.created_by === authUser?.id ? partner?.display_name : profile?.display_name,
-                            input: activeCase.userBInput,
-                            feelings: activeCase.userBFeelings
+                        submissions: {
+                            userA: {
+                                cameraFacts: activeCase.userAInput || '',
+                                theStoryIamTellingMyself: activeCase.userAFeelings || '',
+                                coreNeed: 'understanding' // Default if not collected
+                            },
+                            userB: {
+                                cameraFacts: activeCase.userBInput || '',
+                                theStoryIamTellingMyself: activeCase.userBFeelings || '',
+                                coreNeed: 'understanding' // Default if not collected
+                            }
                         },
                         previousVerdicts: activeCase.allVerdicts || []
                     };

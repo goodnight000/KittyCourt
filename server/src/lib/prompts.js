@@ -211,25 +211,53 @@ OUTPUT RULES:
 4. theSentence.title MUST be one of the four prescribed repairs — no creative alternatives`;
 
 
+// Helper to format profile context for prompts
+const formatProfileContext = (participant) => {
+  const parts = [];
+  if (participant.loveLanguage) parts.push(`Love Language: ${participant.loveLanguage}`);
+  if (participant.communicationStyle) parts.push(`Communication Style: ${participant.communicationStyle}`);
+  if (participant.conflictStyle) parts.push(`Conflict Style: ${participant.conflictStyle}`);
+  if (participant.appreciationStyle) parts.push(`Appreciation Style: ${participant.appreciationStyle}`);
+  if (participant.petPeeves?.length > 0) parts.push(`Pet Peeves: ${participant.petPeeves.join(', ')}`);
+  return parts.length > 0 ? parts.join(' | ') : 'No profile data available';
+};
+
 // --- Helper function to build the analyst prompt with data ---
 const buildAnalystUserPrompt = (input) => {
+  const userAProfile = formatProfileContext(input.participants.userA);
+  const userBProfile = formatProfileContext(input.participants.userB);
+
   return `Perform a deep psychological analysis of this couple's conflict:
 
 ## Participants
 - User A: ${input.participants.userA.name}
 - User B: ${input.participants.userB.name}
 
+## IMPORTANT: Personality & Communication Profiles
+Use this information to understand each person's natural communication patterns and potential triggers:
+
+### ${input.participants.userA.name}'s Profile
+${userAProfile}
+
+### ${input.participants.userB.name}'s Profile
+${userBProfile}
+
 ## User A's Submission
 - **What happened (their perspective)**: "${input.submissions.userA.cameraFacts}"
-- **Primary emotion they selected**: ${input.submissions.userA.selectedPrimaryEmotion}
+- **Primary emotion they selected**: ${input.submissions.userA.selectedPrimaryEmotion || 'not specified'}
 - **The story they're telling themselves**: "${input.submissions.userA.theStoryIamTellingMyself}"
 - **Their stated core need**: ${input.submissions.userA.coreNeed}
 
 ## User B's Submission
 - **What happened (their perspective)**: "${input.submissions.userB.cameraFacts}"
-- **Primary emotion they selected**: ${input.submissions.userB.selectedPrimaryEmotion}
+- **Primary emotion they selected**: ${input.submissions.userB.selectedPrimaryEmotion || 'not specified'}
 - **The story they're telling themselves**: "${input.submissions.userB.theStoryIamTellingMyself}"
 - **Their stated core need**: ${input.submissions.userB.coreNeed}
+
+IMPORTANT: Consider each person's love language and communication style when analyzing the conflict. For example:
+- If someone's love language is "time" and they felt ignored, this is especially significant
+- If someone is "conflict-avoidant" by style, stonewalling may be a coping mechanism, not malice
+- Pet peeves that were triggered should be noted as potential escalation points
 
 Analyze this conflict using the Gottman Method framework. Identify the dynamic, detect horsemen, translate vulnerable emotions, and assess intensity. Output your analysis as JSON.`;
 };
@@ -255,19 +283,30 @@ const buildJudgeUserPrompt = (input, analysis, historicalContext = '') => {
     ? `\n${historicalContext}\n`
     : '';
 
+  const userAProfile = formatProfileContext(input.participants.userA);
+  const userBProfile = formatProfileContext(input.participants.userB);
+
   return `You are presiding over a conflict between ${input.participants.userA.name} and ${input.participants.userB.name}.
 ${contextSection}
+## PERSONALITY PROFILES (Use this for personalized insights)
+
+### ${input.participants.userA.name}'s Profile
+${userAProfile}
+
+### ${input.participants.userB.name}'s Profile
+${userBProfile}
+
 ## THE CURRENT CONFLICT
 
 ### ${input.participants.userA.name}'s Experience
 - **What happened**: "${input.submissions.userA.cameraFacts}"
-- **How they feel**: ${input.submissions.userA.selectedPrimaryEmotion}
+- **How they feel**: ${input.submissions.userA.selectedPrimaryEmotion || 'not specified'}
 - **Their inner narrative**: "${input.submissions.userA.theStoryIamTellingMyself}"
 - **What they need**: ${input.submissions.userA.coreNeed}
 
 ### ${input.participants.userB.name}'s Experience
 - **What happened**: "${input.submissions.userB.cameraFacts}"
-- **How they feel**: ${input.submissions.userB.selectedPrimaryEmotion}
+- **How they feel**: ${input.submissions.userB.selectedPrimaryEmotion || 'not specified'}
 - **Their inner narrative**: "${input.submissions.userB.theStoryIamTellingMyself}"
 - **What they need**: ${input.submissions.userB.coreNeed}
 

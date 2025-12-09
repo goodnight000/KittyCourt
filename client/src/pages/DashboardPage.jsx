@@ -181,7 +181,7 @@ const DashboardPage = () => {
                     whileTap={{ scale: 0.98 }}
                     onClick={() => navigate('/courtroom')}
                     className="relative overflow-hidden rounded-3xl cursor-pointer group shadow-lg h-52"
-                    style={{ background: 'linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%)' }}
+                    style={{ background: 'linear-gradient(135deg, #1c1c84 0%, #000035 100%)' }}
                 >
                     {/* Decorative circle */}
                     <div className="absolute top-1/2 right-0 w-40 h-40 bg-white/5 rounded-full translate-x-1/3 blur-2xl" />
@@ -263,50 +263,66 @@ const DashboardPage = () => {
                     <motion.button
                         whileTap={{ scale: 0.95 }}
                         onClick={() => hasPartner ? setShowGoodDeedModal(true) : navigate('/connect')}
-                        className="glass-card p-2 flex flex-col items-center gap-1.5 relative bg-white/50 hover:bg-white/80 transition-colors"
+                        className="glass-card p-2 flex flex-col items-center gap-1 relative bg-white/50 hover:bg-white/80 transition-colors"
                     >
                         {!hasPartner && (
-                            <div className="absolute top-1 right-1 w-3 h-3 bg-neutral-200 rounded-full flex items-center justify-center">
+                            <div className="absolute top-1 right-1 w-3 h-3 bg-neutral-200 rounded-full flex items-center justify-center z-10">
                                 <Lock className="w-2 h-2 text-neutral-500" />
                             </div>
                         )}
-                        <div className="w-9 h-9 bg-pink-50 rounded-xl flex items-center justify-center text-pink-500">
-                            <Heart className={`w-4 h-4 ${hasPartner ? 'fill-current' : 'text-neutral-400'}`} />
+                        <div className="w-10 h-10 flex items-center justify-center">
+                            <img
+                                src="/assets/icons/appreicate.png"
+                                alt="Appreciate"
+                                className={`w-full h-full object-contain ${!hasPartner ? 'grayscale opacity-50' : ''}`}
+                            />
                         </div>
-                        <span className="text-[9px] font-bold text-neutral-600 text-center leading-tight">Appreciate</span>
+                        <span className="text-[10px] font-bold text-neutral-600 text-center leading-tight">Appreciate</span>
                     </motion.button>
 
                     <motion.button
                         whileTap={{ scale: 0.95 }}
                         onClick={() => navigate('/appreciations')}
-                        className="glass-card p-2 flex flex-col items-center gap-1.5 bg-white/50 hover:bg-white/80 transition-colors"
+                        className="glass-card p-2 flex flex-col items-center gap-1 bg-white/50 hover:bg-white/80 transition-colors"
                     >
-                        <div className="w-9 h-9 bg-violet-50 rounded-xl flex items-center justify-center text-violet-500">
-                            <Gift className="w-4 h-4" />
+                        <div className="w-10 h-10 flex items-center justify-center">
+                            <img
+                                src="/assets/icons/love_notes.png"
+                                alt="Love Notes"
+                                className="w-full h-full object-contain"
+                            />
                         </div>
-                        <span className="text-[9px] font-bold text-neutral-600 text-center leading-tight">Love Notes</span>
+                        <span className="text-[10px] font-bold text-neutral-600 text-center leading-tight">Love Notes</span>
                     </motion.button>
 
                     <motion.button
                         whileTap={{ scale: 0.95 }}
                         onClick={() => navigate('/history')}
-                        className="glass-card p-2 flex flex-col items-center gap-1.5 bg-white/50 hover:bg-white/80 transition-colors"
+                        className="glass-card p-2 flex flex-col items-center gap-1 bg-white/50 hover:bg-white/80 transition-colors"
                     >
-                        <div className="w-9 h-9 bg-green-50 rounded-xl flex items-center justify-center text-green-500">
-                            <History className="w-4 h-4" />
+                        <div className="w-10 h-10 flex items-center justify-center">
+                            <img
+                                src="/assets/icons/cases.png"
+                                alt="Cases"
+                                className="w-full h-full object-contain"
+                            />
                         </div>
-                        <span className="text-[9px] font-bold text-neutral-600 text-center leading-tight">Cases</span>
+                        <span className="text-[10px] font-bold text-neutral-600 text-center leading-tight">Cases</span>
                     </motion.button>
 
                     <motion.button
                         whileTap={{ scale: 0.95 }}
                         onClick={() => navigate('/economy')}
-                        className="glass-card p-2 flex flex-col items-center gap-1.5 bg-white/50 hover:bg-white/80 transition-colors"
+                        className="glass-card p-2 flex flex-col items-center gap-1 bg-white/50 hover:bg-white/80 transition-colors"
                     >
-                        <div className="w-9 h-9 bg-orange-50 rounded-xl flex items-center justify-center text-orange-500">
-                            <Sparkles className="w-4 h-4" />
+                        <div className="w-10 h-10 flex items-center justify-center">
+                            <img
+                                src="/assets/icons/redeem.png"
+                                alt="Redeem"
+                                className="w-full h-full object-contain"
+                            />
                         </div>
-                        <span className="text-[9px] font-bold text-neutral-600 text-center leading-tight">Redeem</span>
+                        <span className="text-[10px] font-bold text-neutral-600 text-center leading-tight">Redeem</span>
                     </motion.button>
                 </div>
             </div>

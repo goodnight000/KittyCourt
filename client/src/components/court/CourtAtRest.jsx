@@ -161,6 +161,7 @@ const CourtAtRest = ({ onServe, navigate }) => {
                 <motion.button
                     whileTap={{ scale: 0.98 }}
                     onClick={() => navigate('/history')}
+
                     className="w-full glass-card p-3 flex items-center justify-center gap-2 text-court-brown font-medium"
                 >
                     <History className="w-4 h-4 text-court-gold" />

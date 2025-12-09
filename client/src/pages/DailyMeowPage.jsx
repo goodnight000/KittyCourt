@@ -445,7 +445,8 @@ const DailyMeowPage = () => {
                                             whileTap={{ scale: 0.98 }}
                                             onClick={confirmMood}
                                             disabled={selectedMoods.length === 0}
-                                            className="mt-4 w-full py-4 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold rounded-2xl shadow-lg disabled:opacity-40 disabled:saturate-50 flex items-center justify-center gap-2"
+                                            style={{ background: 'linear-gradient(135deg, #1c1c84 0%, #000035 100%)' }}
+                                            className="mt-4 w-full py-4 text-white font-bold rounded-2xl shadow-lg disabled:opacity-40 disabled:saturate-50 flex items-center justify-center gap-2"
                                         >
                                             {selectedMoods.length > 0 ? (
                                                 <>

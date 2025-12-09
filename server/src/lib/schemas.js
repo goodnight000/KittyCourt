@@ -14,13 +14,19 @@ const { z } = require('zod');
 const ParticipantSchema = z.object({
     name: z.string().min(1, 'Name is required'),
     id: z.string().min(1, 'ID is required'),
+    // Optional profile data for personalized verdicts
+    loveLanguage: z.string().optional(),
+    communicationStyle: z.string().optional(),
+    conflictStyle: z.string().optional(),
+    appreciationStyle: z.string().optional(),
+    petPeeves: z.array(z.string()).optional().default([]),
 });
 
 const SubmissionSchema = z.object({
     cameraFacts: z.string().min(1, 'Camera facts are required'),
-    selectedPrimaryEmotion: z.string().min(1, 'Primary emotion is required'),
+    selectedPrimaryEmotion: z.string().optional().default('not specified'),
     theStoryIamTellingMyself: z.string().min(1, 'Story is required'),
-    coreNeed: z.string().min(1, 'Core need is required'),
+    coreNeed: z.string().optional().default('understanding'),
 });
 
 const DeliberationInputSchema = z.object({
@@ -41,7 +47,7 @@ const HorsemanType = z.enum(['Criticism', 'Contempt', 'Defensiveness', 'Stonewal
 const DynamicType = z.enum([
     'Pursuer-Distancer',
     'Attack-Defend',
-    'Demand-Withdraw', 
+    'Demand-Withdraw',
     'Mutual Avoidance'
 ]);
 
@@ -49,7 +55,7 @@ const IntensityType = z.enum(['high', 'medium', 'low']);
 
 const RepairType = z.enum([
     'The 20-Minute Reset',
-    'The 20-Second Hug', 
+    'The 20-Second Hug',
     'The Speaker-Listener Exercise',
     'The Soft Startup Redo'
 ]);
@@ -91,7 +97,7 @@ const JudgeContentSchema = z.object({
     // Accept: theSummary, translationSummary
     theSummary: z.string().optional(),
     translationSummary: z.string().optional(),
-    
+
     // Validation - validates each person's emotions deeply  
     // Accept: theRuling_ThePurr, validation_ThePurr
     theRuling_ThePurr: z.object({
@@ -102,17 +108,17 @@ const JudgeContentSchema = z.object({
         userA: z.string(),
         userB: z.string(),
     }).optional(),
-    
+
     // Accountability - calls out behaviors (NOT character)
     // Accept: theRuling_TheHiss, callouts_TheHiss
     theRuling_TheHiss: z.array(z.string()).optional(),
     callouts_TheHiss: z.array(z.string()).optional(),
-    
+
     // Targeted repair matched to the wound type
     // Accept: theSentence, theSentence_RepairAttempt
     theSentence: RepairAttemptSchema.optional(),
     theSentence_RepairAttempt: RepairAttemptSchema.optional(),
-    
+
     // Wise closing (also accept openingStatement for backwards compat)
     closingStatement: z.string().optional(),
     openingStatement: z.string().optional(),
