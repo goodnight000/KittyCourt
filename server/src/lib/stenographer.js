@@ -19,7 +19,7 @@ const { createChatCompletion, isOpenRouterConfigured } = require('./openrouter')
 
 // Configuration
 const CONFIG = {
-    model: 'x-ai/grok-4.1-fast:free', // Grok's fast reasoning model via OpenRouter
+    model: 'deepseek/deepseek-v3.2', // DeepSeek's reasoning model via OpenRouter
     temperature: 0.3, // Low temperature for consistent extraction
     maxTokens: 6000, // Increased for reasoning tokens
     similarityThreshold: 0.92, // For de-duplication
