@@ -1,6 +1,5 @@
 /**
  * OpenRouter Client Configuration
- * Uses OpenRouter API with x-ai/grok-4.1-fast:free model
  * 
  * JSON Mode: Uses response_format with json_schema for structured output
  */

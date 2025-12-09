@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import useAppStore from '../store/useAppStore';
+import useCourtStore, { COURT_PHASES } from '../store/useCourtStore';
 import useAuthStore from '../store/useAuthStore';
 import api from '../services/api';
 import RequirePartner from '../components/RequirePartner';
@@ -1408,13 +1409,19 @@ const VerdictView = ({
 const CourtroomPage = () => {
     const navigate = useNavigate();
     const { hasPartner, user: authUser, profile, partner: connectedPartner } = useAuthStore();
+    // User state from app store
+    const { currentUser, users } = useAppStore();
+
+    // Court state and actions from court store
     const {
-        activeCase, currentUser, users, updateCaseInput, setInitiator, submitSide, resetCase,
-        courtSession, checkActiveSession, servePartner, joinCourt,
-        isCourtAnimationPlaying, finishCourtAnimation, closeCourtSession,
-        submitAddendum, acceptVerdict, showCelebration, closeCelebration,
-        settleOutOfCourt
-    } = useAppStore();
+        phase,
+        activeCase, courtSession,
+        isAnimationPlaying, showCelebration, showRatingPopup,
+        checkActiveSession, servePartner, joinCourt,
+        finishAnimation, updateInput, setInitiator, submitEvidence,
+        submitAddendum, acceptVerdict, closeCelebration,
+        requestSettlement, reset, submitRating, skipRating
+    } = useCourtStore();
 
     const [showAddendumModal, setShowAddendumModal] = useState(false);
     const [addendumText, setAddendumText] = useState('');
@@ -1467,7 +1474,7 @@ const CourtroomPage = () => {
         const restoreCaseFromSession = async () => {
             // If session is RESOLVED and has a case_id but activeCase is not populated
             if (courtSession?.status === 'RESOLVED' && courtSession?.case_id) {
-                const { activeCase } = useAppStore.getState();
+                const { activeCase } = useCourtStore.getState();
 
                 // Only fetch if we don't have the case data or it's stale
                 if (!activeCase?.id || activeCase.id !== courtSession.case_id || activeCase.status !== 'RESOLVED') {
@@ -1478,7 +1485,7 @@ const CourtroomPage = () => {
 
                         if (caseData) {
                             // Use the loadCase function to restore the case state
-                            useAppStore.getState().loadCase(caseData);
+                            useCourtStore.getState().loadCase(caseData);
                         }
                     } catch (error) {
                         console.error('Failed to restore case:', error);
@@ -1488,7 +1495,7 @@ const CourtroomPage = () => {
 
             // If session is DELIBERATING, ensure we have evidence from both users
             if (courtSession?.status === 'DELIBERATING' && courtSession?.evidence_submissions) {
-                const { activeCase } = useAppStore.getState();
+                const { activeCase } = useCourtStore.getState();
                 const evidence = courtSession.evidence_submissions;
 
                 // Update activeCase with evidence from server if missing
@@ -1497,7 +1504,7 @@ const CourtroomPage = () => {
                     (!activeCase?.userBInput && evidence?.partner?.evidence);
 
                 if (needsUpdate) {
-                    useAppStore.setState({
+                    useCourtStore.setState({
                         activeCase: {
                             ...activeCase,
                             userAInput: evidence?.creator?.evidence || activeCase?.userAInput || '',
@@ -1530,7 +1537,7 @@ const CourtroomPage = () => {
             // If session changed to IN_SESSION, trigger the animation
             if (updatedSession && updatedSession.status === 'IN_SESSION') {
                 // Update store to trigger animation
-                useAppStore.setState({ isCourtAnimationPlaying: true });
+                useCourtStore.setState({ isAnimationPlaying: true, phase: COURT_PHASES.IN_SESSION });
             }
         }, 3000); // Poll every 3 seconds
 
@@ -1562,7 +1569,7 @@ const CourtroomPage = () => {
 
                 if (bothSubmitted && updatedSession.status === 'DELIBERATING') {
                     // Get partner's evidence and update local state for judging
-                    const { activeCase } = useAppStore.getState();
+                    const { activeCase } = useCourtStore.getState();
 
                     // IMPORTANT: Copy BOTH users' evidence from courtSession to activeCase
                     // This ensures the state is up-to-date when the verdict polling detects completion
@@ -1578,12 +1585,12 @@ const CourtroomPage = () => {
                         userBSubmitted: true,
                         status: 'DELIBERATING'
                     };
-                    useAppStore.setState({ activeCase: newCase });
+                    useCourtStore.setState({ activeCase: newCase, phase: COURT_PHASES.DELIBERATING });
 
                     // Note: generateVerdict is called by submitSide when bothSubmitted=true.
                     // The isGeneratingVerdict lock in the store prevents duplicate calls.
                     // We call it here as a backup in case the user refreshed before verdict was generated.
-                    useAppStore.getState().generateVerdict();
+                    useCourtStore.getState().generateVerdict();
                 }
             }
         }, 3000); // Poll every 3 seconds
@@ -1626,7 +1633,7 @@ const CourtroomPage = () => {
                     }
 
                     // Show celebration!
-                    useAppStore.setState({ showCelebration: true, courtSession: null });
+                    useCourtStore.setState({ showCelebration: true, courtSession: null, phase: COURT_PHASES.CLOSED });
                 }
             }
         }, 3000); // Poll every 3 seconds
@@ -1681,7 +1688,7 @@ const CourtroomPage = () => {
         setIsSettling(true);
         setShowSettleModal(false);
         try {
-            const result = await settleOutOfCourt();
+            const result = await requestSettlement();
             if (result.settled) {
                 setSettleSuccess(true);
                 // Navigate home after animation
@@ -1737,8 +1744,8 @@ const CourtroomPage = () => {
     }
 
     // Show court animation
-    if (isCourtAnimationPlaying) {
-        return <CourtOpeningAnimation onComplete={finishCourtAnimation} />;
+    if (isAnimationPlaying) {
+        return <CourtOpeningAnimation onComplete={finishAnimation} />;
     }
 
     // Verdict View
@@ -1764,7 +1771,7 @@ const CourtroomPage = () => {
                     userAName={userAName}
                     userBName={userBName}
                     setShowAddendumModal={setShowAddendumModal}
-                    resetCase={resetCase}
+                    resetCase={reset}
                     navigate={navigate}
                     currentUser={currentUser}
                     onAcceptVerdict={handleAcceptVerdict}
@@ -1892,17 +1899,11 @@ const CourtroomPage = () => {
     }
 
     // Check court session status - Show Court at Rest when no active session or session is finished
-    // CLOSED, SETTLED, and RESOLVED sessions should show the rest view
+    // CLOSED, SETTLED, and RESOLVED sessions should show the rest view (sleeping judge)
     if (!courtSession || courtSession.status === 'CLOSED' || courtSession.status === 'SETTLED' ||
         (courtSession.status === 'RESOLVED' && activeCase.status !== 'RESOLVED')) {
-        // Check if we have an active case in DRAFT with no substantial content
-        const hasSubstantialContent = activeCase.userAInput?.trim() || activeCase.userBInput?.trim();
-
-        if (activeCase.status === 'DRAFT' && !hasSubstantialContent) {
-            return <CourtAtRest onServe={handleServe} navigate={navigate} />;
-        }
-        // If there's draft content, show the start court view
-        return <StartCourtView onServe={handleServe} navigate={navigate} />;
+        // Always show the sleeping judge when court is not in session
+        return <CourtAtRest onServe={handleServe} navigate={navigate} />;
     }
 
     if (courtSession.status === 'WAITING') {
@@ -2023,7 +2024,7 @@ const CourtroomPage = () => {
                             if (!activeCase?.initiatorId && authUser?.id) {
                                 setInitiator(authUser.id);
                             }
-                            updateCaseInput(e.target.value, 'facts', isUserA);
+                            updateInput(e.target.value, 'facts', isUserA);
                         }}
                         placeholder="What happened? (Be specific and factual)"
                         className="w-full h-28 bg-white/70 border-2 border-court-tan/50 rounded-xl p-3 text-court-brown placeholder:text-court-brownLight/60 focus:ring-2 focus:ring-court-gold/30 focus:border-court-gold focus:outline-none resize-none text-sm"
@@ -2043,7 +2044,7 @@ const CourtroomPage = () => {
                             if (!activeCase?.initiatorId && authUser?.id) {
                                 setInitiator(authUser.id);
                             }
-                            updateCaseInput(e.target.value, 'feelings', isUserA);
+                            updateInput(e.target.value, 'feelings', isUserA);
                         }}
                         placeholder="How did it make you feel? What story are you telling yourself?"
                         className="w-full h-20 bg-white/70 border-2 border-court-maroon/20 rounded-xl p-3 text-court-brown placeholder:text-court-brownLight/60 focus:ring-2 focus:ring-court-maroon/20 focus:border-court-maroon/40 focus:outline-none resize-none text-sm"
@@ -2055,7 +2056,7 @@ const CourtroomPage = () => {
                     {/* Submit Button */}
                     <motion.button
                         whileTap={{ scale: 0.98 }}
-                        onClick={submitSide}
+                        onClick={submitEvidence}
                         disabled={!myInput.trim()}
                         className="btn-primary flex-1 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >

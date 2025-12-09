@@ -19,6 +19,7 @@ const { getSupabase, isSupabaseConfigured } = require('./lib/supabase');
 const judgeRoutes = require('./routes/judge');
 const memoryRoutes = require('./routes/memory');
 const dailyQuestionsRoutes = require('./routes/dailyQuestions');
+const courtSessionRoutes = require('./routes/courtSession');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -45,9 +46,10 @@ app.use('/api/memory', memoryRoutes);
 // --- Daily Questions Routes ---
 app.use('/api/daily-questions', dailyQuestionsRoutes);
 
-// --- Court Session Management ---
+// --- Court Session Routes (new modular router) ---
+app.use('/api/court-sessions', courtSessionRoutes);
 
-// Create a new court session (User serves their partner)
+// --- Legacy Court Session Endpoints (kept for compatibility, router takes priority) ---
 app.post('/api/court-sessions', async (req, res) => {
     try {
         const { createdBy, partnerId } = req.body;
