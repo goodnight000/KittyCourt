@@ -6,6 +6,7 @@
 const express = require('express');
 const { deliberate } = require('../lib/judgeEngine');
 const { isOpenRouterConfigured } = require('../lib/openrouter');
+const { getSupabase, isSupabaseConfigured } = require('../lib/supabase');
 
 const router = express.Router();
 
@@ -17,12 +18,14 @@ const router = express.Router();
  * 
  * @body {object} participants - { userA: {name, id}, userB: {name, id} }
  * @body {object} submissions - { userA: {...submission}, userB: {...submission} }
+ * @body {string} sessionId - Court session ID to update with verdict
  * 
  * @returns {object} Complete verdict response with Judge Whiskers' ruling
  */
 router.post('/deliberate', async (req, res) => {
     try {
         console.log('[Judge API] Received deliberation request');
+        const { sessionId, coupleId, ...deliberatePayload } = req.body;
 
         // Check if API key is configured
         if (!isOpenRouterConfigured()) {
@@ -34,11 +37,35 @@ router.post('/deliberate', async (req, res) => {
             });
         }
 
-        const result = await deliberate(req.body);
+        const result = await deliberate(deliberatePayload);
 
         // Set appropriate status code based on result
         if (result.status === 'error') {
             return res.status(400).json(result);
+        }
+
+        // Persist verdict to database if sessionId provided
+        if (sessionId && isSupabaseConfigured()) {
+            try {
+                const supabase = getSupabase();
+                const { error: updateError } = await supabase
+                    .from('court_sessions')
+                    .update({
+                        status: 'RESOLVED',
+                        verdict: result,
+                        resolved_at: new Date().toISOString()
+                    })
+                    .eq('id', sessionId);
+
+                if (updateError) {
+                    console.error('[Judge API] Failed to update session:', updateError);
+                } else {
+                    console.log('[Judge API] Session updated to RESOLVED with verdict');
+                }
+            } catch (dbError) {
+                console.error('[Judge API] Database update error:', dbError);
+                // Continue - verdict was still generated successfully
+            }
         }
 
         if (result.status === 'unsafe_counseling_recommended') {

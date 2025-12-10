@@ -354,6 +354,8 @@ const useCourtStore = create(
 
                     // Build payload matching DeliberationInputSchema with profile context
                     const payload = {
+                        sessionId: courtSession?.id,  // For database update
+                        coupleId: profile?.couple_id,
                         participants: {
                             userA: {
                                 id: activeCase.initiatorId || courtSession?.created_by,
