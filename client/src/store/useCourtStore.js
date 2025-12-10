@@ -128,9 +128,14 @@ const useCourtStore = create(
                         // Sync phase with server session status
                         get().syncPhaseWithSession(session);
                     } else {
-                        // No active session - reset if stuck in active state
-                        const { phase } = get();
-                        if (phase !== COURT_PHASES.IDLE) {
+                        // No active session - only reset if not in post-verdict flow
+                        const { phase, showRatingPopup, showCelebration } = get();
+                        const isPostVerdictFlow = phase === COURT_PHASES.RATING ||
+                            phase === COURT_PHASES.CLOSED ||
+                            showRatingPopup ||
+                            showCelebration;
+
+                        if (phase !== COURT_PHASES.IDLE && !isPostVerdictFlow) {
                             console.log('[CourtStore] No server session, resetting to IDLE');
                             get().reset();
                         }
