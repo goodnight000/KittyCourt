@@ -240,10 +240,29 @@ async function extractAndStoreInsights(caseData, caseId) {
         };
     }
 
+    // Validate that case data has meaningful content to extract
+    const { submissions } = caseData || {};
+    const hasUserAContent = submissions?.userA?.cameraFacts?.trim() ||
+        submissions?.userA?.theStoryIamTellingMyself?.trim();
+    const hasUserBContent = submissions?.userB?.cameraFacts?.trim() ||
+        submissions?.userB?.theStoryIamTellingMyself?.trim();
+
+    if (!hasUserAContent && !hasUserBContent) {
+        console.log('[Stenographer] No meaningful content to extract, skipping');
+        return {
+            success: true,
+            skipped: true,
+            reason: 'No meaningful content in submissions',
+            userA: { stored: 0, reinforced: 0, discarded: 0 },
+            userB: { stored: 0, reinforced: 0, discarded: 0 },
+        };
+    }
+
     try {
         // Step 1: Call extraction LLM
         const prompt = buildExtractionPrompt(caseData);
         const extracted = await callExtractionLLM(STENOGRAPHER_SYSTEM_PROMPT, prompt);
+
 
         console.log('[Stenographer] Extracted insights:', JSON.stringify(extracted, null, 2));
 

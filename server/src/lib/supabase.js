@@ -22,11 +22,11 @@ function getSupabase() {
     if (!_supabase) {
         const supabaseUrl = process.env.SUPABASE_URL;
         const supabaseKey = process.env.SUPABASE_SERVICE_KEY; // Use service key for server-side operations
-        
+
         if (!supabaseUrl || !supabaseKey) {
             throw new Error('Supabase is not configured. Set SUPABASE_URL and SUPABASE_SERVICE_KEY.');
         }
-        
+
         _supabase = createClient(supabaseUrl, supabaseKey, {
             auth: {
                 autoRefreshToken: false,
@@ -56,19 +56,19 @@ function isSupabaseConfigured() {
  */
 async function searchSimilarMemories(embedding, userId, threshold = 0.92, limit = 10) {
     const supabase = getSupabase();
-    
+
     const { data, error } = await supabase.rpc('search_similar_memories', {
         query_embedding: embedding,
         target_user_id: userId,
         similarity_threshold: threshold,
         max_results: limit,
     });
-    
+
     if (error) {
         console.error('[Supabase] Error searching similar memories:', error);
         throw error;
     }
-    
+
     return data || [];
 }
 
@@ -82,18 +82,18 @@ async function searchSimilarMemories(embedding, userId, threshold = 0.92, limit 
  */
 async function retrieveRelevantMemories(embedding, userIds, limit = 4) {
     const supabase = getSupabase();
-    
+
     const { data, error } = await supabase.rpc('retrieve_relevant_memories', {
         query_embedding: embedding,
         user_ids: userIds,
         max_results: limit,
     });
-    
+
     if (error) {
         console.error('[Supabase] Error retrieving relevant memories:', error);
         throw error;
     }
-    
+
     return data || [];
 }
 
@@ -111,7 +111,7 @@ async function retrieveRelevantMemories(embedding, userIds, limit = 4) {
  */
 async function insertMemory(memory) {
     const supabase = getSupabase();
-    
+
     const { data, error } = await supabase
         .from('user_memories')
         .insert({
@@ -124,12 +124,12 @@ async function insertMemory(memory) {
         })
         .select()
         .single();
-    
+
     if (error) {
         console.error('[Supabase] Error inserting memory:', error);
         throw error;
     }
-    
+
     return data;
 }
 
@@ -141,19 +141,19 @@ async function insertMemory(memory) {
  */
 async function reinforceMemory(memoryId) {
     const supabase = getSupabase();
-    
+
     // First, get the current count
     const { data: current, error: fetchError } = await supabase
         .from('user_memories')
         .select('reinforcement_count')
         .eq('id', memoryId)
         .single();
-    
+
     if (fetchError) {
         console.error('[Supabase] Error fetching memory for reinforcement:', fetchError);
         throw fetchError;
     }
-    
+
     // Then update with incremented count
     const { data, error } = await supabase
         .from('user_memories')
@@ -164,12 +164,12 @@ async function reinforceMemory(memoryId) {
         .eq('id', memoryId)
         .select()
         .single();
-    
+
     if (error) {
         console.error('[Supabase] Error reinforcing memory:', error);
         throw error;
     }
-    
+
     return data;
 }
 
@@ -182,7 +182,7 @@ async function reinforceMemory(memoryId) {
  */
 async function getUserProfile(userId) {
     const supabase = getSupabase();
-    
+
     const { data, error } = await supabase
         .from('profiles')
         .select(`
@@ -197,17 +197,17 @@ async function getUserProfile(userId) {
         `)
         .eq('id', userId)
         .single();
-    
+
     if (error) {
         console.error('[Supabase] Error getting user profile:', error);
         return {};
     }
-    
+
     if (!data) return {};
-    
+
     // Map to the format expected by memoryRetrieval.js
     const profile = {};
-    
+
     if (data.love_language) {
         profile.loveLanguages = [data.love_language];
     }
@@ -226,7 +226,7 @@ async function getUserProfile(userId) {
     if (data.bio) {
         profile.bio = data.bio;
     }
-    
+
     return profile;
 }
 
@@ -240,7 +240,7 @@ async function getUserProfile(userId) {
  */
 async function updateUserProfile(userId, profileUpdate) {
     const supabase = getSupabase();
-    
+
     // Map from RAG format back to database columns
     const updates = {};
     if (profileUpdate.loveLanguages) updates.love_language = profileUpdate.loveLanguages[0];
@@ -249,23 +249,23 @@ async function updateUserProfile(userId, profileUpdate) {
     if (profileUpdate.petPeeves) updates.pet_peeves = profileUpdate.petPeeves;
     if (profileUpdate.appreciationStyle) updates.appreciation_style = profileUpdate.appreciationStyle;
     if (profileUpdate.bio) updates.bio = profileUpdate.bio;
-    
+
     if (Object.keys(updates).length === 0) {
         return getUserProfile(userId);
     }
-    
+
     const { data, error } = await supabase
         .from('profiles')
         .update(updates)
         .eq('id', userId)
         .select()
         .single();
-    
+
     if (error) {
         console.error('[Supabase] Error updating user profile:', error);
         throw error;
     }
-    
+
     return getUserProfile(userId);
 }
 
@@ -278,25 +278,48 @@ async function updateUserProfile(userId, profileUpdate) {
  */
 async function getUserMemories(userId, memoryType = null) {
     const supabase = getSupabase();
-    
+
     let query = supabase
         .from('user_memories')
         .select('id, memory_text, memory_type, confidence_score, reinforcement_count, created_at')
         .eq('user_id', userId)
         .order('reinforcement_count', { ascending: false });
-    
+
     if (memoryType) {
         query = query.eq('memory_type', memoryType);
     }
-    
+
     const { data, error } = await query;
-    
+
     if (error) {
         console.error('[Supabase] Error getting user memories:', error);
         return [];
     }
-    
+
     return data || [];
+}
+
+/**
+ * Check if a user has any memories stored
+ * Used to skip RAG embedding generation when no memories exist
+ * 
+ * @param {string} userId - User ID
+ * @returns {Promise<number>} Count of memories
+ */
+async function checkUserHasMemories(userId) {
+    const supabase = getSupabase();
+
+    const { count, error } = await supabase
+        .from('user_memories')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId);
+
+    if (error) {
+        console.error('[Supabase] Error checking user memories:', error);
+        return 0;
+    }
+
+    return count || 0;
 }
 
 module.exports = {
@@ -309,4 +332,5 @@ module.exports = {
     getUserProfile,
     updateUserProfile,
     getUserMemories,
+    checkUserHasMemories,
 };

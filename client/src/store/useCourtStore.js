@@ -61,6 +61,7 @@ const useCourtStore = create(
                 userAAccepted: false,
                 userBAccepted: false,
                 verdict: null,
+                analysis: null,
                 allVerdicts: [],
                 rating: null,
             },
@@ -394,7 +395,13 @@ const useCourtStore = create(
                     };
 
                     const response = await api.post('/judge/deliberate', payload);
-                    const verdict = response.data;
+                    const verdictResponse = response.data;
+
+                    // Extract the actual verdict content (judgeContent) from the API response
+                    // The API returns { verdictId, status, judgeContent, _meta, ... }
+                    // VerdictView expects verdict.theSummary, verdict.theRuling_ThePurr, etc.
+                    const verdict = verdictResponse.judgeContent || verdictResponse;
+                    const analysis = verdictResponse._meta?.analysis || null;
 
                     // Store verdict
                     const newVerdict = {
@@ -407,6 +414,7 @@ const useCourtStore = create(
                         activeCase: {
                             ...activeCase,
                             verdict,
+                            analysis,  // Store analysis separately for VerdictView
                             status: 'RESOLVED',  // Update status for render
                             allVerdicts: [...(activeCase.allVerdicts || []), newVerdict]
                         },
@@ -414,6 +422,7 @@ const useCourtStore = create(
                         // Start 60-min auto-accept timer
                         verdictDeadline: Date.now() + (60 * 60 * 1000)
                     });
+
 
                 } catch (error) {
                     console.error('[CourtStore] Verdict generation failed:', error);
@@ -601,6 +610,7 @@ const useCourtStore = create(
                         userAAccepted: false,
                         userBAccepted: false,
                         verdict: null,
+                        analysis: null,
                         allVerdicts: [],
                         rating: null
                     },
