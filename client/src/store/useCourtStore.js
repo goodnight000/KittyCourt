@@ -297,6 +297,7 @@ const useCourtStore = create(
                         // Both submitted → DELIBERATING
                         caseUpdate.userASubmitted = true;
                         caseUpdate.userBSubmitted = true;
+                        caseUpdate.status = 'DELIBERATING';  // Update activeCase.status for render
                         caseUpdate.userAInput = updated.evidence_submissions?.creator?.evidence || activeCase.userAInput;
                         caseUpdate.userAFeelings = updated.evidence_submissions?.creator?.feelings || activeCase.userAFeelings;
                         caseUpdate.userBInput = updated.evidence_submissions?.partner?.evidence || activeCase.userBInput;
@@ -311,8 +312,9 @@ const useCourtStore = create(
                         // Start verdict generation
                         get().generateVerdict();
                     } else {
-                        // Only I submitted → show waiting screen
+                        // Only I submitted → show waiting screen (LOCKED status)
                         console.log('[CourtStore] First submission done, waiting for partner');
+                        caseUpdate.status = isUserA ? 'LOCKED_A' : 'LOCKED_B';  // Update for render
                         set({
                             activeCase: { ...activeCase, ...caseUpdate },
                             phase: COURT_PHASES.SUBMITTING  // Show waiting for partner screen
@@ -403,6 +405,7 @@ const useCourtStore = create(
                         activeCase: {
                             ...activeCase,
                             verdict,
+                            status: 'RESOLVED',  // Update status for render
                             allVerdicts: [...(activeCase.allVerdicts || []), newVerdict]
                         },
                         phase: COURT_PHASES.VERDICT,
