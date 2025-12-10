@@ -6,6 +6,7 @@
  */
 
 const path = require('path');
+const http = require('http');
 const express = require('express');
 const cors = require('cors');
 
@@ -20,9 +21,14 @@ const judgeRoutes = require('./routes/judge');
 const memoryRoutes = require('./routes/memory');
 const dailyQuestionsRoutes = require('./routes/dailyQuestions');
 const courtSessionRoutes = require('./routes/courtSession');
+const wsService = require('./lib/websocket');
 
 const app = express();
+const server = http.createServer(app);
 const PORT = process.env.PORT || 3000;
+
+// Initialize WebSocket service
+wsService.initialize(server);
 
 app.use(cors());
 app.use(express.json());
@@ -1184,7 +1190,8 @@ app.get('/api/health', (req, res) => {
     });
 });
 
-app.listen(PORT, '0.0.0.0', () => {
+server.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on port ${PORT}`);
     console.log(`Supabase configured: ${isSupabaseConfigured()}`);
+    console.log(`WebSocket server initialized`);
 });
