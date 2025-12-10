@@ -19,8 +19,8 @@
  * @throws {Error} - If repair is not possible
  */
 function repairAndParseJSON(jsonString, options = { verbose: true }) {
-    const log = options.verbose ? console.log.bind(console, '[JSON Repair]') : () => {};
-    
+    const log = options.verbose ? console.log.bind(console, '[JSON Repair]') : () => { };
+
     // First, try direct parsing
     try {
         return JSON.parse(jsonString);
@@ -31,9 +31,19 @@ function repairAndParseJSON(jsonString, options = { verbose: true }) {
     let repaired = jsonString;
 
     // Step 1: Remove markdown code blocks if present
-    repaired = repaired.replace(/^```json\s*/i, '').replace(/\s*```$/i, '');
-    repaired = repaired.replace(/^```\s*/i, '').replace(/\s*```$/i, '');
-    
+    // Handle blocks anywhere in the response, not just at start/end
+    if (repaired.includes('```')) {
+        // Try to extract JSON from markdown code block
+        const jsonMatch = repaired.match(/```(?:json)?\s*([\s\S]*?)```/);
+        if (jsonMatch) {
+            repaired = jsonMatch[1].trim();
+            log('Extracted content from markdown code block');
+        } else {
+            // Fallback: just strip the markers
+            repaired = repaired.replace(/```json\s*/gi, '').replace(/```\s*/g, '');
+        }
+    }
+
     try {
         return JSON.parse(repaired);
     } catch (e) {
@@ -52,22 +62,22 @@ function repairAndParseJSON(jsonString, options = { verbose: true }) {
 
         for (let i = 0; i < repaired.length; i++) {
             const char = repaired[i];
-            
+
             if (escape) {
                 escape = false;
                 continue;
             }
-            
+
             if (char === '\\') {
                 escape = true;
                 continue;
             }
-            
+
             if (char === '"' && !escape) {
                 inString = !inString;
                 continue;
             }
-            
+
             if (!inString) {
                 if (char === '{') {
                     braceCount++;
@@ -86,20 +96,20 @@ function repairAndParseJSON(jsonString, options = { verbose: true }) {
         // If we ended inside a string, try to close it
         if (inString) {
             log('Detected unterminated string, attempting to close...');
-            
+
             // Find the last quote and try to close from there
             const lastQuote = repaired.lastIndexOf('"');
             if (lastQuote > 0) {
                 // Check if this is a value or a key
                 const beforeQuote = repaired.substring(0, lastQuote);
                 const colonAfterLastKey = beforeQuote.lastIndexOf(':');
-                
+
                 if (colonAfterLastKey > beforeQuote.lastIndexOf('{')) {
                     // We're in a value, close the string and objects
                     let closers = '"';
                     closers += '}'.repeat(braceCount);
                     closers += ']'.repeat(bracketCount);
-                    
+
                     repaired = repaired.substring(0, repaired.length) + closers;
                     log('Added closing: ' + closers);
                 }
@@ -121,7 +131,7 @@ function repairAndParseJSON(jsonString, options = { verbose: true }) {
     try {
         const jsonStart = repaired.indexOf('{');
         const jsonEnd = repaired.lastIndexOf('}');
-        
+
         if (jsonStart !== -1 && jsonEnd > jsonStart) {
             const extracted = repaired.substring(jsonStart, jsonEnd + 1);
             return JSON.parse(extracted);
@@ -142,8 +152,8 @@ function repairAndParseJSON(jsonString, options = { verbose: true }) {
     try {
         // Find complete key-value pairs and build a new object
         const partialMatch = repaired.match(/"theSummary"\s*:\s*"([^"]*(?:\\"[^"]*)*)"/) ||
-                            repaired.match(/"summary"\s*:\s*"([^"]*(?:\\"[^"]*)*)"/);
-        
+            repaired.match(/"summary"\s*:\s*"([^"]*(?:\\"[^"]*)*)"/);
+
         if (partialMatch) {
             log('Building partial response from available data...');
             return {
