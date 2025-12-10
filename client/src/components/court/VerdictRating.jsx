@@ -39,6 +39,8 @@ export default function VerdictRating() {
     const displayRating = hoveredStar || selectedRating;
     const ratingInfo = RATING_DESCRIPTIONS[displayRating];
 
+    console.log('[VerdictRating] showRatingPopup:', showRatingPopup);
+
     return (
         <AnimatePresence>
             {showRatingPopup && (
@@ -122,8 +124,8 @@ export default function VerdictRating() {
                                         >
                                             <Star
                                                 className={`w-10 h-10 transition-all duration-200 ${star <= displayRating
-                                                        ? 'fill-yellow-400 text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]'
-                                                        : 'text-white/30'
+                                                    ? 'fill-yellow-400 text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]'
+                                                    : 'text-white/30'
                                                     }`}
                                             />
                                             {star <= displayRating && (
@@ -171,8 +173,8 @@ export default function VerdictRating() {
                                         whileHover={{ scale: 1.02 }}
                                         whileTap={{ scale: 0.98 }}
                                         className={`flex-1 py-3 px-4 rounded-xl font-semibold transition ${selectedRating > 0
-                                                ? 'bg-gradient-to-r from-yellow-500 to-amber-500 text-white shadow-lg shadow-yellow-500/25'
-                                                : 'bg-white/10 text-white/30 cursor-not-allowed'
+                                            ? 'bg-gradient-to-r from-yellow-500 to-amber-500 text-white shadow-lg shadow-yellow-500/25'
+                                            : 'bg-white/10 text-white/30 cursor-not-allowed'
                                             }`}
                                     >
                                         {isSubmitting ? (

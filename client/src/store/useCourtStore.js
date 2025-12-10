@@ -680,10 +680,17 @@ const useCourtStore = create(
             // Fetch case history
             fetchCaseHistory: async () => {
                 try {
-                    const { user: authUser } = await getAuthState();
+                    const { user: authUser, partner } = await getAuthState();
                     if (!authUser?.id) return;
 
-                    const response = await api.get(`/cases/user/${authUser.id}`);
+                    // Build query params for the correct endpoint
+                    const params = new URLSearchParams();
+                    params.set('userAId', authUser.id);
+                    if (partner?.id) params.set('userBId', partner.id);
+
+                    const url = `/cases?${params.toString()}`;
+                    console.log('[CourtStore] Fetching case history from:', url);
+                    const response = await api.get(url);
                     set({ caseHistory: response.data || [] });
                 } catch (error) {
                     console.error('[CourtStore] Failed to fetch history:', error);
