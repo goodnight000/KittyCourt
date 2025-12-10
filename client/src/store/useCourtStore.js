@@ -466,7 +466,10 @@ const useCourtStore = create(
                         { userId: authUser.id, caseId: activeCase.id }
                     );
 
+                    console.log('[CourtStore] Accept verdict response:', response.data);
+
                     if (response.data.bothAccepted) {
+                        console.log('[CourtStore] Both accepted! Showing rating popup');
                         // Both accepted → show rating
                         set({
                             phase: COURT_PHASES.RATING,

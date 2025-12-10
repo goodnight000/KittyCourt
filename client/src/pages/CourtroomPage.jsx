@@ -285,11 +285,30 @@ const CourtroomPage = () => {
             const updatedSession = await checkActiveSession();
 
             if (updatedSession?.verdict_acceptances) {
+                console.log('[Polling] Checking verdict_acceptances:', updatedSession.verdict_acceptances);
+
+                // Update local activeCase with acceptance state from server
+                const { activeCase: currentCase } = useCourtStore.getState();
+                const creatorAccepted = updatedSession.verdict_acceptances.creator;
+                const partnerAccepted = updatedSession.verdict_acceptances.partner;
+
+                // Sync local state with server state
+                if (creatorAccepted !== currentCase.userAAccepted || partnerAccepted !== currentCase.userBAccepted) {
+                    console.log('[Polling] Syncing acceptance state:', { creatorAccepted, partnerAccepted });
+                    useCourtStore.setState({
+                        activeCase: {
+                            ...currentCase,
+                            userAAccepted: creatorAccepted,
+                            userBAccepted: partnerAccepted
+                        }
+                    });
+                }
+
                 // Check if both have now accepted
-                const bothAccepted = updatedSession.verdict_acceptances.creator &&
-                    updatedSession.verdict_acceptances.partner;
+                const bothAccepted = creatorAccepted && partnerAccepted;
 
                 if (bothAccepted) {
+                    console.log('[Polling] Both accepted! Triggering celebration');
                     // Partner accepted! Award kibble and celebrate
                     const kibbleReward = activeCase.verdict?.kibbleReward || { userA: 10, userB: 10 };
                     const reward = isUserA ? kibbleReward.userA : kibbleReward.userB;
