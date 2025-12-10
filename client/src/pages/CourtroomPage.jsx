@@ -99,11 +99,11 @@ const CourtroomPage = () => {
     useEffect(() => {
         const restoreCaseFromSession = async () => {
             // If session is RESOLVED and has a case_id but activeCase is not populated
-            if (courtSession?.status === 'RESOLVED' && courtSession?.case_id) {
+            if ((courtSession?.status === 'VERDICT' || courtSession?.status === 'RESOLVED') && courtSession?.case_id) {
                 const { activeCase } = useCourtStore.getState();
 
                 // Only fetch if we don't have the case data or it's stale
-                if (!activeCase?.id || activeCase.id !== courtSession.case_id || activeCase.status !== 'RESOLVED') {
+                if (!activeCase?.id || activeCase.id !== courtSession.case_id || (activeCase.status !== 'VERDICT' && activeCase.status !== 'RESOLVED')) {
                     try {
                         // Fetch the case from the database
                         const response = await api.get(`/cases/${courtSession.case_id}`);
@@ -171,19 +171,26 @@ const CourtroomPage = () => {
     }, [courtSession?.status, courtSession?.id, isCreator, checkActiveSession]);
 
     // Poll for session updates when user has submitted evidence and is waiting for partner
+    // OR when session is in DELIBERATING status (to detect when verdict is ready)
     useEffect(() => {
-        // Only poll if session is in a waiting state (waiting for partner's evidence)
+        // Poll if session is in a waiting state OR deliberating
         const isWaitingForEvidence = courtSession?.status === 'WAITING_FOR_PARTNER' ||
             courtSession?.status === 'WAITING_FOR_CREATOR' ||
             courtSession?.status === 'IN_SESSION';
+
+        const isDeliberating = courtSession?.status === 'DELIBERATING';
 
         const iHaveSubmitted = isCreator
             ? courtSession?.evidence_submissions?.creator?.submitted
             : courtSession?.evidence_submissions?.partner?.submitted;
 
-        if (!courtSession?.id || !isWaitingForEvidence || !iHaveSubmitted) {
+        // Poll during DELIBERATING (always) or during waiting states (if submitted)
+        const shouldPoll = isDeliberating || (isWaitingForEvidence && iHaveSubmitted);
+
+        if (!courtSession?.id || !shouldPoll) {
             return;
         }
+
 
         const pollInterval = setInterval(async () => {
             const updatedSession = await checkActiveSession();
@@ -218,18 +225,18 @@ const CourtroomPage = () => {
                     // We no longer call generateVerdict here to avoid duplicate LLM calls.
                 }
 
-                // CRITICAL: Poll for RESOLVED status - this is the fallback when WebSocket fails
-                // If session is RESOLVED and has a verdict, update local state
-                if (updatedSession.status === 'RESOLVED' && updatedSession.verdict) {
+                // CRITICAL: Poll for VERDICT status - this is the fallback when WebSocket fails
+                // If session is VERDICT and has a verdict, update local state
+                if ((updatedSession.status === 'VERDICT' || updatedSession.status === 'RESOLVED') && updatedSession.verdict) {
                     const { activeCase } = useCourtStore.getState();
                     // Only update if we don't already have the verdict
-                    if (activeCase?.status !== 'RESOLVED') {
-                        console.log('[Polling] Detected RESOLVED status with verdict, updating state');
+                    if (activeCase?.status !== 'VERDICT' && activeCase?.status !== 'RESOLVED') {
+                        console.log('[Polling] Detected VERDICT status with verdict, updating state');
                         useCourtStore.setState({
                             activeCase: {
                                 ...activeCase,
                                 verdict: updatedSession.verdict,
-                                status: 'RESOLVED'
+                                status: 'VERDICT'
                             },
                             phase: COURT_PHASES.VERDICT,
                             verdictDeadline: Date.now() + (60 * 60 * 1000)
@@ -270,7 +277,7 @@ const CourtroomPage = () => {
         const partnerHasAccepted = isUserA ? activeCase.userBAccepted : activeCase.userAAccepted;
 
         // Only poll if: we're in resolved state, user has accepted, and partner hasn't
-        if (activeCase.status !== 'RESOLVED' || !hasAccepted || partnerHasAccepted || !courtSession?.id) {
+        if ((activeCase.status !== 'VERDICT' && activeCase.status !== 'RESOLVED') || !hasAccepted || partnerHasAccepted || !courtSession?.id) {
             return;
         }
 
@@ -412,6 +419,17 @@ const CourtroomPage = () => {
     // Get current verdict to display
     const allVerdicts = activeCase.allVerdicts || [];
 
+    // DEBUG: Log render state to understand blank page issue
+    console.log('[CourtroomPage Render]', {
+        phase,
+        showCelebration,
+        isAnimationPlaying,
+        activeCaseStatus: activeCase?.status,
+        activeCaseVerdict: !!activeCase?.verdict,
+        courtSessionStatus: courtSession?.status,
+        hasCourtSession: !!courtSession
+    });
+
     // Show celebration animation
     if (showCelebration) {
         return (
@@ -428,7 +446,7 @@ const CourtroomPage = () => {
     }
 
     // Verdict View
-    if (activeCase.status === 'RESOLVED' && activeCase.verdict) {
+    if ((activeCase.status === 'VERDICT' || activeCase.status === 'RESOLVED') && activeCase.verdict) {
         const currentVerdict = selectedVerdictVersion === 0
             ? activeCase.verdict
             : allVerdicts.find(v => v.version === selectedVerdictVersion);
@@ -578,9 +596,8 @@ const CourtroomPage = () => {
     }
 
     // Check court session status - Show Court at Rest when no active session or session is finished
-    // CLOSED, SETTLED, and RESOLVED sessions should show the rest view (sleeping judge)
-    if (!courtSession || courtSession.status === 'CLOSED' || courtSession.status === 'SETTLED' ||
-        (courtSession.status === 'RESOLVED' && activeCase.status !== 'RESOLVED')) {
+    // CLOSED and SETTLED sessions should show the rest view (sleeping judge)
+    if (!courtSession || courtSession.status === 'CLOSED' || courtSession.status === 'SETTLED') {
         // Always show the sleeping judge when court is not in session
         return <CourtAtRest onServe={handleServe} navigate={navigate} />;
     }

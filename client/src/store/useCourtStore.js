@@ -415,7 +415,7 @@ const useCourtStore = create(
                             ...activeCase,
                             verdict,
                             analysis,  // Store analysis separately for VerdictView
-                            status: 'RESOLVED',  // Update status for render
+                            status: 'VERDICT',  // Update status for render
                             allVerdicts: [...(activeCase.allVerdicts || []), newVerdict]
                         },
                         phase: COURT_PHASES.VERDICT,

@@ -52,11 +52,11 @@ router.post('/deliberate', async (req, res) => {
                 const supabase = getSupabase();
                 const verdictContent = result.judgeContent || result;
 
-                // Update session status to RESOLVED and store verdict
+                // Update session status to VERDICT and store verdict
                 const { data: updatedSession, error: updateError } = await supabase
                     .from('court_sessions')
                     .update({
-                        status: 'RESOLVED',
+                        status: 'VERDICT',
                         verdict: verdictContent  // Store verdict for polling fallback
                     })
                     .eq('id', sessionId)
@@ -66,7 +66,8 @@ router.post('/deliberate', async (req, res) => {
                 if (updateError) {
                     console.error('[Judge API] Failed to update session status:', updateError);
                 } else {
-                    console.log('[Judge API] Session status updated to RESOLVED');
+                    console.log('[Judge API] Session status updated to VERDICT');
+
 
                     // Notify partner via WebSocket that verdict is ready
                     // This allows the non-submitting user to see the verdict
