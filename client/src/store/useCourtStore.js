@@ -430,6 +430,38 @@ const useCourtStore = create(
                         verdictDeadline: Date.now() + (60 * 60 * 1000)
                     });
 
+                    // Save case to database for history
+                    try {
+                        const savedCase = await api.post('/cases', {
+                            userAId: payload.participants.userA.id,
+                            userBId: payload.participants.userB.id,
+                            userAInput: activeCase.userAInput,
+                            userAFeelings: activeCase.userAFeelings || '',
+                            userBInput: activeCase.userBInput,
+                            userBFeelings: activeCase.userBFeelings || '',
+                            status: 'RESOLVED',
+                            verdict: JSON.stringify(verdict),
+                            caseTitle: analysis?.caseTitle,
+                            severityLevel: analysis?.severityLevel,
+                            primaryHissTag: analysis?.primaryHissTag,
+                            shortResolution: analysis?.shortResolution
+                        });
+
+                        console.log('[CourtStore] Case saved to database:', savedCase.data.id);
+
+                        // Update activeCase with database ID and add to history
+                        set({
+                            activeCase: {
+                                ...get().activeCase,
+                                id: savedCase.data.id
+                            },
+                            caseHistory: [savedCase.data, ...get().caseHistory]
+                        });
+                    } catch (saveError) {
+                        console.error('[CourtStore] Failed to save case to database:', saveError);
+                        // Continue even if save fails - verdict is still shown
+                    }
+
 
                 } catch (error) {
                     console.error('[CourtStore] Verdict generation failed:', error);
