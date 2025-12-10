@@ -7,8 +7,10 @@ const express = require('express');
 const { deliberate } = require('../lib/judgeEngine');
 const { isOpenRouterConfigured } = require('../lib/openrouter');
 const { getSupabase, isSupabaseConfigured } = require('../lib/supabase');
+const wsService = require('../lib/websocket');
 
 const router = express.Router();
+
 
 /**
  * POST /api/judge/deliberate
@@ -44,29 +46,40 @@ router.post('/deliberate', async (req, res) => {
             return res.status(400).json(result);
         }
 
-        // Persist verdict to database if sessionId provided
+        // Persist verdict status to database if sessionId provided
+        // Note: Only update status - the verdict is returned to client and stored locally
+        // The 'verdict' column may not exist in older schemas
         if (sessionId && isSupabaseConfigured()) {
             try {
                 const supabase = getSupabase();
-                const { error: updateError } = await supabase
+
+                // Update session status to RESOLVED
+                const { data: updatedSession, error: updateError } = await supabase
                     .from('court_sessions')
-                    .update({
-                        status: 'RESOLVED',
-                        verdict: result,
-                        resolved_at: new Date().toISOString()
-                    })
-                    .eq('id', sessionId);
+                    .update({ status: 'RESOLVED' })
+                    .eq('id', sessionId)
+                    .select()
+                    .single();
 
                 if (updateError) {
-                    console.error('[Judge API] Failed to update session:', updateError);
+                    console.error('[Judge API] Failed to update session status:', updateError);
                 } else {
-                    console.log('[Judge API] Session updated to RESOLVED with verdict');
+                    console.log('[Judge API] Session status updated to RESOLVED');
+
+                    // Notify partner via WebSocket that verdict is ready
+                    // This allows the non-submitting user to see the verdict
+                    if (coupleId && updatedSession) {
+                        wsService.notifyVerdictReady(coupleId, updatedSession, result.judgeContent || result);
+                        console.log('[Judge API] WebSocket notification sent for verdict ready');
+                    }
                 }
             } catch (dbError) {
                 console.error('[Judge API] Database update error:', dbError);
                 // Continue - verdict was still generated successfully
             }
         }
+
+
 
         if (result.status === 'unsafe_counseling_recommended') {
             return res.status(200).json(result); // Still 200, but with warning status
