@@ -32,8 +32,8 @@ const CONFIG = {
     model: 'deepseek/deepseek-v3.2', // DeepSeek's reasoning model via OpenRouter
     analysisTemperature: 0.5, // Lower temp for consistent clinical analysis
     verdictTemperature: 0.7,  // Higher temp for creative cat persona
-    maxTokens: 10000,          // Sufficient for complete responses
-    maxRetries: 2,            // Number of retries on failure
+    maxTokens: 16000,          // Increased to prevent truncation
+    maxRetries: 3,            // Increased retries
 };
 
 /**
@@ -113,7 +113,16 @@ async function runAnalysis(input) {
             });
 
             const content = response.choices[0].message.content;
-            console.log('[Judge Engine] Raw analysis response:', content.substring(0, 200) + '...');
+            const finishReason = response.choices[0].finish_reason;
+
+            console.log('[Judge Engine] Raw analysis response length:', content?.length);
+            console.log('[Judge Engine] Finish reason:', finishReason);
+            console.log('[Judge Engine] Raw analysis response:', content?.substring(0, 500) + '...');
+
+            // Check if response was truncated
+            if (finishReason === 'length') {
+                console.warn('[Judge Engine] WARNING: Response was truncated due to max_tokens!');
+            }
 
             // Try to parse with repair capability
             let parsed;
@@ -121,8 +130,10 @@ async function runAnalysis(input) {
                 parsed = JSON.parse(content);
             } catch (parseError) {
                 console.log('[Judge Engine] Direct parse failed, attempting repair...');
+                console.log('[Judge Engine] Full response for debugging:', content);
                 parsed = repairAndParseJSON(content);
             }
+
 
             // Handle case where LLM returns fields directly without 'analysis' wrapper
             if (!parsed.analysis && (parsed.identifiedDynamic || parsed.userA_Horsemen)) {
