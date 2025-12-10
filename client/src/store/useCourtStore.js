@@ -128,25 +128,18 @@ const useCourtStore = create(
                         // Sync phase with server session status
                         get().syncPhaseWithSession(session);
                     } else {
-                        // No active session - only reset if not in post-verdict flow
-                        const { phase, showRatingPopup, showCelebration, activeCase } = get();
-                        const hasAccepted = activeCase?.userAAccepted || activeCase?.userBAccepted;
-                        const isPostVerdictFlow = (phase === COURT_PHASES.VERDICT && hasAccepted) ||
-                            phase === COURT_PHASES.RATING ||
-                            phase === COURT_PHASES.CLOSED ||
-                            showRatingPopup ||
-                            showCelebration;
+                        // No active session - only reset if not showing rating/celebration popups
+                        const { phase, showRatingPopup, showCelebration } = get();
 
                         console.log('[CourtStore] Guard check:', {
                             phase,
                             showRatingPopup,
                             showCelebration,
-                            hasAccepted,
-                            isPostVerdictFlow,
-                            willReset: phase !== COURT_PHASES.IDLE && !isPostVerdictFlow
+                            willReset: phase !== COURT_PHASES.IDLE && !showRatingPopup && !showCelebration
                         });
 
-                        if (phase !== COURT_PHASES.IDLE && !isPostVerdictFlow) {
+                        // Only skip reset if rating popup or celebration is active
+                        if (phase !== COURT_PHASES.IDLE && !showRatingPopup && !showCelebration) {
                             console.log('[CourtStore] No server session, resetting to IDLE');
                             get().reset();
                         }
@@ -163,6 +156,15 @@ const useCourtStore = create(
             syncPhaseWithSession: (session) => {
                 if (!session) {
                     set({ phase: COURT_PHASES.IDLE });
+                    return;
+                }
+
+                // Only skip sync during active rating/celebration popups
+                // These are explicitly set only when bothAccepted=true
+                const { showRatingPopup, showCelebration } = get();
+                if (showRatingPopup || showCelebration) {
+                    console.log('[CourtStore] syncPhaseWithSession: Skipping - popup active');
+                    set({ courtSession: session });
                     return;
                 }
 
@@ -517,7 +519,7 @@ const useCourtStore = create(
                     console.log('[CourtStore] Accept verdict response:', response.data);
 
                     if (response.data.bothAccepted) {
-                        console.log('[CourtStore] Both accepted! Showing rating popup');
+                        console.log('[CourtStore] Both accepted! Showing celebration first');
 
                         // Refresh case history so it shows in history page
                         try {
@@ -526,13 +528,13 @@ const useCourtStore = create(
                             console.log('[CourtStore] Failed to refresh case history:', e.message);
                         }
 
-                        // Both accepted → show rating
+                        // Both accepted → show celebration first, then rating popup after
                         set({
-                            phase: COURT_PHASES.RATING,
-                            showRatingPopup: true,
+                            phase: COURT_PHASES.CLOSED,
+                            showCelebration: true,  // Celebration shows first
                             verdictDeadline: null
                         });
-                        console.log('[CourtStore] State after set:', { phase: get().phase, showRatingPopup: get().showRatingPopup });
+                        console.log('[CourtStore] State after set:', { phase: get().phase, showCelebration: get().showCelebration });
                     }
 
                     return response.data;
@@ -551,49 +553,38 @@ const useCourtStore = create(
                         await api.post(`/court-sessions/${courtSession.id}/rate`, { rating });
                     }
 
+                    console.log('[CourtStore] Rating submitted, resetting to idle');
                     set({
                         activeCase: { ...activeCase, rating },
-                        showRatingPopup: false,
-                        phase: COURT_PHASES.CLOSED,
-                        showCelebration: true
+                        showRatingPopup: false
                     });
+                    // Reset to idle after rating is complete
+                    get().reset();
                 } catch (error) {
                     console.error('[CourtStore] Failed to submit rating:', error);
-                    // Still proceed to celebration even if rating fails
-                    set({
-                        showRatingPopup: false,
-                        phase: COURT_PHASES.CLOSED,
-                        showCelebration: true
-                    });
+                    // Still proceed to reset even if rating fails
+                    set({ showRatingPopup: false });
+                    get().reset();
                 }
             },
 
             // Skip rating
             skipRating: () => {
-                set({
-                    showRatingPopup: false,
-                    phase: COURT_PHASES.CLOSED,
-                    showCelebration: true
-                });
+                console.log('[CourtStore] Rating skipped, resetting to idle');
+                set({ showRatingPopup: false });
+                get().reset();
             },
 
-            // Close celebration
+            // Close celebration - show rating popup
             closeCelebration: async () => {
-                const { activeCase, courtSession } = get();
+                console.log('[CourtStore] Celebration closed, showing rating popup');
 
-                // Close session on server
-                if (courtSession?.id) {
-                    try {
-                        await api.post(`/court-sessions/${courtSession.id}/close`, {
-                            caseId: activeCase.id
-                        });
-                    } catch (error) {
-                        console.error('[CourtStore] Failed to close session:', error);
-                    }
-                }
-
-                // Reset to idle
-                get().reset();
+                // After celebration, show rating popup
+                set({
+                    showCelebration: false,
+                    phase: COURT_PHASES.RATING,
+                    showRatingPopup: true
+                });
             },
 
             // Request settlement

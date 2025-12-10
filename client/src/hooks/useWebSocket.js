@@ -128,13 +128,14 @@ export default function useWebSocket() {
             });
 
             if (bothAccepted) {
-                console.log('[WS] Both accepted! Transitioning to RATING');
+                console.log('[WS] Both accepted! Showing celebration first');
                 // Refresh case history so it shows on history page
                 useCourtStore.getState().fetchCaseHistory();
 
+                // Show celebration first, then rating after celebration ends
                 useCourtStore.setState({
-                    phase: COURT_PHASES.RATING,
-                    showRatingPopup: true,
+                    phase: COURT_PHASES.CLOSED,
+                    showCelebration: true,
                     verdictDeadline: null
                 });
             }

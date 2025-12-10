@@ -453,8 +453,8 @@ app.post('/api/court-sessions/:id/accept-verdict', async (req, res) => {
             return res.status(404).json({ error: 'Session not found' });
         }
 
-        // Only allow accepting during RESOLVED or DELIBERATING status
-        const validStates = ['RESOLVED', 'DELIBERATING'];
+        // Only allow accepting during VERDICT, RESOLVED or DELIBERATING status
+        const validStates = ['VERDICT', 'RESOLVED', 'DELIBERATING'];
         if (!validStates.includes(session.status)) {
             return res.status(400).json({ error: `Can only accept verdict when case is resolved. Current status: ${session.status}` });
         }
@@ -480,11 +480,11 @@ app.post('/api/court-sessions/:id/accept-verdict', async (req, res) => {
         const bothAccepted = currentAcceptances.creator && currentAcceptances.partner;
 
         // Update session with acceptance key logic:
-        // 1. Update status to CLOSED only if both accepted
+        // 1. Keep status as VERDICT until both accept, then CLOSED
         // 2. Link case_id if provided (critical for history)
         const updateData = {
             verdict_acceptances: currentAcceptances,
-            status: bothAccepted ? 'CLOSED' : 'RESOLVED'
+            status: bothAccepted ? 'CLOSED' : 'VERDICT'  // Stay on VERDICT until both accept
         };
 
         if (caseId) {
