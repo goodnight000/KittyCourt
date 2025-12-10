@@ -188,8 +188,17 @@ async function generateVerdict(input, analysis, historicalContext = '') {
                 jsonSchema: VERDICT_JSON_SCHEMA,
             });
 
+            // Defensive check for unexpected API response
+            if (!response?.choices?.[0]?.message?.content) {
+                console.error('[Judge Engine] Unexpected API response structure:', JSON.stringify(response));
+                throw new Error('OpenRouter returned unexpected response structure');
+            }
+
             const content = response.choices[0].message.content;
-            console.log('[Judge Engine] Raw verdict response:', content.substring(0, 200) + '...');
+            const finishReason = response.choices[0].finish_reason;
+            console.log('[Judge Engine] Raw verdict response length:', content?.length);
+            console.log('[Judge Engine] Finish reason:', finishReason);
+            console.log('[Judge Engine] Raw verdict response:', content.substring(0, 500) + '...');
 
             // Try to parse with repair capability
             let parsed;
@@ -197,6 +206,7 @@ async function generateVerdict(input, analysis, historicalContext = '') {
                 parsed = JSON.parse(content);
             } catch (parseError) {
                 console.log('[Judge Engine] Direct parse failed, attempting repair...');
+                console.log('[Judge Engine] Full response for repair:', content);
                 parsed = repairAndParseJSON(content);
             }
 

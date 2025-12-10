@@ -114,7 +114,7 @@ router.get('/active', async (req, res) => {
             .lt('expires_at', new Date().toISOString());
 
         // Build query to find sessions relevant to this couple
-        const activeStatuses = ['WAITING', 'IN_SESSION', 'WAITING_FOR_PARTNER', 'WAITING_FOR_CREATOR', 'DELIBERATING', 'RESOLVED'];
+        const activeStatuses = ['WAITING', 'IN_SESSION', 'WAITING_FOR_PARTNER', 'WAITING_FOR_CREATOR', 'DELIBERATING', 'VERDICT', 'RATING', 'RESOLVED'];
         let query = supabase
             .from('court_sessions')
             .select('*')
