@@ -144,7 +144,16 @@ async function callExtractionLLM(systemPrompt, userPrompt) {
         // We'll parse the JSON from the response
     });
 
-    const content = response.choices[0].message.content;
+    let content = response.choices[0].message.content;
+
+    // Strip markdown code block wrappers if present (e.g., ```json ... ```)
+    if (content.includes('```')) {
+        // Extract JSON from markdown code block
+        const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+        if (jsonMatch) {
+            content = jsonMatch[1].trim();
+        }
+    }
 
     // Try to parse JSON, with fallback handling
     try {
@@ -154,6 +163,7 @@ async function callExtractionLLM(systemPrompt, userPrompt) {
         throw new Error('Failed to parse extraction response as JSON');
     }
 }
+
 
 /**
  * De-duplicate and store insights for a single user

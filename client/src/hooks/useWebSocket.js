@@ -71,6 +71,9 @@ export default function useWebSocket() {
             if (bothSubmitted) {
                 const { activeCase } = useCourtStore.getState();
                 // Update activeCase with partner's evidence
+                // NOTE: Do NOT call generateVerdict here - only the user who submitted last
+                // (the one who made bothSubmitted=true) will generate the verdict.
+                // This prevents duplicate LLM calls.
                 useCourtStore.setState({
                     activeCase: {
                         ...activeCase,
@@ -83,8 +86,6 @@ export default function useWebSocket() {
                     },
                     phase: COURT_PHASES.DELIBERATING
                 });
-                // Trigger verdict generation
-                useCourtStore.getState().generateVerdict();
             }
         });
 

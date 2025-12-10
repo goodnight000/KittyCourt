@@ -213,10 +213,9 @@ const CourtroomPage = () => {
                     };
                     useCourtStore.setState({ activeCase: newCase, phase: COURT_PHASES.DELIBERATING });
 
-                    // Note: generateVerdict is called by submitSide when bothSubmitted=true.
+                    // Note: generateVerdict is called by the user who submitted last (making bothSubmitted=true).
                     // The isGeneratingVerdict lock in the store prevents duplicate calls.
-                    // We call it here as a backup in case the user refreshed before verdict was generated.
-                    useCourtStore.getState().generateVerdict();
+                    // We no longer call generateVerdict here to avoid duplicate LLM calls.
                 }
             }
         }, 3000); // Poll every 3 seconds
