@@ -68,9 +68,11 @@ router.post('/deliberate', async (req, res) => {
 
                     // Notify partner via WebSocket that verdict is ready
                     // This allows the non-submitting user to see the verdict
-                    if (coupleId && updatedSession) {
-                        wsService.notifyVerdictReady(coupleId, updatedSession, result.judgeContent || result);
-                        console.log('[Judge API] WebSocket notification sent for verdict ready');
+                    // Use coupleId or sessionId as room identifier
+                    const roomId = coupleId || sessionId;
+                    if (roomId && updatedSession) {
+                        wsService.notifyVerdictReady(roomId, updatedSession, result.judgeContent || result);
+                        console.log('[Judge API] WebSocket notification sent for verdict ready to room:', roomId);
                     }
                 }
             } catch (dbError) {

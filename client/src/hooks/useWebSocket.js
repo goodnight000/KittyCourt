@@ -98,6 +98,7 @@ export default function useWebSocket() {
                 activeCase: {
                     ...activeCase,
                     verdict,
+                    status: 'RESOLVED',  // CRITICAL: Set status so VerdictView is shown
                     allVerdicts: [...(activeCase.allVerdicts || []), {
                         version: (activeCase.allVerdicts?.length || 0) + 1,
                         content: verdict,

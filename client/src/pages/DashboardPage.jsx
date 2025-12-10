@@ -232,7 +232,7 @@ const DashboardPage = () => {
                         <motion.div
                             animate={{ rotate: [0, 5, -5, 0] }}
                             transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                            className="w-28 h-28 rounded-xl overflow-hidden border-2 border-white/30 shadow-lg mb-auto"
+                            className="w-28 h-28 rounded-xl overflow-hidden"
                         >
                             <img
                                 src="/assets/avatars/daily_question.png"

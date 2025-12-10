@@ -810,6 +810,9 @@ const CourtroomPage = () => {
                     <SettleSuccessAnimation partnerName={partnerName} />
                 )}
             </AnimatePresence>
+
+            {/* Verdict Rating Popup - shown when both users accept verdict */}
+            <VerdictRating />
         </div>
     );
 };
