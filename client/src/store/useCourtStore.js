@@ -137,6 +137,15 @@ const useCourtStore = create(
                             showRatingPopup ||
                             showCelebration;
 
+                        console.log('[CourtStore] Guard check:', {
+                            phase,
+                            showRatingPopup,
+                            showCelebration,
+                            hasAccepted,
+                            isPostVerdictFlow,
+                            willReset: phase !== COURT_PHASES.IDLE && !isPostVerdictFlow
+                        });
+
                         if (phase !== COURT_PHASES.IDLE && !isPostVerdictFlow) {
                             console.log('[CourtStore] No server session, resetting to IDLE');
                             get().reset();
