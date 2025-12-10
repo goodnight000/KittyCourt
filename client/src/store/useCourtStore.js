@@ -156,6 +156,7 @@ const useCourtStore = create(
                     'WAITING_FOR_PARTNER': COURT_PHASES.SUBMITTING,
                     'WAITING_FOR_CREATOR': COURT_PHASES.SUBMITTING,
                     'DELIBERATING': COURT_PHASES.DELIBERATING,
+                    'VERDICT': COURT_PHASES.VERDICT,
                     'RESOLVED': COURT_PHASES.VERDICT,
                     'CLOSED': COURT_PHASES.CLOSED,
                     'SETTLED': COURT_PHASES.SETTLED

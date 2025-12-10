@@ -455,8 +455,8 @@ router.post('/:id/accept-verdict', async (req, res) => {
             return res.status(404).json({ error: 'Session not found' });
         }
 
-        // Only allow accepting during RESOLVED or DELIBERATING status
-        const validStates = ['RESOLVED', 'DELIBERATING'];
+        // Only allow accepting during VERDICT, RESOLVED, or DELIBERATING status
+        const validStates = ['VERDICT', 'RESOLVED', 'DELIBERATING'];
         if (!validStates.includes(session.status)) {
             return res.status(400).json({ error: `Can only accept verdict when case is resolved. Current status: ${session.status}` });
         }

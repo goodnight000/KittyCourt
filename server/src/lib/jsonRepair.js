@@ -30,7 +30,32 @@ function repairAndParseJSON(jsonString, options = { verbose: true }) {
 
     let repaired = jsonString;
 
-    // Step 1: Remove markdown code blocks if present
+    // Step 1: Strip DeepSeek reasoning tokens if present
+    // When DeepSeek models use reasoning, they output <think>...</think> before JSON
+    // Only strip if think tokens exist; clean JSON passes through unchanged
+    if (repaired.includes('<think>')) {
+        const thinkEnd = repaired.lastIndexOf('</think>');
+        if (thinkEnd !== -1) {
+            repaired = repaired.substring(thinkEnd + 8).trim();
+            log('Stripped reasoning tokens');
+        } else {
+            // Unclosed think tag - try to find JSON start after <think>
+            const jsonStart = repaired.indexOf('{', repaired.indexOf('<think>'));
+            if (jsonStart !== -1) {
+                repaired = repaired.substring(jsonStart).trim();
+                log('Extracted JSON after unclosed think tag');
+            }
+        }
+
+        // Try parsing after stripping think tokens
+        try {
+            return JSON.parse(repaired);
+        } catch (e) {
+            log('After think token removal: still needs repair');
+        }
+    }
+
+    // Step 2: Remove markdown code blocks if present
     // Handle blocks anywhere in the response, not just at start/end
     if (repaired.includes('```')) {
         // Try to extract JSON from markdown code block
