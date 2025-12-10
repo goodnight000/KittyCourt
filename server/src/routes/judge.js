@@ -7,7 +7,6 @@ const express = require('express');
 const { deliberate } = require('../lib/judgeEngine');
 const { isOpenRouterConfigured } = require('../lib/openrouter');
 const { getSupabase, isSupabaseConfigured } = require('../lib/supabase');
-const wsService = require('../lib/websocket');
 
 const router = express.Router();
 
@@ -53,36 +52,26 @@ router.post('/deliberate', async (req, res) => {
                 const verdictContent = result.judgeContent || result;
 
                 // Update session status to VERDICT and store verdict
-                const { data: updatedSession, error: updateError } = await supabase
+                // Partner will detect this via polling (every 3 seconds)
+                const { error: updateError } = await supabase
                     .from('court_sessions')
                     .update({
                         status: 'VERDICT',
-                        verdict: verdictContent  // Store verdict for polling fallback
+                        verdict: verdictContent
                     })
-                    .eq('id', sessionId)
-                    .select()
-                    .single();
+                    .eq('id', sessionId);
 
                 if (updateError) {
                     console.error('[Judge API] Failed to update session status:', updateError);
                 } else {
                     console.log('[Judge API] Session status updated to VERDICT');
-
-
-                    // Notify partner via WebSocket that verdict is ready
-                    // This allows the non-submitting user to see the verdict
-                    // Use coupleId or sessionId as room identifier
-                    const roomId = coupleId || sessionId;
-                    if (roomId && updatedSession) {
-                        wsService.notifyVerdictReady(roomId, updatedSession, result.judgeContent || result);
-                        console.log('[Judge API] WebSocket notification sent for verdict ready to room:', roomId);
-                    }
                 }
             } catch (dbError) {
                 console.error('[Judge API] Database update error:', dbError);
                 // Continue - verdict was still generated successfully
             }
         }
+
 
 
 
