@@ -129,8 +129,10 @@ const useCourtStore = create(
                         get().syncPhaseWithSession(session);
                     } else {
                         // No active session - only reset if not in post-verdict flow
-                        const { phase, showRatingPopup, showCelebration } = get();
-                        const isPostVerdictFlow = phase === COURT_PHASES.RATING ||
+                        const { phase, showRatingPopup, showCelebration, activeCase } = get();
+                        const hasAccepted = activeCase?.userAAccepted || activeCase?.userBAccepted;
+                        const isPostVerdictFlow = (phase === COURT_PHASES.VERDICT && hasAccepted) ||
+                            phase === COURT_PHASES.RATING ||
                             phase === COURT_PHASES.CLOSED ||
                             showRatingPopup ||
                             showCelebration;
@@ -507,12 +509,21 @@ const useCourtStore = create(
 
                     if (response.data.bothAccepted) {
                         console.log('[CourtStore] Both accepted! Showing rating popup');
+
+                        // Refresh case history so it shows in history page
+                        try {
+                            await get().fetchCaseHistory();
+                        } catch (e) {
+                            console.log('[CourtStore] Failed to refresh case history:', e.message);
+                        }
+
                         // Both accepted → show rating
                         set({
                             phase: COURT_PHASES.RATING,
                             showRatingPopup: true,
                             verdictDeadline: null
                         });
+                        console.log('[CourtStore] State after set:', { phase: get().phase, showRatingPopup: get().showRatingPopup });
                     }
 
                     return response.data;

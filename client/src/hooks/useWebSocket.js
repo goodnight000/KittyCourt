@@ -128,6 +128,10 @@ export default function useWebSocket() {
             });
 
             if (bothAccepted) {
+                console.log('[WS] Both accepted! Transitioning to RATING');
+                // Refresh case history so it shows on history page
+                useCourtStore.getState().fetchCaseHistory();
+
                 useCourtStore.setState({
                     phase: COURT_PHASES.RATING,
                     showRatingPopup: true,
