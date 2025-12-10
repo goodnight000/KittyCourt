@@ -484,7 +484,7 @@ router.post('/:id/accept-verdict', async (req, res) => {
         // Update session
         const updateData = {
             verdict_acceptances: currentAcceptances,
-            status: bothAccepted ? 'CLOSED' : 'RESOLVED'
+            status: bothAccepted ? 'CLOSED' : 'VERDICT'
         };
 
         if (caseId) {
