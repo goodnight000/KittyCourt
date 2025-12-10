@@ -46,17 +46,19 @@ router.post('/deliberate', async (req, res) => {
             return res.status(400).json(result);
         }
 
-        // Persist verdict status to database if sessionId provided
-        // Note: Only update status - the verdict is returned to client and stored locally
-        // The 'verdict' column may not exist in older schemas
+        // Persist verdict status AND verdict content to database if sessionId provided
         if (sessionId && isSupabaseConfigured()) {
             try {
                 const supabase = getSupabase();
+                const verdictContent = result.judgeContent || result;
 
-                // Update session status to RESOLVED
+                // Update session status to RESOLVED and store verdict
                 const { data: updatedSession, error: updateError } = await supabase
                     .from('court_sessions')
-                    .update({ status: 'RESOLVED' })
+                    .update({
+                        status: 'RESOLVED',
+                        verdict: verdictContent  // Store verdict for polling fallback
+                    })
                     .eq('id', sessionId)
                     .select()
                     .single();

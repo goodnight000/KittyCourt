@@ -169,15 +169,27 @@ export default function useWebSocket() {
 
     // Join the court room
     const joinRoom = useCallback(() => {
-        if (!socketRef.current?.connected || !courtSession?.id) return;
+        if (!socketRef.current?.connected || !courtSession?.id) {
+            console.log('[WS] Cannot join room:', {
+                connected: socketRef.current?.connected,
+                sessionId: courtSession?.id
+            });
+            return;
+        }
 
         const coupleId = profile?.couple_id || courtSession.id;
+        console.log('[WS] Joining room with:', {
+            sessionId: courtSession.id,
+            coupleId,
+            profileCoupleId: profile?.couple_id,
+            finalRoomId: `court:${coupleId}`
+        });
         socketRef.current.emit('court:join_room', {
             sessionId: courtSession.id,
             coupleId,
             userId: user?.id
         });
-        console.log('[WS] Joined room for session:', courtSession.id);
+        console.log('[WS] Joined room:', `court:${coupleId}`);
     }, [courtSession?.id, profile?.couple_id, user?.id]);
 
     // Leave the court room

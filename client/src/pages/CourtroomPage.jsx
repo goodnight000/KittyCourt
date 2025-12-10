@@ -217,11 +217,31 @@ const CourtroomPage = () => {
                     // The isGeneratingVerdict lock in the store prevents duplicate calls.
                     // We no longer call generateVerdict here to avoid duplicate LLM calls.
                 }
+
+                // CRITICAL: Poll for RESOLVED status - this is the fallback when WebSocket fails
+                // If session is RESOLVED and has a verdict, update local state
+                if (updatedSession.status === 'RESOLVED' && updatedSession.verdict) {
+                    const { activeCase } = useCourtStore.getState();
+                    // Only update if we don't already have the verdict
+                    if (activeCase?.status !== 'RESOLVED') {
+                        console.log('[Polling] Detected RESOLVED status with verdict, updating state');
+                        useCourtStore.setState({
+                            activeCase: {
+                                ...activeCase,
+                                verdict: updatedSession.verdict,
+                                status: 'RESOLVED'
+                            },
+                            phase: COURT_PHASES.VERDICT,
+                            verdictDeadline: Date.now() + (60 * 60 * 1000)
+                        });
+                    }
+                }
             }
         }, 3000); // Poll every 3 seconds
 
         return () => clearInterval(pollInterval);
     }, [courtSession?.status, courtSession?.id, courtSession?.evidence_submissions, isCreator, checkActiveSession]);
+
 
     // Poll for session updates during IN_SESSION phase (for settlement requests and general sync)
     // This allows both users to see when their partner requests settlement
