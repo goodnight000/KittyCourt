@@ -128,18 +128,24 @@ const useCourtStore = create(
                         // Sync phase with server session status
                         get().syncPhaseWithSession(session);
                     } else {
-                        // No active session - only reset if not showing rating/celebration popups
-                        const { phase, showRatingPopup, showCelebration } = get();
+                        // No active session - only reset if not in verdict acceptance flow
+                        const { phase, showRatingPopup, showCelebration, activeCase } = get();
+
+                        // Additional guards: don't reset if verdict exists or user has accepted
+                        const hasActiveVerdict = activeCase?.verdict;
+                        const hasAccepted = activeCase?.userAAccepted || activeCase?.userBAccepted;
 
                         console.log('[CourtStore] Guard check:', {
                             phase,
                             showRatingPopup,
                             showCelebration,
-                            willReset: phase !== COURT_PHASES.IDLE && !showRatingPopup && !showCelebration
+                            hasActiveVerdict: !!hasActiveVerdict,
+                            hasAccepted,
+                            willReset: phase !== COURT_PHASES.IDLE && !showRatingPopup && !showCelebration && !hasActiveVerdict && !hasAccepted
                         });
 
-                        // Only skip reset if rating popup or celebration is active
-                        if (phase !== COURT_PHASES.IDLE && !showRatingPopup && !showCelebration) {
+                        // Only reset if truly idle - not mid-verdict-acceptance
+                        if (phase !== COURT_PHASES.IDLE && !showRatingPopup && !showCelebration && !hasActiveVerdict && !hasAccepted) {
                             console.log('[CourtStore] No server session, resetting to IDLE');
                             get().reset();
                         }
