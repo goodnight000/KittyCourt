@@ -20,7 +20,7 @@ import api from '../services/api';
 // Court phase constants
 export const COURT_PHASES = {
     IDLE: 'IDLE',
-    PENDING: 'PENDING',
+    WAITING: 'WAITING',           // Changed from PENDING for consistency
     IN_SESSION: 'IN_SESSION',
     SUBMITTING: 'SUBMITTING',
     DELIBERATING: 'DELIBERATING',
@@ -29,6 +29,20 @@ export const COURT_PHASES = {
     CLOSED: 'CLOSED',
     SETTLED: 'SETTLED',
     TIMED_OUT: 'TIMED_OUT'
+};
+
+// Map backend status → frontend phase
+// This is THE mapping for single source of truth
+const STATUS_TO_PHASE = {
+    'WAITING': COURT_PHASES.WAITING,
+    'IN_SESSION': COURT_PHASES.IN_SESSION,
+    'WAITING_FOR_PARTNER': COURT_PHASES.SUBMITTING,
+    'WAITING_FOR_CREATOR': COURT_PHASES.SUBMITTING,
+    'DELIBERATING': COURT_PHASES.DELIBERATING,
+    'VERDICT': COURT_PHASES.VERDICT,
+    'CLOSED': COURT_PHASES.CLOSED,
+    'SETTLED': COURT_PHASES.SETTLED,
+    'TIMED_OUT': COURT_PHASES.TIMED_OUT,
 };
 
 // Get auth store helpers
@@ -51,6 +65,7 @@ const useCourtStore = create(
             // Active case data
             activeCase: {
                 id: null,
+                status: null,  // Added: Track case status for render conditions
                 initiatorId: null,
                 userAInput: '',
                 userAFeelings: '',
@@ -97,6 +112,22 @@ const useCourtStore = create(
                     isInitiator,
                     isUserA: isInitiator || (!activeCase?.initiatorId && isCreator)
                 };
+            },
+
+            // SINGLE SOURCE OF TRUTH: Derive phase from session.status
+            // This replaces all manual phase management
+            getPhase: () => {
+                const { courtSession, showRatingPopup, showCelebration } = get();
+
+                // Local UI overrides (popups)
+                if (showRatingPopup) return COURT_PHASES.RATING;
+                if (showCelebration) return COURT_PHASES.CLOSED;
+
+                // No session = IDLE
+                if (!courtSession) return COURT_PHASES.IDLE;
+
+                // Map server status to frontend phase
+                return STATUS_TO_PHASE[courtSession.status] || COURT_PHASES.IDLE;
             },
 
             // === ACTIONS ===
@@ -159,14 +190,14 @@ const useCourtStore = create(
             },
 
             // Sync local phase with server session status
+            // Uses centralized STATUS_TO_PHASE mapping for single source of truth
             syncPhaseWithSession: (session) => {
                 if (!session) {
-                    set({ phase: COURT_PHASES.IDLE });
+                    set({ phase: COURT_PHASES.IDLE, courtSession: null });
                     return;
                 }
 
-                // Only skip sync during active rating/celebration popups
-                // These are explicitly set only when bothAccepted=true
+                // Skip sync during active rating/celebration popups
                 const { showRatingPopup, showCelebration } = get();
                 if (showRatingPopup || showCelebration) {
                     console.log('[CourtStore] syncPhaseWithSession: Skipping - popup active');
@@ -174,21 +205,19 @@ const useCourtStore = create(
                     return;
                 }
 
-                const statusToPhase = {
-                    'WAITING': COURT_PHASES.PENDING,
-                    'IN_SESSION': COURT_PHASES.IN_SESSION,
-                    'WAITING_FOR_PARTNER': COURT_PHASES.SUBMITTING,
-                    'WAITING_FOR_CREATOR': COURT_PHASES.SUBMITTING,
-                    'DELIBERATING': COURT_PHASES.DELIBERATING,
-                    'VERDICT': COURT_PHASES.VERDICT,
-                    'RATING': COURT_PHASES.RATING,
-                    'RESOLVED': COURT_PHASES.VERDICT,
-                    'CLOSED': COURT_PHASES.CLOSED,
-                    'SETTLED': COURT_PHASES.SETTLED
-                };
+                // Use centralized STATUS_TO_PHASE mapping
+                const newPhase = STATUS_TO_PHASE[session.status] || COURT_PHASES.IDLE;
 
-                const newPhase = statusToPhase[session.status] || COURT_PHASES.IDLE;
-                set({ phase: newPhase, courtSession: session });
+                // CRITICAL: Also sync activeCase.status so render conditions work
+                const { activeCase } = get();
+                set({
+                    phase: newPhase,
+                    courtSession: session,
+                    activeCase: {
+                        ...activeCase,
+                        status: session.status  // Keep activeCase.status in sync with session
+                    }
+                });
             },
 
             // IDLE → PENDING: Serve partner
@@ -206,7 +235,7 @@ const useCourtStore = create(
 
                     set({
                         courtSession: response.data,
-                        phase: COURT_PHASES.PENDING
+                        phase: COURT_PHASES.WAITING  // Changed from PENDING
                     });
 
                     return response.data;
@@ -458,7 +487,7 @@ const useCourtStore = create(
                             userAFeelings: activeCase.userAFeelings || '',
                             userBInput: activeCase.userBInput,
                             userBFeelings: activeCase.userBFeelings || '',
-                            status: 'RESOLVED',
+                            status: 'VERDICT',
                             verdict: JSON.stringify(verdict),
                             caseTitle: analysis?.caseTitle,
                             severityLevel: analysis?.severityLevel,
@@ -659,6 +688,7 @@ const useCourtStore = create(
                     courtSession: null,
                     activeCase: {
                         id: null,
+                        status: null,  // Reset status field
                         initiatorId: null,
                         userAInput: '',
                         userAFeelings: '',

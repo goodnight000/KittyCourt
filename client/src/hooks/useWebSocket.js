@@ -1,26 +1,24 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import useAuthStore from '../store/useAuthStore';
-import useCourtStore, { COURT_PHASES } from '../store/useCourtStore';
+import useCourtStore from '../store/useCourtStore';
 
 /**
- * WebSocket hook for real-time court session synchronization
+ * WebSocket hook for Court Session Real-Time Sync
  * 
- * Automatically connects to the server and joins the court session room.
- * Handles all court-related events and updates the court store.
+ * Handles real-time events during active court sessions:
+ * - court:partner_joined - Partner accepted summons
+ * - court:evidence_submitted - Evidence was submitted
+ * - court:verdict_ready - Verdict was generated
+ * - court:verdict_accepted - Verdict was accepted
+ * - court:session_closed - Session was closed
  */
 
 const SOCKET_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000';
 
 export default function useWebSocket() {
     const socketRef = useRef(null);
-    const { user, profile, partner } = useAuthStore();
-    const {
-        courtSession,
-        phase,
-        checkActiveSession,
-        syncPhaseWithSession
-    } = useCourtStore();
+    const { user, profile } = useAuthStore();
 
     // Connect to WebSocket server
     const connect = useCallback(() => {
@@ -37,9 +35,14 @@ export default function useWebSocket() {
         socketRef.current.on('connect', () => {
             console.log('[WS] Connected:', socketRef.current.id);
 
-            // Join court room if we have an active session
-            if (courtSession?.id) {
-                joinRoom();
+            // Auto-join court room if there's an active session
+            const { courtSession } = useCourtStore.getState();
+            if (courtSession && profile?.couple_id) {
+                socketRef.current.emit('court:join_room', {
+                    sessionId: courtSession.id,
+                    coupleId: profile.couple_id,
+                    userId: user?.id
+                });
             }
         });
 
@@ -51,45 +54,21 @@ export default function useWebSocket() {
             console.error('[WS] Connection error:', error.message);
         });
 
-        // === Court Event Handlers ===
+        // === Court Session Event Handlers ===
 
         // Partner joined the session
         socketRef.current.on('court:partner_joined', ({ session }) => {
-            console.log('[WS] Partner joined session');
-            useCourtStore.setState({
-                courtSession: session,
-                phase: COURT_PHASES.IN_SESSION,
-                isAnimationPlaying: true
-            });
+            console.log('[WS] Partner joined:', session.status);
+            useCourtStore.getState().syncPhaseWithSession(session);
         });
 
-        // Evidence submitted
+        // Evidence was submitted
         socketRef.current.on('court:evidence_submitted', ({ session, submittedBy, bothSubmitted }) => {
-            console.log('[WS] Evidence submitted by', submittedBy, 'bothSubmitted:', bothSubmitted);
-            useCourtStore.setState({ courtSession: session });
-
-            if (bothSubmitted) {
-                const { activeCase } = useCourtStore.getState();
-                // Update activeCase with partner's evidence
-                // NOTE: Do NOT call generateVerdict here - only the user who submitted last
-                // (the one who made bothSubmitted=true) will generate the verdict.
-                // This prevents duplicate LLM calls.
-                useCourtStore.setState({
-                    activeCase: {
-                        ...activeCase,
-                        userAInput: session.evidence_submissions?.creator?.evidence || activeCase.userAInput,
-                        userAFeelings: session.evidence_submissions?.creator?.feelings || activeCase.userAFeelings,
-                        userASubmitted: true,
-                        userBInput: session.evidence_submissions?.partner?.evidence || activeCase.userBInput,
-                        userBFeelings: session.evidence_submissions?.partner?.feelings || activeCase.userBFeelings,
-                        userBSubmitted: true
-                    },
-                    phase: COURT_PHASES.DELIBERATING
-                });
-            }
+            console.log('[WS] Evidence submitted by:', submittedBy, 'bothSubmitted:', bothSubmitted);
+            useCourtStore.getState().syncPhaseWithSession(session);
         });
 
-        // Verdict ready
+        // Verdict is ready
         socketRef.current.on('court:verdict_ready', ({ session, verdict }) => {
             console.log('[WS] Verdict ready');
             const { activeCase } = useCourtStore.getState();
@@ -97,112 +76,55 @@ export default function useWebSocket() {
                 courtSession: session,
                 activeCase: {
                     ...activeCase,
-                    verdict,
-                    status: 'VERDICT',  // CRITICAL: Set status so VerdictView is shown
-                    allVerdicts: [...(activeCase.allVerdicts || []), {
-                        version: (activeCase.allVerdicts?.length || 0) + 1,
-                        content: verdict,
-                        timestamp: new Date().toISOString()
-                    }]
-                },
-                phase: COURT_PHASES.VERDICT,
-                verdictDeadline: Date.now() + (60 * 60 * 1000)
-            });
-        });
-
-        // Verdict accepted
-        socketRef.current.on('court:verdict_accepted', ({ session, acceptedBy, bothAccepted }) => {
-            console.log('[WS] Verdict accepted by', acceptedBy, 'bothAccepted:', bothAccepted);
-            useCourtStore.setState({ courtSession: session });
-
-            const { activeCase } = useCourtStore.getState();
-            const isCreator = session.created_by === user?.id;
-            const acceptedByCreator = acceptedBy === session.created_by;
-
-            useCourtStore.setState({
-                activeCase: {
-                    ...activeCase,
-                    // Only update the flag for the user who actually accepted
-                    userAAccepted: acceptedByCreator ? true : activeCase.userAAccepted,
-                    userBAccepted: acceptedByCreator ? activeCase.userBAccepted : true
+                    verdict: verdict,
+                    status: 'VERDICT'
                 }
             });
+            useCourtStore.getState().syncPhaseWithSession(session);
+        });
+
+        // Verdict was accepted
+        socketRef.current.on('court:verdict_accepted', ({ session, acceptedBy, bothAccepted }) => {
+            console.log('[WS] Verdict accepted by:', acceptedBy, 'bothAccepted:', bothAccepted);
+            useCourtStore.setState({ courtSession: session });
 
             if (bothAccepted) {
-                console.log('[WS] Both accepted! Showing celebration first');
-                // Refresh case history so it shows on history page
-                useCourtStore.getState().fetchCaseHistory();
-
-                // Show celebration first, then rating after celebration ends
-                useCourtStore.setState({
-                    phase: COURT_PHASES.CLOSED,
-                    showCelebration: true,
-                    verdictDeadline: null
-                });
+                // Both accepted - show celebration!
+                console.log('[WS] Both accepted! Showing celebration');
+                useCourtStore.setState({ showCelebration: true });
             }
         });
 
-        // Settlement requested
-        socketRef.current.on('court:settlement_requested', ({ session, requestedBy }) => {
-            console.log('[WS] Settlement requested by', requestedBy);
-            useCourtStore.setState({ courtSession: session });
-        });
-
-        // Settled
-        socketRef.current.on('court:settled', ({ session }) => {
-            console.log('[WS] Case settled');
-            useCourtStore.setState({
-                courtSession: session,
-                phase: COURT_PHASES.SETTLED
-            });
-        });
-
-        // Session closed
+        // Session was closed
         socketRef.current.on('court:session_closed', ({ sessionId, reason }) => {
             console.log('[WS] Session closed:', reason);
-            if (reason === 'completed') {
-                useCourtStore.setState({
-                    showCelebration: true,
-                    courtSession: null,
-                    phase: COURT_PHASES.CLOSED
-                });
-            } else {
+            // Don't reset if celebrating
+            const { showCelebration } = useCourtStore.getState();
+            if (!showCelebration) {
                 useCourtStore.getState().reset();
             }
         });
 
-    }, [courtSession?.id, user?.id]);
+    }, [user?.id, profile?.couple_id]);
 
-    // Join the court room
-    const joinRoom = useCallback(() => {
-        if (!socketRef.current?.connected || !courtSession?.id) {
-            console.log('[WS] Cannot join room:', {
-                connected: socketRef.current?.connected,
-                sessionId: courtSession?.id
+    // Join court room when session becomes active
+    const joinCourtRoom = useCallback((session) => {
+        if (socketRef.current?.connected && session && profile?.couple_id) {
+            socketRef.current.emit('court:join_room', {
+                sessionId: session.id,
+                coupleId: profile.couple_id,
+                userId: user?.id
             });
-            return;
+            console.log('[WS] Joined court room:', profile.couple_id);
         }
+    }, [user?.id, profile?.couple_id]);
 
-        const coupleId = profile?.couple_id || courtSession.id;
-        console.log('[WS] Joining room with:', {
-            sessionId: courtSession.id,
-            coupleId,
-            profileCoupleId: profile?.couple_id,
-            finalRoomId: `court:${coupleId}`
-        });
-        socketRef.current.emit('court:join_room', {
-            sessionId: courtSession.id,
-            coupleId,
-            userId: user?.id
-        });
-        console.log('[WS] Joined room:', `court:${coupleId}`);
-    }, [courtSession?.id, profile?.couple_id, user?.id]);
-
-    // Leave the court room
-    const leaveRoom = useCallback(() => {
-        if (!socketRef.current?.connected) return;
-        socketRef.current.emit('court:leave_room');
-        console.log('[WS] Left court room');
+    // Leave court room
+    const leaveCourtRoom = useCallback(() => {
+        if (socketRef.current?.connected) {
+            socketRef.current.emit('court:leave_room');
+            console.log('[WS] Left court room');
+        }
     }, []);
 
     // Disconnect
@@ -224,25 +146,11 @@ export default function useWebSocket() {
         };
     }, [user?.id, connect, disconnect]);
 
-    // Auto-join room when court session starts
-    useEffect(() => {
-        if (courtSession?.id && socketRef.current?.connected) {
-            joinRoom();
-        }
-    }, [courtSession?.id, joinRoom]);
-
-    // Leave room when session ends
-    useEffect(() => {
-        if (!courtSession && socketRef.current?.connected) {
-            leaveRoom();
-        }
-    }, [courtSession, leaveRoom]);
-
     return {
         isConnected: socketRef.current?.connected || false,
         connect,
         disconnect,
-        joinRoom,
-        leaveRoom
+        joinCourtRoom,
+        leaveCourtRoom
     };
 }

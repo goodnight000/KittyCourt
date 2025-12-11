@@ -113,8 +113,17 @@ router.get('/active', async (req, res) => {
             .eq('status', 'WAITING')
             .lt('expires_at', new Date().toISOString());
 
+        // Auto-close IN_SESSION after 1 hour (evidence submission timeout)
+        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+        await supabase
+            .from('court_sessions')
+            .update({ status: 'TIMED_OUT' })
+            .eq('status', 'IN_SESSION')
+            .lt('created_at', oneHourAgo);
+
         // Build query to find sessions relevant to this couple
-        const activeStatuses = ['WAITING', 'IN_SESSION', 'WAITING_FOR_PARTNER', 'WAITING_FOR_CREATOR', 'DELIBERATING', 'VERDICT', 'RATING', 'RESOLVED'];
+        // Note: RESOLVED consolidated to VERDICT
+        const activeStatuses = ['WAITING', 'IN_SESSION', 'WAITING_FOR_PARTNER', 'WAITING_FOR_CREATOR', 'DELIBERATING', 'VERDICT', 'RATING'];
         let query = supabase
             .from('court_sessions')
             .select('*')
@@ -455,10 +464,10 @@ router.post('/:id/accept-verdict', async (req, res) => {
             return res.status(404).json({ error: 'Session not found' });
         }
 
-        // Only allow accepting during VERDICT, RESOLVED, or DELIBERATING status
-        const validStates = ['VERDICT', 'RESOLVED', 'DELIBERATING'];
+        // Only allow accepting during VERDICT or DELIBERATING status
+        const validStates = ['VERDICT', 'DELIBERATING'];
         if (!validStates.includes(session.status)) {
-            return res.status(400).json({ error: `Can only accept verdict when case is resolved. Current status: ${session.status}` });
+            return res.status(400).json({ error: `Can only accept verdict when verdict is ready. Current status: ${session.status}` });
         }
 
         // Determine if user is creator or partner

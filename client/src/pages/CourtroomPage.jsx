@@ -94,16 +94,16 @@ const CourtroomPage = () => {
         checkActiveSession();
     }, []);
 
-    // Restore case data when session has a linked case (RESOLVED status)
+    // Restore case data when session has a linked case
     // This handles the case when user refreshes after verdict was delivered
     useEffect(() => {
         const restoreCaseFromSession = async () => {
-            // If session is RESOLVED and has a case_id but activeCase is not populated
-            if ((courtSession?.status === 'VERDICT' || courtSession?.status === 'RESOLVED') && courtSession?.case_id) {
+            // If session has VERDICT status and has a case_id but activeCase is not populated
+            if (courtSession?.status === 'VERDICT' && courtSession?.case_id) {
                 const { activeCase } = useCourtStore.getState();
 
                 // Only fetch if we don't have the case data or it's stale
-                if (!activeCase?.id || activeCase.id !== courtSession.case_id || (activeCase.status !== 'VERDICT' && activeCase.status !== 'RESOLVED')) {
+                if (!activeCase?.id || activeCase.id !== courtSession.case_id || activeCase.status !== 'VERDICT') {
                     try {
                         // Fetch the case from the database
                         const response = await api.get(`/cases/${courtSession.case_id}`);
@@ -226,11 +226,10 @@ const CourtroomPage = () => {
                 }
 
                 // CRITICAL: Poll for VERDICT status - this is the fallback when WebSocket fails
-                // If session is VERDICT and has a verdict, update local state
-                if ((updatedSession.status === 'VERDICT' || updatedSession.status === 'RESOLVED') && updatedSession.verdict) {
+                if (updatedSession.status === 'VERDICT' && updatedSession.verdict) {
                     const { activeCase } = useCourtStore.getState();
                     // Only update if we don't already have the verdict
-                    if (activeCase?.status !== 'VERDICT' && activeCase?.status !== 'RESOLVED') {
+                    if (activeCase?.status !== 'VERDICT') {
                         console.log('[Polling] Detected VERDICT status with verdict, updating state');
                         useCourtStore.setState({
                             activeCase: {
@@ -271,67 +270,70 @@ const CourtroomPage = () => {
         return () => clearInterval(pollInterval);
     }, [courtSession?.id, courtSession?.status, courtSession?.evidence_submissions, isCreator, checkActiveSession]);
 
-    // Poll for partner acceptance when current user has accepted but partner hasn't
+    // SIMPLIFIED: Poll for partner acceptance when current user has accepted
+    // This is the ONLY way first acceptor detects when partner accepts (no WebSocket)
     useEffect(() => {
         const hasAccepted = isUserA ? activeCase.userAAccepted : activeCase.userBAccepted;
-        const partnerHasAccepted = isUserA ? activeCase.userBAccepted : activeCase.userAAccepted;
 
-        // Only poll if: we're in resolved state, user has accepted, and partner hasn't
-        if ((activeCase.status !== 'VERDICT' && activeCase.status !== 'RESOLVED') || !hasAccepted || partnerHasAccepted || !courtSession?.id) {
+        // Only poll if: user has accepted AND we have a session AND not already celebrating
+        if (!hasAccepted || !courtSession?.id || showCelebration) {
             return;
         }
 
+        console.log('[Polling] Started - waiting for partner to accept');
+
         const pollInterval = setInterval(async () => {
-            const updatedSession = await checkActiveSession();
+            try {
+                // Fetch fresh session data
+                const response = await api.get(`/court-sessions/active?userId=${authUser?.id}`);
+                const session = response.data;
 
-            if (updatedSession?.verdict_acceptances) {
-                console.log('[Polling] Checking verdict_acceptances:', updatedSession.verdict_acceptances);
-
-                // Update local activeCase with acceptance state from server
-                const { activeCase: currentCase } = useCourtStore.getState();
-                const creatorAccepted = updatedSession.verdict_acceptances.creator;
-                const partnerAccepted = updatedSession.verdict_acceptances.partner;
-
-                // Sync local state with server state
-                if (creatorAccepted !== currentCase.userAAccepted || partnerAccepted !== currentCase.userBAccepted) {
-                    console.log('[Polling] Syncing acceptance state:', { creatorAccepted, partnerAccepted });
-                    useCourtStore.setState({
-                        activeCase: {
-                            ...currentCase,
-                            userAAccepted: creatorAccepted,
-                            userBAccepted: partnerAccepted
-                        }
-                    });
+                if (!session) {
+                    console.log('[Polling] No session found');
+                    return;
                 }
 
-                // Check if both have now accepted
-                const bothAccepted = creatorAccepted && partnerAccepted;
+                // Check verdict_acceptances from server
+                const acceptances = session.verdict_acceptances || {};
+                const bothAccepted = acceptances.creator && acceptances.partner;
+
+                console.log('[Polling] Checking acceptances:', acceptances, 'bothAccepted:', bothAccepted);
 
                 if (bothAccepted) {
-                    console.log('[Polling] Both accepted! Triggering celebration');
-                    // Partner accepted! Award kibble and celebrate
-                    const kibbleReward = activeCase.verdict?.kibbleReward || { userA: 10, userB: 10 };
-                    const reward = isUserA ? kibbleReward.userA : kibbleReward.userB;
+                    console.log('[Polling] Both accepted! Showing celebration');
+                    clearInterval(pollInterval);
 
+                    // Refresh case history
                     try {
-                        await api.post('/economy/transaction', {
-                            userId: authUser?.id,
-                            amount: reward,
-                            type: 'EARN',
-                            description: 'Case resolved - verdict accepted'
-                        });
-                    } catch (error) {
-                        console.log('Error awarding kibble:', error.message);
+                        await useCourtStore.getState().fetchCaseHistory();
+                    } catch (e) {
+                        console.log('[Polling] Failed to refresh history:', e.message);
                     }
 
                     // Show celebration!
-                    useCourtStore.setState({ showCelebration: true, courtSession: null, phase: COURT_PHASES.CLOSED });
+                    useCourtStore.setState({
+                        showCelebration: true,
+                        phase: COURT_PHASES.CLOSED,
+                        verdictDeadline: null
+                    });
+                } else {
+                    // Sync acceptance state so UI shows correctly
+                    const { activeCase: currentCase } = useCourtStore.getState();
+                    useCourtStore.setState({
+                        activeCase: {
+                            ...currentCase,
+                            userAAccepted: acceptances.creator || false,
+                            userBAccepted: acceptances.partner || false
+                        }
+                    });
                 }
+            } catch (error) {
+                console.error('[Polling] Error checking acceptance:', error.message);
             }
-        }, 3000); // Poll every 3 seconds
+        }, 2000); // Poll every 2 seconds for faster response
 
         return () => clearInterval(pollInterval);
-    }, [activeCase.status, activeCase.userAAccepted, activeCase.userBAccepted, isUserA, courtSession?.id, activeCase.verdict, authUser?.id, checkActiveSession]);
+    }, [activeCase.userAAccepted, activeCase.userBAccepted, isUserA, courtSession?.id, authUser?.id, showCelebration]);
 
     // Require partner to access courtroom
     if (!hasPartner) {
@@ -464,8 +466,8 @@ const CourtroomPage = () => {
         return <CourtOpeningAnimation onComplete={finishAnimation} />;
     }
 
-    // Verdict View
-    if ((activeCase.status === 'VERDICT' || activeCase.status === 'RESOLVED') && activeCase.verdict) {
+    // Verdict View - show when phase is VERDICT and we have a verdict
+    if (phase === COURT_PHASES.VERDICT && activeCase.verdict) {
         const currentVerdict = selectedVerdictVersion === 0
             ? activeCase.verdict
             : allVerdicts.find(v => v.version === selectedVerdictVersion);
