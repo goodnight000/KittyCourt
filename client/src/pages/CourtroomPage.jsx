@@ -40,14 +40,17 @@ const CourtroomPage = () => {
 
     // Court state and actions from court store
     const {
-        phase,
         activeCase, courtSession,
         isAnimationPlaying, showCelebration, showRatingPopup,
         checkActiveSession, servePartner, joinCourt,
         finishAnimation, updateInput, setInitiator, submitEvidence,
         submitAddendum, acceptVerdict, closeCelebration,
-        requestSettlement, reset, submitRating, skipRating
+        requestSettlement, reset, submitRating, skipRating,
+        getPhase  // Use computed getter for single source of truth
     } = useCourtStore();
+
+    // SINGLE SOURCE OF TRUTH: Derive phase from session.status
+    const phase = getPhase();
 
     const [showAddendumModal, setShowAddendumModal] = useState(false);
     const [addendumText, setAddendumText] = useState('');
@@ -318,12 +321,30 @@ const CourtroomPage = () => {
                     });
                 } else {
                     // Sync acceptance state so UI shows correctly
-                    const { activeCase: currentCase } = useCourtStore.getState();
+                    // IMPORTANT: Map creator/partner → userA/userB based on initiator
+                    const { activeCase: currentCase, courtSession: currentSession } = useCourtStore.getState();
+
+                    // Determine if creator is the initiator (userA)
+                    const creatorIsInitiator = currentSession?.created_by === currentCase?.initiatorId;
+
+                    // Map acceptances correctly based on role alignment
+                    let mappedUserAAccepted, mappedUserBAccepted;
+                    if (creatorIsInitiator) {
+                        // Creator = UserA, Partner = UserB
+                        mappedUserAAccepted = acceptances.creator || false;
+                        mappedUserBAccepted = acceptances.partner || false;
+                    } else {
+                        // Creator = UserB, Partner = UserA  
+                        mappedUserAAccepted = acceptances.partner || false;
+                        mappedUserBAccepted = acceptances.creator || false;
+                    }
+
                     useCourtStore.setState({
+                        courtSession: session,  // Always sync session
                         activeCase: {
                             ...currentCase,
-                            userAAccepted: acceptances.creator || false,
-                            userBAccepted: acceptances.partner || false
+                            userAAccepted: mappedUserAAccepted,
+                            userBAccepted: mappedUserBAccepted
                         }
                     });
                 }

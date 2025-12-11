@@ -189,11 +189,11 @@ const useCourtStore = create(
                 }
             },
 
-            // Sync local phase with server session status
-            // Uses centralized STATUS_TO_PHASE mapping for single source of truth
+            // Sync session from server - phase is derived via getPhase()
+            // Only updates courtSession, does not manually set phase
             syncPhaseWithSession: (session) => {
                 if (!session) {
-                    set({ phase: COURT_PHASES.IDLE, courtSession: null });
+                    set({ courtSession: null });
                     return;
                 }
 
@@ -205,17 +205,14 @@ const useCourtStore = create(
                     return;
                 }
 
-                // Use centralized STATUS_TO_PHASE mapping
-                const newPhase = STATUS_TO_PHASE[session.status] || COURT_PHASES.IDLE;
-
-                // CRITICAL: Also sync activeCase.status so render conditions work
+                // Only sync courtSession - phase is derived via getPhase()
+                // Also sync activeCase.status for components that still check it
                 const { activeCase } = get();
                 set({
-                    phase: newPhase,
                     courtSession: session,
                     activeCase: {
                         ...activeCase,
-                        status: session.status  // Keep activeCase.status in sync with session
+                        status: session.status
                     }
                 });
             },
