@@ -122,8 +122,9 @@ export default function useWebSocket() {
             useCourtStore.setState({
                 activeCase: {
                     ...activeCase,
-                    userAAccepted: acceptedByCreator || activeCase.userAAccepted,
-                    userBAccepted: !acceptedByCreator || activeCase.userBAccepted
+                    // Only update the flag for the user who actually accepted
+                    userAAccepted: acceptedByCreator ? true : activeCase.userAAccepted,
+                    userBAccepted: acceptedByCreator ? activeCase.userBAccepted : true
                 }
             });
 
