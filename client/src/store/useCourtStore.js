@@ -560,13 +560,19 @@ const useCourtStore = create(
                             console.log('[CourtStore] Failed to refresh case history:', e.message);
                         }
 
-                        // Both accepted → show celebration first, then rating popup after
+                        // Both accepted → show celebration first, then auto-show rating popup after 1s
                         set({
-                            phase: COURT_PHASES.CLOSED,
-                            showCelebration: true,  // Celebration shows first
+                            showCelebration: true,
                             verdictDeadline: null
                         });
-                        console.log('[CourtStore] State after set:', { phase: get().phase, showCelebration: get().showCelebration });
+
+                        // Auto-show rating popup 1 second after celebration starts
+                        setTimeout(() => {
+                            set({ showRatingPopup: true });
+                            console.log('[CourtStore] Auto-showing rating popup after 1s');
+                        }, 1000);
+
+                        console.log('[CourtStore] State after set:', { showCelebration: get().showCelebration });
                     }
 
                     return response.data;

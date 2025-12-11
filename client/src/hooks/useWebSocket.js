@@ -89,9 +89,15 @@ export default function useWebSocket() {
             useCourtStore.setState({ courtSession: session });
 
             if (bothAccepted) {
-                // Both accepted - show celebration!
+                // Both accepted - show celebration and auto-show rating popup!
                 console.log('[WS] Both accepted! Showing celebration');
                 useCourtStore.setState({ showCelebration: true });
+
+                // Auto-show rating popup 1 second after celebration starts
+                setTimeout(() => {
+                    useCourtStore.setState({ showRatingPopup: true });
+                    console.log('[WS] Auto-showing rating popup after 1s');
+                }, 1000);
             }
         });
 

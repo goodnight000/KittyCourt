@@ -122,8 +122,8 @@ router.get('/active', async (req, res) => {
             .lt('created_at', oneHourAgo);
 
         // Build query to find sessions relevant to this couple
-        // Note: RESOLVED consolidated to VERDICT
-        const activeStatuses = ['WAITING', 'IN_SESSION', 'WAITING_FOR_PARTNER', 'WAITING_FOR_CREATOR', 'DELIBERATING', 'VERDICT', 'RATING'];
+        // Note: CLOSED included temporarily so users can detect bothAccepted via polling
+        const activeStatuses = ['WAITING', 'IN_SESSION', 'WAITING_FOR_PARTNER', 'WAITING_FOR_CREATOR', 'DELIBERATING', 'VERDICT', 'RATING', 'CLOSED'];
         let query = supabase
             .from('court_sessions')
             .select('*')

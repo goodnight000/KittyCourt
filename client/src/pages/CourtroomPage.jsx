@@ -313,12 +313,17 @@ const CourtroomPage = () => {
                         console.log('[Polling] Failed to refresh history:', e.message);
                     }
 
-                    // Show celebration!
+                    // Show celebration and auto-show rating popup after 1s
                     useCourtStore.setState({
                         showCelebration: true,
-                        phase: COURT_PHASES.CLOSED,
                         verdictDeadline: null
                     });
+
+                    // Auto-show rating popup 1 second after celebration starts
+                    setTimeout(() => {
+                        useCourtStore.setState({ showRatingPopup: true });
+                        console.log('[Polling] Auto-showing rating popup after 1s');
+                    }, 1000);
                 } else {
                     // Sync acceptance state so UI shows correctly
                     // IMPORTANT: Map creator/partner → userA/userB based on initiator
