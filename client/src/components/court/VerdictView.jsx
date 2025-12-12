@@ -267,7 +267,8 @@ const VerdictView = ({
                         <motion.button
                             whileTap={{ scale: 0.98 }}
                             onClick={onAcceptVerdict}
-                            className="btn-primary flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-green-500 to-emerald-500"
+                            className="flex-1 flex items-center justify-center gap-2 rounded-xl py-3 px-4 text-white font-extrabold shadow-lg"
+                            style={{ background: 'linear-gradient(135deg, #1c1c84 0%, #000035 100%)' }}
                         >
                             <Check className="w-5 h-5" />
                             Accept Verdict

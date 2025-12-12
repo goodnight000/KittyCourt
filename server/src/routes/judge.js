@@ -7,6 +7,7 @@ const express = require('express');
 const { deliberate } = require('../lib/judgeEngine');
 const { isOpenRouterConfigured } = require('../lib/openrouter');
 const { getSupabase, isSupabaseConfigured } = require('../lib/supabase');
+const { courtSessionManager } = require('../lib/courtSessionManager');
 
 const router = express.Router();
 
@@ -45,35 +46,41 @@ router.post('/deliberate', async (req, res) => {
             return res.status(400).json(result);
         }
 
-        // Persist verdict status AND verdict content to database if sessionId provided
-        if (sessionId && isSupabaseConfigured()) {
-            try {
-                const supabase = getSupabase();
-                const verdictContent = result.judgeContent || result;
+        // Store verdict in session manager (which handles DB checkpoint + WS notification)
+        const verdictContent = result.judgeContent || result;
 
-                // Update session status to VERDICT and store verdict
-                // Partner will detect this via polling (every 3 seconds)
-                const { error: updateError } = await supabase
-                    .from('court_sessions')
-                    .update({
-                        status: 'VERDICT',
-                        verdict: verdictContent
-                    })
-                    .eq('id', sessionId);
+        if (sessionId) {
+            // Try to store verdict via session manager first
+            const session = courtSessionManager.getSession(sessionId);
 
-                if (updateError) {
-                    console.error('[Judge API] Failed to update session status:', updateError);
-                } else {
-                    console.log('[Judge API] Session status updated to VERDICT');
+            if (session) {
+                // Session is in memory - use session manager
+                await courtSessionManager.storeVerdict(sessionId, verdictContent);
+                console.log('[Judge API] Verdict stored via session manager');
+            } else if (isSupabaseConfigured()) {
+                // Fallback to direct database update (legacy or recovery scenario)
+                try {
+                    const supabase = getSupabase();
+
+                    const { error: updateError } = await supabase
+                        .from('court_sessions')
+                        .update({
+                            status: 'VERDICT',
+                            verdict: verdictContent
+                        })
+                        .eq('id', sessionId);
+
+                    if (updateError) {
+                        console.error('[Judge API] Failed to update session status:', updateError);
+                    } else {
+                        console.log('[Judge API] Session status updated to VERDICT (direct DB)');
+                    }
+                } catch (dbError) {
+                    console.error('[Judge API] Database update error:', dbError);
+                    // Continue - verdict was still generated successfully
                 }
-            } catch (dbError) {
-                console.error('[Judge API] Database update error:', dbError);
-                // Continue - verdict was still generated successfully
             }
         }
-
-
-
 
         if (result.status === 'unsafe_counseling_recommended') {
             return res.status(200).json(result); // Still 200, but with warning status
@@ -119,7 +126,7 @@ router.post('/addendum', async (req, res) => {
             });
         }
 
-        const { addendumText, addendumFrom, previousVerdict, ...caseData } = req.body;
+        const { addendumText, addendumFrom, previousVerdict, sessionId, ...caseData } = req.body;
 
         if (!addendumText || !addendumFrom) {
             return res.status(400).json({
@@ -136,6 +143,16 @@ router.post('/addendum', async (req, res) => {
 
         if (result.status === 'error') {
             return res.status(400).json(result);
+        }
+
+        // Store new verdict if session provided
+        const verdictContent = result.judgeContent || result;
+
+        if (sessionId) {
+            const session = courtSessionManager.getSession(sessionId);
+            if (session) {
+                await courtSessionManager.storeVerdict(sessionId, verdictContent);
+            }
         }
 
         return res.status(200).json(result);
@@ -164,6 +181,7 @@ router.get('/health', (req, res) => {
             ? 'Judge Whiskers is awake and ready to preside (via OpenRouter).'
             : 'Judge Whiskers requires an OpenRouter API key to function.',
         timestamp: new Date().toISOString(),
+        courtSessionManagerStats: courtSessionManager.getStats()
     });
 });
 

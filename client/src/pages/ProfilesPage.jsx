@@ -138,9 +138,11 @@ const ProfilesPage = () => {
     };
 
     // Calculate relationship stats
-    const totalCases = caseHistory?.length || 0;
-    const totalAppreciations = appreciations?.length || 0;
-    const totalKibbleEarned = appreciations?.reduce((sum, a) => sum + (a.kibbleAmount || 0), 0) || 0;
+    const totalCases = Array.isArray(caseHistory) ? caseHistory.length : 0;
+    const totalAppreciations = Array.isArray(appreciations) ? appreciations.length : 0;
+    const totalKibbleEarned = Array.isArray(appreciations)
+        ? appreciations.reduce((sum, a) => sum + (a.kibbleAmount || 0), 0)
+        : 0;
     const questionsAnswered = profile?.questions_answered || 0;
     const partnerQuestionsAnswered = connectedPartner?.questions_answered || 0;
 

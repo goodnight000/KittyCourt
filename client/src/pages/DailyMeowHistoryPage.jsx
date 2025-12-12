@@ -233,7 +233,7 @@ const DailyMeowHistoryPage = () => {
             </motion.div>
 
             {/* Content */}
-            <div className="flex-1 px-4 mt-4 pb-24">
+            <div className="flex-1 px-4 mt-4">
                 {loading ? (
                     <div className="flex items-center justify-center py-12">
                         <motion.div

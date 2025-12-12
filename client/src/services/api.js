@@ -1,9 +1,10 @@
 import axios from 'axios';
 
-// Always use Render production URL for API
-// Database is handled by Supabase, Express API by Render
-// Only the frontend client runs locally
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://kittyjudge.onrender.com/api';
+// API base URL
+// - Prefer same-origin (/api) so dev uses the local server by default.
+// - Allow override via VITE_API_URL when explicitly set (e.g. pointing at Render).
+const ENV_API_URL = import.meta.env.VITE_API_URL;
+const API_BASE_URL = ENV_API_URL && ENV_API_URL.trim().length > 0 ? ENV_API_URL : '/api';
 
 const api = axios.create({
     baseURL: API_BASE_URL,

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Star, X, Sparkles } from 'lucide-react';
-import useCourtStore from '../../store/useCourtStore';
+import useCourtStore from '../../store/courtStore';
 
 /**
  * Verdict Rating Component
@@ -22,24 +22,43 @@ const RATING_DESCRIPTIONS = {
     5: { text: 'Absolutely purrfect!', emoji: '😻' }
 };
 
-export default function VerdictRating() {
+export default function VerdictRating({ onRate, onSkip }) {
     const [hoveredStar, setHoveredStar] = useState(0);
     const [selectedRating, setSelectedRating] = useState(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [localError, setLocalError] = useState('');
 
-    const { showRatingPopup, submitRating, skipRating } = useCourtStore();
+    const { showRatingPopup, setShowRatingPopup, reset, error: storeError } = useCourtStore();
 
     const handleSubmit = async () => {
         if (selectedRating === 0) return;
 
         setIsSubmitting(true);
-        await submitRating(selectedRating);
+        setLocalError('');
+        try {
+            if (onRate) {
+                await onRate(selectedRating);
+            }
+            // Only close/reset after successful submission.
+            setShowRatingPopup(false);
+            reset();
+        } catch (e) {
+            setLocalError('Could not save your rating. Please try again.');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleSkip = () => {
+        if (onSkip) {
+            onSkip();
+        }
+        setShowRatingPopup(false);
+        reset();
     };
 
     const displayRating = hoveredStar || selectedRating;
     const ratingInfo = RATING_DESCRIPTIONS[displayRating];
-
-    console.log('[VerdictRating] showRatingPopup:', showRatingPopup);
 
     return (
         <AnimatePresence>
@@ -56,7 +75,7 @@ export default function VerdictRating() {
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         className="absolute inset-0 bg-black/70 backdrop-blur-md"
-                        onClick={skipRating}
+                        onClick={handleSkip}
                     />
 
                     {/* Modal */}
@@ -87,7 +106,7 @@ export default function VerdictRating() {
                             <div className="relative p-8">
                                 {/* Close button */}
                                 <button
-                                    onClick={skipRating}
+                                    onClick={handleSkip}
                                     className="absolute top-4 right-4 p-2 text-white/40 hover:text-white/70 transition"
                                 >
                                     <X className="w-5 h-5" />
@@ -109,6 +128,12 @@ export default function VerdictRating() {
                                         How fair was Judge Whiskers' ruling?
                                     </p>
                                 </div>
+
+                                {(localError || storeError) && (
+                                    <div className="mb-4 rounded-xl border border-red-300/20 bg-red-500/10 px-4 py-3 text-sm text-red-100">
+                                        {localError || storeError}
+                                    </div>
+                                )}
 
                                 {/* Stars */}
                                 <div className="flex justify-center gap-2 mb-4">
@@ -162,7 +187,7 @@ export default function VerdictRating() {
                                 {/* Actions */}
                                 <div className="flex gap-3">
                                     <button
-                                        onClick={skipRating}
+                                        onClick={handleSkip}
                                         className="flex-1 py-3 px-4 rounded-xl text-white/50 hover:text-white/70 hover:bg-white/5 transition font-medium"
                                     >
                                         Skip

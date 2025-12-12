@@ -16,7 +16,7 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 
 // App Pages
-import CourtroomPage from './pages/CourtroomPage';
+import CourtroomPage from './pages/CourtroomPageV2';
 import HistoryPage from './pages/HistoryPage';
 import CaseDetailPage from './pages/CaseDetailPage';
 import AppreciationsPage from './pages/AppreciationsPage';

@@ -3,34 +3,41 @@ import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { Gavel, Home, Calendar, User, Cat } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import useAppStore from '../store/useAppStore';
-import useCourtStore from '../store/useCourtStore';
+import useCourtStore, { VIEW_PHASE } from '../store/courtStore';
 import useAuthStore from '../store/useAuthStore';
+import useCourtSocket from '../hooks/useCourtSocket';
 import clsx from 'clsx';
 
 const MainLayout = () => {
     const { currentUser, users, fetchUsers, switchUser } = useAppStore();
-    const { checkActiveSession, courtSession } = useCourtStore();
+    const { fetchState, myViewPhase, hasUnreadVerdict } = useCourtStore();
     const { user: authUser } = useAuthStore();
     const location = useLocation();
 
-    // Check for active summons
-    const isSummonsPending = courtSession?.status === 'WAITING' &&
-        courtSession?.created_by !== authUser?.id &&
-        courtSession?.partner_id === authUser?.id &&
-        !courtSession?.partner_joined;
+    // Keep the court WebSocket alive across navigation so verdict/settlement updates
+    // (and dock indicators) work even when the user isn't on the courtroom page.
+    useCourtSocket();
+
+    // Check for pending summons (partner received but not yet accepted)
+    const isSummonsPending = myViewPhase === VIEW_PHASE.PENDING_PARTNER;
+    const isCourtAlerting = isSummonsPending || hasUnreadVerdict;
 
     useEffect(() => {
         fetchUsers();
         // Initial check
-        checkActiveSession();
+        if (authUser?.id) {
+            fetchState();
+        }
 
         // Poll for summons every 10 seconds
         const interval = setInterval(() => {
-            checkActiveSession();
+            if (authUser?.id) {
+                fetchState();
+            }
         }, 10000);
 
         return () => clearInterval(interval);
-    }, []);
+    }, [authUser?.id]);
 
     if (!currentUser) return (
         <div className="min-h-screen flex items-center justify-center px-6">
@@ -81,7 +88,7 @@ const MainLayout = () => {
                         to="/courtroom"
                         icon={<Gavel size={26} />}
                         label="Court"
-                        isAlerting={isSummonsPending}
+                        isAlerting={isCourtAlerting}
                     />
                     <TabItem to="/calendar" icon={<Calendar size={26} />} label="Calendar" />
                     <TabItem to="/profile" icon={<User size={26} />} label="Profile" />

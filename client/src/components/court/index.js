@@ -4,6 +4,7 @@ export { default as CourtAtRest } from './CourtAtRest';
 export { default as CelebrationAnimation } from './CelebrationAnimation';
 export { default as CourtOpeningAnimation } from './CourtOpeningAnimation';
 export { default as WaitingForPartner } from './WaitingForPartner';
+export { default as WaitingForEvidence } from './WaitingForEvidence';
 export { default as SummonsReceived } from './SummonsReceived';
 export { default as SettleModal } from './SettleModal';
 export { default as SettleSuccessAnimation } from './SettleSuccessAnimation';

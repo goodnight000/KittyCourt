@@ -136,7 +136,7 @@ const CalendarPage = () => {
     const fetchEvents = async () => {
         try {
             const response = await api.get('/calendar/events');
-            const dbEvents = response.data;
+            const dbEvents = Array.isArray(response.data) ? response.data : [];
 
             // Get default holidays for current and next year
             const currentYear = new Date().getFullYear();
@@ -555,10 +555,10 @@ const EventCard = ({ event, delay, onClick, onPlanClick, showPlanButton }) => {
                     whileTap={{ scale: 0.97 }}
                     onClick={onPlanClick}
                     className={`w-full mt-4 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 ${isSoon
-                            ? 'text-white shadow-lg'
-                            : 'bg-white/80 text-court-brown border border-court-tan/50 shadow-soft hover:bg-white'
+                        ? 'text-white shadow-lg'
+                        : 'bg-white/80 text-court-brown border border-court-tan/50 shadow-soft hover:bg-white'
                         }`}
-                    style={isSoon ? { background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' } : {}}
+                    style={isSoon ? { background: 'linear-gradient(135deg, #1c1c84 0%, #000035 100%)' } : {}}
                 >
                     <Wand2 className="w-4 h-4" />
                     {isSoon ? 'Help Me Plan This! ✨' : 'Plan Ahead'}
@@ -670,8 +670,8 @@ const AddEventModal = ({ selectedDate, onAdd, onClose }) => {
                                     setEmoji(t.emoji);
                                 }}
                                 className={`px-3 py-2 rounded-xl text-sm font-medium flex items-center gap-1.5 transition-all ${type === t.id
-                                        ? 'bg-violet-100 ring-2 ring-violet-400 text-violet-700'
-                                        : 'bg-neutral-50 text-neutral-600'
+                                    ? 'bg-violet-100 ring-2 ring-violet-400 text-violet-700'
+                                    : 'bg-neutral-50 text-neutral-600'
                                     }`}
                             >
                                 <span>{t.emoji}</span>
@@ -701,8 +701,8 @@ const AddEventModal = ({ selectedDate, onAdd, onClose }) => {
                         value={date}
                         onChange={(e) => handleDateChange(e.target.value)}
                         className={`w-full bg-neutral-50 border-2 rounded-xl p-3 text-neutral-700 focus:ring-2 focus:outline-none text-sm ${dateError
-                                ? 'border-red-300 focus:ring-red-200 focus:border-red-300'
-                                : 'border-neutral-100 focus:ring-violet-200 focus:border-violet-300'
+                            ? 'border-red-300 focus:ring-red-200 focus:border-red-300'
+                            : 'border-neutral-100 focus:ring-violet-200 focus:border-violet-300'
                             }`}
                     />
                     {dateError && (
