@@ -38,12 +38,12 @@ router.get('/state', (req, res) => {
  */
 router.post('/serve', async (req, res) => {
     try {
-        const { userId, partnerId, coupleId } = req.body;
+        const { userId, partnerId, coupleId, judgeType } = req.body;
         if (!userId || !partnerId) {
             return res.status(400).json({ error: 'userId and partnerId required' });
         }
 
-        await courtSessionManager.serve(userId, partnerId, coupleId);
+        await courtSessionManager.serve(userId, partnerId, coupleId, judgeType);
         const state = courtSessionManager.getStateForUser(userId);
         res.json(state);
     } catch (error) {

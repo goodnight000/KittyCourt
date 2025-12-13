@@ -170,7 +170,7 @@ class CourtSessionManager {
     /**
      * Creator serves partner (creates pending session)
      */
-    async serve(creatorId, partnerId, coupleId) {
+    async serve(creatorId, partnerId, coupleId, judgeType = 'logical') {
         // Check for existing session
         if (this.userToCouple.has(creatorId) || this.userToCouple.has(partnerId)) {
             throw new Error('One or both users already in a session');
@@ -186,6 +186,7 @@ class CourtSessionManager {
             partnerId,
             phase: PHASE.PENDING,
             caseId: null,
+            judgeType, // Selected judge type for verdict generation
             creator: this._emptyUserState(),
             partner: this._emptyUserState(),
             verdict: null,
@@ -538,8 +539,10 @@ class CourtSessionManager {
                 caseData.submissions[key].addendum = session.addendum.text;
             }
 
-            // Call judge engine
-            const result = await this.judgeEngine.deliberate(caseData);
+            // Call judge engine with selected judge type
+            const result = await this.judgeEngine.deliberate(caseData, {
+                judgeType: session.judgeType || 'logical'
+            });
 
             // Store verdict
             session.verdict = result;

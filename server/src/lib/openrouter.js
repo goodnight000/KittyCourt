@@ -45,9 +45,10 @@ function isOpenRouterConfigured() {
  * @param {number} options.temperature - The temperature
  * @param {number} options.maxTokens - Maximum tokens to generate
  * @param {object} options.jsonSchema - The JSON schema for structured output
+ * @param {string} options.reasoningEffort - Optional reasoning effort: low|medium|high
  * @returns {Promise<object>} The completion response
  */
-async function createChatCompletion({ model, messages, temperature = 0.7, maxTokens = 2000, jsonSchema = null }) {
+async function createChatCompletion({ model, messages, temperature = 0.7, maxTokens = 2000, jsonSchema = null, reasoningEffort = null }) {
     const client = getOpenRouter();
 
     const body = {
@@ -69,7 +70,7 @@ async function createChatCompletion({ model, messages, temperature = 0.7, maxTok
     // This enables extended thinking/reasoning before generating the response
     if (model.includes('grok') || model.includes('o1') || model.includes('o3') || model.includes('deepseek-v3.2') || model.includes('deepseek-reasoner')) {
         body.reasoning = {
-            effort: 'high' // Use high effort for maximum reasoning quality
+            effort: reasoningEffort || 'high' // Default to high unless specified
         };
     }
 

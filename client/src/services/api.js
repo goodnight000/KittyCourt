@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { supabase } from './supabase';
 
 // API base URL
 // - Prefer same-origin (/api) so dev uses the local server by default.
@@ -11,6 +12,21 @@ const api = axios.create({
     headers: {
         'Content-Type': 'application/json',
     },
+});
+
+// Attach Supabase auth token so server can enforce per-user access.
+api.interceptors.request.use(async (config) => {
+    try {
+        const { data } = await supabase.auth.getSession();
+        const token = data?.session?.access_token;
+        if (token) {
+            config.headers = config.headers || {};
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+    } catch (_err) {
+        // Best-effort only.
+    }
+    return config;
 });
 
 // --- Judge Engine API ---

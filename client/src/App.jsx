@@ -1,7 +1,5 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles } from 'lucide-react';
 
 // Layout
 import MainLayout from './layouts/MainLayout';
@@ -29,54 +27,11 @@ import EconomyPage from './pages/EconomyPage';
 
 // Components
 import PartnerRequestModal from './components/PartnerRequestModal';
+import LoadingScreen from './components/LoadingScreen';
 
 // Store
 import useAuthStore from './store/useAuthStore';
-
-// Loading Screen Component
-const LoadingScreen = () => {
-    const [showReset, setShowReset] = React.useState(false);
-
-    React.useEffect(() => {
-        const timer = setTimeout(() => setShowReset(true), 5000);
-        return () => clearTimeout(timer);
-    }, []);
-
-    const handleReset = () => {
-        localStorage.clear();
-        window.location.href = '/signin';
-    };
-
-    return (
-        <div className="min-h-screen bg-gradient-to-br from-court-cream via-white to-court-tan/30 flex flex-col items-center justify-center">
-            <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                className="mb-6"
-            >
-                <div
-                    className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg"
-                    style={{ background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' }}
-                >
-                    <Sparkles className="w-8 h-8 text-white" />
-                </div>
-            </motion.div>
-            <h2 className="text-xl font-bold text-neutral-700">Loading Pause...</h2>
-            <p className="text-neutral-500 mt-2">🐱</p>
-
-            {showReset && (
-                <motion.button
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    onClick={handleReset}
-                    className="mt-8 px-6 py-2 bg-white border border-neutral-200 rounded-full text-sm text-neutral-500 hover:bg-neutral-50 hover:text-red-500 transition-colors shadow-sm"
-                >
-                    Taking too long? Tap to Reset
-                </motion.button>
-            )}
-        </div>
-    );
-};
+import { startAuthLifecycle } from './services/authLifecycle';
 
 // Protected Route Component - Now allows access without partner (with restrictions)
 const ProtectedRoute = ({ children }) => {
@@ -104,6 +59,11 @@ const ProtectedRoute = ({ children }) => {
 const AppRoutes = () => {
     const { initialize, isLoading, isAuthenticated, onboardingComplete, profile, pendingRequests, hasPartner } = useAuthStore();
     const [initialized, setInitialized] = React.useState(false);
+
+    useEffect(() => {
+        const stop = startAuthLifecycle();
+        return () => stop?.();
+    }, []);
 
     useEffect(() => {
         // Only initialize once

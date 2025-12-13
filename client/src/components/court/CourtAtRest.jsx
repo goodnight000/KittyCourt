@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Moon, History, Gavel, Zap, Coffee, Heart } from 'lucide-react';
+import JudgeSelection from './JudgeSelection';
 
 /**
  * CourtAtRest - Shows when no court session is active
@@ -8,6 +9,7 @@ import { Moon, History, Gavel, Zap, Coffee, Heart } from 'lucide-react';
  */
 const CourtAtRest = ({ onServe, navigate }) => {
     const [catPhase, setCatPhase] = useState(0);
+    const [showJudgeSelection, setShowJudgeSelection] = useState(false);
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -22,8 +24,20 @@ const CourtAtRest = ({ onServe, navigate }) => {
         "No disputes? Purrfect..."
     ];
 
+    const handleServeWithJudge = (judgeType) => {
+        setShowJudgeSelection(false);
+        onServe(judgeType);
+    };
+
     return (
         <div className="min-h-[70vh] flex flex-col items-center justify-center px-4">
+            {/* Judge Selection Modal */}
+            <JudgeSelection
+                isOpen={showJudgeSelection}
+                onClose={() => setShowJudgeSelection(false)}
+                onServe={handleServeWithJudge}
+            />
+
             {/* Sleeping Cat Scene */}
             <div className="relative">
                 {/* Moon & Stars Background */}
@@ -150,7 +164,7 @@ const CourtAtRest = ({ onServe, navigate }) => {
             <div className="mt-8 w-full max-w-xs space-y-3">
                 <motion.button
                     whileTap={{ scale: 0.98 }}
-                    onClick={onServe}
+                    onClick={() => setShowJudgeSelection(true)}
                     className="btn-primary w-full flex items-center justify-center gap-2"
                 >
                     <Gavel className="w-4 h-4" />
@@ -186,3 +200,4 @@ const CourtAtRest = ({ onServe, navigate }) => {
 };
 
 export default CourtAtRest;
+

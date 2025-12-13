@@ -55,6 +55,7 @@ async function checkpoint(session, action) {
         creator_joined: true,
         partner_joined: session.phase !== 'PENDING',
         case_id: session.caseId || null,
+        judge_type: session.judgeType || 'logical',
         evidence_submissions: evidence,
         settle_requests: settleRequests,
         verdict_acceptances: acceptances,

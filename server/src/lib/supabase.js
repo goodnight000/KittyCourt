@@ -217,6 +217,9 @@ async function getUserProfile(userId) {
     if (data.conflict_style) {
         profile.conflictStyle = data.conflict_style;
     }
+    if (data.favorite_date_activities && data.favorite_date_activities.length > 0) {
+        profile.favoriteDateActivities = data.favorite_date_activities;
+    }
     if (data.pet_peeves && data.pet_peeves.length > 0) {
         profile.petPeeves = data.pet_peeves;
     }

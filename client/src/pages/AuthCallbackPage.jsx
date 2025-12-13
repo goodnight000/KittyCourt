@@ -1,8 +1,7 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Sparkles } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
+import LoadingScreen from '../components/LoadingScreen';
 
 const AuthCallbackPage = () => {
     const navigate = useNavigate();
@@ -52,22 +51,10 @@ const AuthCallbackPage = () => {
     }, []);
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-court-cream via-white to-court-tan/30 flex flex-col items-center justify-center">
-            <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                className="mb-6"
-            >
-                <div
-                    className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg"
-                    style={{ background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' }}
-                >
-                    <Sparkles className="w-8 h-8 text-white" />
-                </div>
-            </motion.div>
-            <h2 className="text-xl font-bold text-neutral-700">Signing you in...</h2>
-            <p className="text-neutral-500 mt-2">Just a moment! 🐱</p>
-        </div>
+        <LoadingScreen
+            message="Signing you in..."
+            showResetButton={false}
+        />
     );
 };
 

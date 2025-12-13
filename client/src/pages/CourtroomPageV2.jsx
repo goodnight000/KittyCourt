@@ -140,10 +140,10 @@ export default function CourtroomPageV2() {
 
     const [showAddendumModal, setShowAddendumModal] = useState(false);
 
-    const handleServe = async () => {
+    const handleServe = async (judgeType = 'logical') => {
         const partnerId = partner?.id;
         if (!partnerId) return;
-        await serve(partnerId);
+        await serve(partnerId, null, judgeType);
     };
 
     const handleSubmitEvidence = async () => {

@@ -43,6 +43,40 @@ if (isSupabaseConfigured()) {
 app.use(cors());
 app.use(express.json());
 
+// Auth helper (Supabase JWT via Authorization: Bearer <token>)
+const requireAuthUserId = async (req) => {
+    const header = req.headers.authorization || req.headers.Authorization || '';
+    const match = typeof header === 'string' ? header.match(/^Bearer\s+(.+)$/i) : null;
+    const token = match?.[1];
+
+    if (!token) {
+        const error = new Error('Missing Authorization bearer token');
+        error.statusCode = 401;
+        throw error;
+    }
+
+    const supabase = requireSupabase();
+    const { data, error } = await supabase.auth.getUser(token);
+    if (error || !data?.user?.id) {
+        const err = new Error('Invalid or expired session');
+        err.statusCode = 401;
+        throw err;
+    }
+
+    return data.user.id;
+};
+
+const getPartnerIdForUser = async (supabase, userId) => {
+    const { data, error } = await supabase
+        .from('profiles')
+        .select('partner_id')
+        .eq('id', userId)
+        .single();
+
+    if (error) throw error;
+    return data?.partner_id || null;
+};
+
 // Helper to check Supabase and get client
 const requireSupabase = () => {
     if (!isSupabaseConfigured()) {
@@ -534,20 +568,23 @@ app.get('/api/appreciations/:userId', async (req, res) => {
 
 app.get('/api/calendar/events', async (req, res) => {
     try {
-        const { userId, partnerId } = req.query;
+        const viewerId = await requireAuthUserId(req);
 
         const supabase = requireSupabase();
+        const partnerId = await getPartnerIdForUser(supabase, viewerId);
 
         let query = supabase
             .from('calendar_events')
             .select('*')
             .order('event_date', { ascending: true });
 
-        // Filter by couple if IDs provided
-        if (userId && partnerId) {
-            query = query.or(`created_by.eq.${userId},created_by.eq.${partnerId}`);
-        } else if (userId) {
-            query = query.eq('created_by', userId);
+        // Viewer can see:
+        // - their own events (including secret)
+        // - partner events only if not secret
+        if (partnerId) {
+            query = query.or(`and(created_by.eq.${viewerId}),and(created_by.eq.${partnerId},is_secret.eq.false)`);
+        } else {
+            query = query.eq('created_by', viewerId);
         }
 
         const { data: events, error } = await query;
@@ -564,6 +601,7 @@ app.get('/api/calendar/events', async (req, res) => {
             type: e.event_type,
             notes: e.notes,
             isRecurring: e.is_recurring,
+            isSecret: e.is_secret,
             recurrencePattern: e.recurrence_pattern,
             createdAt: e.created_at
         }));
@@ -571,13 +609,14 @@ app.get('/api/calendar/events', async (req, res) => {
         res.json(transformed);
     } catch (error) {
         console.error('Error fetching events:', error);
-        res.status(500).json({ error: error.message });
+        res.status(error.statusCode || 500).json({ error: error.message });
     }
 });
 
 app.post('/api/calendar/events', async (req, res) => {
     try {
-        const { title, date, type, emoji, isRecurring, createdBy, notes } = req.body;
+        const viewerId = await requireAuthUserId(req);
+        const { title, date, type, emoji, isRecurring, notes, isSecret } = req.body;
 
         const supabase = requireSupabase();
 
@@ -589,7 +628,8 @@ app.post('/api/calendar/events', async (req, res) => {
                 event_type: type || 'custom',
                 emoji: emoji || '📅',
                 is_recurring: isRecurring || false,
-                created_by: createdBy,
+                created_by: viewerId,
+                is_secret: !!isSecret,
                 notes
             })
             .select()
@@ -606,20 +646,34 @@ app.post('/api/calendar/events', async (req, res) => {
             type: event.event_type,
             notes: event.notes,
             isRecurring: event.is_recurring,
+            isSecret: event.is_secret,
             createdAt: event.created_at
         });
     } catch (error) {
         console.error('Error creating event:', error);
-        res.status(500).json({ error: error.message });
+        res.status(error.statusCode || 500).json({ error: error.message });
     }
 });
 
 app.put('/api/calendar/events/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { title, date, type, emoji, isRecurring, notes } = req.body;
+        const viewerId = await requireAuthUserId(req);
+        const { title, date, type, emoji, isRecurring, notes, isSecret } = req.body;
 
         const supabase = requireSupabase();
+
+        const { data: existing, error: existingError } = await supabase
+            .from('calendar_events')
+            .select('created_by,is_secret')
+            .eq('id', id)
+            .single();
+
+        if (existingError) throw existingError;
+
+        const partnerId = await getPartnerIdForUser(supabase, viewerId);
+        const canEdit = existing.created_by === viewerId || (partnerId && existing.created_by === partnerId && existing.is_secret === false);
+        if (!canEdit) return res.status(403).json({ error: 'Not allowed to update this event' });
 
         const { data: event, error } = await supabase
             .from('calendar_events')
@@ -629,6 +683,7 @@ app.put('/api/calendar/events/:id', async (req, res) => {
                 event_type: type,
                 emoji,
                 is_recurring: isRecurring,
+                ...(existing.created_by === viewerId ? { is_secret: !!isSecret } : {}),
                 notes
             })
             .eq('id', id)
@@ -645,19 +700,33 @@ app.put('/api/calendar/events/:id', async (req, res) => {
             date: event.event_date,
             type: event.event_type,
             notes: event.notes,
-            isRecurring: event.is_recurring
+            isRecurring: event.is_recurring,
+            isSecret: event.is_secret
         });
     } catch (error) {
         console.error('Error updating event:', error);
-        res.status(500).json({ error: error.message });
+        res.status(error.statusCode || 500).json({ error: error.message });
     }
 });
 
 app.delete('/api/calendar/events/:id', async (req, res) => {
     try {
         const { id } = req.params;
+        const viewerId = await requireAuthUserId(req);
 
         const supabase = requireSupabase();
+
+        const { data: existing, error: existingError } = await supabase
+            .from('calendar_events')
+            .select('created_by,is_secret')
+            .eq('id', id)
+            .single();
+
+        if (existingError) throw existingError;
+
+        const partnerId = await getPartnerIdForUser(supabase, viewerId);
+        const canDelete = existing.created_by === viewerId || (partnerId && existing.created_by === partnerId && existing.is_secret === false);
+        if (!canDelete) return res.status(403).json({ error: 'Not allowed to delete this event' });
 
         const { error } = await supabase
             .from('calendar_events')
@@ -669,120 +738,189 @@ app.delete('/api/calendar/events/:id', async (req, res) => {
         res.json({ success: true });
     } catch (error) {
         console.error('Error deleting event:', error);
-        res.status(500).json({ error: error.message });
+        res.status(error.statusCode || 500).json({ error: error.message });
+    }
+});
+
+// --- Event Plans (saved per user) ---
+
+app.post('/api/calendar/event-plans/exists', async (req, res) => {
+    try {
+        const viewerId = await requireAuthUserId(req);
+        const { eventKeys } = req.body || {};
+
+        if (!Array.isArray(eventKeys) || eventKeys.length === 0) {
+            return res.json({ exists: {} });
+        }
+
+        const supabase = requireSupabase();
+        const { data, error } = await supabase
+            .from('event_plans')
+            .select('event_key')
+            .eq('user_id', viewerId)
+            .in('event_key', eventKeys);
+
+        if (error) {
+            if (error.code === '42P01') return res.json({ exists: {} }); // table missing (migration not applied yet)
+            throw error;
+        }
+
+        const exists = {};
+        for (const row of data || []) exists[row.event_key] = true;
+
+        return res.json({ exists });
+    } catch (error) {
+        console.error('Error checking event plan existence:', error);
+        res.status(error.statusCode || 500).json({ error: error.message });
+    }
+});
+
+app.get('/api/calendar/event-plans', async (req, res) => {
+    try {
+        const viewerId = await requireAuthUserId(req);
+        const { eventKey } = req.query || {};
+
+        if (!eventKey) return res.status(400).json({ error: 'eventKey is required' });
+
+        const supabase = requireSupabase();
+        const { data, error } = await supabase
+            .from('event_plans')
+            .select('id,event_key,style,plan,checklist_state,updated_at')
+            .eq('user_id', viewerId)
+            .eq('event_key', eventKey)
+            .order('updated_at', { ascending: false });
+
+        if (error) {
+            if (error.code === '42P01') return res.json({ plans: [] }); // table missing (migration not applied yet)
+            throw error;
+        }
+
+        const plans = (data || []).map((p) => ({
+            id: p.id,
+            eventKey: p.event_key,
+            style: p.style,
+            plan: p.plan,
+            checklistState: p.checklist_state || {},
+            updatedAt: p.updated_at,
+        }));
+
+        return res.json({ plans });
+    } catch (error) {
+        console.error('Error fetching event plans:', error);
+        res.status(error.statusCode || 500).json({ error: error.message });
+    }
+});
+
+app.patch('/api/calendar/event-plans/:id', async (req, res) => {
+    try {
+        const viewerId = await requireAuthUserId(req);
+        const { id } = req.params;
+        const { checklistState } = req.body || {};
+
+        if (!checklistState || typeof checklistState !== 'object') {
+            return res.status(400).json({ error: 'checklistState must be an object' });
+        }
+
+        const supabase = requireSupabase();
+        const { data, error } = await supabase
+            .from('event_plans')
+            .update({ checklist_state: checklistState })
+            .eq('id', id)
+            .eq('user_id', viewerId)
+            .select('id,event_key,style,checklist_state,updated_at')
+            .single();
+
+        if (error) {
+            if (error.code === '42P01') return res.status(409).json({ error: 'event_plans table missing (run migration 015)' });
+            throw error;
+        }
+
+        return res.json({
+            id: data.id,
+            eventKey: data.event_key,
+            style: data.style,
+            checklistState: data.checklist_state || {},
+            updatedAt: data.updated_at,
+        });
+    } catch (error) {
+        console.error('Error updating plan checklist:', error);
+        res.status(error.statusCode || 500).json({ error: error.message });
     }
 });
 
 // AI-powered event planning suggestions
 app.post('/api/calendar/plan-event', async (req, res) => {
     try {
-        const { eventTitle, eventType, eventDate, partnerContext, currentUserName } = req.body;
+        const {
+            event,
+            userId,
+            partnerId,
+            partnerDisplayName,
+            currentUserName,
+            style,
+            // Back-compat (old client payload)
+            eventTitle,
+            eventType,
+            eventDate,
+            eventKey,
+        } = req.body || {};
 
-        // Build context from partner info
-        const loveLanguageMap = {
-            'words': 'Words of Affirmation - they love compliments and verbal appreciation',
-            'acts': 'Acts of Service - they appreciate when you do helpful things',
-            'gifts': 'Receiving Gifts - thoughtful presents mean a lot to them',
-            'time': 'Quality Time - they value undivided attention together',
-            'touch': 'Physical Touch - hugs, hand-holding, and closeness matter most',
+        const viewerId = await requireAuthUserId(req);
+
+        const normalizedEvent = event || {
+            title: eventTitle,
+            type: eventType,
+            date: eventDate,
         };
 
-        const loveLanguageContext = partnerContext.loveLanguage && loveLanguageMap[partnerContext.loveLanguage]
-            ? `Their love language is ${loveLanguageMap[partnerContext.loveLanguage]}.`
-            : '';
-
-        const appreciationsContext = partnerContext.recentAppreciations?.length > 0
-            ? `Recently, ${partnerContext.name} has appreciated these things: ${partnerContext.recentAppreciations.join(', ')}.`
-            : '';
-
-        // Use OpenRouter to generate personalized suggestions
-        const { callOpenRouter } = require('./lib/openrouter');
-
-        const prompt = `You are a romantic relationship advisor helping someone plan a special ${eventTitle} for their partner.
-
-Partner Info:
-- Name: ${partnerContext.name || 'their partner'}
-${loveLanguageContext}
-${appreciationsContext}
-
-Generate 3 creative and thoughtful ideas for ${eventTitle} that would be meaningful based on what we know about the partner. Each idea should:
-1. Be practical and achievable
-2. Show thoughtfulness about the partner's preferences
-3. Include a personal touch
-
-Return ONLY a JSON array with exactly 3 objects, each with:
-- "emoji": a single emoji representing the idea
-- "title": a short catchy title (3-5 words)
-- "description": a brief explanation (1-2 sentences) personalized for ${partnerContext.name || 'them'}
-
-Example format:
-[{"emoji":"🌹","title":"Surprise Breakfast in Bed","description":"Wake them up with their favorite breakfast and a love note."}]`;
-
-        try {
-            const response = await callOpenRouter([
-                { role: 'user', content: prompt }
-            ], {
-                model: 'google/gemini-flash-1.5',
-                maxTokens: 500,
-                temperature: 0.8,
-            });
-
-            // Parse the response
-            const content = response.choices[0]?.message?.content || '[]';
-
-            // Try to extract JSON from the response
-            const jsonMatch = content.match(/\[[\s\S]*\]/);
-            if (jsonMatch) {
-                const suggestions = JSON.parse(jsonMatch[0]);
-                return res.json({ suggestions });
-            }
-        } catch (aiError) {
-            console.error('AI planning error:', aiError);
+        if (!partnerId) {
+            return res.status(400).json({ error: 'partnerId is required' });
         }
 
-        // Fallback suggestions if AI fails
-        const fallbackSuggestions = getFallbackSuggestions(eventType, partnerContext.name);
-        res.json({ suggestions: fallbackSuggestions });
+        const { generateEventPlan } = require('./lib/eventPlanner');
+
+        const result = await generateEventPlan({
+            event: normalizedEvent,
+            userId: viewerId,
+            partnerId,
+            partnerDisplayName,
+            currentUserName,
+            style,
+        });
+
+        // Persist plan (best effort) when we have a non-fallback plan and an eventKey
+        if (eventKey && result?.meta?.fallback === false && result?.plan) {
+            try {
+                const supabase = requireSupabase();
+                const { data: upserted } = await supabase
+                    .from('event_plans')
+                    .upsert({
+                        user_id: viewerId,
+                        partner_id: partnerId,
+                        event_key: eventKey,
+                        event_snapshot: normalizedEvent,
+                        style: style || 'cozy',
+                        plan: result.plan,
+                    }, { onConflict: 'user_id,event_key,style' })
+                    .select('id')
+                    .single();
+
+                result.meta = { ...(result.meta || {}), planId: upserted?.id || null, eventKey };
+            } catch (e) {
+                console.warn('[Planner] Failed to persist plan:', e?.message || e);
+                result.meta = { ...(result.meta || {}), planId: null, eventKey };
+            }
+        } else {
+            result.meta = { ...(result.meta || {}), planId: null, eventKey: eventKey || null };
+        }
+
+        return res.json(result);
 
     } catch (error) {
         console.error('Planning error:', error);
-        res.status(500).json({ error: error.message });
+        res.status(error.statusCode || 500).json({ error: error.message });
     }
 });
-
-// Fallback suggestions
-function getFallbackSuggestions(eventType, partnerName) {
-    const name = partnerName || 'your partner';
-    const suggestions = {
-        birthday: [
-            { emoji: '🎂', title: 'Homemade Cake Surprise', description: `Bake ${name}'s favorite cake from scratch with love` },
-            { emoji: '📝', title: 'Memory Scrapbook', description: `Create a book of your favorite moments together` },
-            { emoji: '🎁', title: 'Experience Over Things', description: `Plan a surprise activity they've always wanted to try` },
-        ],
-        anniversary: [
-            { emoji: '💕', title: 'First Date Redux', description: `Recreate your first date with a romantic twist` },
-            { emoji: '✉️', title: 'Love Letter Jar', description: `Write 12 love notes, one for each month until next year` },
-            { emoji: '📷', title: 'Year in Photos', description: `Make a photo book of your favorite memories this year` },
-        ],
-        holiday: [
-            { emoji: '🏠', title: 'Cozy Movie Night', description: `Set up a comfy fort with ${name}'s favorite movies and snacks` },
-            { emoji: '🍳', title: 'Cook Together', description: `Make a special holiday meal together as a team` },
-            { emoji: '🎄', title: 'DIY Gift Exchange', description: `Exchange handmade gifts with a heartfelt touch` },
-        ],
-        date_night: [
-            { emoji: '🌙', title: 'Stargazing Picnic', description: `Pack a basket and find a spot to watch the stars together` },
-            { emoji: '💆', title: 'Home Spa Night', description: `Create a relaxing spa experience at home for ${name}` },
-            { emoji: '🎮', title: 'Game Night Date', description: `Play games together with their favorite snacks` },
-        ],
-        custom: [
-            { emoji: '💐', title: 'Surprise Flowers', description: `Get ${name}'s favorite flowers delivered unexpectedly` },
-            { emoji: '🎵', title: 'Playlist of Love', description: `Create a playlist of songs that remind you of ${name}` },
-            { emoji: '🍽️', title: 'Fancy Home Dinner', description: `Cook an elaborate candlelit dinner at home` },
-        ],
-    };
-
-    return suggestions[eventType] || suggestions.custom;
-}
 
 // Root endpoint - for easy verification
 app.get('/', (req, res) => {

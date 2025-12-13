@@ -21,6 +21,120 @@ import {
     subscribeToPartnerRequests,
     subscribeToProfileChanges
 } from '../services/supabase';
+import { readSessionBackup, writeSessionBackup, clearSessionBackup } from '../services/authSessionBackup';
+
+const AUTH_PROFILE_TIMEOUT_MS = 5000;
+const AUTH_REQUESTS_TIMEOUT_MS = 5000;
+
+let initializePromise = null;
+let authListenerSubscription = null;
+
+const withTimeout = (promise, timeoutMs, label) => {
+    if (!timeoutMs) return promise;
+    return Promise.race([
+        promise,
+        new Promise((_, reject) =>
+            setTimeout(() => reject(new Error(`[Auth] ${label} timed out after ${timeoutMs}ms`)), timeoutMs)
+        )
+    ]);
+};
+
+const loadAuthContext = async (user) => {
+    let profile = null;
+    try {
+        const profileResult = await withTimeout(getProfile(user.id), AUTH_PROFILE_TIMEOUT_MS, 'getProfile');
+        const { data: profileData, error: profileError } = profileResult || {};
+
+        if (profileData) {
+            profile = profileData;
+        } else if (profileError?.code === 'PGRST116') {
+            const partnerCode = generatePartnerCode();
+            const { data: newProfile, error: createError } = await upsertProfile({
+                id: user.id,
+                email: user.email,
+                partner_code: partnerCode,
+                onboarding_complete: false,
+                created_at: new Date().toISOString(),
+            });
+
+            if (!createError) {
+                profile = newProfile;
+            }
+        }
+    } catch (e) {
+        console.warn('[Auth] Failed to load profile:', e);
+    }
+
+    let partner = null;
+    if (profile?.partner_id) {
+        try {
+            const partnerResult = await withTimeout(getProfile(profile.partner_id), AUTH_PROFILE_TIMEOUT_MS, 'getPartnerProfile');
+            partner = partnerResult?.data || null;
+        } catch (e) {
+            console.warn('[Auth] Failed to load partner profile:', e);
+        }
+    }
+
+    let requests = [];
+    let sent = null;
+    try {
+        const pendingResult = await withTimeout(getPendingRequests(), AUTH_REQUESTS_TIMEOUT_MS, 'getPendingRequests');
+        requests = pendingResult?.data || [];
+    } catch (_e) {
+        // Non-critical on boot; ignore.
+    }
+
+    try {
+        const sentResult = await withTimeout(getSentRequest(), AUTH_REQUESTS_TIMEOUT_MS, 'getSentRequest');
+        sent = sentResult?.data || null;
+    } catch (_e) {
+        // Non-critical on boot; ignore.
+    }
+
+    return { profile, partner, requests, sent };
+};
+
+const startSupabaseAuthListener = () => {
+    if (authListenerSubscription) return;
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+        // INITIAL_SESSION is handled synchronously by initialize() so we can
+        // await profile hydration before rendering routes.
+        if (event === 'INITIAL_SESSION') return;
+
+        if (event === 'SIGNED_OUT') {
+            clearSessionBackup();
+        }
+
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+            if (session) writeSessionBackup(session);
+        }
+
+        useAuthStore.getState().handleSupabaseAuthEvent(event, session);
+    });
+
+    authListenerSubscription = subscription;
+};
+
+const restoreSessionFromBackup = async () => {
+    const backup = readSessionBackup();
+    if (!backup?.refresh_token) return null;
+
+    try {
+        const { data, error } = await supabase.auth.setSession({
+            access_token: backup.access_token,
+            refresh_token: backup.refresh_token,
+        });
+        if (error) throw error;
+
+        if (data?.session) writeSessionBackup(data.session);
+        return data?.session || null;
+    } catch (e) {
+        console.warn('[Auth] Failed to restore session from backup:', e);
+        clearSessionBackup();
+        return null;
+    }
+};
 
 /**
  * Authentication store for managing user auth state
@@ -46,107 +160,134 @@ const useAuthStore = create(
             onboardingStep: 0,
             onboardingData: {},
 
-            // Initialize auth state on app load
-            initialize: async () => {
-                const state = get();
-                // Prevent multiple simultaneous initializations if already authenticated
-                if (state.isAuthenticated) {
-                    console.log('[Auth] Already authenticated, skipping init...');
-                    return;
-                }
+            handleSupabaseAuthEvent: async (event, session) => {
+                const sessionUser = session?.user || null;
+                console.log('[Auth] Auth state change:', event, sessionUser?.id);
 
-                // Allow initialization to proceed even if isLoading is true (default state)
-                // We rely on the timeout and session check to manage state
-
-                set({ isLoading: true });
-
-                // Add a timeout to prevent infinite loading
-                const timeoutId = setTimeout(() => {
-                    console.error('[Auth] Initialization timed out after 10s');
+                if (event === 'SIGNED_OUT') {
                     set({
-                        isLoading: false,
-                        isAuthenticated: false,
                         user: null,
                         session: null,
                         profile: null,
-                        initTimeout: null
+                        partner: null,
+                        pendingRequests: [],
+                        sentRequest: null,
+                        hasPartner: false,
+                        isAuthenticated: false,
+                        onboardingComplete: false,
+                        onboardingStep: 0,
+                        onboardingData: {},
+                        isLoading: false
                     });
-                }, 10000);
+                    return;
+                }
 
-                set({ initTimeout: timeoutId });
+                if (event === 'TOKEN_REFRESHED') {
+                    if (session) set({ session });
+                    return;
+                }
 
-                try {
-                    console.log('[Auth] Starting initialization...');
-                    const { session, error: sessionError } = await getSession();
+                if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && sessionUser) {
+                    const state = get();
 
-                    if (sessionError) {
-                        console.error('[Auth] Session error:', sessionError);
-                        clearTimeout(timeoutId);
-                        set({ isLoading: false, isAuthenticated: false, initTimeout: null });
+                    // If we're already authenticated with this user, avoid duplicate work.
+                    if (state.isAuthenticated && state.user?.id === sessionUser.id) {
+                        if (session && state.session?.access_token !== session.access_token) {
+                            set({ session });
+                        }
                         return;
                     }
 
-                    console.log('[Auth] Session:', session ? 'exists' : 'none');
-
-                    if (session?.user) {
-                        // Try to get profile (might not exist yet for new OAuth users)
-                        let profile = null;
-                        try {
-                            const { data: profileData } = await getProfile(session.user.id);
-                            profile = profileData;
-                        } catch (e) {
-                            console.warn('Failed to fetch profile:', e);
-                        }
-
-                        // Get partner if connected
-                        let partner = null;
-                        if (profile?.partner_id) {
-                            try {
-                                const { data: partnerData } = await getPartnerProfile();
-                                partner = partnerData;
-                            } catch (e) {
-                                console.warn('Failed to fetch partner profile:', e);
-                            }
-                        }
-
-                        // Get pending requests (wrapped in try-catch in case table doesn't exist yet)
-                        let requests = [];
-                        let sent = null;
-                        try {
-                            const { data: requestsData } = await getPendingRequests();
-                            requests = requestsData || [];
-                        } catch (e) {
-                            console.warn('Failed to fetch pending requests:', e);
-                        }
-
-                        try {
-                            const { data: sentData } = await getSentRequest();
-                            sent = sentData;
-                        } catch (e) {
-                            console.warn('Failed to fetch sent request:', e);
-                        }
-
-                        clearTimeout(timeoutId);
+                    // Clear any cached data from a different user.
+                    if (state.profile?.id && state.profile.id !== sessionUser.id) {
                         set({
-                            user: session.user,
-                            session,
+                            profile: null,
+                            partner: null,
+                            pendingRequests: [],
+                            sentRequest: null,
+                            hasPartner: false,
+                            onboardingComplete: false,
+                            onboardingStep: 0,
+                            onboardingData: {}
+                        });
+                    }
+
+                    set({
+                        user: sessionUser,
+                        session,
+                        isAuthenticated: true
+                    });
+
+                    const cachedProfile = get().profile;
+                    if (cachedProfile?.id === sessionUser.id) {
+                        set({
+                            hasPartner: !!cachedProfile.partner_id,
+                            onboardingComplete: !!cachedProfile.onboarding_complete,
+                        });
+
+                        setTimeout(() => {
+                            get().refreshProfile();
+                            get().refreshPendingRequests();
+                            get().setupRealtimeSubscriptions();
+                        }, 0);
+                        return;
+                    }
+
+                    try {
+                        const { profile, partner, requests, sent } = await loadAuthContext(sessionUser);
+                        const stateAfterHydrate = get();
+                        set({
                             profile,
                             partner,
                             pendingRequests: requests,
                             sentRequest: sent,
-                            hasPartner: !!profile?.partner_id,
-                            isAuthenticated: true,
-                            onboardingComplete: profile?.onboarding_complete || false,
-                            isLoading: false,
-                            initTimeout: null
+                            hasPartner: profile ? !!profile.partner_id : stateAfterHydrate.hasPartner,
+                            onboardingComplete: profile ? !!profile.onboarding_complete : stateAfterHydrate.onboardingComplete,
                         });
 
-                        // Set up real-time subscriptions after authentication
                         setTimeout(() => {
                             get().setupRealtimeSubscriptions();
                         }, 100);
+                    } catch (e) {
+                        console.warn('[Auth] Failed to hydrate user context:', e);
+                    }
+                }
+            },
+
+            // Initialize auth state on app load
+            initialize: async () => {
+                if (initializePromise) return initializePromise;
+
+                initializePromise = (async () => {
+                    set({ isLoading: true });
+
+                    if (useAuthStore.persist?.hasHydrated && !useAuthStore.persist.hasHydrated()) {
+                        await new Promise((resolve) => {
+                            const unsub = useAuthStore.persist.onFinishHydration(() => {
+                                unsub();
+                                resolve();
+                            });
+                        });
+                    }
+
+                    startSupabaseAuthListener();
+
+                    const { session: rawSession, error: rawSessionError } = await getSession();
+                    if (rawSessionError) {
+                        console.warn('[Auth] getSession error:', rawSessionError);
                     } else {
-                        clearTimeout(timeoutId);
+                        // Keep backup warm even if Supabase persistence is flaky on some webviews.
+                        if (rawSession) writeSessionBackup(rawSession);
+                    }
+
+                    let session = rawSession;
+                    if (!session?.user) {
+                        session = await restoreSessionFromBackup();
+                    }
+
+                    if (session?.user) {
+                        await get().handleSupabaseAuthEvent('INITIAL_SESSION', session);
+                    } else {
                         set({
                             user: null,
                             session: null,
@@ -156,23 +297,20 @@ const useAuthStore = create(
                             sentRequest: null,
                             hasPartner: false,
                             isAuthenticated: false,
-                            isLoading: false,
-                            initTimeout: null
+                            onboardingComplete: false,
+                            onboardingStep: 0,
+                            onboardingData: {},
+                            isLoading: false
                         });
                     }
-                } catch (error) {
-                    clearTimeout(timeoutId);
-                    console.error('Auth initialization error:', error);
-                    // Ensure loading is set to false even on error
-                    set({
-                        isLoading: false,
-                        isAuthenticated: false,
-                        user: null,
-                        session: null,
-                        profile: null,
-                        initTimeout: null
-                    });
-                }
+
+                    set({ isLoading: false });
+                })().catch((error) => {
+                    console.error('[Auth] Initialization error:', error);
+                    set({ isLoading: false });
+                });
+
+                return initializePromise;
             },
 
             // Sign in with email/password
@@ -575,124 +713,16 @@ const useAuthStore = create(
         {
             name: 'catjudge-auth',
             partialize: (state) => ({
-                // Only persist these fields
+                // Persist non-secret UI state to avoid blocking on network at boot.
+                profile: state.profile,
+                partner: state.partner,
+                hasPartner: state.hasPartner,
+                onboardingComplete: state.onboardingComplete,
                 onboardingData: state.onboardingData,
                 onboardingStep: state.onboardingStep,
             }),
         }
     )
 );
-
-// Listen for auth state changes
-supabase.auth.onAuthStateChange(async (event, session) => {
-    const store = useAuthStore.getState();
-    console.log('[Auth] Auth state change:', event, session?.user?.id);
-
-    if (event === 'SIGNED_IN' && session?.user) {
-        // If we're already authenticated with this user, skip re-processing
-        // This prevents the duplicate loading when signIn() already handled everything
-        if (store.isAuthenticated && store.user?.id === session.user.id) {
-            console.log('[Auth] Already authenticated with this user, skipping duplicate processing');
-            return;
-        }
-
-        // Only set loading for OAuth callbacks where we haven't processed yet
-        // Don't set isLoading to avoid showing LoadingScreen during transition
-        // useAuthStore.setState({ isLoading: true });
-
-        try {
-            // Check if profile exists, create one if not (for OAuth)
-            let { data: profile } = await getProfile(session.user.id);
-
-            if (!profile) {
-                // First time OAuth sign-in, create profile
-                const partnerCode = generatePartnerCode();
-                const { data: newProfile } = await upsertProfile({
-                    id: session.user.id,
-                    email: session.user.email,
-                    partner_code: partnerCode,
-                    onboarding_complete: false,
-                    created_at: new Date().toISOString(),
-                });
-                profile = newProfile;
-            }
-
-            // Get partner if connected
-            let partner = null;
-            if (profile?.partner_id) {
-                try {
-                    const { data: partnerData } = await getPartnerProfile();
-                    partner = partnerData;
-                } catch (e) {
-                    console.warn('Failed to fetch partner profile:', e);
-                }
-            }
-
-            // Get pending requests
-            let requests = [];
-            try {
-                const { data: requestsData } = await getPendingRequests();
-                requests = requestsData || [];
-            } catch (e) {
-                console.warn('Failed to fetch pending requests:', e);
-            }
-
-            // Get sent request
-            let sent = null;
-            try {
-                const { data: sentData } = await getSentRequest();
-                sent = sentData;
-            } catch (e) {
-                console.warn('Failed to fetch sent request:', e);
-            }
-
-            useAuthStore.setState({
-                user: session.user,
-                session,
-                profile,
-                partner,
-                pendingRequests: requests,
-                sentRequest: sent,
-                hasPartner: !!profile?.partner_id,
-                isAuthenticated: true,
-                onboardingComplete: profile?.onboarding_complete || false,
-                isLoading: false
-            });
-
-            // Set up real-time subscriptions
-            setTimeout(() => {
-                useAuthStore.getState().setupRealtimeSubscriptions();
-            }, 100);
-        } catch (error) {
-            console.error('[Auth] Error in auth state change:', error);
-            // Even on error, set auth true if we have a user
-            useAuthStore.setState({
-                isLoading: false,
-                isAuthenticated: true,
-                user: session.user,
-                session
-            });
-        }
-    } else if (event === 'SIGNED_OUT') {
-        useAuthStore.setState({
-            user: null,
-            session: null,
-            profile: null,
-            partner: null,
-            pendingRequests: [],
-            sentRequest: null,
-            hasPartner: false,
-            isAuthenticated: false,
-            onboardingComplete: false,
-            isLoading: false
-        });
-    } else if (event === 'TOKEN_REFRESHED') {
-        // Session was refreshed, update the session in state
-        console.log('[Auth] Token refreshed');
-        if (session) {
-            useAuthStore.setState({ session });
-        }
-    }
-});
 
 export default useAuthStore;

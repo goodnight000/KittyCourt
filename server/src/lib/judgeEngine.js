@@ -36,6 +36,13 @@ const CONFIG = {
     maxRetries: 3,            // Increased retries
 };
 
+// Judge types for verdict generation (user-selectable)
+const JUDGE_MODELS = {
+    best: 'anthropic/claude-opus-4.5',     // Judge Whiskers - empathic, experienced
+    fast: 'deepseek/deepseek-v3.2',        // The Fast Judge - quick verdicts
+    logical: 'moonshotai/kimi-k2-thinking' // Judge Mittens - balanced, methodical
+};
+
 /**
  * Step 1: Safety Guardrail
  * Runs moderation check on user-submitted text to detect harmful content
@@ -167,10 +174,13 @@ async function runAnalysis(input) {
  * @param {object} input - The validated deliberation input
  * @param {object} analysis - The psychological analysis from Step 2
  * @param {string} historicalContext - Optional formatted historical context from RAG
+ * @param {string} judgeType - Selected judge type: 'best', 'fast', or 'logical'
  * @returns {Promise<object>} - The complete verdict content
  */
-async function generateVerdict(input, analysis, historicalContext = '') {
+async function generateVerdict(input, analysis, historicalContext = '', judgeType = 'logical') {
     const userPrompt = buildJudgeUserPrompt(input, analysis, historicalContext);
+    const verdictModel = JUDGE_MODELS[judgeType] || JUDGE_MODELS.logical;
+    console.log(`[Judge Engine] Using model ${verdictModel} for verdict (judgeType: ${judgeType})`);
     let lastError = null;
 
     for (let attempt = 1; attempt <= CONFIG.maxRetries; attempt++) {
@@ -178,7 +188,7 @@ async function generateVerdict(input, analysis, historicalContext = '') {
             console.log(`[Judge Engine] Verdict attempt ${attempt}/${CONFIG.maxRetries}`);
 
             const response = await createChatCompletion({
-                model: CONFIG.model,
+                model: verdictModel,
                 messages: [
                     { role: 'system', content: JUDGE_SYSTEM_PROMPT },
                     { role: 'user', content: userPrompt },
@@ -266,6 +276,7 @@ function getFallbackVerdict(input, error) {
  * @param {object} options.previousVerdict - Previous verdict for addendum flow
  * @param {string} options.addendumText - New information to consider
  * @param {string} options.addendumFrom - Who submitted the addendum (userA/userB)
+ * @param {string} options.judgeType - Selected judge type: 'best', 'fast', or 'logical'
  * @returns {Promise<object>} - Complete verdict response
  */
 async function deliberate(rawInput, options = {}) {
@@ -361,10 +372,11 @@ async function deliberate(rawInput, options = {}) {
     }
 
     // Step 4: Verdict Generation
-    console.log('[Judge Engine] Step 4: Generating verdict...');
+    const judgeType = options.judgeType || 'logical';
+    console.log(`[Judge Engine] Step 4: Generating verdict with judgeType=${judgeType}...`);
     let judgeContent;
     try {
-        judgeContent = await generateVerdict(input, analysis, formattedContext);
+        judgeContent = await generateVerdict(input, analysis, formattedContext, judgeType);
         console.log('[Judge Engine] Verdict generated successfully');
     } catch (error) {
         return {
@@ -395,7 +407,8 @@ async function deliberate(rawInput, options = {}) {
             analysis: analysis.analysis,
             moderationPassed: !moderationResult.flagged,
             processingTimeMs: duration,
-            model: CONFIG.model,
+            model: JUDGE_MODELS[judgeType] || JUDGE_MODELS.logical,
+            judgeType,
             hasHistoricalContext: hasHistoricalContext(historicalContext),
             memoriesUsed: historicalContext?.memories?.length || 0,
         },
@@ -419,4 +432,5 @@ module.exports = {
     runAnalysis,
     generateVerdict,
     CONFIG,
+    JUDGE_MODELS,
 };

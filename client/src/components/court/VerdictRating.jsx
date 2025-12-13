@@ -89,7 +89,7 @@ export default function VerdictRating({ onRate, onSkip }) {
                         {/* Glassmorphic Card */}
                         <div className="relative overflow-hidden rounded-3xl">
                             {/* Gradient background */}
-                            <div className="absolute inset-0 bg-gradient-to-br from-purple-900/80 via-indigo-900/80 to-slate-900/80" />
+                            <div className="absolute inset-0 bg-gradient-to-br from-[#1c1c84] to-[#000035]" />
 
                             {/* Glass overlay */}
                             <div className="absolute inset-0 bg-white/5 backdrop-blur-xl" />

@@ -123,8 +123,11 @@ const useCourtStore = create((set, get) => ({
 
     /**
      * Serve partner (create pending session)
+     * @param {string} partnerId - Partner's user ID
+     * @param {string} coupleId - Optional couple ID
+     * @param {string} judgeType - Selected judge: 'best', 'fast', or 'logical'
      */
-    serve: async (partnerId, coupleId) => {
+    serve: async (partnerId, coupleId, judgeType = 'logical') => {
         set({ isSubmitting: true, error: null });
 
         if (socketRef?.connected) {
@@ -138,7 +141,7 @@ const useCourtStore = create((set, get) => ({
                     get().fetchState({ force: true }).finally(resolve);
                 }, 2500);
 
-                socketRef.emit('court:serve', { partnerId, coupleId }, (resp) => {
+                socketRef.emit('court:serve', { partnerId, coupleId, judgeType }, (resp) => {
                     if (done) return;
                     done = true;
                     clearTimeout(timeout);
@@ -152,7 +155,7 @@ const useCourtStore = create((set, get) => ({
             // API fallback
             try {
                 const userId = get()._getUserId();
-                const response = await api.post(`${COURT_API}/serve`, { userId, partnerId, coupleId });
+                const response = await api.post(`${COURT_API}/serve`, { userId, partnerId, coupleId, judgeType });
                 get().onStateSync(response.data);
             } catch (error) {
                 get().onError(error.response?.data?.error || error.message);
