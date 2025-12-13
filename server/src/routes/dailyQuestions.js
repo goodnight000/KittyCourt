@@ -10,7 +10,41 @@
 
 const express = require('express');
 const router = express.Router();
-const { getSupabase, isSupabaseConfigured } = require('../lib/supabase');
+const { requireSupabase, requireAuthUserId, getPartnerIdForUser } = require('../lib/auth');
+
+const normalizeLimit = (limit) => {
+    const parsed = parseInt(limit, 10);
+    if (!Number.isFinite(parsed) || parsed <= 0) return 20;
+    return Math.min(parsed, 200);
+};
+
+const normalizeMoods = (mood, moods) => {
+    const merged = [];
+    if (typeof mood === 'string' && mood.trim().length > 0) merged.push(mood.trim());
+    if (Array.isArray(moods)) {
+        for (const m of moods) {
+            if (typeof m === 'string' && m.trim().length > 0) merged.push(m.trim());
+        }
+    }
+    return Array.from(new Set(merged)).slice(0, 3);
+};
+
+const requirePartnerForAuthUser = async (supabase, authUserId, partnerIdFromClient) => {
+    const partnerId = await getPartnerIdForUser(supabase, authUserId);
+    if (!partnerId) {
+        const error = new Error('No partner connected');
+        error.statusCode = 400;
+        throw error;
+    }
+
+    if (partnerIdFromClient && partnerIdFromClient !== partnerId) {
+        const error = new Error('Invalid partnerId for current user');
+        error.statusCode = 400;
+        throw error;
+    }
+
+    return partnerId;
+};
 
 /**
  * GET /api/daily-questions/today
@@ -21,22 +55,19 @@ router.get('/today', async (req, res) => {
     try {
         const { userId, partnerId } = req.query;
         
-        console.log('[DailyQuestions] GET /today called with:', { userId, partnerId });
-        
-        if (!userId || !partnerId) {
-            return res.status(400).json({ error: 'userId and partnerId are required' });
+        const supabase = requireSupabase();
+        const authUserId = await requireAuthUserId(req);
+
+        if (userId && userId !== authUserId) {
+            return res.status(403).json({ error: 'userId does not match authenticated user' });
         }
-        
-        if (!isSupabaseConfigured()) {
-            return res.status(503).json({ error: 'Database not configured' });
-        }
-        
-        const supabase = getSupabase();
+
+        const resolvedPartnerId = await requirePartnerForAuthUser(supabase, authUserId, partnerId);
         
         // Call the database function to get/create today's question
         const { data, error } = await supabase.rpc('get_todays_question', {
-            p_user_id: userId,
-            p_partner_id: partnerId
+            p_user_id: authUserId,
+            p_partner_id: resolvedPartnerId
         });
         
         if (error) {
@@ -73,8 +104,8 @@ router.get('/today', async (req, res) => {
         }
         
         // Build response
-        const myAnswer = answers?.find(a => a.user_id === userId);
-        const partnerAnswer = answers?.find(a => a.user_id === partnerId);
+        const myAnswer = answers?.find(a => a.user_id === authUserId);
+        const partnerAnswer = answers?.find(a => a.user_id === resolvedPartnerId);
         
         res.json({
             assignment_id: question.assignment_id,
@@ -86,12 +117,12 @@ router.get('/today', async (req, res) => {
             status: question.status,
             is_backlog: question.is_backlog,
             my_answer: myAnswer || null,
-            partner_answer: myAnswer ? partnerAnswer : null, // Only show partner answer if user has answered
+            partner_answer: myAnswer ? (partnerAnswer || null) : null, // Only show partner answer if user has answered
             both_answered: !!(myAnswer && partnerAnswer)
         });
     } catch (error) {
         console.error('Error in /today:', error);
-        res.status(500).json({ error: error.message });
+        res.status(error.statusCode || 500).json({ error: error.message });
     }
 });
 
@@ -102,89 +133,125 @@ router.get('/today', async (req, res) => {
  */
 router.post('/answer', async (req, res) => {
     try {
-        const { userId, assignmentId, answer, mood } = req.body;
+        const { userId, assignmentId, answer, mood, moods } = req.body;
         
-        if (!userId || !assignmentId || !answer) {
-            return res.status(400).json({ error: 'userId, assignmentId, and answer are required' });
+        const supabase = requireSupabase();
+        const authUserId = await requireAuthUserId(req);
+
+        if (userId && userId !== authUserId) {
+            return res.status(403).json({ error: 'userId does not match authenticated user' });
         }
-        
-        if (!isSupabaseConfigured()) {
-            return res.status(503).json({ error: 'Database not configured' });
+
+        const trimmedAnswer = typeof answer === 'string' ? answer.trim() : '';
+        if (!assignmentId || trimmedAnswer.length === 0) {
+            return res.status(400).json({ error: 'assignmentId and non-empty answer are required' });
         }
-        
-        const supabase = getSupabase();
-        
-        // Check if answer already exists
-        const { data: existing } = await supabase
-            .from('daily_answers')
-            .select('id')
-            .eq('user_id', userId)
-            .eq('assignment_id', assignmentId)
-            .single();
-        
-        let result;
-        
-        if (existing) {
-            // Update existing answer (will set edited_at via trigger)
-            const { data, error } = await supabase
-                .from('daily_answers')
-                .update({ answer, mood })
-                .eq('id', existing.id)
-                .select()
-                .single();
-            
-            if (error) throw error;
-            result = data;
-        } else {
-            // Insert new answer
-            const { data, error } = await supabase
-                .from('daily_answers')
-                .insert({ user_id: userId, assignment_id: assignmentId, answer, mood })
-                .select()
-                .single();
-            
-            if (error) throw error;
-            result = data;
+        if (trimmedAnswer.length > 2000) {
+            return res.status(400).json({ error: 'Answer is too long (max 2000 characters)' });
         }
-        
-        // Check if both partners have now answered
-        const { data: assignment } = await supabase
+
+        const normalizedMoods = normalizeMoods(mood, moods);
+        const primaryMood = normalizedMoods[0] || null;
+
+        const { data: assignment, error: assignmentError } = await supabase
             .from('couple_question_assignments')
-            .select('user_a_id, user_b_id')
+            .select('id,user_a_id,user_b_id,status,completed_at')
             .eq('id', assignmentId)
             .single();
+
+        if (assignmentError || !assignment) {
+            return res.status(404).json({ error: 'Assignment not found' });
+        }
+
+        const isUserA = assignment.user_a_id === authUserId;
+        const isUserB = assignment.user_b_id === authUserId;
+        if (!isUserA && !isUserB) {
+            return res.status(403).json({ error: 'You do not have access to this assignment' });
+        }
         
-        if (assignment) {
-            const { data: allAnswers } = await supabase
+        const upsertPayload = {
+            user_id: authUserId,
+            assignment_id: assignmentId,
+            answer: trimmedAnswer,
+            mood: primaryMood
+        };
+
+        if (normalizedMoods.length > 0) {
+            upsertPayload.moods = normalizedMoods;
+        }
+
+        let savedAnswer;
+        {
+            const { data, error: saveError } = await supabase
                 .from('daily_answers')
-                .select('user_id')
-                .eq('assignment_id', assignmentId);
-            
-            const hasUserA = allAnswers?.some(a => a.user_id === assignment.user_a_id);
-            const hasUserB = allAnswers?.some(a => a.user_id === assignment.user_b_id);
-            
-            if (hasUserA && hasUserB) {
-                // Mark assignment as completed
-                await supabase
-                    .from('couple_question_assignments')
-                    .update({ status: 'completed', completed_at: new Date().toISOString() })
-                    .eq('id', assignmentId);
-                
-                // Award kibbles to both users
+                .upsert(upsertPayload, { onConflict: 'user_id,assignment_id' })
+                .select()
+                .single();
+
+            if (!saveError) {
+                savedAnswer = data;
+            } else if (String(saveError.message || '').includes('moods')) {
+                const { data: fallbackData, error: fallbackError } = await supabase
+                    .from('daily_answers')
+                    .upsert(
+                        {
+                            user_id: authUserId,
+                            assignment_id: assignmentId,
+                            answer: trimmedAnswer,
+                            mood: primaryMood
+                        },
+                        { onConflict: 'user_id,assignment_id' }
+                    )
+                    .select()
+                    .single();
+
+                if (fallbackError) throw fallbackError;
+                savedAnswer = fallbackData;
+            } else {
+                throw saveError;
+            }
+        }
+
+        const { data: allAnswers, error: answersError } = await supabase
+            .from('daily_answers')
+            .select('user_id')
+            .eq('assignment_id', assignmentId);
+
+        if (answersError) throw answersError;
+
+        const hasUserA = allAnswers?.some(a => a.user_id === assignment.user_a_id);
+        const hasUserB = allAnswers?.some(a => a.user_id === assignment.user_b_id);
+
+        let completionAwarded = false;
+        if (hasUserA && hasUserB) {
+            const now = new Date().toISOString();
+            const { data: updatedAssignment } = await supabase
+                .from('couple_question_assignments')
+                .update({ status: 'completed', completed_at: now })
+                .eq('id', assignmentId)
+                .neq('status', 'completed')
+                .select('id')
+                .single();
+
+            if (updatedAssignment) {
+                completionAwarded = true;
                 const kibbleAmount = 5;
-                const now = new Date().toISOString();
-                
                 await supabase.from('transactions').insert([
                     { user_id: assignment.user_a_id, amount: kibbleAmount, type: 'EARN', description: 'Daily Meow completed!' },
                     { user_id: assignment.user_b_id, amount: kibbleAmount, type: 'EARN', description: 'Daily Meow completed!' }
                 ]);
             }
         }
-        
-        res.json({ success: true, answer: result });
+
+        res.json({
+            success: true,
+            answer: savedAnswer,
+            both_answered: !!(hasUserA && hasUserB),
+            completion_awarded: completionAwarded
+        });
     } catch (error) {
         console.error('Error submitting answer:', error);
-        res.status(500).json({ error: error.message });
+        res.status(error.statusCode || 500).json({ error: error.message });
     }
 });
 
@@ -195,21 +262,19 @@ router.post('/answer', async (req, res) => {
  */
 router.get('/history', async (req, res) => {
     try {
-        const { userId, partnerId, limit = 20 } = req.query;
-        
-        if (!userId || !partnerId) {
-            return res.status(400).json({ error: 'userId and partnerId are required' });
+        const { userId, partnerId, limit } = req.query;
+        const supabase = requireSupabase();
+        const authUserId = await requireAuthUserId(req);
+
+        if (userId && userId !== authUserId) {
+            return res.status(403).json({ error: 'userId does not match authenticated user' });
         }
-        
-        if (!isSupabaseConfigured()) {
-            return res.status(503).json({ error: 'Database not configured' });
-        }
-        
-        const supabase = getSupabase();
+
+        const resolvedPartnerId = await requirePartnerForAuthUser(supabase, authUserId, partnerId);
         
         // Get consistent couple ordering
-        const userA = userId < partnerId ? userId : partnerId;
-        const userB = userId < partnerId ? partnerId : userId;
+        const userA = authUserId < resolvedPartnerId ? authUserId : resolvedPartnerId;
+        const userB = authUserId < resolvedPartnerId ? resolvedPartnerId : authUserId;
         
         // Fetch completed assignments with their questions and answers
         const { data: assignments, error } = await supabase
@@ -230,11 +295,15 @@ router.get('/history', async (req, res) => {
             .eq('user_b_id', userB)
             .eq('status', 'completed')
             .order('assigned_date', { ascending: false })
-            .limit(parseInt(limit));
+            .limit(normalizeLimit(limit));
         
         if (error) {
             console.error('Error fetching history:', error);
             return res.status(500).json({ error: error.message });
+        }
+
+        if (!assignments || assignments.length === 0) {
+            return res.json([]);
         }
         
         // Fetch all answers for these assignments
@@ -252,8 +321,8 @@ router.get('/history', async (req, res) => {
         // Build response with answers grouped by assignment
         const history = assignments.map(a => {
             const assignmentAnswers = answers?.filter(ans => ans.assignment_id === a.id) || [];
-            const myAnswer = assignmentAnswers.find(ans => ans.user_id === userId);
-            const partnerAnswer = assignmentAnswers.find(ans => ans.user_id === partnerId);
+            const myAnswer = assignmentAnswers.find(ans => ans.user_id === authUserId);
+            const partnerAnswer = assignmentAnswers.find(ans => ans.user_id === resolvedPartnerId);
             
             return {
                 id: a.id,
@@ -266,12 +335,14 @@ router.get('/history', async (req, res) => {
                 my_answer: myAnswer ? {
                     answer: myAnswer.answer,
                     mood: myAnswer.mood,
+                    moods: myAnswer.moods || (myAnswer.mood ? [myAnswer.mood] : null),
                     created_at: myAnswer.created_at,
                     edited_at: myAnswer.edited_at
                 } : null,
                 partner_answer: partnerAnswer ? {
                     answer: partnerAnswer.answer,
                     mood: partnerAnswer.mood,
+                    moods: partnerAnswer.moods || (partnerAnswer.mood ? [partnerAnswer.mood] : null),
                     created_at: partnerAnswer.created_at,
                     edited_at: partnerAnswer.edited_at
                 } : null
@@ -281,7 +352,7 @@ router.get('/history', async (req, res) => {
         res.json(history);
     } catch (error) {
         console.error('Error in /history:', error);
-        res.status(500).json({ error: error.message });
+        res.status(error.statusCode || 500).json({ error: error.message });
     }
 });
 
@@ -293,22 +364,37 @@ router.get('/history', async (req, res) => {
 router.put('/answer/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { answer, mood } = req.body;
+        const { answer } = req.body;
         
-        if (!answer) {
+        const supabase = requireSupabase();
+        const authUserId = await requireAuthUserId(req);
+
+        const trimmedAnswer = typeof answer === 'string' ? answer.trim() : '';
+        if (!trimmedAnswer) {
             return res.status(400).json({ error: 'answer is required' });
         }
-        
-        if (!isSupabaseConfigured()) {
-            return res.status(503).json({ error: 'Database not configured' });
+        if (trimmedAnswer.length > 2000) {
+            return res.status(400).json({ error: 'Answer is too long (max 2000 characters)' });
         }
-        
-        const supabase = getSupabase();
+
+        const { data: existing, error: existingError } = await supabase
+            .from('daily_answers')
+            .select('id,user_id')
+            .eq('id', id)
+            .single();
+
+        if (existingError || !existing) {
+            return res.status(404).json({ error: 'Answer not found' });
+        }
+
+        if (existing.user_id !== authUserId) {
+            return res.status(403).json({ error: 'You do not have permission to edit this answer' });
+        }
         
         // Update the answer (trigger will set edited_at)
         const { data, error } = await supabase
             .from('daily_answers')
-            .update({ answer, mood })
+            .update({ answer: trimmedAnswer })
             .eq('id', id)
             .select()
             .single();
@@ -321,7 +407,7 @@ router.put('/answer/:id', async (req, res) => {
         res.json({ success: true, answer: data });
     } catch (error) {
         console.error('Error in PUT /answer/:id:', error);
-        res.status(500).json({ error: error.message });
+        res.status(error.statusCode || 500).json({ error: error.message });
     }
 });
 
@@ -333,20 +419,18 @@ router.put('/answer/:id', async (req, res) => {
 router.get('/pending', async (req, res) => {
     try {
         const { userId, partnerId } = req.query;
-        
-        if (!userId || !partnerId) {
-            return res.status(400).json({ error: 'userId and partnerId are required' });
+        const supabase = requireSupabase();
+        const authUserId = await requireAuthUserId(req);
+
+        if (userId && userId !== authUserId) {
+            return res.status(403).json({ error: 'userId does not match authenticated user' });
         }
-        
-        if (!isSupabaseConfigured()) {
-            return res.status(503).json({ error: 'Database not configured' });
-        }
-        
-        const supabase = getSupabase();
+
+        const resolvedPartnerId = await requirePartnerForAuthUser(supabase, authUserId, partnerId);
         
         // Get consistent couple ordering
-        const userA = userId < partnerId ? userId : partnerId;
-        const userB = userId < partnerId ? partnerId : userId;
+        const userA = authUserId < resolvedPartnerId ? authUserId : resolvedPartnerId;
+        const userB = authUserId < resolvedPartnerId ? resolvedPartnerId : authUserId;
         
         // Check for pending questions
         const { data, error } = await supabase
@@ -376,7 +460,7 @@ router.get('/pending', async (req, res) => {
         });
     } catch (error) {
         console.error('Error in /pending:', error);
-        res.status(500).json({ error: error.message });
+        res.status(error.statusCode || 500).json({ error: error.message });
     }
 });
 

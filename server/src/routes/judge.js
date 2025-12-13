@@ -6,10 +6,57 @@
 const express = require('express');
 const { deliberate } = require('../lib/judgeEngine');
 const { isOpenRouterConfigured } = require('../lib/openrouter');
-const { getSupabase, isSupabaseConfigured } = require('../lib/supabase');
+const { isSupabaseConfigured } = require('../lib/supabase');
+const { requireAuthUserId, requireSupabase, getPartnerIdForUser } = require('../lib/auth');
+const { createRateLimiter } = require('../lib/rateLimit');
+const { canUseFeature } = require('../lib/usageLimits');
 const { courtSessionManager } = require('../lib/courtSessionManager');
 
 const router = express.Router();
+
+const deliberateLimiter = createRateLimiter({
+    windowMs: 60 * 1000,
+    max: 5,
+    keyGenerator: (req) => req.authUserId || req.ip,
+});
+
+const attachAuthUser = async (req, res, next) => {
+    try {
+        req.authUserId = await requireAuthUserId(req);
+        next();
+    } catch (error) {
+        res.status(error.statusCode || 401).json({ error: error.message });
+    }
+};
+
+const judgeTypeToUsageType = (judgeType) => {
+    if (judgeType === 'fast') return 'lightning';
+    if (judgeType === 'best') return 'whiskers';
+    return 'mittens';
+};
+
+const requireCoupleParticipants = async (req, res, next) => {
+    try {
+        const viewerId = req.authUserId;
+        const supabase = requireSupabase();
+        const partnerId = await getPartnerIdForUser(supabase, viewerId);
+        if (!partnerId) {
+            return res.status(400).json({ error: 'No partner connected' });
+        }
+
+        const participants = req.body?.participants;
+        const userAId = participants?.userA?.id;
+        const userBId = participants?.userB?.id;
+        const ids = [String(userAId || ''), String(userBId || '')];
+        const ok = ids.includes(String(viewerId)) && ids.includes(String(partnerId));
+        if (!ok) {
+            return res.status(403).json({ error: 'Participants do not match authenticated couple' });
+        }
+        next();
+    } catch (error) {
+        res.status(error.statusCode || 500).json({ error: error.message });
+    }
+};
 
 
 /**
@@ -24,10 +71,17 @@ const router = express.Router();
  * 
  * @returns {object} Complete verdict response with Judge Whiskers' ruling
  */
-router.post('/deliberate', async (req, res) => {
+router.post('/deliberate', attachAuthUser, deliberateLimiter, requireCoupleParticipants, async (req, res) => {
     try {
         console.log('[Judge API] Received deliberation request');
-        const { sessionId, coupleId, ...deliberatePayload } = req.body;
+        const judgeType = req.body?.judgeType || 'logical';
+        const usageType = judgeTypeToUsageType(judgeType);
+        const usage = await canUseFeature({ userId: req.authUserId, type: usageType });
+        if (!usage.allowed) {
+            return res.status(403).json({ error: 'Usage limit reached', usage });
+        }
+
+        const { sessionId, coupleId, judgeType: _judgeTypeIgnored, ...deliberatePayload } = req.body;
 
         // Check if API key is configured
         if (!isOpenRouterConfigured()) {
@@ -39,7 +93,7 @@ router.post('/deliberate', async (req, res) => {
             });
         }
 
-        const result = await deliberate(deliberatePayload);
+        const result = await deliberate(deliberatePayload, { judgeType });
 
         // Set appropriate status code based on result
         if (result.status === 'error') {
@@ -60,7 +114,27 @@ router.post('/deliberate', async (req, res) => {
             } else if (isSupabaseConfigured()) {
                 // Fallback to direct database update (legacy or recovery scenario)
                 try {
-                    const supabase = getSupabase();
+                    const supabase = requireSupabase();
+
+                    const { data: sessionRow, error: sessionFetchError } = await supabase
+                        .from('court_sessions')
+                        .select('id,created_by,partner_id')
+                        .eq('id', sessionId)
+                        .maybeSingle();
+
+                    if (sessionFetchError) {
+                        console.error('[Judge API] Failed to fetch session for authorization:', sessionFetchError);
+                    }
+
+                    const allowedUserIds = new Set([
+                        String(sessionRow?.created_by || ''),
+                        String(sessionRow?.partner_id || ''),
+                    ]);
+
+                    if (!sessionRow || !allowedUserIds.has(String(req.authUserId))) {
+                        console.warn('[Judge API] Skipping session update (not authorized or missing)');
+                        return res.status(200).json(result);
+                    }
 
                     const { error: updateError } = await supabase
                         .from('court_sessions')
@@ -113,7 +187,7 @@ router.post('/deliberate', async (req, res) => {
  * 
  * @returns {object} New verdict response with updated ruling
  */
-router.post('/addendum', async (req, res) => {
+router.post('/addendum', attachAuthUser, deliberateLimiter, requireCoupleParticipants, async (req, res) => {
     try {
         console.log('[Judge API] Received addendum request');
 
@@ -126,7 +200,14 @@ router.post('/addendum', async (req, res) => {
             });
         }
 
-        const { addendumText, addendumFrom, previousVerdict, sessionId, ...caseData } = req.body;
+        const judgeType = req.body?.judgeType || 'logical';
+        const usageType = judgeTypeToUsageType(judgeType);
+        const usage = await canUseFeature({ userId: req.authUserId, type: usageType });
+        if (!usage.allowed) {
+            return res.status(403).json({ error: 'Usage limit reached', usage });
+        }
+
+        const { addendumText, addendumFrom, previousVerdict, sessionId, judgeType: _judgeTypeIgnored, ...caseData } = req.body;
 
         if (!addendumText || !addendumFrom) {
             return res.status(400).json({
@@ -139,6 +220,7 @@ router.post('/addendum', async (req, res) => {
             addendumText,
             addendumFrom,
             previousVerdict,
+            judgeType,
         });
 
         if (result.status === 'error') {

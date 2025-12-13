@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
-    Sparkles, Heart, Check, Clock, History,
+    Heart, Check,
     Cat, Edit3, Send, Lock, AlertCircle, RefreshCw, BookOpen, ChevronRight
 } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
@@ -37,14 +37,14 @@ const MOOD_OPTIONS = [
 
 const DailyMeowPage = () => {
     const navigate = useNavigate();
-    const { hasPartner, user: authUser, profile, partner: connectedPartner } = useAuthStore();
+    const { hasPartner, user: authUser, partner: connectedPartner } = useAuthStore();
 
     const myId = authUser?.id;
     const partnerId = connectedPartner?.id;
     const partnerDisplayName = connectedPartner?.display_name || 'Your partner';
 
-    // Ref to prevent duplicate fetches
-    const hasFetched = useRef(false);
+    // Ref to prevent duplicate fetches per couple pair
+    const fetchedKeyRef = useRef('');
 
     // State
     const [loading, setLoading] = useState(true);
@@ -124,18 +124,18 @@ const DailyMeowPage = () => {
     }, [myId, partnerId]);
 
     useEffect(() => {
-        // Only fetch once when we have both IDs
-        if (myId && partnerId && !hasFetched.current) {
-            hasFetched.current = true;
-            fetchTodaysQuestion();
+        if (myId && partnerId) {
+            const key = `${myId}:${partnerId}`;
+            if (fetchedKeyRef.current !== key) {
+                fetchedKeyRef.current = key;
+                fetchTodaysQuestion();
+            }
         } else if (hasPartner && (!myId || !partnerId)) {
-            // Partner is connected but IDs not yet loaded - keep loading
             setLoading(true);
         } else if (!hasPartner) {
-            // No partner - this is handled by RequirePartner component
             setLoading(false);
         }
-    }, [myId, partnerId, hasPartner]); // Removed fetchTodaysQuestion to prevent re-triggers
+    }, [myId, partnerId, hasPartner, fetchTodaysQuestion]);
 
     // Require partner
     if (!hasPartner) {
@@ -235,6 +235,21 @@ const DailyMeowPage = () => {
 
     const getMoodData = (moodId) => MOOD_OPTIONS.find(m => m.id === moodId);
 
+    const MoodIcon = ({ moodId, className = 'w-6 h-6' }) => {
+        const mood = getMoodData(moodId);
+        if (!mood) return null
+
+        if (mood.image) {
+            return <img src={mood.image} alt={mood.label} className={`${className} object-contain`} />
+        }
+
+        if (mood.emoji) {
+            return <span className="text-xl">{mood.emoji}</span>
+        }
+
+        return null
+    }
+
     const formatDate = (dateStr) => {
         const date = new Date(dateStr);
         return date.toLocaleDateString('en-US', {
@@ -257,14 +272,17 @@ const DailyMeowPage = () => {
     const partnerHasAnswered = !!todaysQuestion?.partner_answer;
     const bothAnswered = hasAnswered && partnerHasAnswered;
     const isBacklog = todaysQuestion?.is_backlog;
-    const currentMoodData = selectedMoods.length > 0 ? getMoodData(selectedMoods[0]) : null;
+
+    const stepLabel = hasAnswered ? 'Shared' : step === 'mood' ? 'Mood' : step === 'answer' ? 'Answer' : 'Shared'
+
+    const partnerMoodIds = (todaysQuestion?.partner_answer?.moods || (todaysQuestion?.partner_answer?.mood ? [todaysQuestion.partner_answer.mood] : [])).slice(0, 3)
 
     return (
         <div className="min-h-[calc(100dvh-120px)] flex flex-col">
             {/* Success Toast */}
             <AnimatePresence>
                 {showSuccess && (
-                    <motion.div
+                    <Motion.div
                         initial={{ opacity: 0, y: -20, scale: 0.95 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -20, scale: 0.95 }}
@@ -272,39 +290,15 @@ const DailyMeowPage = () => {
                     >
                         <Check className="w-5 h-5" />
                         <span className="font-medium">Answer saved!</span>
-                    </motion.div>
+                    </Motion.div>
                 )}
             </AnimatePresence>
-
-            {/* Header */}
-            <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="text-center pt-2 pb-4"
-            >
-                <motion.div
-                    animate={{ y: [0, -5, 0] }}
-                    transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
-                    className="inline-block"
-                >
-                    <div className="w-14 h-14 bg-gradient-to-br from-amber-100 via-orange-100 to-pink-100 rounded-2xl flex items-center justify-center shadow-lg mx-auto">
-                        <span className="text-2xl">🐱</span>
-                    </div>
-                </motion.div>
-                <h1 className="text-xl font-bold bg-gradient-to-r from-amber-600 to-pink-600 bg-clip-text text-transparent mt-2">
-                    Daily Meow
-                </h1>
-                <p className="text-neutral-400 text-xs flex items-center justify-center gap-1">
-                    <Sparkles className="w-3 h-3 text-amber-400" />
-                    One question, two hearts
-                </p>
-            </motion.div>
 
             {/* Loading State */}
             {loading && (
                 <div className="flex-1 flex items-center justify-center">
                     <div className="text-center">
-                        <motion.div
+                        <Motion.div
                             animate={{ rotate: 360 }}
                             transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                             className="w-10 h-10 border-3 border-amber-400 border-t-transparent rounded-full mx-auto"
@@ -353,41 +347,37 @@ const DailyMeowPage = () => {
 
             {/* Main Content */}
             {!loading && !error && todaysQuestion && (
-                <div className="flex-1 flex flex-col px-1">
-                    {/* Backlog Badge */}
-                    {isBacklog && (
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            className="flex items-center justify-center gap-2 px-4 py-2 bg-amber-50 border border-amber-200 rounded-2xl mb-4"
-                        >
-                            <Clock className="w-4 h-4 text-amber-600" />
-                            <span className="text-sm font-medium text-amber-700">
-                                Catch-up from {formatDate(todaysQuestion.assigned_date)}
-                            </span>
-                        </motion.div>
-                    )}
-
+                <div className="flex-1 flex flex-col">
                     {/* Question Card */}
-                    <motion.div
+                    <Motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className={`glass-card overflow-hidden flex-1 flex flex-col ${currentMoodData ? `bg-gradient-to-br ${currentMoodData.color}` : ''
-                            }`}
+                        className="glass-card overflow-hidden flex-1 flex flex-col"
                     >
                         {/* Question Header */}
                         <div className="p-5 text-center border-b border-white/50">
-                            <motion.span
-                                className="text-5xl block mb-3"
-                                animate={{ scale: [1, 1.1, 1] }}
-                                transition={{ duration: 2, repeat: Infinity }}
-                            >
-                                {todaysQuestion.emoji || '💭'}
-                            </motion.span>
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/70 rounded-full text-xs font-bold text-amber-700 shadow-sm mb-3">
-                                <Heart className="w-3 h-3" />
-                                {isBacklog ? 'Catch-up Question' : "Today's Question"}
-                            </span>
+                            <h1 className="text-lg font-bold text-neutral-800 tracking-tight mb-2">
+                                Daily Question
+                            </h1>
+                            <div className="flex items-center justify-center gap-2 mb-3">
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/70 rounded-full text-xs font-bold text-amber-700 shadow-sm">
+                                    <Heart className="w-3 h-3" />
+                                    {isBacklog ? 'Catch-up' : 'Today'}
+                                </span>
+                                {isBacklog && (
+                                    <span className="inline-flex items-center px-3 py-1 bg-white/70 rounded-full text-xs font-bold text-neutral-700 shadow-sm">
+                                        {formatDate(todaysQuestion.assigned_date)}
+                                    </span>
+                                )}
+                                {todaysQuestion.category && (
+                                    <span className="inline-flex items-center px-3 py-1 bg-white/70 rounded-full text-xs font-bold text-neutral-700 shadow-sm">
+                                        {todaysQuestion.category}
+                                    </span>
+                                )}
+                                <span className="inline-flex items-center px-3 py-1 bg-white/70 rounded-full text-xs font-bold text-neutral-700 shadow-sm">
+                                    {stepLabel}
+                                </span>
+                            </div>
                             <h2 className="text-xl font-bold text-neutral-800 leading-relaxed">
                                 {todaysQuestion.question}
                             </h2>
@@ -398,7 +388,7 @@ const DailyMeowPage = () => {
                             <AnimatePresence mode="wait">
                                 {/* STEP 1: Mood Selection (MANDATORY) */}
                                 {step === 'mood' && !hasAnswered && (
-                                    <motion.div
+                                    <Motion.div
                                         key="mood-step"
                                         initial={{ opacity: 0, x: 20 }}
                                         animate={{ opacity: 1, x: 0 }}
@@ -408,17 +398,17 @@ const DailyMeowPage = () => {
                                         <div className="text-center mb-4">
                                             <h3 className="text-lg font-bold text-neutral-800">How are you feeling today?</h3>
                                             <p className="text-sm text-neutral-500 mt-1">
-                                                Select 1-3 moods ({selectedMoods.length}/3 selected)
+                                                Pick up to 3 ({selectedMoods.length}/3)
                                             </p>
                                             <p className="text-xs text-amber-600 mt-2 flex items-center justify-center gap-1">
                                                 <Lock className="w-3 h-3" />
-                                                Your moods will be locked after submitting
+                                                Locked after you submit
                                             </p>
                                         </div>
 
                                         <div className="grid grid-cols-4 gap-2 flex-1 content-start">
                                             {MOOD_OPTIONS.map((mood) => (
-                                                <motion.button
+                                                <Motion.button
                                                     key={mood.id}
                                                     whileTap={{ scale: 0.95 }}
                                                     onClick={() => handleMoodSelect(mood)}
@@ -437,41 +427,35 @@ const DailyMeowPage = () => {
                                                         <span className="text-2xl">{mood.emoji}</span>
                                                     )}
                                                     <span className="text-[14px] text-neutral-600 font-medium mt-0.5">{mood.label}</span>
-                                                </motion.button>
+                                                </Motion.button>
                                             ))}
                                         </div>
 
-                                        <motion.button
+                                        <Motion.button
                                             whileTap={{ scale: 0.98 }}
                                             onClick={confirmMood}
                                             disabled={selectedMoods.length === 0}
-                                            style={{ background: 'linear-gradient(135deg, #1c1c84 0%, #000035 100%)' }}
-                                            className="mt-4 w-full py-4 text-white font-bold rounded-2xl shadow-lg disabled:opacity-40 disabled:saturate-50 flex items-center justify-center gap-2"
+                                            className="mt-4 w-full py-4 bg-gradient-to-r from-amber-500 via-orange-500 to-pink-500 text-white font-bold rounded-2xl shadow-lg disabled:opacity-40 disabled:saturate-50 flex items-center justify-center gap-2"
                                         >
                                             {selectedMoods.length > 0 ? (
                                                 <>
-                                                    <span className="text-xl flex gap-1 items-center">
-                                                        {selectedMoods.map(m => {
-                                                            const mood = getMoodData(m);
-                                                            return mood?.image ? (
-                                                                <img key={m} src={mood.image} alt={mood.label} className="w-6 h-6 object-contain" />
-                                                            ) : (
-                                                                <span key={m}>{mood?.emoji}</span>
-                                                            );
-                                                        })}
+                                                    <span className="flex items-center gap-1">
+                                                        {selectedMoods.map(m => (
+                                                            <MoodIcon key={m} moodId={m} className="w-6 h-6" />
+                                                        ))}
                                                     </span>
-                                                    Continue with {selectedMoods.length} mood{selectedMoods.length > 1 ? 's' : ''}
+                                                    Continue
                                                 </>
                                             ) : (
-                                                'Select at least 1 mood to continue'
+                                                'Pick at least 1 mood'
                                             )}
-                                        </motion.button>
-                                    </motion.div>
+                                        </Motion.button>
+                                    </Motion.div>
                                 )}
 
                                 {/* STEP 2: Answer Input */}
                                 {step === 'answer' && !hasAnswered && (
-                                    <motion.div
+                                    <Motion.div
                                         key="answer-step"
                                         initial={{ opacity: 0, x: 20 }}
                                         animate={{ opacity: 1, x: 0 }}
@@ -480,8 +464,10 @@ const DailyMeowPage = () => {
                                     >
                                         {/* Selected Moods Display (can still change) */}
                                         <div className="flex items-center justify-center gap-2 mb-4 px-4 py-2 bg-white/60 rounded-xl">
-                                            <span className="text-xl flex gap-1">
-                                                {selectedMoods.map(m => getMoodData(m)?.emoji).join('')}
+                                            <span className="flex items-center gap-1">
+                                                {selectedMoods.map(m => (
+                                                    <MoodIcon key={m} moodId={m} className="w-5 h-5" />
+                                                ))}
                                             </span>
                                             <span className="text-sm font-medium text-neutral-700">
                                                 {selectedMoods.length} mood{selectedMoods.length > 1 ? 's' : ''} selected
@@ -504,19 +490,25 @@ const DailyMeowPage = () => {
                                         <textarea
                                             value={answer}
                                             onChange={(e) => setAnswer(e.target.value)}
-                                            placeholder="Share your honest thoughts..."
+                                            placeholder="Say the first thing that comes to mind…"
                                             className="flex-1 min-h-[150px] bg-white/70 rounded-2xl p-4 text-neutral-700 border border-white focus:border-amber-300 focus:ring-2 focus:ring-amber-100 outline-none resize-none text-base placeholder:text-neutral-400"
+                                            maxLength={2000}
                                             autoFocus
                                         />
 
-                                        <motion.button
+                                        <div className="flex items-center justify-between mt-2">
+                                            <span className="text-xs text-neutral-500">A few honest sentences is perfect</span>
+                                            <span className="text-xs text-neutral-400">{answer.length}/2000</span>
+                                        </div>
+
+                                        <Motion.button
                                             whileTap={{ scale: 0.98 }}
                                             onClick={handleSubmit}
                                             disabled={!answer.trim() || submitting || selectedMoods.length === 0}
                                             className="mt-4 w-full py-4 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold rounded-2xl shadow-lg disabled:opacity-40 disabled:saturate-50 flex items-center justify-center gap-2"
                                         >
                                             {submitting ? (
-                                                <motion.div
+                                                <Motion.div
                                                     animate={{ rotate: 360 }}
                                                     transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                                                     className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
@@ -527,30 +519,51 @@ const DailyMeowPage = () => {
                                                     Submit Answer
                                                 </>
                                             )}
-                                        </motion.button>
-                                    </motion.div>
+                                        </Motion.button>
+                                    </Motion.div>
                                 )}
 
                                 {/* STEP 3: Done - View Answers */}
                                 {(step === 'done' || hasAnswered) && !isEditing && (
-                                    <motion.div
+                                    <Motion.div
                                         key="done-step"
                                         initial={{ opacity: 0, x: 20 }}
                                         animate={{ opacity: 1, x: 0 }}
                                         exit={{ opacity: 0, x: -20 }}
                                         className="flex-1 flex flex-col gap-4"
                                     >
-                                        {/* Status Indicators */}
-                                        <div className="flex items-center justify-between px-1">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-3 h-3 rounded-full bg-emerald-400 shadow-sm" />
-                                                <span className="text-sm text-neutral-600">You answered</span>
+                                        {/* Emotions */}
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div className="bg-white/70 rounded-2xl border border-white p-3 shadow-sm">
+                                                <div className="text-[11px] font-bold text-neutral-600 mb-2">You felt</div>
+                                                {selectedMoods.length > 0 ? (
+                                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                                        {selectedMoods.map(m => (
+                                                            <MoodIcon key={m} moodId={m} className="w-7 h-7" />
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <div className="text-xs text-neutral-400">—</div>
+                                                )}
                                             </div>
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-sm text-neutral-600">
-                                                    {partnerHasAnswered ? `${partnerDisplayName} answered` : `Waiting...`}
-                                                </span>
-                                                <div className={`w-3 h-3 rounded-full ${partnerHasAnswered ? 'bg-emerald-400' : 'bg-neutral-300 animate-pulse'}`} />
+                                            <div className="bg-white/70 rounded-2xl border border-white p-3 shadow-sm">
+                                                <div className="text-[11px] font-bold text-neutral-600 mb-2">{partnerDisplayName} felt</div>
+                                                {partnerHasAnswered ? (
+                                                    partnerMoodIds.length > 0 ? (
+                                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                                            {partnerMoodIds.map(m => (
+                                                                <MoodIcon key={m} moodId={m} className="w-7 h-7" />
+                                                            ))}
+                                                        </div>
+                                                    ) : (
+                                                        <div className="text-xs text-neutral-400">—</div>
+                                                    )
+                                                ) : (
+                                                    <div className="flex items-center gap-2 text-xs text-neutral-500">
+                                                        <Lock className="w-4 h-4 text-neutral-400" />
+                                                        Waiting…
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
 
@@ -560,8 +573,10 @@ const DailyMeowPage = () => {
                                                 <div className="flex items-center gap-2">
                                                     <span className="text-sm font-bold text-amber-700">Your answer</span>
                                                     {selectedMoods.length > 0 && (
-                                                        <span className="text-lg flex gap-0.5">
-                                                            {selectedMoods.map(m => getMoodData(m)?.emoji).join('')}
+                                                        <span className="flex items-center gap-1">
+                                                            {selectedMoods.map(m => (
+                                                                <MoodIcon key={m} moodId={m} className="w-5 h-5" />
+                                                            ))}
                                                         </span>
                                                     )}
                                                 </div>
@@ -584,21 +599,25 @@ const DailyMeowPage = () => {
 
                                         {/* Partner's Answer or Waiting */}
                                         {bothAnswered ? (
-                                            <motion.div
+                                            <Motion.div
                                                 initial={{ opacity: 0, y: 10 }}
                                                 animate={{ opacity: 1, y: 0 }}
                                                 className="bg-white/70 rounded-2xl p-4 border border-pink-200 shadow-sm"
                                             >
                                                 <div className="flex items-center gap-2 mb-2">
                                                     <span className="text-sm font-bold text-pink-700">{partnerDisplayName}'s answer</span>
-                                                    {todaysQuestion.partner_answer?.mood && (
-                                                        <span className="text-lg">{getMoodData(todaysQuestion.partner_answer.mood)?.emoji}</span>
+                                                    {(todaysQuestion.partner_answer?.moods || (todaysQuestion.partner_answer?.mood ? [todaysQuestion.partner_answer.mood] : [])).length > 0 && (
+                                                        <span className="flex items-center gap-1">
+                                                            {(todaysQuestion.partner_answer?.moods || [todaysQuestion.partner_answer.mood]).slice(0, 3).map(m => (
+                                                                <MoodIcon key={m} moodId={m} className="w-5 h-5" />
+                                                            ))}
+                                                        </span>
                                                     )}
                                                 </div>
                                                 <p className="text-neutral-700 leading-relaxed">
                                                     {todaysQuestion.partner_answer?.answer}
                                                 </p>
-                                            </motion.div>
+                                            </Motion.div>
                                         ) : (
                                             <div className="bg-white/50 rounded-2xl p-6 border border-dashed border-neutral-300 text-center">
                                                 <Lock className="w-6 h-6 text-neutral-400 mx-auto mb-2" />
@@ -610,7 +629,7 @@ const DailyMeowPage = () => {
 
                                         {/* Completion Celebration */}
                                         {bothAnswered && (
-                                            <motion.div
+                                            <Motion.div
                                                 initial={{ scale: 0, opacity: 0 }}
                                                 animate={{ scale: 1, opacity: 1 }}
                                                 transition={{ type: "spring", delay: 0.2 }}
@@ -619,14 +638,14 @@ const DailyMeowPage = () => {
                                                 <span className="px-5 py-2.5 bg-gradient-to-r from-emerald-100 to-teal-100 rounded-full text-sm font-bold text-emerald-700 flex items-center gap-2 shadow-sm">
                                                     ✨ You both answered! +5 Kibbles each
                                                 </span>
-                                            </motion.div>
+                                            </Motion.div>
                                         )}
-                                    </motion.div>
+                                    </Motion.div>
                                 )}
 
                                 {/* Editing Mode */}
                                 {isEditing && (
-                                    <motion.div
+                                    <Motion.div
                                         key="edit-step"
                                         initial={{ opacity: 0, x: 20 }}
                                         animate={{ opacity: 1, x: 0 }}
@@ -635,10 +654,12 @@ const DailyMeowPage = () => {
                                     >
                                         {/* Locked Mood Display - Cannot edit */}
                                         <div className="flex items-center justify-center gap-2 mb-4 px-4 py-2 bg-white/60 rounded-xl">
-                                            <span className="text-xl">{getMoodData(todaysQuestion.my_answer?.mood)?.emoji}</span>
-                                            <span className="text-sm font-medium text-neutral-700">
-                                                Feeling {getMoodData(todaysQuestion.my_answer?.mood)?.label}
+                                            <span className="flex items-center gap-1">
+                                                {(todaysQuestion.my_answer?.moods || (todaysQuestion.my_answer?.mood ? [todaysQuestion.my_answer.mood] : [])).slice(0, 3).map(m => (
+                                                    <MoodIcon key={m} moodId={m} className="w-5 h-5" />
+                                                ))}
                                             </span>
+                                            <span className="text-sm font-medium text-neutral-700">Mood locked</span>
                                             <Lock className="w-3 h-3 text-neutral-400 ml-1" />
                                         </div>
 
@@ -646,8 +667,13 @@ const DailyMeowPage = () => {
                                             value={editingAnswer}
                                             onChange={(e) => setEditingAnswer(e.target.value)}
                                             className="flex-1 min-h-[150px] bg-white/70 rounded-2xl p-4 text-neutral-700 border border-amber-300 focus:ring-2 focus:ring-amber-100 outline-none resize-none text-base"
+                                            maxLength={2000}
                                             autoFocus
                                         />
+
+                                        <div className="flex items-center justify-end mt-2">
+                                            <span className="text-xs text-neutral-400">{editingAnswer.length}/2000</span>
+                                        </div>
 
                                         <div className="flex gap-3 mt-4">
                                             <button
@@ -656,14 +682,14 @@ const DailyMeowPage = () => {
                                             >
                                                 Cancel
                                             </button>
-                                            <motion.button
+                                            <Motion.button
                                                 whileTap={{ scale: 0.98 }}
                                                 onClick={handleEdit}
                                                 disabled={!editingAnswer.trim() || submitting}
                                                 className="flex-1 py-3.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold rounded-2xl shadow-lg disabled:opacity-40 flex items-center justify-center gap-2"
                                             >
                                                 {submitting ? (
-                                                    <motion.div
+                                                    <Motion.div
                                                         animate={{ rotate: 360 }}
                                                         transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                                                         className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
@@ -674,31 +700,28 @@ const DailyMeowPage = () => {
                                                         Save Changes
                                                     </>
                                                 )}
-                                            </motion.button>
+                                            </Motion.button>
                                         </div>
-                                    </motion.div>
+                                    </Motion.div>
                                 )}
                             </AnimatePresence>
                         </div>
-                    </motion.div>
-
-                    {/* Footer Actions */}
-                    <div className="py-4 space-y-3">
-                        {/* View History Button */}
-                        <motion.button
-                            whileTap={{ scale: 0.98 }}
-                            onClick={() => navigate('/daily-meow/history')}
-                            className="w-full py-3.5 bg-white/80 text-neutral-700 font-bold rounded-2xl shadow-sm border border-neutral-200 flex items-center justify-center gap-2"
-                        >
-                            <BookOpen className="w-5 h-5 text-court-gold" />
-                            Question Archives
-                            <ChevronRight className="w-4 h-4 text-neutral-400" />
-                        </motion.button>
-
-                        <p className="text-center text-xs text-neutral-400">
-                            🐾 New question every day at midnight 🐾
-                        </p>
-                    </div>
+                        <div className="p-5 pt-0">
+                            <div className="h-px bg-gradient-to-r from-transparent via-neutral-200 to-transparent my-4" />
+                            <Motion.button
+                                whileTap={{ scale: 0.98 }}
+                                onClick={() => navigate('/daily-meow/history')}
+                                className="w-full py-3.5 bg-white/80 text-neutral-700 font-bold rounded-2xl shadow-sm border border-neutral-200 flex items-center justify-center gap-2"
+                            >
+                                <BookOpen className="w-5 h-5 text-court-gold" />
+                                Question Archives
+                                <ChevronRight className="w-4 h-4 text-neutral-400" />
+                            </Motion.button>
+                            <p className="text-center text-xs text-neutral-400 mt-3">
+                                New question every day at midnight ET
+                            </p>
+                        </div>
+                    </Motion.div>
                 </div>
             )}
         </div>

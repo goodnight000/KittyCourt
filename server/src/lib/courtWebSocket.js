@@ -7,6 +7,9 @@
 
 const { Server } = require('socket.io');
 const { courtSessionManager, VIEW_PHASE } = require('./courtSessionManager');
+const { createSocketCorsOptions } = require('./security');
+const { isSupabaseConfigured } = require('./supabase');
+const { requireSupabase, getPartnerIdForUser } = require('./auth');
 
 class CourtWebSocketService {
     constructor() {
@@ -20,10 +23,37 @@ class CourtWebSocketService {
     initialize(httpServer) {
         this.io = new Server(httpServer, {
             cors: {
-                origin: process.env.CORS_ORIGIN || '*',
-                methods: ['GET', 'POST']
+                ...createSocketCorsOptions(),
             },
             transports: ['websocket', 'polling']
+        });
+
+        // Authenticate the socket using Supabase JWT when configured.
+        this.io.use(async (socket, next) => {
+            if (!isSupabaseConfigured()) {
+                if (process.env.NODE_ENV === 'production') {
+                    return next(new Error('Auth not configured'));
+                }
+                return next();
+            }
+
+            try {
+                const authToken = socket.handshake.auth?.token;
+                const header = socket.handshake.headers?.authorization || '';
+                const match = typeof header === 'string' ? header.match(/^Bearer\s+(.+)$/i) : null;
+                const headerToken = match?.[1];
+                const token = authToken || headerToken;
+                if (!token) return next(new Error('Unauthorized'));
+
+                const supabase = requireSupabase();
+                const { data, error } = await supabase.auth.getUser(token);
+                if (error || !data?.user?.id) return next(new Error('Unauthorized'));
+
+                socket.userId = data.user.id;
+                return next();
+            } catch (e) {
+                return next(new Error('Unauthorized'));
+            }
         });
 
         // Connect session manager to this service
@@ -33,24 +63,30 @@ class CourtWebSocketService {
             console.log(`[WS] Client connected: ${socket.id}`);
 
             // === Registration ===
-            socket.on('court:register', ({ userId }) => {
-                if (!userId) {
-                    socket.emit('court:error', { message: 'userId required' });
-                    return;
+            socket.on('court:register', async ({ userId } = {}) => {
+                // In production (or whenever Supabase is configured), userId is derived from auth.
+                if (!socket.userId) {
+                    if (process.env.NODE_ENV === 'production') {
+                        socket.emit('court:error', { message: 'Unauthorized' });
+                        return;
+                    }
+                    if (!userId) {
+                        socket.emit('court:error', { message: 'userId required' });
+                        return;
+                    }
+                    socket.userId = userId;
                 }
-
-                socket.userId = userId;
 
                 // Track socket
-                if (!this.userSockets.has(userId)) {
-                    this.userSockets.set(userId, new Set());
+                if (!this.userSockets.has(socket.userId)) {
+                    this.userSockets.set(socket.userId, new Set());
                 }
-                this.userSockets.get(userId).add(socket.id);
+                this.userSockets.get(socket.userId).add(socket.id);
 
-                console.log(`[WS] User ${userId} registered`);
+                console.log(`[WS] User ${socket.userId} registered`);
 
                 // Send current state
-                const state = courtSessionManager.getStateForUser(userId);
+                const state = courtSessionManager.getStateForUser(socket.userId);
                 socket.emit('court:state', state);
             });
 
@@ -60,6 +96,14 @@ class CourtWebSocketService {
             socket.on('court:serve', async ({ partnerId, coupleId }, ack) => {
                 try {
                     if (!socket.userId) throw new Error('Not registered');
+                    if (!partnerId) throw new Error('partnerId required');
+                    if (isSupabaseConfigured()) {
+                        const supabase = requireSupabase();
+                        const resolvedPartnerId = await getPartnerIdForUser(supabase, socket.userId);
+                        if (!resolvedPartnerId || String(resolvedPartnerId) !== String(partnerId)) {
+                            throw new Error('Invalid partnerId for current user');
+                        }
+                    }
                     await courtSessionManager.serve(socket.userId, partnerId, coupleId);
                     if (typeof ack === 'function') ack({ ok: true });
                 } catch (error) {

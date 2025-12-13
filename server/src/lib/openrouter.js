@@ -5,6 +5,8 @@
  */
 
 let _openRouterClient = null;
+const DEFAULT_TIMEOUT_MS = Number(process.env.OPENROUTER_TIMEOUT_MS || 60000);
+const DEFAULT_MODERATION_TIMEOUT_MS = Number(process.env.OPENAI_MODERATION_TIMEOUT_MS || 15000);
 
 /**
  * Get the OpenRouter client instance
@@ -68,7 +70,7 @@ async function createChatCompletion({ model, messages, temperature = 0.7, maxTok
 
     // Add reasoning parameter for models that support it (e.g., Grok, OpenAI o1/o3, DeepSeek R1)
     // This enables extended thinking/reasoning before generating the response
-    if (model.includes('grok') || model.includes('o1') || model.includes('o3') || model.includes('deepseek-v3.2') || model.includes('deepseek-reasoner')) {
+    if (model.includes('grok') || model.includes('deepseek-v3.2') || model.includes('deepseek-reasoner')) {
         body.reasoning = {
             effort: reasoningEffort || 'high' // Default to high unless specified
         };
@@ -76,16 +78,24 @@ async function createChatCompletion({ model, messages, temperature = 0.7, maxTok
 
     console.log(`[OpenRouter] Calling ${model} with JSON schema: ${jsonSchema ? 'yes' : 'no'}, reasoning: ${body.reasoning ? `yes (effort=${body.reasoning.effort})` : 'no'}`);
 
-    const response = await fetch(`${client.baseUrl}/chat/completions`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${client.apiKey}`,
-            'HTTP-Referer': 'https://catjudge.app', // Optional but good practice
-            'X-Title': 'Cat Judge - Relationship Dispute Resolution',
-        },
-        body: JSON.stringify(body),
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
+    let response;
+    try {
+        response = await fetch(`${client.baseUrl}/chat/completions`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${client.apiKey}`,
+                'HTTP-Referer': 'https://catjudge.app',
+                'X-Title': 'Cat Judge - Relationship Dispute Resolution',
+            },
+            body: JSON.stringify(body),
+            signal: controller.signal,
+        });
+    } finally {
+        clearTimeout(timeoutId);
+    }
 
     if (!response.ok) {
         const errorText = await response.text();
@@ -119,14 +129,22 @@ async function createModeration(text) {
     }
 
     try {
-        const response = await fetch('https://api.openai.com/v1/moderations', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${openaiKey}`,
-            },
-            body: JSON.stringify({ input: text }),
-        });
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), DEFAULT_MODERATION_TIMEOUT_MS);
+        let response;
+        try {
+            response = await fetch('https://api.openai.com/v1/moderations', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${openaiKey}`,
+                },
+                body: JSON.stringify({ input: text }),
+                signal: controller.signal,
+            });
+        } finally {
+            clearTimeout(timeoutId);
+        }
 
         if (!response.ok) {
             console.error('[OpenRouter] Moderation API error, returning safe');

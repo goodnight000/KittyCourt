@@ -5,7 +5,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { Gavel, MessageCircle, Heart, Send } from 'lucide-react';
 
 import useAuthStore from '../store/useAuthStore';
@@ -38,10 +38,14 @@ export default function CourtroomPageV2() {
         localAddendum,
         isSubmitting,
         isGeneratingVerdict,
+        showOpeningAnimation,
+        showCelebrationAnimation,
         error,
         setLocalEvidence,
         setLocalFeelings,
         setLocalAddendum,
+        setShowOpeningAnimation,
+        setShowCelebrationAnimation,
         setShowRatingPopup,
         markVerdictSeen,
         serve,
@@ -89,8 +93,6 @@ export default function CourtroomPageV2() {
 
     // Opening animation: play when transitioning from PENDING → EVIDENCE.
     const prevViewPhaseRef = useRef(myViewPhase);
-    const [showOpeningAnimation, setShowOpeningAnimation] = useState(false);
-    const [showCelebration, setShowCelebration] = useState(false);
     useEffect(() => {
         const prev = prevViewPhaseRef.current;
         const next = myViewPhase;
@@ -105,12 +107,12 @@ export default function CourtroomPageV2() {
         if (cameFromVerdictFlow && next === VIEW_PHASE.CLOSED) {
             // Celebration first, then rating.
             setShowRatingPopup(false);
-            setShowCelebration(true);
+            setShowCelebrationAnimation(true);
         } else if (prev !== VIEW_PHASE.CLOSED && next === VIEW_PHASE.CLOSED) {
             // If we didn't witness the verdict flow (e.g. came back later), just show rating.
             setShowRatingPopup(true);
         }
-    }, [myViewPhase, setShowRatingPopup]);
+    }, [myViewPhase, setShowRatingPopup, setShowOpeningAnimation, setShowCelebrationAnimation]);
 
     // Bug fix: If we sent an action but didn't get a state update (WS hiccup), force a REST resync.
     const lastSyncAt = useCourtStore((s) => s.lastSyncAt);
@@ -134,7 +136,7 @@ export default function CourtroomPageV2() {
     }, [myViewPhase, session?.verdict, markVerdictSeen]);
 
     const handleCelebrationComplete = () => {
-        setShowCelebration(false);
+        setShowCelebrationAnimation(false);
         setShowRatingPopup(true);
     };
 
@@ -234,26 +236,28 @@ export default function CourtroomPageV2() {
 
     return (
         <RequirePartner>
-            <div className="min-h-screen bg-gradient-to-b from-court-cream to-court-tan/20 p-4">
+            <div className="min-h-screen bg-gradient-to-b from-court-cream to-court-tan/20">
                 {showOpeningAnimation && (
                     <CourtOpeningAnimation onComplete={() => setShowOpeningAnimation(false)} />
                 )}
 
-                {showCelebration && (
+                {showCelebrationAnimation && (
                     <CelebrationAnimation onComplete={handleCelebrationComplete} />
                 )}
 
-                {error && (
-                    <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="bg-red-100 text-red-700 p-3 rounded-lg mb-4 text-sm"
-                    >
-                        {error}
-                    </motion.div>
-                )}
+                <div className="w-full">
+                    {error && (
+                        <Motion.div
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="glass-card p-3 bg-red-50/80 text-red-700 mb-4 text-sm"
+                        >
+                            {error}
+                        </Motion.div>
+                    )}
 
-                {renderContent()}
+                    {renderContent()}
+                </div>
 
                 <AddendumModal
                     open={showAddendumModal}
@@ -284,9 +288,13 @@ function EvidenceForm({
     myName,
     partnerName
 }) {
+    const maxLen = 2000;
+    const evidenceLen = localEvidence?.length || 0;
+    const feelingsLen = localFeelings?.length || 0;
+
     return (
         <div className="space-y-5">
-            <motion.div
+            <Motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="glass-card p-4 bg-gradient-to-br from-court-cream to-court-tan/30"
@@ -318,9 +326,9 @@ function EvidenceForm({
                         <p className="text-[10px] text-court-brownLight">Partner</p>
                     </div>
                 </div>
-            </motion.div>
+            </Motion.div>
 
-            <motion.div
+            <Motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
@@ -335,11 +343,16 @@ function EvidenceForm({
                         value={localEvidence}
                         onChange={(e) => setLocalEvidence(e.target.value)}
                         placeholder="What happened? Describe the situation objectively..."
+                        maxLength={maxLen}
                         className="w-full h-32 px-4 py-3 rounded-xl border-2 border-court-tan/30 
                             focus:border-court-gold focus:ring-2 focus:ring-court-gold/20 
                             bg-white/50 text-court-brown placeholder-court-brownLight/50
                             transition-all resize-none"
                     />
+                    <div className="flex items-center justify-between mt-2">
+                        <span className="text-[11px] text-court-brownLight/80">Aim for clarity over completeness</span>
+                        <span className="text-[11px] text-neutral-400">{evidenceLen}/{maxLen}</span>
+                    </div>
                 </div>
 
                 <div>
@@ -351,15 +364,20 @@ function EvidenceForm({
                         value={localFeelings}
                         onChange={(e) => setLocalFeelings(e.target.value)}
                         placeholder="How did this make you feel? What story are you telling yourself?"
+                        maxLength={maxLen}
                         className="w-full h-32 px-4 py-3 rounded-xl border-2 border-court-tan/30 
                             focus:border-court-gold focus:ring-2 focus:ring-court-gold/20 
                             bg-white/50 text-court-brown placeholder-court-brownLight/50
                             transition-all resize-none"
                     />
+                    <div className="flex items-center justify-between mt-2">
+                        <span className="text-[11px] text-court-brownLight/80">Name the emotion, not the verdict</span>
+                        <span className="text-[11px] text-neutral-400">{feelingsLen}/{maxLen}</span>
+                    </div>
                 </div>
 
                 <div className="space-y-3">
-                    <motion.button
+                    <Motion.button
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={onSubmit}
@@ -369,7 +387,7 @@ function EvidenceForm({
                         style={{ background: 'linear-gradient(135deg, #1c1c84 0%, #000035 100%)' }}
                     >
                         {isSubmitting ? (
-                            <motion.div
+                            <Motion.div
                                 animate={{ rotate: 360 }}
                                 transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
                                 className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
@@ -380,7 +398,7 @@ function EvidenceForm({
                                 Submit Evidence
                             </>
                         )}
-                    </motion.button>
+                    </Motion.button>
 
                     <SettlementButton className="w-full" />
 
@@ -388,7 +406,7 @@ function EvidenceForm({
                         ✨ Judge Whiskers values honesty and emotional vulnerability ✨
                     </p>
                 </div>
-            </motion.div>
+            </Motion.div>
         </div>
     );
 }
@@ -397,14 +415,14 @@ function AddendumModal({ open, onClose, value, onChange, onSubmit, isSubmitting 
     return (
         <AnimatePresence>
             {open && (
-                <motion.div
+                <Motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
                     onClick={onClose}
                 >
-                    <motion.div
+                    <Motion.div
                         initial={{ scale: 0.95, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
                         exit={{ scale: 0.98, opacity: 0 }}
@@ -440,8 +458,8 @@ function AddendumModal({ open, onClose, value, onChange, onSubmit, isSubmitting 
                                 Submit
                             </button>
                         </div>
-                    </motion.div>
-                </motion.div>
+                    </Motion.div>
+                </Motion.div>
             )}
         </AnimatePresence>
     );

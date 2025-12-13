@@ -4,12 +4,15 @@ import { useNavigate } from 'react-router-dom';
 import {
     User, Heart, Calendar, Star, Settings, ChevronRight,
     Edit3, Check, X, Gift, Scale, Clock,
-    Coffee, TrendingUp, Award, Link2, Copy, Users, LogOut, Lock, MessageSquare, AlertTriangle
+    Coffee, TrendingUp, Award, Link2, Copy, Users, LogOut, Lock, MessageSquare, AlertTriangle,
+    Crown, Sparkles, Zap, Gavel, Wand2
 } from 'lucide-react';
 import useAppStore from '../store/useAppStore';
 import useAuthStore from '../store/useAuthStore';
+import useSubscriptionStore from '../store/useSubscriptionStore';
 import { validateBirthdayDate } from '../utils/helpers';
 import { upsertProfile } from '../services/supabase';
+import Paywall from '../components/Paywall';
 
 const AVATAR_OPTIONS = [
     { id: 'cat_orange', emoji: '🐱', label: 'Orange Cat' },
@@ -34,11 +37,13 @@ const ProfilesPage = () => {
     const navigate = useNavigate();
     const { currentUser, users, caseHistory, appreciations, fetchAppreciations } = useAppStore();
     const { profile, partner: connectedPartner, hasPartner, signOut, refreshProfile, user: authUser } = useAuthStore();
+    const { isGold, usage, limits, getUsageDisplay, purchaseGold, restorePurchases, isLoading: subLoading } = useSubscriptionStore();
     const partnerFromUsers = users?.find(u => u.id !== currentUser?.id);
 
     const [showEditModal, setShowEditModal] = useState(false);
     const [activeTab, setActiveTab] = useState('me'); // 'me' or 'us'
     const [copied, setCopied] = useState(false);
+    const [showPaywall, setShowPaywall] = useState(false);
 
     // Profile settings - initialize from Supabase profile, fallback to localStorage
     const [profileData, setProfileData] = useState(() => {
@@ -316,6 +321,91 @@ const ProfilesPage = () => {
                             </motion.div>
                         </div>
 
+                        {/* Subscription Card */}
+                        <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.28 }}
+                            className={`glass-card p-5 ${isGold
+                                ? 'bg-gradient-to-br from-amber-50/80 to-court-gold/20 border border-court-gold/30'
+                                : 'bg-gradient-to-br from-neutral-50/80 to-neutral-100/60'
+                                }`}
+                        >
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${isGold
+                                    ? 'bg-gradient-to-br from-court-gold to-amber-600'
+                                    : 'bg-gradient-to-br from-neutral-300 to-neutral-400'
+                                    }`}>
+                                    <Crown className="w-6 h-6 text-white" />
+                                </div>
+                                <div className="flex-1">
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="font-bold text-neutral-800">
+                                            {isGold ? 'Pause Gold' : 'Free Plan'}
+                                        </h3>
+                                        {isGold && <Sparkles className="w-4 h-4 text-court-gold" />}
+                                    </div>
+                                    <p className="text-xs text-neutral-500">
+                                        {isGold ? 'Premium features unlocked' : 'Upgrade to unlock more'}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Usage Stats */}
+                            <div className="space-y-2 mb-4">
+                                <div className="flex items-center justify-between text-sm">
+                                    <span className="flex items-center gap-2 text-neutral-600">
+                                        <Zap className="w-4 h-4 text-blue-500" />
+                                        Judge Lightning
+                                    </span>
+                                    <span className="font-medium text-neutral-700">{getUsageDisplay('fast')}</span>
+                                </div>
+                                <div className="flex items-center justify-between text-sm">
+                                    <span className="flex items-center gap-2 text-neutral-600">
+                                        <Scale className="w-4 h-4 text-emerald-500" />
+                                        Judge Mittens
+                                    </span>
+                                    <span className="font-medium text-neutral-700">{getUsageDisplay('logical')}</span>
+                                </div>
+                                <div className="flex items-center justify-between text-sm">
+                                    <span className="flex items-center gap-2 text-neutral-600">
+                                        <Gavel className="w-4 h-4 text-amber-500" />
+                                        Judge Whiskers
+                                    </span>
+                                    <span className={`font-medium ${isGold ? 'text-neutral-700' : 'text-neutral-400'}`}>
+                                        {isGold ? getUsageDisplay('best') : 'Gold Only'}
+                                    </span>
+                                </div>
+                                <div className="flex items-center justify-between text-sm">
+                                    <span className="flex items-center gap-2 text-neutral-600">
+                                        <Wand2 className="w-4 h-4 text-purple-500" />
+                                        Help Me Plan
+                                    </span>
+                                    <span className={`font-medium ${isGold ? 'text-neutral-700' : 'text-neutral-400'}`}>
+                                        {isGold ? 'Unlimited ✨' : 'Gold Only'}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {!isGold && (
+                                <motion.button
+                                    whileTap={{ scale: 0.98 }}
+                                    onClick={() => setShowPaywall(true)}
+                                    className="w-full py-3 rounded-xl font-bold text-white flex items-center justify-center gap-2 shadow-md"
+                                    style={{ background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' }}
+                                >
+                                    <Crown className="w-5 h-5" />
+                                    Upgrade to Gold – $8.88/mo
+                                </motion.button>
+                            )}
+
+                            {isGold && (
+                                <p className="text-center text-xs text-neutral-500">
+                                    Thank you for being a Gold member! 🐱✨
+                                </p>
+                            )}
+                        </motion.div>
+
                         {/* Connect with Partner Card - Show only when not connected */}
                         {!hasPartner && (
                             <motion.div
@@ -558,6 +648,12 @@ const ProfilesPage = () => {
                     />
                 )}
             </AnimatePresence>
+
+            {/* Paywall Modal */}
+            <Paywall
+                isOpen={showPaywall}
+                onClose={() => setShowPaywall(false)}
+            />
         </div>
     );
 };

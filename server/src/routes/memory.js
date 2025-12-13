@@ -7,6 +7,7 @@
 
 const express = require('express');
 const { isSupabaseConfigured, getUserProfile, updateUserProfile, getUserMemories } = require('../lib/supabase');
+const { requireAuthUserId } = require('../lib/auth');
 
 const router = express.Router();
 
@@ -41,14 +42,19 @@ router.get('/profile/:userId', async (req, res) => {
     }
     
     try {
-        const profile = await getUserProfile(req.params.userId);
+        const viewerId = await requireAuthUserId(req);
+        if (String(req.params.userId) !== String(viewerId)) {
+            return res.status(403).json({ error: 'Forbidden' });
+        }
+
+        const profile = await getUserProfile(viewerId);
         res.json({
-            userId: req.params.userId,
+            userId: viewerId,
             profile,
         });
     } catch (error) {
         console.error('[Memory API] Error getting profile:', error);
-        res.status(500).json({ error: error.message });
+        res.status(error.statusCode || 500).json({ error: error.message });
     }
 });
 
@@ -75,15 +81,20 @@ router.patch('/profile/:userId', async (req, res) => {
     }
     
     try {
-        const updatedProfile = await updateUserProfile(req.params.userId, req.body);
+        const viewerId = await requireAuthUserId(req);
+        if (String(req.params.userId) !== String(viewerId)) {
+            return res.status(403).json({ error: 'Forbidden' });
+        }
+
+        const updatedProfile = await updateUserProfile(viewerId, req.body);
         res.json({
-            userId: req.params.userId,
+            userId: viewerId,
             profile: updatedProfile,
             message: 'Profile updated successfully',
         });
     } catch (error) {
         console.error('[Memory API] Error updating profile:', error);
-        res.status(500).json({ error: error.message });
+        res.status(error.statusCode || 500).json({ error: error.message });
     }
 });
 
@@ -102,15 +113,26 @@ router.get('/memories/:userId', async (req, res) => {
     }
     
     try {
-        const memories = await getUserMemories(req.params.userId, req.query.type);
+        const viewerId = await requireAuthUserId(req);
+        if (String(req.params.userId) !== String(viewerId)) {
+            return res.status(403).json({ error: 'Forbidden' });
+        }
+
+        const allowedTypes = new Set(['trigger', 'core_value', 'pattern']);
+        const type = typeof req.query.type === 'string' ? req.query.type : null;
+        if (type && !allowedTypes.has(type)) {
+            return res.status(400).json({ error: 'Invalid type' });
+        }
+
+        const memories = await getUserMemories(viewerId, type);
         res.json({
-            userId: req.params.userId,
+            userId: viewerId,
             count: memories.length,
             memories,
         });
     } catch (error) {
         console.error('[Memory API] Error getting memories:', error);
-        res.status(500).json({ error: error.message });
+        res.status(error.statusCode || 500).json({ error: error.message });
     }
 });
 
@@ -127,14 +149,19 @@ router.get('/insights/:userId', async (req, res) => {
     }
     
     try {
+        const viewerId = await requireAuthUserId(req);
+        if (String(req.params.userId) !== String(viewerId)) {
+            return res.status(403).json({ error: 'Forbidden' });
+        }
+
         const [triggers, coreValues, patterns] = await Promise.all([
-            getUserMemories(req.params.userId, 'trigger'),
-            getUserMemories(req.params.userId, 'core_value'),
-            getUserMemories(req.params.userId, 'pattern'),
+            getUserMemories(viewerId, 'trigger'),
+            getUserMemories(viewerId, 'core_value'),
+            getUserMemories(viewerId, 'pattern'),
         ]);
         
         res.json({
-            userId: req.params.userId,
+            userId: viewerId,
             summary: {
                 triggers: triggers.length,
                 coreValues: coreValues.length,

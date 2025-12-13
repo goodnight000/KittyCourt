@@ -22,6 +22,8 @@ import {
     subscribeToProfileChanges
 } from '../services/supabase';
 import { readSessionBackup, writeSessionBackup, clearSessionBackup } from '../services/authSessionBackup';
+import useSubscriptionStore from './useSubscriptionStore';
+import { logOutUser as revenueCatLogOut } from '../services/revenuecat';
 
 const AUTH_PROFILE_TIMEOUT_MS = 5000;
 const AUTH_REQUESTS_TIMEOUT_MS = 5000;
@@ -80,14 +82,14 @@ const loadAuthContext = async (user) => {
     try {
         const pendingResult = await withTimeout(getPendingRequests(), AUTH_REQUESTS_TIMEOUT_MS, 'getPendingRequests');
         requests = pendingResult?.data || [];
-    } catch (_e) {
+    } catch {
         // Non-critical on boot; ignore.
     }
 
     try {
         const sentResult = await withTimeout(getSentRequest(), AUTH_REQUESTS_TIMEOUT_MS, 'getSentRequest');
         sent = sentResult?.data || null;
-    } catch (_e) {
+    } catch {
         // Non-critical on boot; ignore.
     }
 
@@ -165,6 +167,8 @@ const useAuthStore = create(
                 console.log('[Auth] Auth state change:', event, sessionUser?.id);
 
                 if (event === 'SIGNED_OUT') {
+                    useSubscriptionStore.getState().reset();
+                    revenueCatLogOut();
                     set({
                         user: null,
                         session: null,
@@ -245,7 +249,9 @@ const useAuthStore = create(
                             onboardingComplete: profile ? !!profile.onboarding_complete : stateAfterHydrate.onboardingComplete,
                         });
 
+                        // Initialize subscription store after auth
                         setTimeout(() => {
+                            useSubscriptionStore.getState().initialize(sessionUser.id);
                             get().setupRealtimeSubscriptions();
                         }, 100);
                     } catch (e) {
@@ -314,13 +320,15 @@ const useAuthStore = create(
             },
 
             // Sign in with email/password
-            // Note: Does NOT set global isLoading to avoid showing LoadingScreen during auth
+            // Note: Set global isLoading during auth to avoid routing "flashes" before profile is hydrated.
             signIn: async (email, password) => {
                 try {
+                    set({ isLoading: true });
                     console.log('[Auth] signIn called with email:', email);
                     const { data, error } = await supabaseSignInWithEmail(email, password);
                     if (error) {
                         console.error('[Auth] Sign in error:', error);
+                        set({ isLoading: false });
                         return { error };
                     }
 
@@ -403,8 +411,9 @@ const useAuthStore = create(
                         isLoading: false
                     });
 
-                    // Set up real-time subscriptions
+                    // Set up real-time subscriptions and initialize subscription store
                     setTimeout(() => {
+                        useSubscriptionStore.getState().initialize(data.user.id);
                         get().setupRealtimeSubscriptions();
                     }, 100);
 
@@ -412,6 +421,7 @@ const useAuthStore = create(
                     return { data };
                 } catch (e) {
                     console.error('[Auth] Sign in exception:', e);
+                    set({ isLoading: false });
                     return { error: { message: 'An unexpected error occurred' } };
                 }
             },
@@ -460,6 +470,8 @@ const useAuthStore = create(
             // Sign out
             signOut: async () => {
                 set({ isLoading: true });
+                useSubscriptionStore.getState().reset();
+                revenueCatLogOut();
                 await supabaseSignOut();
                 set({
                     user: null,

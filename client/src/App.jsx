@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 
 // Layout
@@ -33,6 +33,9 @@ import LoadingScreen from './components/LoadingScreen';
 import useAuthStore from './store/useAuthStore';
 import { startAuthLifecycle } from './services/authLifecycle';
 
+// RevenueCat
+import { initializeRevenueCat } from './services/revenuecat';
+
 // Protected Route Component - Now allows access without partner (with restrictions)
 const ProtectedRoute = ({ children }) => {
     const { isAuthenticated, isLoading, onboardingComplete } = useAuthStore();
@@ -43,12 +46,12 @@ const ProtectedRoute = ({ children }) => {
     }
 
     if (!isAuthenticated) {
-        return <Navigate to="/signin" state={{ from: location }} replace />;
+        return <Navigate to="/welcome" state={{ from: location }} replace />;
     }
 
     // If authenticated but onboarding not complete, redirect to onboarding
-    if (!onboardingComplete && location.pathname !== '/onboarding') {
-        return <Navigate to="/onboarding" replace />;
+    if (!onboardingComplete && location.pathname !== '/welcome' && location.pathname !== '/onboarding') {
+        return <Navigate to="/welcome" replace />;
     }
 
     // Allow access to main app even without partner (features will be restricted)
@@ -57,26 +60,27 @@ const ProtectedRoute = ({ children }) => {
 
 // App Routes Component
 const AppRoutes = () => {
-    const { initialize, isLoading, isAuthenticated, onboardingComplete, profile, pendingRequests, hasPartner } = useAuthStore();
-    const [initialized, setInitialized] = React.useState(false);
+    const { initialize, isLoading, isAuthenticated, onboardingComplete, pendingRequests, hasPartner } = useAuthStore();
+    const initializedRef = useRef(false);
 
     useEffect(() => {
         const stop = startAuthLifecycle();
+        // Initialize RevenueCat SDK (only works on native platforms)
+        initializeRevenueCat();
         return () => stop?.();
     }, []);
 
     useEffect(() => {
-        // Only initialize once
-        if (initialized) return;
+        if (initializedRef.current) return;
+        initializedRef.current = true;
 
         console.log('[App] Calling initialize...');
-        setInitialized(true);
         initialize().then(() => {
             console.log('[App] Initialize completed');
         }).catch((err) => {
             console.error('[App] Initialize failed:', err);
         });
-    }, [initialized, initialize]);
+    }, [initialize]);
 
     console.log('[App] Render - isLoading:', isLoading, 'isAuthenticated:', isAuthenticated);
 
@@ -93,15 +97,20 @@ const AppRoutes = () => {
                 {/* Public Routes */}
                 <Route path="/signin" element={
                     isAuthenticated ? (
-                        onboardingComplete ? <Navigate to="/" replace /> : <Navigate to="/onboarding" replace />
+                        onboardingComplete ? <Navigate to="/" replace /> : <Navigate to="/welcome" replace />
                     ) : <SignInPage />
                 } />
                 <Route path="/signup" element={
                     isAuthenticated ? (
-                        onboardingComplete ? <Navigate to="/" replace /> : <Navigate to="/onboarding" replace />
+                        onboardingComplete ? <Navigate to="/" replace /> : <Navigate to="/welcome" replace />
                     ) : <SignUpPage />
                 } />
                 <Route path="/auth/callback" element={<AuthCallbackPage />} />
+                <Route path="/welcome" element={
+                    isAuthenticated
+                        ? (onboardingComplete ? <Navigate to="/" replace /> : <OnboardingPage />)
+                        : <OnboardingPage />
+                } />
 
                 {/* Password Reset Routes */}
                 <Route path="/forgot-password" element={
@@ -111,9 +120,7 @@ const AppRoutes = () => {
 
                 {/* Onboarding (requires auth, but not full onboarding) */}
                 <Route path="/onboarding" element={
-                    !isAuthenticated ? <Navigate to="/signin" replace /> :
-                        onboardingComplete ? <Navigate to="/" replace /> :
-                            <OnboardingPage />
+                    <Navigate to="/welcome" replace />
                 } />
 
                 {/* Connect Partner (requires auth + onboarding, can access anytime if not connected) */}

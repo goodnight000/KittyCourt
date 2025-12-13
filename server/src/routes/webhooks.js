@@ -1,0 +1,170 @@
+/**
+ * Webhook Routes
+ * 
+ * Handles webhooks from external services like RevenueCat.
+ */
+
+const express = require('express');
+const router = express.Router();
+const crypto = require('crypto');
+const { getSupabase, isSupabaseConfigured } = require('../lib/supabase');
+
+const REVENUECAT_WEBHOOK_TOKEN = process.env.REVENUECAT_WEBHOOK_TOKEN || '';
+const PAUSE_GOLD_ENTITLEMENT = 'pause_gold';
+const PAUSE_GOLD_PRODUCT = 'pause_gold_monthly';
+const isProd = process.env.NODE_ENV === 'production';
+
+/**
+ * POST /api/webhooks/revenuecat
+ * Handle RevenueCat subscription events
+ * 
+ * Events handled:
+ * - INITIAL_PURCHASE: New subscription
+ * - RENEWAL: Subscription renewed
+ * - EXPIRATION: Subscription expired
+ * - CANCELLATION: Subscription cancelled
+ * - BILLING_ISSUE: Payment failed
+ */
+router.post('/revenuecat', async (req, res) => {
+    try {
+        if (!isSupabaseConfigured()) {
+            console.error('[Webhook] Supabase not configured');
+            return res.status(500).json({ error: 'Server not configured' });
+        }
+
+        // Optional shared-secret auth (recommended).
+        if (isProd && !REVENUECAT_WEBHOOK_TOKEN) {
+            return res.status(503).json({ error: 'Webhook auth not configured' });
+        }
+
+        if (REVENUECAT_WEBHOOK_TOKEN) {
+            const authHeader = req.headers.authorization || '';
+            const match = typeof authHeader === 'string' ? authHeader.match(/^Bearer\s+(.+)$/i) : null;
+            const token = match?.[1];
+            const ok = (() => {
+                if (!token) return false;
+                try {
+                    const a = Buffer.from(token);
+                    const b = Buffer.from(REVENUECAT_WEBHOOK_TOKEN);
+                    if (a.length !== b.length) return false;
+                    return crypto.timingSafeEqual(a, b);
+                } catch {
+                    return false;
+                }
+            })();
+            if (!ok) {
+                return res.status(401).json({ error: 'Unauthorized' });
+            }
+        }
+
+        const supabase = getSupabase();
+        const event = req.body;
+        console.log('[Webhook] RevenueCat event received:', event.event?.type || 'unknown');
+
+        // RevenueCat webhook payload structure
+        const eventType = event.event?.type;
+        const appUserId = event.event?.app_user_id;
+        const productId = event.event?.product_id;
+        const expiresAt = event.event?.expiration_at_ms;
+        const entitlementIds = event.event?.entitlement_ids || [];
+        const affectsGold = entitlementIds.includes(PAUSE_GOLD_ENTITLEMENT) || productId === PAUSE_GOLD_PRODUCT;
+
+        if (!appUserId) {
+            console.warn('[Webhook] No app_user_id in event');
+            return res.status(200).json({ received: true, processed: false });
+        }
+
+        if (!affectsGold) {
+            // Ignore unrelated products/entitlements.
+            return res.status(200).json({ received: true, processed: false, reason: 'unrelated_product' });
+        }
+
+        // Calculate expiration date
+        const expirationDate = expiresAt
+            ? new Date(expiresAt).toISOString()
+            : null;
+
+        switch (eventType) {
+            case 'INITIAL_PURCHASE':
+            case 'RENEWAL':
+            case 'PRODUCT_CHANGE':
+                // User subscribed or renewed
+                console.log(`[Webhook] Setting ${appUserId} to pause_gold`);
+
+                const { error: subscribeError } = await supabase
+                    .from('profiles')
+                    .update({
+                        subscription_tier: 'pause_gold',
+                        subscription_expires_at: expirationDate,
+                        store_customer_id: event.event?.original_app_user_id || appUserId,
+                    })
+                    .eq('id', appUserId);
+
+                if (subscribeError) {
+                    console.error('[Webhook] Failed to update subscription:', subscribeError);
+                    return res.status(500).json({ error: 'Database update failed' });
+                }
+                break;
+
+            case 'EXPIRATION':
+                // Subscription ended
+                console.log(`[Webhook] Setting ${appUserId} to free (${eventType})`);
+
+                const { error: cancelError } = await supabase
+                    .from('profiles')
+                    .update({
+                        subscription_tier: 'free',
+                        subscription_expires_at: null,
+                    })
+                    .eq('id', appUserId);
+
+                if (cancelError) {
+                    console.error('[Webhook] Failed to cancel subscription:', cancelError);
+                    return res.status(500).json({ error: 'Database update failed' });
+                }
+                break;
+
+            case 'CANCELLATION':
+                // Auto-renew turned off, but entitlement usually remains active until expiration.
+                console.log(`[Webhook] Cancellation for ${appUserId} (keeping pause_gold until expiration)`);
+                await supabase
+                    .from('profiles')
+                    .update({
+                        subscription_tier: 'pause_gold',
+                        subscription_expires_at: expirationDate,
+                    })
+                    .eq('id', appUserId);
+                break;
+
+            case 'BILLING_ISSUE':
+                // Payment problem - could add grace period logic
+                console.warn(`[Webhook] Billing issue for ${appUserId}`);
+                // For now, we'll keep the subscription active
+                // RevenueCat will send EXPIRATION if it's not resolved
+                break;
+
+            case 'SUBSCRIBER_ALIAS':
+                // User ID aliasing - update customer ID reference
+                console.log(`[Webhook] Alias event for ${appUserId}`);
+                break;
+
+            default:
+                console.log(`[Webhook] Unhandled event type: ${eventType}`);
+        }
+
+        res.status(200).json({ received: true, processed: true });
+    } catch (error) {
+        console.error('[Webhook] Error processing RevenueCat event:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
+ * GET /api/webhooks/health
+ * Health check endpoint
+ */
+router.get('/health', (req, res) => {
+    res.json({ status: 'ok', service: 'webhooks' });
+});
+
+module.exports = router;

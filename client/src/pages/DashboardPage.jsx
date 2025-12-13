@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Heart, Coffee, TrendingUp, Sparkles, Star, Gift, X, Check, Scale, History, MessageCircle, Lock, BookOpen, Flame, ArrowRight } from 'lucide-react';
 import useAppStore from '../store/useAppStore';
@@ -8,7 +8,7 @@ import api from '../services/api';
 
 const DashboardPage = () => {
     const navigate = useNavigate();
-    const { currentUser, users, logGoodDeed, caseHistory } = useAppStore();
+    const { currentUser, users, logGoodDeed } = useAppStore();
     const { hasPartner, profile, partner: connectedPartner, user: authUser } = useAuthStore();
     const [showGoodDeedModal, setShowGoodDeedModal] = useState(false);
     const [questionStreak, setQuestionStreak] = useState(0);
@@ -27,27 +27,24 @@ const DashboardPage = () => {
                 const response = await api.get('/daily-questions/history', {
                     params: { userId: authUser.id, partnerId: connectedPartner.id }
                 });
-                // Calculate streak from history
                 const history = response.data || [];
-                let streak = 0;
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
+                const completed = history.filter(q => q.my_answer && q.partner_answer);
+                if (completed.length === 0) {
+                    setQuestionStreak(0);
+                    return;
+                }
 
-                // Sort by date descending
-                const sorted = history
-                    .filter(q => q.my_answer && q.partner_answer)
-                    .sort((a, b) => new Date(b.assigned_date) - new Date(a.assigned_date));
+                const parseDay = (day) => new Date(`${day}T00:00:00`);
+                const sorted = [...completed].sort((a, b) => parseDay(b.assigned_date) - parseDay(a.assigned_date));
 
-                for (let i = 0; i < sorted.length; i++) {
-                    const questionDate = new Date(sorted[i].assigned_date + 'T00:00:00');
-                    const expectedDate = new Date(today);
-                    expectedDate.setDate(expectedDate.getDate() - i);
-
-                    if (questionDate.toDateString() === expectedDate.toDateString()) {
-                        streak++;
-                    } else {
-                        break;
-                    }
+                const msPerDay = 1000 * 60 * 60 * 24;
+                let streak = 1;
+                for (let i = 1; i < sorted.length; i++) {
+                    const prev = parseDay(sorted[i - 1].assigned_date);
+                    const curr = parseDay(sorted[i].assigned_date);
+                    const diffDays = Math.round((prev - curr) / msPerDay);
+                    if (diffDays === 1) streak++;
+                    else break;
                 }
                 setQuestionStreak(streak);
             } catch (err) {
@@ -111,7 +108,7 @@ const DashboardPage = () => {
         <div className="space-y-6">
             {/* Welcome & Stats Section */}
             <div className="space-y-4">
-                <motion.div
+                <Motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="flex items-center justify-between"
@@ -122,16 +119,16 @@ const DashboardPage = () => {
                         </h1>
                         <p className="text-neutral-500 text-sm mt-0.5">Welcome back 💕</p>
                     </div>
-                </motion.div>
+                </Motion.div>
 
                 {/* Stats Strip - Prominent at top */}
-                <motion.div
+                <Motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.05 }}
                     className="flex gap-3"
                 >
-                    <motion.div
+                    <Motion.div
                         whileTap={{ scale: 0.98 }}
                         onClick={() => navigate('/profile')}
                         className="flex-1 bg-gradient-to-br from-pink-50 to-rose-50/80 rounded-2xl p-4 border border-pink-100/50 cursor-pointer shadow-sm relative overflow-hidden"
@@ -149,9 +146,9 @@ const DashboardPage = () => {
                         </div>
                         {/* Decorative background icon */}
                         <Heart className="absolute -bottom-4 -right-4 w-24 h-24 text-pink-100/50 rotate-12" />
-                    </motion.div>
+                    </Motion.div>
 
-                    <motion.div
+                    <Motion.div
                         whileTap={{ scale: 0.98 }}
                         onClick={() => navigate('/daily-meow/history')}
                         className="flex-1 bg-gradient-to-br from-orange-50 to-amber-50/80 rounded-2xl p-4 border border-orange-100/50 cursor-pointer shadow-sm relative overflow-hidden"
@@ -167,14 +164,14 @@ const DashboardPage = () => {
                         </div>
                         {/* Decorative background icon */}
                         <Flame className="absolute -bottom-4 -right-4 w-24 h-24 text-orange-100/50 rotate-12" />
-                    </motion.div>
-                </motion.div>
+                    </Motion.div>
+                </Motion.div>
             </div>
 
             {/* Main Features - Side by Side Cards */}
             <div className="grid grid-cols-2 gap-3">
                 {/* File a Case Card */}
-                <motion.div
+                <Motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1 }}
@@ -188,7 +185,7 @@ const DashboardPage = () => {
 
                     <div className="relative h-full p-4 flex flex-col">
                         {/* Large Avatar - Top Left */}
-                        <motion.div
+                        <Motion.div
                             animate={{ y: [0, -3, 0] }}
                             transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
                             className="w-28 h-28 rounded-xl overflow-hidden mb-auto"
@@ -198,7 +195,7 @@ const DashboardPage = () => {
                                 alt="Judge Whiskers"
                                 className="w-full h-full object-cover"
                             />
-                        </motion.div>
+                        </Motion.div>
 
                         {/* Ready Badge - Top Right */}
                         <div className="absolute top-4 right-4 inline-flex items-center gap-1.5 px-2.5 py-1 bg-white/15 backdrop-blur-sm rounded-full">
@@ -212,10 +209,10 @@ const DashboardPage = () => {
                             <p className="text-white/60 text-xs mt-0.5">Let Judge Whiskers decide</p>
                         </div>
                     </div>
-                </motion.div>
+                </Motion.div>
 
                 {/* Daily Question Card */}
-                <motion.div
+                <Motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.15 }}
@@ -229,7 +226,7 @@ const DashboardPage = () => {
 
                     <div className="relative h-full p-4 flex flex-col">
                         {/* Large Icon - Top Left */}
-                        <motion.div
+                        <Motion.div
                             animate={{ rotate: [0, 5, -5, 0] }}
                             transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
                             className="w-28 h-28 rounded-xl overflow-hidden"
@@ -239,7 +236,7 @@ const DashboardPage = () => {
                                 alt="Daily Question"
                                 className="w-full h-full object-cover"
                             />
-                        </motion.div>
+                        </Motion.div>
 
                         {/* NEW Badge - Top Right */}
                         <div className="absolute top-4 right-4 px-2.5 py-1 bg-white/20 backdrop-blur-sm rounded-full">
@@ -252,7 +249,7 @@ const DashboardPage = () => {
                             <p className="text-white/60 text-xs mt-0.5">Share your thoughts</p>
                         </div>
                     </div>
-                </motion.div>
+                </Motion.div>
             </div>
 
             {/* Quick Actions - Compact Grid */}
@@ -260,7 +257,7 @@ const DashboardPage = () => {
                 <h3 className="font-bold text-neutral-400 text-xs uppercase tracking-wider px-1">Quick Actions</h3>
 
                 <div className="grid grid-cols-4 gap-2">
-                    <motion.button
+                    <Motion.button
                         whileTap={{ scale: 0.95 }}
                         onClick={() => hasPartner ? setShowGoodDeedModal(true) : navigate('/connect')}
                         className="glass-card p-2 flex flex-col items-center gap-1 relative bg-white/50 hover:bg-white/80 transition-colors"
@@ -278,9 +275,9 @@ const DashboardPage = () => {
                             />
                         </div>
                         <span className="text-[10px] font-bold text-neutral-600 text-center leading-tight">Appreciate</span>
-                    </motion.button>
+                    </Motion.button>
 
-                    <motion.button
+                    <Motion.button
                         whileTap={{ scale: 0.95 }}
                         onClick={() => navigate('/appreciations')}
                         className="glass-card p-2 flex flex-col items-center gap-1 bg-white/50 hover:bg-white/80 transition-colors"
@@ -293,9 +290,9 @@ const DashboardPage = () => {
                             />
                         </div>
                         <span className="text-[10px] font-bold text-neutral-600 text-center leading-tight">Love Notes</span>
-                    </motion.button>
+                    </Motion.button>
 
-                    <motion.button
+                    <Motion.button
                         whileTap={{ scale: 0.95 }}
                         onClick={() => navigate('/history')}
                         className="glass-card p-2 flex flex-col items-center gap-1 bg-white/50 hover:bg-white/80 transition-colors"
@@ -308,9 +305,9 @@ const DashboardPage = () => {
                             />
                         </div>
                         <span className="text-[10px] font-bold text-neutral-600 text-center leading-tight">Cases</span>
-                    </motion.button>
+                    </Motion.button>
 
-                    <motion.button
+                    <Motion.button
                         whileTap={{ scale: 0.95 }}
                         onClick={() => navigate('/economy')}
                         className="glass-card p-2 flex flex-col items-center gap-1 bg-white/50 hover:bg-white/80 transition-colors"
@@ -323,12 +320,12 @@ const DashboardPage = () => {
                             />
                         </div>
                         <span className="text-[10px] font-bold text-neutral-600 text-center leading-tight">Redeem</span>
-                    </motion.button>
+                    </Motion.button>
                 </div>
             </div>
 
             {/* Question Archives - Horizontal Banner */}
-            <motion.div
+            <Motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
@@ -347,19 +344,19 @@ const DashboardPage = () => {
                     </div>
                     <ArrowRight className="w-5 h-5 text-neutral-400" />
                 </div>
-            </motion.div>
+            </Motion.div>
 
             {/* Good Deed Modal */}
             <AnimatePresence>
                 {showGoodDeedModal && (
-                    <motion.div
+                    <Motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] flex items-end justify-center p-4 pb-20"
                         onClick={() => setShowGoodDeedModal(false)}
                     >
-                        <motion.div
+                        <Motion.div
                             initial={{ y: 100, opacity: 0 }}
                             animate={{ y: 0, opacity: 1 }}
                             exit={{ y: 100, opacity: 0 }}
@@ -367,21 +364,21 @@ const DashboardPage = () => {
                             className="bg-white rounded-3xl w-full max-w-md p-5 space-y-4 shadow-xl"
                         >
                             {showSuccess ? (
-                                <motion.div
+                                <Motion.div
                                     initial={{ scale: 0.8 }}
                                     animate={{ scale: 1 }}
                                     className="text-center py-8"
                                 >
-                                    <motion.div
+                                    <Motion.div
                                         animate={{ scale: [1, 1.2, 1] }}
                                         transition={{ duration: 0.5 }}
                                         className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4"
                                     >
                                         <Check className="w-8 h-8 text-green-500" />
-                                    </motion.div>
+                                    </Motion.div>
                                     <h3 className="font-bold text-neutral-800 text-lg">{partnerName} got +10 Kibble! 🎉</h3>
                                     <p className="text-neutral-500 text-sm">Thanks for recognizing their effort!</p>
-                                </motion.div>
+                                </Motion.div>
                             ) : (
                                 <>
                                     <div className="flex items-center justify-between">
@@ -424,7 +421,7 @@ const DashboardPage = () => {
                                         className="btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-50"
                                     >
                                         {isSubmitting ? (
-                                            <motion.div
+                                            <Motion.div
                                                 animate={{ rotate: 360 }}
                                                 transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                                                 className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
@@ -438,8 +435,8 @@ const DashboardPage = () => {
                                     </button>
                                 </>
                             )}
-                        </motion.div>
-                    </motion.div>
+                        </Motion.div>
+                    </Motion.div>
                 )}
             </AnimatePresence>
         </div>

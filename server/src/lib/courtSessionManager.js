@@ -8,6 +8,8 @@
  */
 
 const { v4: uuidv4 } = require('uuid');
+const { incrementUsage } = require('./usageTracking');
+const { canUseFeature } = require('./usageLimits');
 
 // Session phases (internal state machine)
 const PHASE = {
@@ -539,6 +541,29 @@ class CourtSessionManager {
                 caseData.submissions[key].addendum = session.addendum.text;
             }
 
+            // Enforce subscription limits before spending LLM tokens.
+            try {
+                const judgeType = session.judgeType || 'logical';
+                const usageType = judgeType === 'fast'
+                    ? 'lightning'
+                    : judgeType === 'best'
+                        ? 'whiskers'
+                        : 'mittens';
+
+                const usage = await canUseFeature({ userId: session.creatorId, type: usageType });
+                if (!usage.allowed) {
+                    session.verdict = { status: 'error', error: 'Usage limit reached', usage };
+                    session.resolvedAt = Date.now();
+                    session.phase = PHASE.VERDICT;
+                    await this._dbCheckpoint(session, 'verdict');
+                    this._notifyBoth(session);
+                    return;
+                }
+            } catch (e) {
+                // Best-effort: if we can't verify limits, don't block the session.
+                console.warn('[Court] Failed to verify usage limits:', e?.message || e);
+            }
+
             // Call judge engine with selected judge type
             const result = await this.judgeEngine.deliberate(caseData, {
                 judgeType: session.judgeType || 'logical'
@@ -548,6 +573,19 @@ class CourtSessionManager {
             session.verdict = result;
             session.resolvedAt = Date.now();
             session.phase = PHASE.VERDICT;
+
+            // Record usage for the creator (best-effort; do not block verdict delivery).
+            try {
+                const judgeType = session.judgeType || 'logical';
+                const usageType = judgeType === 'fast'
+                    ? 'lightning'
+                    : judgeType === 'best'
+                        ? 'whiskers'
+                        : 'mittens';
+                await incrementUsage({ userId: session.creatorId, type: usageType });
+            } catch (e) {
+                console.warn('[Court] Failed to increment usage:', e?.message || e);
+            }
 
             // Set verdict timeout (1 hour auto-accept)
             session.timeoutId = setTimeout(() => {

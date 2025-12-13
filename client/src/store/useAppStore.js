@@ -46,7 +46,7 @@ const useAppStore = create(
                         try {
                             const balanceRes = await api.get(`/economy/balance/${user.id}`);
                             user.kibbleBalance = balanceRes.data.balance || 0;
-                        } catch (e) {
+                        } catch {
                             user.kibbleBalance = 0;
                         }
                     }
@@ -60,7 +60,7 @@ const useAppStore = create(
                 }
             },
 
-            switchUser: (userId) => {
+            switchUser: () => {
                 console.warn('User switching is disabled in production mode.');
                 // No-op
             },
@@ -199,51 +199,12 @@ const useAppStore = create(
                 }
             },
 
-            // --- Daily Question State ---
-            dailyQuestion: null,
-            dailyAnswer: '',
-            hasAnsweredToday: false,
-
-            setDailyAnswer: (answer) => set({ dailyAnswer: answer }),
-
-            submitDailyAnswer: async () => {
-                const { dailyAnswer, dailyQuestion } = get();
-                if (!dailyAnswer.trim() || !dailyQuestion) return;
-
-                // Get auth user from auth store
-                const { user: authUser } = await import('./useAuthStore').then(m => m.default.getState());
-                if (!authUser?.id) return;
-
-                try {
-                    await api.post('/daily-answers', {
-                        userId: authUser.id,
-                        questionId: dailyQuestion.id,
-                        answer: dailyAnswer
-                    });
-
-                    set({ hasAnsweredToday: true, dailyAnswer: '' });
-
-                    // Award kibble for answering
-                    await api.post('/economy/transaction', {
-                        userId: authUser.id,
-                        amount: 3,
-                        type: 'EARN',
-                        description: 'Answered daily question'
-                    });
-
-                    get().fetchUsers();
-                } catch (error) {
-                    console.error("Failed to submit daily answer", error);
-                }
-            },
-
         }),
         {
             name: 'cat-judge-storage',
             partialize: (state) => ({
                 currentUser: state.currentUser,
                 users: state.users,
-                hasAnsweredToday: state.hasAnsweredToday,
             }),
         }
     )

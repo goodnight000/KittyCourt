@@ -34,6 +34,7 @@ export default function useCourtSocket() {
 
     // Get user from auth store
     const user = useAuthStore(state => state.user);
+    const session = useAuthStore(state => state.session);
 
     // Get store handlers
     const onStateSync = useCourtStore(state => state.onStateSync);
@@ -59,7 +60,10 @@ export default function useCourtSocket() {
         const socket = io(url, {
             transports: ['websocket', 'polling'],
             timeout: 10000,
-            reconnection: false // We handle reconnection manually
+            reconnection: false, // We handle reconnection manually
+            auth: {
+                token: session?.access_token || null
+            }
         });
 
         // === Connection Events ===
@@ -125,7 +129,7 @@ export default function useCourtSocket() {
         setSocketRef(socket);
 
         return socket;
-    }, [user?.id, onStateSync, onError, onSettlementRequested, onSettlementDeclined, storeSetConnected]);
+    }, [user?.id, session?.access_token, onStateSync, onError, onSettlementRequested, onSettlementDeclined, storeSetConnected]);
 
     // Disconnect
     const disconnect = useCallback(() => {

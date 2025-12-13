@@ -27,12 +27,14 @@ const { retrieveHistoricalContext, formatContextForPrompt, hasHistoricalContext 
 const { triggerBackgroundExtraction } = require('./stenographer');
 const { repairAndParseJSON } = require('./jsonRepair');
 
+const DEBUG_LOGS = process.env.NODE_ENV !== 'production';
+
 // Configuration - Using OpenRouter with DeepSeek R1 reasoning model
 const CONFIG = {
     model: 'deepseek/deepseek-v3.2', // DeepSeek's reasoning model via OpenRouter
     analysisTemperature: 0.5, // Lower temp for consistent clinical analysis
     verdictTemperature: 0.7,  // Higher temp for creative cat persona
-    maxTokens: 16000,          // Increased to prevent truncation
+    maxTokens: 8000,          // Increased to prevent truncation
     maxRetries: 3,            // Increased retries
 };
 
@@ -100,7 +102,7 @@ async function runModerationCheck(input) {
  * @param {object} input - The validated deliberation input
  * @returns {Promise<object>} - Structured psychological analysis
  */
-async function runAnalysis(input) {
+async function runAnalysis(input, analysisModel) {
     const userPrompt = buildAnalystUserPrompt(input);
     let lastError = null;
 
@@ -109,7 +111,7 @@ async function runAnalysis(input) {
             console.log(`[Judge Engine] Analysis attempt ${attempt}/${CONFIG.maxRetries}`);
 
             const response = await createChatCompletion({
-                model: CONFIG.model,
+                model: analysisModel,
                 messages: [
                     { role: 'system', content: ANALYST_SYSTEM_PROMPT },
                     { role: 'user', content: userPrompt },
@@ -124,7 +126,9 @@ async function runAnalysis(input) {
 
             console.log('[Judge Engine] Raw analysis response length:', content?.length);
             console.log('[Judge Engine] Finish reason:', finishReason);
-            console.log('[Judge Engine] Raw analysis response:', content?.substring(0, 500) + '...');
+            if (DEBUG_LOGS) {
+                console.log('[Judge Engine] Raw analysis response:', content?.substring(0, 500) + '...');
+            }
 
             // Check if response was truncated
             if (finishReason === 'length') {
@@ -137,7 +141,7 @@ async function runAnalysis(input) {
                 parsed = JSON.parse(content);
             } catch (parseError) {
                 console.log('[Judge Engine] Direct parse failed, attempting repair...');
-                console.log('[Judge Engine] Full response for debugging:', content);
+                if (DEBUG_LOGS) console.log('[Judge Engine] Full response for debugging:', content);
                 parsed = repairAndParseJSON(content);
             }
 
@@ -208,7 +212,7 @@ async function generateVerdict(input, analysis, historicalContext = '', judgeTyp
             const finishReason = response.choices[0].finish_reason;
             console.log('[Judge Engine] Raw verdict response length:', content?.length);
             console.log('[Judge Engine] Finish reason:', finishReason);
-            console.log('[Judge Engine] Raw verdict response:', content.substring(0, 500) + '...');
+            if (DEBUG_LOGS) console.log('[Judge Engine] Raw verdict response:', content.substring(0, 500) + '...');
 
             // Try to parse with repair capability
             let parsed;
@@ -216,7 +220,7 @@ async function generateVerdict(input, analysis, historicalContext = '', judgeTyp
                 parsed = JSON.parse(content);
             } catch (parseError) {
                 console.log('[Judge Engine] Direct parse failed, attempting repair...');
-                console.log('[Judge Engine] Full response for repair:', content);
+                if (DEBUG_LOGS) console.log('[Judge Engine] Full response for repair:', content);
                 parsed = repairAndParseJSON(content);
             }
 
@@ -357,10 +361,13 @@ async function deliberate(rawInput, options = {}) {
     }
 
     // Step 3: Analysis Phase
+    const judgeType = options.judgeType || 'logical';
+    const analysisModel = JUDGE_MODELS[judgeType] || CONFIG.model;
     console.log('[Judge Engine] Step 3: Running psychological analysis...');
     let analysis;
     try {
-        analysis = await runAnalysis(input);
+        console.log(`[Judge Engine] Using model ${analysisModel} for analysis (judgeType: ${judgeType})`);
+        analysis = await runAnalysis(input, analysisModel);
         console.log('[Judge Engine] Analysis complete:', JSON.stringify(analysis, null, 2));
     } catch (error) {
         return {
@@ -372,7 +379,6 @@ async function deliberate(rawInput, options = {}) {
     }
 
     // Step 4: Verdict Generation
-    const judgeType = options.judgeType || 'logical';
     console.log(`[Judge Engine] Step 4: Generating verdict with judgeType=${judgeType}...`);
     let judgeContent;
     try {
@@ -407,7 +413,8 @@ async function deliberate(rawInput, options = {}) {
             analysis: analysis.analysis,
             moderationPassed: !moderationResult.flagged,
             processingTimeMs: duration,
-            model: JUDGE_MODELS[judgeType] || JUDGE_MODELS.logical,
+            analysisModel,
+            verdictModel: JUDGE_MODELS[judgeType] || JUDGE_MODELS.logical,
             judgeType,
             hasHistoricalContext: hasHistoricalContext(historicalContext),
             memoriesUsed: historicalContext?.memories?.length || 0,

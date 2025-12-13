@@ -169,7 +169,6 @@ const CourtAtRest = ({ onServe, navigate }) => {
                 >
                     <Gavel className="w-4 h-4" />
                     File a New Case
-                    <Zap className="w-4 h-4" />
                 </motion.button>
 
                 <motion.button

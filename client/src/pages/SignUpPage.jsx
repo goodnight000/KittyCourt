@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion as Motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, Sparkles, Check } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
@@ -56,7 +56,7 @@ const SignUpPage = () => {
         } else {
             setSuccess(true);
             // Force navigation to onboarding immediately to avoid any state race conditions
-            navigate('/onboarding');
+            navigate('/welcome');
         }
     };
 
@@ -73,12 +73,12 @@ const SignUpPage = () => {
     if (success) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-court-cream via-white to-court-tan/30 flex flex-col items-center justify-center p-6">
-                <motion.div
+                <Motion.div
                     initial={{ scale: 0.8, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     className="text-center"
                 >
-                    <motion.div
+                    <Motion.div
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
                         transition={{ type: 'spring', delay: 0.2 }}
@@ -86,17 +86,17 @@ const SignUpPage = () => {
                         style={{ background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' }}
                     >
                         <Check className="w-12 h-12 text-white" />
-                    </motion.div>
+                    </Motion.div>
                     <h2 className="text-2xl font-bold text-neutral-800 mb-2">Account Created! 🎉</h2>
                     <p className="text-neutral-500">Let's set up your profile...</p>
-                    <motion.div
+                    <Motion.div
                         animate={{ rotate: 360 }}
                         transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
                         className="mt-6"
                     >
                         <Sparkles className="w-6 h-6 text-court-gold mx-auto" />
-                    </motion.div>
-                </motion.div>
+                    </Motion.div>
+                </Motion.div>
             </div>
         );
     }
@@ -105,42 +105,42 @@ const SignUpPage = () => {
         <div className="min-h-screen bg-gradient-to-br from-court-cream via-white to-court-tan/30 flex flex-col items-center justify-center p-6">
             {/* Background Decorations */}
             <div className="fixed inset-0 pointer-events-none overflow-hidden">
-                <motion.div
+                <Motion.div
                     animate={{ y: [0, -20, 0], rotate: [0, 5, 0] }}
                     transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
                     className="absolute top-20 right-10 text-4xl opacity-20"
                 >
                     ✨
-                </motion.div>
-                <motion.div
+                </Motion.div>
+                <Motion.div
                     animate={{ y: [0, 15, 0], rotate: [0, -5, 0] }}
                     transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
                     className="absolute bottom-32 left-16 text-3xl opacity-20"
                 >
                     🐱
-                </motion.div>
+                </Motion.div>
             </div>
 
             {/* Logo & Header */}
-            <motion.div
+            <Motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="text-center mb-6"
             >
-                <motion.div
+                <Motion.div
                     animate={{ y: [0, -8, 0] }}
                     transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
                     className="w-20 h-20 mx-auto mb-4 rounded-2xl flex items-center justify-center shadow-lg"
                     style={{ background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' }}
                 >
                     <span className="text-4xl">🐱</span>
-                </motion.div>
+                </Motion.div>
                 <h1 className="text-3xl font-bold text-gradient font-display">Join Pause</h1>
                 <p className="text-neutral-500 mt-2">Create your account to get started</p>
-            </motion.div>
+            </Motion.div>
 
             {/* Sign Up Card */}
-            <motion.div
+            <Motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
@@ -149,17 +149,17 @@ const SignUpPage = () => {
                 <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-8 shadow-xl border border-white/50">
                     {/* Error Message */}
                     {error && (
-                        <motion.div
+                        <Motion.div
                             initial={{ opacity: 0, y: -10 }}
                             animate={{ opacity: 1, y: 0 }}
                             className="mb-6 p-4 bg-red-50 border border-red-100 rounded-2xl"
                         >
                             <p className="text-red-600 text-sm text-center">{error}</p>
-                        </motion.div>
+                        </Motion.div>
                     )}
 
                     {/* Google Sign Up */}
-                    <motion.button
+                    <Motion.button
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={handleGoogleSignUp}
@@ -173,7 +173,7 @@ const SignUpPage = () => {
                             <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                         </svg>
                         Continue with Google
-                    </motion.button>
+                    </Motion.button>
 
                     {/* Divider */}
                     <div className="flex items-center gap-4 my-6">
@@ -217,7 +217,7 @@ const SignUpPage = () => {
 
                         {/* Password Requirements */}
                         {password && (
-                            <motion.div
+                            <Motion.div
                                 initial={{ opacity: 0, height: 0 }}
                                 animate={{ opacity: 1, height: 'auto' }}
                                 className="space-y-1.5 pl-1"
@@ -230,7 +230,7 @@ const SignUpPage = () => {
                                         <span className={req.met ? 'text-green-600' : 'text-neutral-400'}>{req.text}</span>
                                     </div>
                                 ))}
-                            </motion.div>
+                            </Motion.div>
                         )}
 
                         {/* Confirm Password Input */}
@@ -249,7 +249,7 @@ const SignUpPage = () => {
                         </div>
 
                         {/* Submit Button */}
-                        <motion.button
+                        <Motion.button
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                             type="submit"
@@ -258,19 +258,19 @@ const SignUpPage = () => {
                             style={{ background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' }}
                         >
                             {isSubmitting ? (
-                                <motion.div
+                                <Motion.div
                                     animate={{ rotate: 360 }}
                                     transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                                 >
                                     <Sparkles className="w-5 h-5" />
-                                </motion.div>
+                                </Motion.div>
                             ) : (
                                 <>
                                     Create Account
                                     <ArrowRight className="w-5 h-5" />
                                 </>
                             )}
-                        </motion.button>
+                        </Motion.button>
                     </form>
 
                     {/* Terms */}
@@ -280,7 +280,7 @@ const SignUpPage = () => {
                 </div>
 
                 {/* Sign In Link */}
-                <motion.p
+                <Motion.p
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.3 }}
@@ -293,8 +293,8 @@ const SignUpPage = () => {
                     >
                         Sign in
                     </Link>
-                </motion.p>
-            </motion.div>
+                </Motion.p>
+            </Motion.div>
         </div>
     );
 };

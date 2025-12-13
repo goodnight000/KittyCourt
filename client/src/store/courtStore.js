@@ -51,6 +51,8 @@ const useCourtStore = create((set, get) => ({
     // === UI State ===
     isSubmitting: false,
     isGeneratingVerdict: false,
+    showOpeningAnimation: false,
+    showCelebrationAnimation: false,
     showRatingPopup: false,
     showSettlementRequest: false,
     settlementDeclinedNotice: null,
@@ -62,6 +64,8 @@ const useCourtStore = create((set, get) => ({
     setLocalEvidence: (text) => set({ localEvidence: text }),
     setLocalFeelings: (text) => set({ localFeelings: text }),
     setLocalAddendum: (text) => set({ localAddendum: text }),
+    setShowOpeningAnimation: (show) => set({ showOpeningAnimation: show }),
+    setShowCelebrationAnimation: (show) => set({ showCelebrationAnimation: show }),
     setShowRatingPopup: (show) => set({ showRatingPopup: show }),
     setShowSettlementRequest: (show) => set({ showSettlementRequest: show }),
     clearSettlementDeclinedNotice: () => set({ settlementDeclinedNotice: null }),
@@ -96,6 +100,8 @@ const useCourtStore = create((set, get) => ({
             hasUnreadVerdict: nextHasUnreadVerdict,
             // Detect deliberating
             isGeneratingVerdict: myViewPhase === VIEW_PHASE.DELIBERATING,
+            // UI-only animations never persist across sessions
+            ...(isSessionCleared || isNewSession ? { showOpeningAnimation: false, showCelebrationAnimation: false } : {}),
             // Clear stale local inputs when a session ends or a new session starts
             ...(isSessionCleared || isNewSession
                 ? { localEvidence: '', localFeelings: '', localAddendum: '' }

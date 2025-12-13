@@ -1,15 +1,16 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { motion as Motion, AnimatePresence } from 'framer-motion';
 import {
     ChevronLeft, ChevronRight, Plus, X, Check, Calendar,
     Heart, Cake, Star, Gift, PartyPopper, Sparkles, Trash2,
-    Lightbulb, Wand2, Loader2, AlertTriangle, Lock
+    Lightbulb, Wand2, Loader2, AlertTriangle, Lock, Crown
 } from 'lucide-react';
 import useAppStore from '../store/useAppStore';
 import useAuthStore from '../store/useAuthStore';
+import useSubscriptionStore from '../store/useSubscriptionStore';
 import api from '../services/api';
 import { validateDate } from '../utils/helpers';
+import Paywall from '../components/Paywall';
 
 const EVENT_TYPES = [
     { id: 'birthday', label: 'Birthday', emoji: '🎂', color: 'pink' },
@@ -40,9 +41,9 @@ const getDefaultHolidays = (year) => [
 ];
 
 const CalendarPage = () => {
-    const navigate = useNavigate();
     const { currentUser } = useAppStore();
-    const { user: authUser, profile, partner: connectedPartner, hasPartner } = useAuthStore();
+    const { user: authUser, profile, partner: connectedPartner } = useAuthStore();
+    const { canUsePlanFeature, isGold } = useSubscriptionStore();
 
     // Build users array from auth store
     const myId = authUser?.id || currentUser?.id;
@@ -58,11 +59,47 @@ const CalendarPage = () => {
     const [showPlanningModal, setShowPlanningModal] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [plannedEventKeys, setPlannedEventKeys] = useState(() => new Set());
+    const [showPaywall, setShowPaywall] = useState(false);
 
-    // Fetch events from API and merge with default holidays and profile dates
+    const fetchEvents = useCallback(async () => {
+        try {
+            setIsLoading(true);
+            const response = await api.get('/calendar/events');
+            const dbEvents = Array.isArray(response.data) ? response.data : [];
+
+            const currentYear = new Date().getFullYear();
+            const defaultEvents = [
+                ...getDefaultHolidays(currentYear),
+                ...getDefaultHolidays(currentYear + 1)
+            ];
+
+            const personalEvents = getPersonalEvents();
+
+            const existingTitles = dbEvents.map(e => e.title);
+            const newDefaults = defaultEvents.filter(d => !existingTitles.includes(d.title));
+
+            setEvents([
+                ...dbEvents,
+                ...newDefaults.map(d => ({ ...d, id: `default_${d.title}` })),
+                ...personalEvents
+            ]);
+        } catch (error) {
+            console.error('Failed to fetch events:', error);
+            const currentYear = new Date().getFullYear();
+            const defaultEvents = getDefaultHolidays(currentYear);
+            const personalEvents = getPersonalEvents();
+            setEvents([
+                ...defaultEvents.map(d => ({ ...d, id: `default_${d.title}` })),
+                ...personalEvents
+            ]);
+        } finally {
+            setIsLoading(false);
+        }
+    }, [myId, partnerId, profile, connectedPartner]);
+
     useEffect(() => {
         fetchEvents();
-    }, [myId, partnerId, profile, connectedPartner]);
+    }, [fetchEvents]);
 
     // Get personal events from auth store profiles
     const getPersonalEvents = () => {
@@ -138,45 +175,7 @@ const CalendarPage = () => {
         return personalEvents;
     };
 
-    const fetchEvents = async () => {
-        try {
-            const response = await api.get('/calendar/events');
-            const dbEvents = Array.isArray(response.data) ? response.data : [];
-
-            // Get default holidays for current and next year
-            const currentYear = new Date().getFullYear();
-            const defaultEvents = [
-                ...getDefaultHolidays(currentYear),
-                ...getDefaultHolidays(currentYear + 1)
-            ];
-
-            // Get personal events (birthdays, anniversary) from profiles
-            const personalEvents = getPersonalEvents();
-
-            // Check which default holidays are already in the database
-            const existingTitles = dbEvents.map(e => e.title);
-            const newDefaults = defaultEvents.filter(d => !existingTitles.includes(d.title));
-
-            // Combine all events
-            setEvents([
-                ...dbEvents,
-                ...newDefaults.map(d => ({ ...d, id: `default_${d.title}` })),
-                ...personalEvents
-            ]);
-        } catch (error) {
-            console.error('Failed to fetch events:', error);
-            // Still show default holidays and personal events even if API fails
-            const currentYear = new Date().getFullYear();
-            const defaultEvents = getDefaultHolidays(currentYear);
-            const personalEvents = getPersonalEvents();
-            setEvents([
-                ...defaultEvents.map(d => ({ ...d, id: `default_${d.title}` })),
-                ...personalEvents
-            ]);
-        } finally {
-            setIsLoading(false);
-        }
-    };
+    // `fetchEvents` is defined above (useCallback)
 
     const addEvent = async (eventData) => {
         try {
@@ -303,7 +302,7 @@ const CalendarPage = () => {
                 const exists = response.data?.exists || {};
                 if (cancelled) return;
                 setPlannedEventKeys(new Set(Object.keys(exists).filter((k) => exists[k])));
-            } catch (e) {
+            } catch {
                 if (cancelled) return;
                 setPlannedEventKeys(new Set());
             }
@@ -316,57 +315,57 @@ const CalendarPage = () => {
         <div className="space-y-5">
             {/* Header */}
             <div className="flex items-center gap-3">
-                <motion.div
-                    animate={{ y: [0, -5, 0] }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                    className="w-12 h-12 bg-gradient-to-br from-violet-100 to-pink-100 rounded-2xl flex items-center justify-center shadow-soft"
-                >
-                    <span className="text-2xl">📅</span>
-                </motion.div>
+                <div className="w-12 h-12 bg-gradient-to-br from-violet-100 to-pink-100 rounded-2xl flex items-center justify-center shadow-soft">
+                    <Calendar className="w-6 h-6 text-violet-600" />
+                </div>
                 <div className="flex-1">
                     <h1 className="text-xl font-bold text-gradient">Our Calendar</h1>
                     <p className="text-neutral-500 text-sm">Important dates & memories 💕</p>
                 </div>
-                <motion.button
-                    whileTap={{ scale: 0.95 }}
+                <Motion.button
+                    whileTap={{ scale: 0.97 }}
                     onClick={() => {
                         setSelectedDate(new Date());
                         setShowAddModal(true);
                     }}
-                    className="w-10 h-10 rounded-xl flex items-center justify-center shadow-md"
-                    style={{ background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' }}
+                    disabled={isLoading}
+                    className="w-10 h-10 rounded-xl flex items-center justify-center shadow-md bg-gradient-to-r from-amber-500 to-orange-500"
                 >
-                    <Plus className="w-5 h-5 text-white" />
-                </motion.button>
+                    {isLoading ? (
+                        <Loader2 className="w-5 h-5 text-white animate-spin" />
+                    ) : (
+                        <Plus className="w-5 h-5 text-white" />
+                    )}
+                </Motion.button>
             </div>
 
             {/* Month Navigation */}
-            <motion.div
+            <Motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="glass-card p-4"
             >
                 <div className="flex items-center justify-between mb-4">
-                    <motion.button
+                    <Motion.button
                         whileTap={{ scale: 0.9 }}
                         onClick={() => navigateMonth(-1)}
                         className="w-10 h-10 bg-white/80 rounded-xl flex items-center justify-center"
                     >
                         <ChevronLeft className="w-5 h-5 text-neutral-600" />
-                    </motion.button>
+                    </Motion.button>
                     <div className="text-center">
                         <h2 className="font-bold text-neutral-800 text-lg">
                             {MONTHS[currentDate.getMonth()]}
                         </h2>
                         <p className="text-neutral-500 text-sm">{currentDate.getFullYear()}</p>
                     </div>
-                    <motion.button
+                    <Motion.button
                         whileTap={{ scale: 0.9 }}
                         onClick={() => navigateMonth(1)}
                         className="w-10 h-10 bg-white/80 rounded-xl flex items-center justify-center"
                     >
                         <ChevronRight className="w-5 h-5 text-neutral-600" />
-                    </motion.button>
+                    </Motion.button>
                 </div>
 
                 {/* Day Headers */}
@@ -387,7 +386,7 @@ const CalendarPage = () => {
                         const today = isToday(dayInfo.date);
 
                         return (
-                            <motion.button
+                            <Motion.button
                                 key={index}
                                 whileTap={{ scale: 0.9 }}
                                 onClick={() => {
@@ -417,14 +416,14 @@ const CalendarPage = () => {
                                         <span className="text-[8px] text-neutral-400 font-semibold">{dayEvents.length}</span>
                                     </div>
                                 )}
-                            </motion.button>
+                            </Motion.button>
                         );
                     })}
                 </div>
-            </motion.div>
+            </Motion.div>
 
             {/* Upcoming Events */}
-            <motion.div
+            <Motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="glass-card p-4 overflow-hidden"
@@ -457,24 +456,31 @@ const CalendarPage = () => {
                                 const eventKey = getEventKey(event);
                                 const hasSavedPlan = plannedEventKeys.has(eventKey);
                                 return (
-                            <EventCard
-                                key={event.id}
-                                event={event}
-                                delay={index * 0.05}
-                                onClick={() => setShowEventDetails([event])}
-                                onPlanClick={(e) => {
-                                    e.stopPropagation();
-                                    setShowPlanningModal({ event, eventKey });
-                                }}
-                                showPlanButton={!!partnerId}
-                                hasSavedPlan={hasSavedPlan}
-                            />
+                                    <EventCard
+                                        key={event.id}
+                                        event={event}
+                                        delay={index * 0.05}
+                                        onClick={() => setShowEventDetails([event])}
+                                        onPlanClick={(e) => {
+                                            e.stopPropagation();
+                                            // Check subscription before showing planning modal
+                                            const { allowed } = canUsePlanFeature();
+                                            if (!allowed) {
+                                                setShowPaywall(true);
+                                                return;
+                                            }
+                                            setShowPlanningModal({ event, eventKey });
+                                        }}
+                                        showPlanButton={!!partnerId}
+                                        hasSavedPlan={hasSavedPlan}
+                                        isGold={isGold}
+                                    />
                                 );
                             })()
                         ))}
                     </div>
                 )}
-            </motion.div>
+            </Motion.div>
 
             {/* Add Event Modal */}
             <AnimatePresence>
@@ -530,6 +536,13 @@ const CalendarPage = () => {
                     />
                 )}
             </AnimatePresence>
+
+            {/* Paywall Modal */}
+            <Paywall
+                isOpen={showPaywall}
+                onClose={() => setShowPaywall(false)}
+                triggerReason="Help Me Plan is a Pause Gold feature"
+            />
         </div>
     );
 };
@@ -564,7 +577,7 @@ const EventCard = ({ event, delay, onClick, onPlanClick, showPlanButton, hasSave
     };
 
     return (
-        <motion.div
+        <Motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay }}
@@ -618,7 +631,7 @@ const EventCard = ({ event, delay, onClick, onPlanClick, showPlanButton, hasSave
                 </div>
 
                 {showPlanButton && (
-                    <motion.button
+                    <Motion.button
                         whileTap={{ scale: 0.97 }}
                         onClick={onPlanClick}
                         className={`shrink-0 h-10 px-3 rounded-full text-xs font-bold flex items-center gap-2 transition-all ${isSoon
@@ -629,10 +642,10 @@ const EventCard = ({ event, delay, onClick, onPlanClick, showPlanButton, hasSave
                     >
                         <Wand2 className="w-4 h-4" />
                         <span>{hasSavedPlan ? 'View my plan' : 'Help me plan'}</span>
-                    </motion.button>
+                    </Motion.button>
                 )}
             </div>
-        </motion.div>
+        </Motion.div>
     );
 };
 
@@ -707,14 +720,14 @@ const AddEventModal = ({ selectedDate, onAdd, onClose }) => {
     };
 
     return (
-        <motion.div
+        <Motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] flex items-end justify-center p-4 pb-20"
             onClick={onClose}
         >
-            <motion.div
+            <Motion.div
                 initial={{ y: 100, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 exit={{ y: 100, opacity: 0 }}
@@ -865,8 +878,8 @@ const AddEventModal = ({ selectedDate, onAdd, onClose }) => {
                     <Plus className="w-4 h-4" />
                     Add Event
                 </button>
-            </motion.div>
-        </motion.div>
+            </Motion.div>
+        </Motion.div>
     );
 };
 
@@ -876,14 +889,14 @@ const EventDetailsModal = ({ events, onDelete, onClose, onAddMore, currentUserId
     const eventDate = dateStr?.includes('T') ? new Date(dateStr) : new Date(dateStr + 'T00:00:00');
 
     return (
-        <motion.div
+        <Motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] flex items-end justify-center p-4 pb-20"
             onClick={onClose}
         >
-            <motion.div
+            <Motion.div
                 initial={{ y: 100, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 exit={{ y: 100, opacity: 0 }}
@@ -913,7 +926,7 @@ const EventDetailsModal = ({ events, onDelete, onClose, onAddMore, currentUserId
                         const canDelete = isCreatedByMe && !event.isDefault && !event.isPersonal;
 
                         return (
-                            <motion.div
+                            <Motion.div
                                 key={event.id}
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
@@ -921,13 +934,13 @@ const EventDetailsModal = ({ events, onDelete, onClose, onAddMore, currentUserId
                                 className={`glass-card p-4 bg-gradient-to-r from-${eventType.color}-50/50 to-white`}
                             >
                                 <div className="flex items-start gap-3">
-                                    <motion.div
+                                    <Motion.div
                                         animate={{ scale: [1, 1.05, 1] }}
                                         transition={{ duration: 2, repeat: Infinity, delay: index * 0.2 }}
                                         className="text-3xl"
                                     >
                                         {event.emoji}
-                                    </motion.div>
+                                    </Motion.div>
                                     <div className="flex-1 min-w-0">
                                         <h4 className="font-bold text-neutral-800">{event.title}</h4>
                                         <div className="flex items-center gap-2 mt-1 flex-wrap">
@@ -972,7 +985,7 @@ const EventDetailsModal = ({ events, onDelete, onClose, onAddMore, currentUserId
                                         </button>
                                     )}
                                 </div>
-                            </motion.div>
+                            </Motion.div>
                         );
                     })}
                 </div>
@@ -985,8 +998,8 @@ const EventDetailsModal = ({ events, onDelete, onClose, onAddMore, currentUserId
                     <Plus className="w-4 h-4" />
                     Add Another Event
                 </button>
-            </motion.div>
-        </motion.div>
+            </Motion.div>
+        </Motion.div>
     );
 };
 
@@ -1052,14 +1065,13 @@ const PlanningModal = ({ event, eventKey, myId, partnerId, partnerDisplayName, m
                 setStyle(initialStyle);
                 setPlan(initialPlan);
                 setChecked(nextChecklists[initialStyle] || {});
-            } catch (e) {
+            } catch {
                 if (cancelled) return;
                 setPlansByStyle({});
                 setPlanIdsByStyle({});
                 setChecklistsByStyle({});
             } finally {
-                if (cancelled) return;
-                setIsLoading(false);
+                if (!cancelled) setIsLoading(false);
             }
         })();
 
@@ -1115,8 +1127,7 @@ const PlanningModal = ({ event, eventKey, myId, partnerId, partnerDisplayName, m
             setError(err?.response?.data?.error || err?.message || 'Failed to generate a plan');
             // Preserve the last successful plan; show error without wiping content.
         } finally {
-            if (requestSeq !== requestSeqRef.current) return;
-            setIsLoading(false);
+            if (requestSeq === requestSeqRef.current) setIsLoading(false);
         }
     }, [
         eventKey,
@@ -1160,7 +1171,7 @@ const PlanningModal = ({ event, eventKey, myId, partnerId, partnerDisplayName, m
             checklistSaveTimerRef.current = setTimeout(async () => {
                 try {
                     await api.patch(`/calendar/event-plans/${planId}`, { checklistState: next });
-                } catch (_e) {
+                } catch {
                     // Best-effort; keep UI responsive even if save fails.
                 }
             }, 500);
@@ -1185,14 +1196,14 @@ const PlanningModal = ({ event, eventKey, myId, partnerId, partnerDisplayName, m
     );
 
     return (
-        <motion.div
+        <Motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/35 backdrop-blur-sm z-[60] flex items-end justify-center p-4 pb-20"
             onClick={onClose}
         >
-            <motion.div
+            <Motion.div
                 initial={{ y: 120, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 exit={{ y: 120, opacity: 0 }}
@@ -1440,8 +1451,8 @@ const PlanningModal = ({ event, eventKey, myId, partnerId, partnerDisplayName, m
                         </p>
                     )}
                 </div>
-            </motion.div>
-        </motion.div>
+            </Motion.div>
+        </Motion.div>
     );
 };
 

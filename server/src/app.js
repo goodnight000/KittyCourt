@@ -8,18 +8,22 @@
 const path = require('path');
 const http = require('http');
 const express = require('express');
-const cors = require('cors');
 
 // Load environment variables from server/.env explicitly
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
 // Import Supabase client
-const { getSupabase, isSupabaseConfigured } = require('./lib/supabase');
+const { isSupabaseConfigured } = require('./lib/supabase');
+const { requireSupabase, requireAuthUserId, getPartnerIdForUser } = require('./lib/auth');
+const { corsMiddleware, securityHeaders } = require('./lib/security');
+const { canUseFeature } = require('./lib/usageLimits');
 
 // Import routes
 const judgeRoutes = require('./routes/judge');
 const memoryRoutes = require('./routes/memory');
 const dailyQuestionsRoutes = require('./routes/dailyQuestions');
+const usageRoutes = require('./routes/usage');
+const webhookRoutes = require('./routes/webhooks');
 
 // NEW: Clean court architecture
 const courtRoutes = require('./routes/court');
@@ -28,6 +32,10 @@ const { initializeCourtServices } = require('./lib/courtInit');
 const app = express();
 const server = http.createServer(app);
 const PORT = process.env.PORT || 3000;
+
+app.set('trust proxy', 1);
+app.disable('x-powered-by');
+app.use(securityHeaders);
 
 // Initialize court services (WebSocket, SessionManager, DB recovery)
 if (isSupabaseConfigured()) {
@@ -40,50 +48,12 @@ if (isSupabaseConfigured()) {
     courtWebSocket.initialize(server);
 }
 
-app.use(cors());
-app.use(express.json());
+app.use(corsMiddleware());
+app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || '256kb' }));
+app.use(express.urlencoded({ extended: false, limit: process.env.JSON_BODY_LIMIT || '256kb' }));
 
-// Auth helper (Supabase JWT via Authorization: Bearer <token>)
-const requireAuthUserId = async (req) => {
-    const header = req.headers.authorization || req.headers.Authorization || '';
-    const match = typeof header === 'string' ? header.match(/^Bearer\s+(.+)$/i) : null;
-    const token = match?.[1];
-
-    if (!token) {
-        const error = new Error('Missing Authorization bearer token');
-        error.statusCode = 401;
-        throw error;
-    }
-
-    const supabase = requireSupabase();
-    const { data, error } = await supabase.auth.getUser(token);
-    if (error || !data?.user?.id) {
-        const err = new Error('Invalid or expired session');
-        err.statusCode = 401;
-        throw err;
-    }
-
-    return data.user.id;
-};
-
-const getPartnerIdForUser = async (supabase, userId) => {
-    const { data, error } = await supabase
-        .from('profiles')
-        .select('partner_id')
-        .eq('id', userId)
-        .single();
-
-    if (error) throw error;
-    return data?.partner_id || null;
-};
-
-// Helper to check Supabase and get client
-const requireSupabase = () => {
-    if (!isSupabaseConfigured()) {
-        throw new Error('Supabase is not configured. Set SUPABASE_URL and SUPABASE_SERVICE_KEY.');
-    }
-    return getSupabase();
-};
+const isProd = process.env.NODE_ENV === 'production';
+const safeErrorMessage = (error) => (isProd ? 'Internal server error' : (error?.message || String(error)));
 
 // --- Routes ---
 
@@ -99,11 +69,18 @@ app.use('/api/daily-questions', dailyQuestionsRoutes);
 // --- Court Session Routes (NEW Clean Architecture) ---
 app.use('/api/court', courtRoutes);
 
+// --- Usage Tracking Routes (Subscription limits) ---
+app.use('/api/usage', usageRoutes);
+
+// --- Webhook Routes (RevenueCat, etc.) ---
+app.use('/api/webhooks', webhookRoutes);
+
 // --- Cases with Verdicts ---
 
 // Submit a Case (or update it)
 app.post('/api/cases', async (req, res) => {
     try {
+        const viewerId = await requireAuthUserId(req);
         const {
             id,
             userAId,
@@ -121,17 +98,38 @@ app.post('/api/cases', async (req, res) => {
         } = req.body;
 
         const supabase = requireSupabase();
+        const partnerId = await getPartnerIdForUser(supabase, viewerId);
+
+        if (isProd && verdict) {
+            return res.status(400).json({ error: 'Client-supplied verdicts are not allowed' });
+        }
 
         if (id) {
+            const { data: existingCase, error: existingError } = await supabase
+                .from('cases')
+                .select('id,user_a_id,user_b_id,status')
+                .eq('id', id)
+                .single();
+
+            if (existingError || !existingCase) {
+                return res.status(404).json({ error: 'Case not found' });
+            }
+
+            const isUserA = String(existingCase.user_a_id) === String(viewerId);
+            const isUserB = String(existingCase.user_b_id) === String(viewerId);
+            if (!isUserA && !isUserB) {
+                return res.status(403).json({ error: 'Forbidden' });
+            }
+
             // Update existing case
             const { data: updated, error: updateError } = await supabase
                 .from('cases')
                 .update({
-                    user_a_input: userAInput,
-                    user_a_feelings: userAFeelings,
-                    user_b_input: userBInput,
-                    user_b_feelings: userBFeelings,
-                    status,
+                    user_a_input: isUserA ? (userAInput || '') : undefined,
+                    user_a_feelings: isUserA ? (userAFeelings || '') : undefined,
+                    user_b_input: isUserB ? (userBInput || '') : undefined,
+                    user_b_feelings: isUserB ? (userBFeelings || '') : undefined,
+                    ...(isProd ? {} : { status: status || undefined }),
                     case_title: caseTitle,
                     severity_level: severityLevel,
                     primary_hiss_tag: primaryHissTag,
@@ -144,7 +142,7 @@ app.post('/api/cases', async (req, res) => {
             if (updateError) throw updateError;
 
             // If verdict provided, create a new verdict record
-            if (verdict) {
+            if (!isProd && verdict) {
                 const { count } = await supabase
                     .from('verdicts')
                     .select('*', { count: 'exact', head: true })
@@ -167,17 +165,24 @@ app.post('/api/cases', async (req, res) => {
 
             return res.json(transformCase(result));
         } else {
+            if (userAId && String(userAId) !== String(viewerId)) {
+                return res.status(403).json({ error: 'userAId does not match authenticated user' });
+            }
+            if (userBId && partnerId && String(userBId) !== String(partnerId)) {
+                return res.status(400).json({ error: 'Invalid partner' });
+            }
+
             // Create new case
             const { data: newCase, error: insertError } = await supabase
                 .from('cases')
                 .insert({
-                    user_a_id: userAId || null,
-                    user_b_id: userBId || null,
+                    user_a_id: viewerId,
+                    user_b_id: partnerId || null,
                     user_a_input: userAInput || '',
                     user_a_feelings: userAFeelings || '',
-                    user_b_input: userBInput || '',
-                    user_b_feelings: userBFeelings || '',
-                    status: status || 'PENDING',
+                    user_b_input: '',
+                    user_b_feelings: '',
+                    status: isProd ? 'PENDING' : (status || 'PENDING'),
                     case_title: caseTitle || null,
                     severity_level: severityLevel || null,
                     primary_hiss_tag: primaryHissTag || null,
@@ -189,7 +194,7 @@ app.post('/api/cases', async (req, res) => {
             if (insertError) throw insertError;
 
             // If verdict provided, create the first verdict record
-            if (verdict) {
+            if (!isProd && verdict) {
                 await supabase.from('verdicts').insert({
                     case_id: newCase.id,
                     version: 1,
@@ -209,17 +214,37 @@ app.post('/api/cases', async (req, res) => {
         }
     } catch (error) {
         console.error('Error saving case:', error);
-        res.status(500).json({ error: error.message });
+        res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
     }
 });
 
 // Add an addendum verdict to a case
 app.post('/api/cases/:id/addendum', async (req, res) => {
     try {
-        const { addendumBy, addendumText, verdict, caseTitle, severityLevel, primaryHissTag, shortResolution } = req.body;
+        if (isProd) {
+            return res.status(404).json({ error: 'Not found' });
+        }
+
+        const viewerId = await requireAuthUserId(req);
+        const { addendumText, verdict, caseTitle, severityLevel, primaryHissTag, shortResolution } = req.body;
         const caseId = req.params.id;
 
         const supabase = requireSupabase();
+        const { data: caseRow, error: caseError } = await supabase
+            .from('cases')
+            .select('id,user_a_id,user_b_id')
+            .eq('id', caseId)
+            .single();
+
+        if (caseError || !caseRow) {
+            return res.status(404).json({ error: 'Case not found' });
+        }
+
+        const isUserA = String(caseRow.user_a_id) === String(viewerId);
+        const isUserB = String(caseRow.user_b_id) === String(viewerId);
+        if (!isUserA && !isUserB) {
+            return res.status(403).json({ error: 'Forbidden' });
+        }
 
         const { count } = await supabase
             .from('verdicts')
@@ -231,7 +256,7 @@ app.post('/api/cases/:id/addendum', async (req, res) => {
             case_id: caseId,
             version: (count || 0) + 1,
             content: typeof verdict === 'string' ? JSON.parse(verdict) : verdict,
-            addendum_by: addendumBy,
+            addendum_by: isUserA ? 'userA' : 'userB',
             addendum_text: addendumText
         });
 
@@ -256,7 +281,7 @@ app.post('/api/cases/:id/addendum', async (req, res) => {
         res.json(transformCase(result));
     } catch (error) {
         console.error('Error adding addendum:', error);
-        res.status(500).json({ error: error.message });
+        res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
     }
 });
 
@@ -264,11 +289,8 @@ app.post('/api/cases/:id/addendum', async (req, res) => {
 app.post('/api/cases/:id/rate', async (req, res) => {
     try {
         const caseId = req.params.id;
-        const { userId, rating } = req.body;
-
-        if (!userId) {
-            return res.status(400).json({ error: 'userId required' });
-        }
+        const viewerId = await requireAuthUserId(req);
+        const { rating } = req.body;
         const numericRating = Number(rating);
         if (!Number.isInteger(numericRating) || numericRating < 1 || numericRating > 5) {
             return res.status(400).json({ error: 'rating must be an integer from 1 to 5' });
@@ -286,9 +308,9 @@ app.post('/api/cases/:id/rate', async (req, res) => {
         if (caseError) throw caseError;
 
         let ratingColumn = null;
-        if (String(caseRow.user_a_id) === String(userId)) {
+        if (String(caseRow.user_a_id) === String(viewerId)) {
             ratingColumn = 'rating_user_a';
-        } else if (String(caseRow.user_b_id) === String(userId)) {
+        } else if (String(caseRow.user_b_id) === String(viewerId)) {
             ratingColumn = 'rating_user_b';
         } else {
             return res.status(403).json({ error: 'User is not part of this case' });
@@ -320,43 +342,46 @@ app.post('/api/cases/:id/rate', async (req, res) => {
         return res.json({ ok: true, verdict: updatedVerdict });
     } catch (error) {
         console.error('Error rating verdict:', error);
-        res.status(500).json({ error: error.message });
+        res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
     }
 });
 
 // Get Case History
 app.get('/api/cases', async (req, res) => {
     try {
-        const { userAId, userBId } = req.query;
+        const viewerId = await requireAuthUserId(req);
 
         const supabase = requireSupabase();
+        const partnerId = await getPartnerIdForUser(supabase, viewerId);
 
         let query = supabase
             .from('cases')
             .select(`*, verdicts(*)`)
             .order('created_at', { ascending: false });
 
-        if (userAId && userBId) {
-            query = query.or(`and(user_a_id.eq.${userAId},user_b_id.eq.${userBId}),and(user_a_id.eq.${userBId},user_b_id.eq.${userAId})`);
-        } else if (userAId || userBId) {
-            const userId = userAId || userBId;
-            query = query.or(`user_a_id.eq.${userId},user_b_id.eq.${userId}`);
+        if (partnerId) {
+            query = query.or(
+                `and(user_a_id.eq.${viewerId},user_b_id.eq.${partnerId}),and(user_a_id.eq.${partnerId},user_b_id.eq.${viewerId})`
+            );
+        } else {
+            query = query.or(`user_a_id.eq.${viewerId},user_b_id.eq.${viewerId}`);
         }
 
         const { data: cases, error } = await query;
 
         if (error) throw error;
 
-        res.json(cases.map(transformCase));
+        res.json((cases || []).map(transformCase));
     } catch (error) {
         console.error('Error fetching cases:', error);
-        res.status(500).json({ error: error.message });
+        res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
     }
 });
 
 // Get single case with all verdicts
 app.get('/api/cases/:id', async (req, res) => {
     try {
+        const viewerId = await requireAuthUserId(req);
         const supabase = requireSupabase();
 
         const { data: caseItem, error } = await supabase
@@ -370,10 +395,16 @@ app.get('/api/cases/:id', async (req, res) => {
             return res.status(404).json({ error: 'Case not found' });
         }
 
+        const isUserA = String(caseItem.user_a_id) === String(viewerId);
+        const isUserB = String(caseItem.user_b_id) === String(viewerId);
+        if (!isUserA && !isUserB) {
+            return res.status(403).json({ error: 'Forbidden' });
+        }
+
         res.json(transformCase(caseItem));
     } catch (error) {
         console.error('Error fetching case:', error);
-        res.status(500).json({ error: error.message });
+        res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
     }
 });
 
@@ -415,18 +446,27 @@ function transformCase(c) {
 
 app.post('/api/economy/transaction', async (req, res) => {
     try {
-        const { userId, amount, type, description } = req.body;
+        const viewerId = await requireAuthUserId(req);
+        const { amount, type, description } = req.body;
 
-        if (!userId) {
-            return res.status(400).json({ error: 'userId is required' });
+        const numericAmount = Number(amount);
+        if (!Number.isFinite(numericAmount) || !Number.isInteger(numericAmount) || Math.abs(numericAmount) > 1000) {
+            return res.status(400).json({ error: 'amount must be an integer with abs(amount) <= 1000' });
         }
+        if (!['EARN', 'SPEND', 'ADJUST'].includes(type)) {
+            return res.status(400).json({ error: 'type must be EARN, SPEND, or ADJUST' });
+        }
+        if (isProd && type === 'ADJUST') {
+            return res.status(403).json({ error: 'ADJUST is not allowed in production' });
+        }
+        const safeDescription = typeof description === 'string' ? description.trim().slice(0, 200) : null;
 
         const supabase = requireSupabase();
 
         // Create Transaction
         const { data: transaction, error: insertError } = await supabase
             .from('transactions')
-            .insert({ user_id: userId, amount, type, description })
+            .insert({ user_id: viewerId, amount: numericAmount, type, description: safeDescription })
             .select()
             .single();
 
@@ -436,35 +476,39 @@ app.post('/api/economy/transaction', async (req, res) => {
         const { data: allTransactions } = await supabase
             .from('transactions')
             .select('amount')
-            .eq('user_id', userId);
+            .eq('user_id', viewerId);
 
         const newBalance = (allTransactions || []).reduce((sum, t) => sum + t.amount, 0);
 
-        res.json({ transaction, newBalance });
+        res.json({ transaction, newBalance, userId: viewerId });
     } catch (error) {
         console.error('Error creating transaction:', error);
-        res.status(500).json({ error: error.message });
+        res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
     }
 });
 
 // Get user's kibble balance from transactions
 app.get('/api/economy/balance/:userId', async (req, res) => {
     try {
+        const viewerId = await requireAuthUserId(req);
         const { userId } = req.params;
+        if (userId && String(userId) !== String(viewerId)) {
+            return res.status(403).json({ error: 'Forbidden' });
+        }
 
         const supabase = requireSupabase();
 
         const { data: transactions } = await supabase
             .from('transactions')
             .select('amount')
-            .eq('user_id', userId);
+            .eq('user_id', viewerId);
 
         const balance = (transactions || []).reduce((sum, t) => sum + t.amount, 0);
 
-        res.json({ userId, balance });
+        res.json({ userId: viewerId, balance });
     } catch (error) {
         console.error('Error fetching balance:', error);
-        res.status(500).json({ error: error.message });
+        res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
     }
 });
 
@@ -472,23 +516,35 @@ app.get('/api/economy/balance/:userId', async (req, res) => {
 
 app.post('/api/appreciations', async (req, res) => {
     try {
-        const { fromUserId, toUserId, message, category, kibbleAmount = 10 } = req.body;
+        const viewerId = await requireAuthUserId(req);
+        const { toUserId, message, category, kibbleAmount = 10 } = req.body;
 
-        if (!fromUserId || !toUserId) {
-            return res.status(400).json({ error: 'fromUserId and toUserId are required' });
+        if (!toUserId) {
+            return res.status(400).json({ error: 'toUserId is required' });
         }
+        const numericKibble = Number(kibbleAmount);
+        if (!Number.isFinite(numericKibble) || !Number.isInteger(numericKibble) || numericKibble <= 0 || numericKibble > 100) {
+            return res.status(400).json({ error: 'kibbleAmount must be an integer from 1 to 100' });
+        }
+        const safeMessage = typeof message === 'string' ? message.trim().slice(0, 500) : '';
+        if (!safeMessage) return res.status(400).json({ error: 'message is required' });
+        const safeCategory = typeof category === 'string' ? category.trim().slice(0, 50) : null;
 
         const supabase = requireSupabase();
+        const partnerId = await getPartnerIdForUser(supabase, viewerId);
+        if (!partnerId || String(toUserId) !== String(partnerId)) {
+            return res.status(403).json({ error: 'Can only send appreciation to your connected partner' });
+        }
 
         // Create the appreciation
         const { data: appreciation, error: insertError } = await supabase
             .from('appreciations')
             .insert({
-                from_user_id: fromUserId,
+                from_user_id: viewerId,
                 to_user_id: toUserId,
-                message,
-                category,
-                kibble_amount: kibbleAmount
+                message: safeMessage,
+                category: safeCategory,
+                kibble_amount: numericKibble
             })
             .select()
             .single();
@@ -500,9 +556,9 @@ app.post('/api/appreciations', async (req, res) => {
             .from('transactions')
             .insert({
                 user_id: toUserId,
-                amount: kibbleAmount,
+                amount: numericKibble,
                 type: 'EARN',
-                description: `Appreciated: ${message.substring(0, 50)}${message.length > 50 ? '...' : ''}`
+                description: `Appreciated: ${safeMessage.substring(0, 50)}${safeMessage.length > 50 ? '...' : ''}`
             })
             .select()
             .single();
@@ -527,21 +583,25 @@ app.post('/api/appreciations', async (req, res) => {
         });
     } catch (error) {
         console.error('Error creating appreciation:', error);
-        res.status(500).json({ error: error.message });
+        res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
     }
 });
 
 // Get appreciations FOR a user
 app.get('/api/appreciations/:userId', async (req, res) => {
     try {
+        const viewerId = await requireAuthUserId(req);
         const { userId } = req.params;
+        if (userId && String(userId) !== String(viewerId)) {
+            return res.status(403).json({ error: 'Forbidden' });
+        }
 
         const supabase = requireSupabase();
 
         const { data: appreciations, error } = await supabase
             .from('appreciations')
             .select('*')
-            .eq('to_user_id', userId)
+            .eq('to_user_id', viewerId)
             .order('created_at', { ascending: false });
 
         if (error) throw error;
@@ -560,7 +620,7 @@ app.get('/api/appreciations/:userId', async (req, res) => {
         res.json(transformed);
     } catch (error) {
         console.error('Error fetching appreciations:', error);
-        res.status(500).json({ error: error.message });
+        res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
     }
 });
 
@@ -609,7 +669,7 @@ app.get('/api/calendar/events', async (req, res) => {
         res.json(transformed);
     } catch (error) {
         console.error('Error fetching events:', error);
-        res.status(error.statusCode || 500).json({ error: error.message });
+        res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
     }
 });
 
@@ -651,7 +711,7 @@ app.post('/api/calendar/events', async (req, res) => {
         });
     } catch (error) {
         console.error('Error creating event:', error);
-        res.status(error.statusCode || 500).json({ error: error.message });
+        res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
     }
 });
 
@@ -705,7 +765,7 @@ app.put('/api/calendar/events/:id', async (req, res) => {
         });
     } catch (error) {
         console.error('Error updating event:', error);
-        res.status(error.statusCode || 500).json({ error: error.message });
+        res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
     }
 });
 
@@ -738,7 +798,7 @@ app.delete('/api/calendar/events/:id', async (req, res) => {
         res.json({ success: true });
     } catch (error) {
         console.error('Error deleting event:', error);
-        res.status(error.statusCode || 500).json({ error: error.message });
+        res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
     }
 });
 
@@ -771,7 +831,7 @@ app.post('/api/calendar/event-plans/exists', async (req, res) => {
         return res.json({ exists });
     } catch (error) {
         console.error('Error checking event plan existence:', error);
-        res.status(error.statusCode || 500).json({ error: error.message });
+        res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
     }
 });
 
@@ -807,7 +867,7 @@ app.get('/api/calendar/event-plans', async (req, res) => {
         return res.json({ plans });
     } catch (error) {
         console.error('Error fetching event plans:', error);
-        res.status(error.statusCode || 500).json({ error: error.message });
+        res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
     }
 });
 
@@ -844,7 +904,7 @@ app.patch('/api/calendar/event-plans/:id', async (req, res) => {
         });
     } catch (error) {
         console.error('Error updating plan checklist:', error);
-        res.status(error.statusCode || 500).json({ error: error.message });
+        res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
     }
 });
 
@@ -853,7 +913,6 @@ app.post('/api/calendar/plan-event', async (req, res) => {
     try {
         const {
             event,
-            userId,
             partnerId,
             partnerDisplayName,
             currentUserName,
@@ -866,6 +925,8 @@ app.post('/api/calendar/plan-event', async (req, res) => {
         } = req.body || {};
 
         const viewerId = await requireAuthUserId(req);
+        const supabase = requireSupabase();
+        const resolvedPartnerId = await getPartnerIdForUser(supabase, viewerId);
 
         const normalizedEvent = event || {
             title: eventTitle,
@@ -873,16 +934,25 @@ app.post('/api/calendar/plan-event', async (req, res) => {
             date: eventDate,
         };
 
-        if (!partnerId) {
-            return res.status(400).json({ error: 'partnerId is required' });
+        if (!resolvedPartnerId) {
+            return res.status(400).json({ error: 'No partner connected' });
+        }
+        if (!partnerId || String(partnerId) !== String(resolvedPartnerId)) {
+            return res.status(400).json({ error: 'Invalid partnerId for current user' });
+        }
+
+        const usage = await canUseFeature({ userId: viewerId, type: 'plan' });
+        if (!usage.allowed) {
+            return res.status(403).json({ error: 'Usage limit reached', usage });
         }
 
         const { generateEventPlan } = require('./lib/eventPlanner');
+        const { incrementUsage } = require('./lib/usageTracking');
 
         const result = await generateEventPlan({
             event: normalizedEvent,
             userId: viewerId,
-            partnerId,
+            partnerId: resolvedPartnerId,
             partnerDisplayName,
             currentUserName,
             style,
@@ -896,7 +966,7 @@ app.post('/api/calendar/plan-event', async (req, res) => {
                     .from('event_plans')
                     .upsert({
                         user_id: viewerId,
-                        partner_id: partnerId,
+                        partner_id: resolvedPartnerId,
                         event_key: eventKey,
                         event_snapshot: normalizedEvent,
                         style: style || 'cozy',
@@ -914,11 +984,18 @@ app.post('/api/calendar/plan-event', async (req, res) => {
             result.meta = { ...(result.meta || {}), planId: null, eventKey: eventKey || null };
         }
 
+        // Record usage for a successful plan generation (best-effort).
+        if (result?.meta?.fallback === false) {
+            incrementUsage({ userId: viewerId, type: 'plan' }).catch((e) => {
+                console.warn('[Planner] Failed to increment plan usage:', e?.message || e);
+            });
+        }
+
         return res.json(result);
 
     } catch (error) {
         console.error('Planning error:', error);
-        res.status(error.statusCode || 500).json({ error: error.message });
+        res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
     }
 });
 
@@ -942,6 +1019,15 @@ app.get('/api/health', (req, res) => {
         supabase: isSupabaseConfigured(),
         timestamp: new Date().toISOString()
     });
+});
+
+// Centralized error handling (CORS + unexpected errors)
+app.use((err, req, res, _next) => {
+    if (err?.message === 'CORS blocked') {
+        return res.status(403).json({ error: 'CORS blocked' });
+    }
+    console.error('[App] Unhandled error:', err);
+    return res.status(500).json({ error: safeErrorMessage(err) });
 });
 
 server.listen(PORT, '0.0.0.0', () => {

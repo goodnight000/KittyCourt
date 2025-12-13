@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion as Motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, Sparkles, AlertCircle, UserX } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
@@ -112,49 +112,49 @@ const SignInPage = () => {
         <div className="min-h-screen bg-gradient-to-br from-court-cream via-white to-court-tan/30 flex flex-col items-center justify-center p-6">
             {/* Background Decorations */}
             <div className="fixed inset-0 pointer-events-none overflow-hidden">
-                <motion.div
+                <Motion.div
                     animate={{ y: [0, -20, 0], rotate: [0, 5, 0] }}
                     transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
                     className="absolute top-20 left-10 text-4xl opacity-20"
                 >
                     🐱
-                </motion.div>
-                <motion.div
+                </Motion.div>
+                <Motion.div
                     animate={{ y: [0, 15, 0], rotate: [0, -5, 0] }}
                     transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
                     className="absolute top-40 right-16 text-3xl opacity-20"
                 >
                     ⚖️
-                </motion.div>
-                <motion.div
+                </Motion.div>
+                <Motion.div
                     animate={{ y: [0, 10, 0] }}
                     transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 2 }}
                     className="absolute bottom-40 left-20 text-3xl opacity-20"
                 >
                     💕
-                </motion.div>
+                </Motion.div>
             </div>
 
             {/* Logo & Header */}
-            <motion.div
+            <Motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="text-center mb-8"
             >
-                <motion.div
+                <Motion.div
                     animate={{ y: [0, -8, 0] }}
                     transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
                     className="w-20 h-20 mx-auto mb-4 rounded-2xl flex items-center justify-center shadow-lg"
                     style={{ background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' }}
                 >
                     <span className="text-4xl">🐱</span>
-                </motion.div>
+                </Motion.div>
                 <h1 className="text-3xl font-bold text-gradient font-display">Pause</h1>
                 <p className="text-neutral-500 mt-2">Welcome back, counselor!</p>
-            </motion.div>
+            </Motion.div>
 
             {/* Sign In Card */}
-            <motion.div
+            <Motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
@@ -163,7 +163,7 @@ const SignInPage = () => {
                 <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-8 shadow-xl border border-white/50">
                     {/* Error Message */}
                     {error && (
-                        <motion.div
+                        <Motion.div
                             initial={{ opacity: 0, y: -10 }}
                             animate={{ opacity: 1, y: 0 }}
                             className="mb-6 p-4 bg-red-50 border border-red-100 rounded-2xl"
@@ -201,11 +201,11 @@ const SignInPage = () => {
                                     )}
                                 </div>
                             </div>
-                        </motion.div>
+                        </Motion.div>
                     )}
 
                     {/* Google Sign In */}
-                    <motion.button
+                    <Motion.button
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={handleGoogleSignIn}
@@ -219,7 +219,7 @@ const SignInPage = () => {
                             <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                         </svg>
                         Continue with Google
-                    </motion.button>
+                    </Motion.button>
 
                     {/* Divider */}
                     <div className="flex items-center gap-4 my-6">
@@ -262,7 +262,7 @@ const SignInPage = () => {
                         </div>
 
                         {/* Submit Button */}
-                        <motion.button
+                        <Motion.button
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                             type="submit"
@@ -271,19 +271,19 @@ const SignInPage = () => {
                             style={{ background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' }}
                         >
                             {isSubmitting ? (
-                                <motion.div
+                                <Motion.div
                                     animate={{ rotate: 360 }}
                                     transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                                 >
                                     <Sparkles className="w-5 h-5" />
-                                </motion.div>
+                                </Motion.div>
                             ) : (
                                 <>
                                     Sign In
                                     <ArrowRight className="w-5 h-5" />
                                 </>
                             )}
-                        </motion.button>
+                        </Motion.button>
                     </form>
 
                     {/* Forgot Password */}
@@ -298,7 +298,7 @@ const SignInPage = () => {
                 </div>
 
                 {/* Sign Up Link */}
-                <motion.p
+                <Motion.p
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.3 }}
@@ -311,18 +311,18 @@ const SignInPage = () => {
                     >
                         Create an account
                     </Link>
-                </motion.p>
-            </motion.div>
+                </Motion.p>
+            </Motion.div>
 
             {/* Footer */}
-            <motion.p
+            <Motion.p
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.4 }}
                 className="mt-8 text-neutral-400 text-sm"
             >
                 Resolve disputes with love 💕
-            </motion.p>
+            </Motion.p>
         </div>
     );
 };

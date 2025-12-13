@@ -21,10 +21,10 @@ let _supabase = null;
 function getSupabase() {
     if (!_supabase) {
         const supabaseUrl = process.env.SUPABASE_URL;
-        const supabaseKey = process.env.SUPABASE_SERVICE_KEY; // Use service key for server-side operations
+        const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY; // server-side service role
 
         if (!supabaseUrl || !supabaseKey) {
-            throw new Error('Supabase is not configured. Set SUPABASE_URL and SUPABASE_SERVICE_KEY.');
+            throw new Error('Supabase is not configured. Set SUPABASE_URL and SUPABASE_SERVICE_KEY (or SUPABASE_SERVICE_ROLE_KEY).');
         }
 
         _supabase = createClient(supabaseUrl, supabaseKey, {
@@ -42,7 +42,7 @@ function getSupabase() {
  * @returns {boolean}
  */
 function isSupabaseConfigured() {
-    return !!(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY);
+    return !!(process.env.SUPABASE_URL && (process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY));
 }
 
 /**
