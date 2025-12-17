@@ -6,6 +6,7 @@ import {
     Cat, Edit3, Send, Lock, AlertCircle, RefreshCw, BookOpen, ChevronRight
 } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
+import useCacheStore, { CACHE_KEYS } from '../store/useCacheStore';
 import RequirePartner from '../components/RequirePartner';
 import api from '../services/api';
 
@@ -192,6 +193,10 @@ const DailyMeowPage = () => {
                 mood: selectedMoods[0], // Primary mood for backward compatibility
                 moods: selectedMoods // All selected moods
             });
+
+            // Invalidate related caches
+            useCacheStore.getState().invalidate(`${CACHE_KEYS.STREAK}:${myId}:${partnerId}`);
+            useCacheStore.getState().invalidatePrefix(`${CACHE_KEYS.DAILY_HISTORY}:`);
 
             setShowSuccess(true);
             setTimeout(() => setShowSuccess(false), 2000);

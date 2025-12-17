@@ -5,6 +5,7 @@ import {
     Calendar, BookOpen, Search
 } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
+import useCacheStore, { CACHE_TTL, CACHE_KEYS } from '../store/useCacheStore';
 import api from '../services/api';
 import { ChevronLeft } from 'lucide-react';
 
@@ -51,12 +52,26 @@ const DailyMeowHistoryPage = () => {
     const fetchHistory = useCallback(async () => {
         if (!myId || !partnerId) return;
 
+        const cacheKey = `${CACHE_KEYS.DAILY_HISTORY}:${myId}:${partnerId}`;
+
+        // Check cache first
+        const cached = useCacheStore.getState().getCached(cacheKey);
+        if (cached !== null) {
+            setHistory(cached);
+            setLoading(false);
+            return;
+        }
+
         try {
             setLoading(true);
             const response = await api.get('/daily-questions/history', {
                 params: { userId: myId, partnerId, limit: 100 }
             });
-            setHistory(response.data);
+            const data = response.data || [];
+
+            // Cache the history
+            useCacheStore.getState().setCache(cacheKey, data, CACHE_TTL.DAILY_HISTORY);
+            setHistory(data);
         } catch (err) {
             console.error('Error fetching history:', err);
         } finally {

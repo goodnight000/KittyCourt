@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import api from '../services/api';
+import useCacheStore, { CACHE_TTL, CACHE_KEYS } from './useCacheStore';
 
 /**
  * useAppStore - Application-wide state
@@ -73,6 +74,16 @@ const useAppStore = create(
                 try {
                     // Get auth user and partner to filter cases for this couple
                     const { user: authUser, partner: connectedPartner } = await import('./useAuthStore').then(m => m.default.getState());
+                    if (!authUser?.id || !connectedPartner?.id) return;
+
+                    const cacheKey = `${CACHE_KEYS.CASE_HISTORY}:${authUser.id}:${connectedPartner.id}`;
+
+                    // Check cache first
+                    const cached = useCacheStore.getState().getCached(cacheKey);
+                    if (cached !== null) {
+                        set({ caseHistory: cached });
+                        return;
+                    }
 
                     // Build query params for filtering
                     const params = new URLSearchParams();
@@ -81,7 +92,11 @@ const useAppStore = create(
 
                     const url = params.toString() ? `/cases?${params.toString()}` : '/cases';
                     const response = await api.get(url);
-                    set({ caseHistory: response.data });
+                    const data = response.data || [];
+
+                    // Cache the result
+                    useCacheStore.getState().setCache(cacheKey, data, CACHE_TTL.CASE_HISTORY);
+                    set({ caseHistory: data });
                 } catch (error) {
                     console.error("Failed to fetch case history", error);
                 }
@@ -122,9 +137,22 @@ const useAppStore = create(
                 const { user: authUser } = await import('./useAuthStore').then(m => m.default.getState());
                 if (!authUser?.id) return;
 
+                const cacheKey = `${CACHE_KEYS.APPRECIATIONS}:${authUser.id}`;
+
+                // Check cache first
+                const cached = useCacheStore.getState().getCached(cacheKey);
+                if (cached !== null) {
+                    set({ appreciations: cached });
+                    return;
+                }
+
                 try {
                     const response = await api.get(`/appreciations/${authUser.id}`);
-                    set({ appreciations: response.data });
+                    const data = response.data || [];
+
+                    // Cache the result
+                    useCacheStore.getState().setCache(cacheKey, data, CACHE_TTL.APPRECIATIONS);
+                    set({ appreciations: data });
                 } catch (error) {
                     console.error("Failed to fetch appreciations", error);
                 }
@@ -153,6 +181,9 @@ const useAppStore = create(
                         type: 'EARN',
                         description: `Appreciation from ${authUser.display_name || 'partner'}`
                     });
+
+                    // Invalidate partner's appreciations cache (they received a new one)
+                    useCacheStore.getState().invalidate(`${CACHE_KEYS.APPRECIATIONS}:${connectedPartner.id}`);
 
                     // Refresh users and appreciations
                     get().fetchUsers();

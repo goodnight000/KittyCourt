@@ -8,6 +8,7 @@ import {
 import useAppStore from '../store/useAppStore';
 import useAuthStore from '../store/useAuthStore';
 import useSubscriptionStore from '../store/useSubscriptionStore';
+import useCacheStore, { CACHE_TTL, CACHE_KEYS } from '../store/useCacheStore';
 import api from '../services/api';
 import { validateDate } from '../utils/helpers';
 import Paywall from '../components/Paywall';
@@ -62,6 +63,16 @@ const CalendarPage = () => {
     const [showPaywall, setShowPaywall] = useState(false);
 
     const fetchEvents = useCallback(async () => {
+        const cacheKey = CACHE_KEYS.CALENDAR_EVENTS;
+
+        // Check cache first
+        const cached = useCacheStore.getState().getCached(cacheKey);
+        if (cached !== null) {
+            setEvents(cached);
+            setIsLoading(false);
+            return;
+        }
+
         try {
             setIsLoading(true);
             const response = await api.get('/calendar/events');
@@ -78,11 +89,15 @@ const CalendarPage = () => {
             const existingTitles = dbEvents.map(e => e.title);
             const newDefaults = defaultEvents.filter(d => !existingTitles.includes(d.title));
 
-            setEvents([
+            const allEvents = [
                 ...dbEvents,
                 ...newDefaults.map(d => ({ ...d, id: `default_${d.title}` })),
                 ...personalEvents
-            ]);
+            ];
+
+            // Cache the events
+            useCacheStore.getState().setCache(cacheKey, allEvents, CACHE_TTL.CALENDAR_EVENTS);
+            setEvents(allEvents);
         } catch (error) {
             console.error('Failed to fetch events:', error);
             const currentYear = new Date().getFullYear();
@@ -182,6 +197,8 @@ const CalendarPage = () => {
             const response = await api.post('/calendar/events', {
                 ...eventData
             });
+            // Invalidate calendar cache on add
+            useCacheStore.getState().invalidate(CACHE_KEYS.CALENDAR_EVENTS);
             setEvents([...events, response.data]);
             setShowAddModal(false);
         } catch (error) {
@@ -192,6 +209,8 @@ const CalendarPage = () => {
     const deleteEvent = async (eventId) => {
         try {
             await api.delete(`/calendar/events/${eventId}`);
+            // Invalidate calendar cache on delete
+            useCacheStore.getState().invalidate(CACHE_KEYS.CALENDAR_EVENTS);
             setEvents(events.filter(e => e.id !== eventId));
             setShowEventDetails(null);
         } catch (error) {
@@ -295,13 +314,27 @@ const CalendarPage = () => {
             return;
         }
 
+        // Create a cache key based on the event keys
+        const keysHash = eventKeys.sort().join('|');
+        const cacheKey = `${CACHE_KEYS.EVENT_PLANS}:${keysHash}`;
+
+        // Check cache first
+        const cached = useCacheStore.getState().getCached(cacheKey);
+        if (cached !== null) {
+            setPlannedEventKeys(cached);
+            return;
+        }
+
         let cancelled = false;
         (async () => {
             try {
                 const response = await api.post('/calendar/event-plans/exists', { eventKeys });
                 const exists = response.data?.exists || {};
                 if (cancelled) return;
-                setPlannedEventKeys(new Set(Object.keys(exists).filter((k) => exists[k])));
+                const plannedSet = new Set(Object.keys(exists).filter((k) => exists[k]));
+                // Cache the result
+                useCacheStore.getState().setCache(cacheKey, plannedSet, CACHE_TTL.EVENT_PLANS);
+                setPlannedEventKeys(plannedSet);
             } catch {
                 if (cancelled) return;
                 setPlannedEventKeys(new Set());

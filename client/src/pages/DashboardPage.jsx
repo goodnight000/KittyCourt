@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Heart, Coffee, TrendingUp, Sparkles, Star, Gift, X, Check, Scale, History, MessageCircle, Lock, BookOpen, Flame, ArrowRight } from 'lucide-react';
+import { Heart, Coffee, TrendingUp, Sparkles, Star, Gift, X, Check, Scale, History, MessageCircle, Lock, BookOpen, Flame, ArrowRight, Clock } from 'lucide-react';
 import useAppStore from '../store/useAppStore';
 import useAuthStore from '../store/useAuthStore';
+import useCacheStore, { CACHE_TTL, CACHE_KEYS } from '../store/useCacheStore';
 import api from '../services/api';
 
 const DashboardPage = () => {
@@ -12,17 +13,33 @@ const DashboardPage = () => {
     const { hasPartner, profile, partner: connectedPartner, user: authUser } = useAuthStore();
     const [showGoodDeedModal, setShowGoodDeedModal] = useState(false);
     const [questionStreak, setQuestionStreak] = useState(0);
+    const [todaysQuestion, setTodaysQuestion] = useState(null);
+    const [questionLoading, setQuestionLoading] = useState(true);
 
     // Get partner name - prefer connected partner from auth store
-    const partnerName = connectedPartner?.display_name || users?.find(u => u.id !== currentUser?.id)?.name || 'your partner';
+    const partnerName = connectedPartner?.display_name || users?.find(u => u.id !== currentUser?.id)?.name || 'Partner';
+    // Get current user's display name
+    const myName = profile?.display_name || currentUser?.display_name || currentUser?.name || 'Me';
+    // Get profile pictures
+
     const [goodDeedText, setGoodDeedText] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
 
-    // Fetch question streak
+    // Fetch question streak with caching
     useEffect(() => {
         const fetchStreak = async () => {
             if (!authUser?.id || !connectedPartner?.id) return;
+
+            const cacheKey = `${CACHE_KEYS.STREAK}:${authUser.id}:${connectedPartner.id}`;
+
+            // Check cache first
+            const cached = useCacheStore.getState().getCached(cacheKey);
+            if (cached !== null) {
+                setQuestionStreak(cached);
+                return;
+            }
+
             try {
                 const response = await api.get('/daily-questions/history', {
                     params: { userId: authUser.id, partnerId: connectedPartner.id }
@@ -30,6 +47,7 @@ const DashboardPage = () => {
                 const history = response.data || [];
                 const completed = history.filter(q => q.my_answer && q.partner_answer);
                 if (completed.length === 0) {
+                    useCacheStore.getState().setCache(cacheKey, 0, CACHE_TTL.STREAK);
                     setQuestionStreak(0);
                     return;
                 }
@@ -46,12 +64,37 @@ const DashboardPage = () => {
                     if (diffDays === 1) streak++;
                     else break;
                 }
+
+                // Cache the calculated streak
+                useCacheStore.getState().setCache(cacheKey, streak, CACHE_TTL.STREAK);
                 setQuestionStreak(streak);
             } catch (err) {
                 console.error('Failed to fetch streak:', err);
             }
         };
         fetchStreak();
+    }, [authUser?.id, connectedPartner?.id]);
+
+    // Fetch today's question for dashboard preview
+    useEffect(() => {
+        const fetchTodaysQuestion = async () => {
+            if (!authUser?.id || !connectedPartner?.id) {
+                setQuestionLoading(false);
+                return;
+            }
+            try {
+                setQuestionLoading(true);
+                const response = await api.get('/daily-questions/today', {
+                    params: { userId: authUser.id, partnerId: connectedPartner.id }
+                });
+                setTodaysQuestion(response.data);
+            } catch (err) {
+                console.error('Failed to fetch daily question:', err);
+            } finally {
+                setQuestionLoading(false);
+            }
+        };
+        fetchTodaysQuestion();
     }, [authUser?.id, connectedPartner?.id]);
 
     // Calculate actual days together from anniversary date (prefer Supabase profile)
@@ -104,153 +147,184 @@ const DashboardPage = () => {
         "Surprised me 🎁",
     ];
 
+    // Derive answer states
+    const hasAnswered = !!todaysQuestion?.my_answer;
+    const partnerHasAnswered = !!todaysQuestion?.partner_answer;
+    const bothAnswered = hasAnswered && partnerHasAnswered;
+    const neitherAnswered = !hasAnswered && !partnerHasAnswered;
+
+    // Helper to get effective avatar - matches ProfilesPage.jsx logic
+    const getMyAvatar = () => {
+        // Primary: localStorage profilePicture (for immediate updates before Supabase sync)
+        try {
+            const stored = localStorage.getItem(`catjudge_profile_${currentUser?.id}`);
+            if (stored) {
+                const data = JSON.parse(stored);
+                if (data.profilePicture) return data.profilePicture;
+            }
+        } catch (e) {
+            console.error('Error reading local profile:', e);
+        }
+        // Fallback: Supabase avatar_url ONLY (not Google OAuth avatar)
+        return profile?.avatar_url || null;
+    };
+
+    const myAvatar = getMyAvatar();
+    const partnerAvatar = connectedPartner?.avatar_url || null;
     return (
-        <div className="space-y-6">
-            {/* Welcome & Stats Section */}
-            <div className="space-y-4">
+        <div className="space-y-5">
+            {/* Stats Strip - Prominent at top */}
+            <Motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex gap-3"
+            >
                 <Motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="flex items-center justify-between"
-                >
-                    <div>
-                        <h1 className="text-2xl font-bold text-neutral-800">
-                            Hey, <span className="text-gradient">{profile?.display_name || currentUser?.display_name || currentUser?.name || 'Love'}</span>
-                        </h1>
-                        <p className="text-neutral-500 text-sm mt-0.5">Welcome back 💕</p>
-                    </div>
-                </Motion.div>
-
-                {/* Stats Strip - Prominent at top */}
-                <Motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.05 }}
-                    className="flex gap-3"
-                >
-                    <Motion.div
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => navigate('/profile')}
-                        className="flex-1 bg-gradient-to-br from-pink-50 to-rose-50/80 rounded-2xl p-4 border border-pink-100/50 cursor-pointer shadow-sm relative overflow-hidden"
-                    >
-                        <div className="relative z-10 flex items-center gap-3">
-                            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-soft text-pink-500">
-                                <Heart className="w-5 h-5 fill-current" />
-                            </div>
-                            <div>
-                                <div className="text-2xl font-bold text-neutral-800 leading-none mb-1">
-                                    {daysTogether !== null ? daysTogether : '?'}
-                                </div>
-                                <div className="text-xs text-neutral-500 font-bold uppercase tracking-wide">Days Together</div>
-                            </div>
-                        </div>
-                        {/* Decorative background icon */}
-                        <Heart className="absolute -bottom-4 -right-4 w-24 h-24 text-pink-100/50 rotate-12" />
-                    </Motion.div>
-
-                    <Motion.div
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => navigate('/daily-meow/history')}
-                        className="flex-1 bg-gradient-to-br from-orange-50 to-amber-50/80 rounded-2xl p-4 border border-orange-100/50 cursor-pointer shadow-sm relative overflow-hidden"
-                    >
-                        <div className="relative z-10 flex items-center gap-3">
-                            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-soft text-orange-500">
-                                <Flame className="w-5 h-5 fill-current" />
-                            </div>
-                            <div>
-                                <div className="text-2xl font-bold text-neutral-800 leading-none mb-1">{questionStreak}</div>
-                                <div className="text-xs text-neutral-500 font-bold uppercase tracking-wide">Question Streak</div>
-                            </div>
-                        </div>
-                        {/* Decorative background icon */}
-                        <Flame className="absolute -bottom-4 -right-4 w-24 h-24 text-orange-100/50 rotate-12" />
-                    </Motion.div>
-                </Motion.div>
-            </div>
-
-            {/* Main Features - Side by Side Cards */}
-            <div className="grid grid-cols-2 gap-3">
-                {/* File a Case Card */}
-                <Motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 }}
                     whileTap={{ scale: 0.98 }}
-                    onClick={() => navigate('/courtroom')}
-                    className="relative overflow-hidden rounded-3xl cursor-pointer group shadow-lg h-52"
-                    style={{ background: 'linear-gradient(135deg, #1c1c84 0%, #000035 100%)' }}
+                    onClick={() => navigate('/profile')}
+                    className="flex-1 bg-gradient-to-br from-pink-50 to-rose-50/80 rounded-2xl p-4 border border-pink-100/50 cursor-pointer shadow-sm relative overflow-hidden"
                 >
-                    {/* Decorative circle */}
-                    <div className="absolute top-1/2 right-0 w-40 h-40 bg-white/5 rounded-full translate-x-1/3 blur-2xl" />
-
-                    <div className="relative h-full p-4 flex flex-col">
-                        {/* Large Avatar - Top Left */}
-                        <Motion.div
-                            animate={{ y: [0, -3, 0] }}
-                            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                            className="w-28 h-28 rounded-xl overflow-hidden mb-auto"
-                        >
-                            <img
-                                src="/assets/avatars/judge_whiskers.png"
-                                alt="Judge Whiskers"
-                                className="w-full h-full object-cover"
-                            />
-                        </Motion.div>
-
-                        {/* Ready Badge - Top Right */}
-                        <div className="absolute top-4 right-4 inline-flex items-center gap-1.5 px-2.5 py-1 bg-white/15 backdrop-blur-sm rounded-full">
-                            <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
-                            <span className="text-white/90 text-[10px] font-bold">Ready</span>
+                    <div className="relative z-10 flex items-center gap-3">
+                        <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-soft text-pink-500">
+                            <Heart className="w-5 h-5 fill-current" />
                         </div>
-
-                        {/* Title at Bottom */}
                         <div>
-                            <h3 className="text-white font-bold text-lg leading-tight">File a Case</h3>
-                            <p className="text-white/60 text-xs mt-0.5">Let Judge Whiskers decide</p>
+                            <div className="text-2xl font-bold text-neutral-800 leading-none mb-1">
+                                {daysTogether !== null ? daysTogether : '?'}
+                            </div>
+                            <div className="text-xs text-neutral-500 font-bold uppercase tracking-wide">Days Together</div>
                         </div>
                     </div>
+                    <Heart className="absolute -bottom-4 -right-4 w-24 h-24 text-pink-100/50 rotate-12" />
                 </Motion.div>
 
-                {/* Daily Question Card */}
                 <Motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.15 }}
                     whileTap={{ scale: 0.98 }}
-                    onClick={() => navigate('/daily-meow')}
-                    className="relative overflow-hidden rounded-3xl cursor-pointer group shadow-lg h-52"
-                    style={{ background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' }}
+                    onClick={() => navigate('/daily-meow/history')}
+                    className="flex-1 bg-gradient-to-br from-orange-50 to-amber-50/80 rounded-2xl p-4 border border-orange-100/50 cursor-pointer shadow-sm relative overflow-hidden"
                 >
-                    {/* Decorative circle */}
-                    <div className="absolute top-1/2 right-0 w-40 h-40 bg-white/5 rounded-full translate-x-1/3 blur-2xl" />
-
-                    <div className="relative h-full p-4 flex flex-col">
-                        {/* Large Icon - Top Left */}
-                        <Motion.div
-                            animate={{ rotate: [0, 5, -5, 0] }}
-                            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                            className="w-28 h-28 rounded-xl overflow-hidden"
-                        >
-                            <img
-                                src="/assets/avatars/daily_question.png"
-                                alt="Daily Question"
-                                className="w-full h-full object-cover"
-                            />
-                        </Motion.div>
-
-                        {/* NEW Badge - Top Right */}
-                        <div className="absolute top-4 right-4 px-2.5 py-1 bg-white/20 backdrop-blur-sm rounded-full">
-                            <span className="text-white text-[10px] font-bold">NEW</span>
+                    <div className="relative z-10 flex items-center gap-3">
+                        <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-soft text-orange-500">
+                            <Flame className="w-5 h-5 fill-current" />
                         </div>
-
-                        {/* Title at Bottom */}
                         <div>
-                            <h3 className="text-white font-bold text-lg leading-tight">Daily Question</h3>
-                            <p className="text-white/60 text-xs mt-0.5">Share your thoughts</p>
+                            <div className="text-2xl font-bold text-neutral-800 leading-none mb-1">{questionStreak}</div>
+                            <div className="text-xs text-neutral-500 font-bold uppercase tracking-wide">Question Streak</div>
                         </div>
                     </div>
+                    <Flame className="absolute -bottom-4 -right-4 w-24 h-24 text-orange-100/50 rotate-12" />
                 </Motion.div>
-            </div>
+            </Motion.div>
+
+            {/* Daily Question Card - Full Width, Dynamic States */}
+            <Motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                whileTap={{ scale: 0.995 }}
+                onClick={() => navigate('/daily-meow')}
+                className="relative overflow-hidden rounded-[32px] cursor-pointer shadow-xl flex-1 min-h-[220px] flex flex-col"
+                style={{ background: 'linear-gradient(135deg, #B85C6B 0%, #8B4049 100%)' }}
+            >
+                {/* Background Pattern - Subtle Cats */}
+                <div className="absolute inset-0 opacity-5 pointer-events-none">
+                    <div className="absolute top-4 right-10 transform rotate-12 text-4xl">🐱</div>
+                    <div className="absolute bottom-6 left-12 transform -rotate-12 text-3xl">😺</div>
+                    <div className="absolute top-1/2 left-4 transform rotate-45 text-2xl">😸</div>
+                </div>
+
+                {bothAnswered && (
+                    <Motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="absolute inset-0 overflow-hidden pointer-events-none"
+                    >
+                        <Sparkles className="absolute top-6 right-16 w-5 h-5 text-white/40 animate-pulse" />
+                        <Sparkles className="absolute top-12 right-8 w-4 h-4 text-white/30 animate-pulse" style={{ animationDelay: '0.5s' }} />
+                        <Sparkles className="absolute bottom-20 right-12 w-4 h-4 text-white/30 animate-pulse" style={{ animationDelay: '1s' }} />
+                    </Motion.div>
+                )}
+
+                <div className="relative z-10 p-6 flex flex-col h-full items-center justify-center text-center">
+                    {/* Header Badge */}
+                    <div className="mb-4">
+                        <span className={`px-3 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase bg-white/20 text-white backdrop-blur-sm border border-white/20`}>
+                            {bothAnswered ? 'Completed' : hasAnswered ? 'Waiting for Partner' : 'Daily Question'}
+                        </span>
+                    </div>
+
+                    {/* Question Text */}
+                    <h3 className="text-2xl font-bold text-white mb-6 leading-tight max-w-sm mx-auto" style={{ fontFamily: 'var(--font-display), Quicksand, sans-serif' }}>
+                        {questionLoading ? 'Loading...' : (todaysQuestion?.question || "What's on your mind today?")}
+                    </h3>
+
+                    {/* Status Indicators - Fully Rounded Capsule Pills with Overlapping Heart */}
+                    <div className="flex items-center justify-center">
+                        {/* User Status Pill */}
+                        <div className={`flex items-center gap-2 pl-2 pr-5 py-2 rounded-full relative z-0 translate-x-3 ${hasAnswered ? 'bg-white' : 'bg-[#9E525E]'}`}>
+                            {/* User Avatar */}
+                            <div className={`w-8 h-8 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0 bg-neutral-200`}>
+                                {myAvatar ? (
+                                    <img src={myAvatar} alt="Me" className="w-full h-full object-cover" />
+                                ) : (
+                                    <span className="text-xs font-bold text-neutral-500">{myName?.charAt(0)?.toUpperCase()}</span>
+                                )}
+                            </div>
+                            <div className="text-left">
+                                <p className={`text-[10px] font-bold leading-tight ${hasAnswered ? 'text-neutral-800' : 'text-white'}`}>
+                                    You: {hasAnswered ? '✓' : ''}
+                                </p>
+                                <p className={`text-[9px] leading-tight ${hasAnswered ? 'text-neutral-500' : 'text-white/70'}`}>
+                                    {hasAnswered ? 'Answered' : 'Waiting...'}
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Heart Connector - Overlaps both pills */}
+                        <div className="relative z-20 mx-[-6px]">
+                            <div className="w-9 h-9 bg-white rounded-full flex items-center justify-center shadow-sm border-[3px] border-[#9B4E5A]">
+                                <Heart className={`w-3.5 h-3.5 ${bothAnswered ? 'text-[#B85C6B] fill-current' : 'text-[#B85C6B]'}`} />
+                            </div>
+                        </div>
+
+                        {/* Partner Status Pill */}
+                        <div className={`flex items-center gap-2 pl-5 pr-2 py-2 rounded-full relative z-0 -translate-x-3 ${partnerHasAnswered ? 'bg-white' : 'bg-[#9E525E]'}`}>
+                            <div className="text-right">
+                                <p className={`text-[10px] font-bold leading-tight ${partnerHasAnswered ? 'text-neutral-800' : 'text-white'}`}>
+                                    {partnerName?.split(' ')[0]}: {partnerHasAnswered ? '✓' : ''}
+                                </p>
+                                <p className={`text-[9px] leading-tight ${partnerHasAnswered ? 'text-neutral-500' : 'text-white/70'}`}>
+                                    {partnerHasAnswered ? 'Answered' : (
+                                        <span className="inline-flex items-center">
+                                            Waiting
+                                            <Motion.span
+                                                animate={{ opacity: [0, 1, 0] }}
+                                                transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                                            >.</Motion.span>
+                                            <Motion.span
+                                                animate={{ opacity: [0, 1, 0] }}
+                                                transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut", delay: 0.2 }}
+                                            >.</Motion.span>
+                                            <Motion.span
+                                                animate={{ opacity: [0, 1, 0] }}
+                                                transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut", delay: 0.4 }}
+                                            >.</Motion.span>
+                                        </span>
+                                    )}
+                                </p>
+                            </div>
+                            {/* Partner Avatar */}
+                            <div className={`w-8 h-8 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0 bg-neutral-200`}>
+                                {partnerAvatar ? (
+                                    <img src={partnerAvatar} alt="Partner" className="w-full h-full object-cover" />
+                                ) : (
+                                    <span className="text-xs font-bold text-neutral-500">{partnerName?.charAt(0)?.toUpperCase()}</span>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </Motion.div>
 
             {/* Quick Actions - Compact Grid */}
             <div className="space-y-3">
@@ -322,10 +396,10 @@ const DashboardPage = () => {
                         <span className="text-[10px] font-bold text-neutral-600 text-center leading-tight">Redeem</span>
                     </Motion.button>
                 </div>
-            </div>
+            </div >
 
             {/* Question Archives - Horizontal Banner */}
-            <Motion.div
+            < Motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
@@ -344,10 +418,10 @@ const DashboardPage = () => {
                     </div>
                     <ArrowRight className="w-5 h-5 text-neutral-400" />
                 </div>
-            </Motion.div>
+            </Motion.div >
 
             {/* Good Deed Modal */}
-            <AnimatePresence>
+            < AnimatePresence >
                 {showGoodDeedModal && (
                     <Motion.div
                         initial={{ opacity: 0 }}
@@ -438,8 +512,8 @@ const DashboardPage = () => {
                         </Motion.div>
                     </Motion.div>
                 )}
-            </AnimatePresence>
-        </div>
+            </AnimatePresence >
+        </div >
     );
 };
 

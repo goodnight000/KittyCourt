@@ -7,23 +7,23 @@ export default {
     theme: {
         extend: {
             colors: {
-                // Premium Court Palette - Inspired by Judge Whiskers
+                // Premium Court Palette - Champagne Gold Theme
                 'court': {
-                    // Primary Gold/Amber (gavel, badge)
-                    'gold': '#C9A227',
-                    'goldLight': '#E5C76B',
-                    'goldDark': '#8B7019',
+                    // Primary Champagne Gold (gavel, badge)
+                    'gold': '#D4AF37',           // True gold - richer than mustard
+                    'goldLight': '#E6CFA3',      // Champagne - soft, luxurious
+                    'goldDark': '#B8972E',       // Deep gold - sophisticated accent
                     // Warm Browns (robe, wood)
                     'brown': '#4A3728',
                     'brownLight': '#6B5344',
                     'brownDark': '#2D221A',
                     // Cream/Tan (cat fur, background)
-                    'cream': '#F5EDE0',
-                    'tan': '#D4C4A8',
-                    'ivory': '#FAF7F2',
-                    // Deep Maroon (chair, accents)
-                    'maroon': '#722F37',
-                    'maroonLight': '#8B4049',
+                    'cream': '#FFFBF5',          // Warm ivory - brighter, cleaner
+                    'tan': '#E6D5C3',            // Softer tan
+                    'ivory': '#FFFEF8',          // Pure warm white
+                    // Deep Accents (chair, accents)
+                    'maroon': '#8B4513',         // Saddle brown - warmer accent
+                    'maroonLight': '#A0522D',    // Sienna - softer accent
                     // Neutral grays
                     'slate': '#4A4A4A',
                 },
