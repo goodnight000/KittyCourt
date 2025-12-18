@@ -362,7 +362,8 @@ const CalendarPage = () => {
                         setShowAddModal(true);
                     }}
                     disabled={isLoading}
-                    className="w-10 h-10 rounded-xl flex items-center justify-center shadow-md bg-gradient-to-r from-amber-500 to-orange-500"
+                    className="w-10 h-10 rounded-xl flex items-center justify-center shadow-md"
+                    style={{ background: 'linear-gradient(135deg, #B85C6B 0%, #8B4049 100%)' }}
                 >
                     {isLoading ? (
                         <Loader2 className="w-5 h-5 text-white animate-spin" />
@@ -438,7 +439,7 @@ const CalendarPage = () => {
                                     ${hasEvents && !today ? (hasSecretEvents ? 'bg-[#1c1c84]/15' : 'bg-pink-50') : ''}
                                     ${!today && !hasEvents ? 'hover:bg-neutral-50' : ''}
                                 `}
-                                style={today ? { background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' } : {}}
+                                style={today ? { background: 'linear-gradient(135deg, #B85C6B 0%, #8B4049 100%)', opacity: 1 } : {}}
                             >
                                 <span className={`text-sm font-bold ${today ? 'text-white' : ''}`}>
                                     {dayInfo.day}
@@ -463,15 +464,13 @@ const CalendarPage = () => {
             >
                 <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-100 via-pink-100 to-violet-100 flex items-center justify-center shadow-soft border border-white/60">
-                            <Sparkles className="w-5 h-5 text-amber-600" />
-                        </div>
+
                         <div>
-                            <h3 className="text-sm font-extrabold text-neutral-700">Upcoming</h3>
-                            <p className="text-xs text-neutral-500">Next 7 days</p>
+                            <h3 className="text-lg font-extrabold text-neutral-700">Upcoming</h3>
+                            <p className="text-sm text-neutral-500">Next 7 days</p>
                         </div>
                     </div>
-                    <div className="text-xs text-neutral-400 font-medium">
+                    <div className="text-sm text-neutral-400 font-medium">
                         {upcomingEvents.length} {upcomingEvents.length === 1 ? 'event' : 'events'}
                     </div>
                 </div>
@@ -671,7 +670,7 @@ const EventCard = ({ event, delay, onClick, onPlanClick, showPlanButton, hasSave
                             ? 'text-white shadow-lg'
                             : 'bg-white/70 text-court-brown border border-court-tan/50 shadow-soft hover:bg-white'
                             }`}
-                        style={isSoon ? { background: 'linear-gradient(135deg, #C9A227 0%, #722F37 100%)' } : {}}
+                        style={isSoon ? { background: 'linear-gradient(135deg, #B85C6B 0%, #8B4049 100%)' } : {}}
                     >
                         <Wand2 className="w-4 h-4" />
                         <span>{hasSavedPlan ? 'View my plan' : 'Help me plan'}</span>

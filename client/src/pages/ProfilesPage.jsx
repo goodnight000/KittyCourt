@@ -182,7 +182,7 @@ const ProfilesPage = () => {
                         ? 'text-white shadow-md'
                         : 'text-neutral-500'
                         }`}
-                    style={activeTab === 'me' ? { background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' } : {}}
+                    style={activeTab === 'me' ? { background: 'linear-gradient(135deg, #B85C6B 0%, #8B4049 100%)' } : {}}
                 >
                     My Profile
                 </button>
@@ -193,7 +193,7 @@ const ProfilesPage = () => {
                         ? 'text-white shadow-md'
                         : hasPartner ? 'text-neutral-500' : 'text-neutral-400 opacity-60 cursor-not-allowed'
                         }`}
-                    style={activeTab === 'us' ? { background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' } : {}}
+                    style={activeTab === 'us' ? { background: 'linear-gradient(135deg, #B85C6B 0%, #8B4049 100%)' } : {}}
                 >
                     {!hasPartner && <Lock className="w-3.5 h-3.5" />}
                     Our Story
@@ -392,7 +392,7 @@ const ProfilesPage = () => {
                                     whileTap={{ scale: 0.98 }}
                                     onClick={() => setShowPaywall(true)}
                                     className="w-full py-3 rounded-xl font-bold text-white flex items-center justify-center gap-2 shadow-md"
-                                    style={{ background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' }}
+                                    style={{ background: 'linear-gradient(135deg, #B85C6B 0%, #8B4049 100%)' }}
                                 >
                                     <Crown className="w-5 h-5" />
                                     Upgrade to Gold – $8.88/mo

@@ -14,6 +14,7 @@ import {
     checkPauseGoldStatus,
     getCustomerInfo,
     getOfferings,
+    checkTrialEligibility as rcCheckTrialEligibility,
     purchasePauseGold as rcPurchaseGold,
     restorePurchases as rcRestorePurchases,
     onCustomerInfoUpdate,
@@ -75,6 +76,10 @@ const useSubscriptionStore = create((set, get) => ({
     // Computed limits based on subscription
     limits: FREE_LIMITS,
 
+    // Trial eligibility (for showing "7 days free" messaging)
+    trialEligible: true, // Default true, will check on init
+    trialEligibilityChecked: false,
+
     // Error state
     error: null,
 
@@ -104,8 +109,12 @@ const useSubscriptionStore = create((set, get) => ({
                     await get().checkEntitlement();
                 });
                 set({ _rcUnsub: unsub || null });
+
+                // Check trial eligibility (non-blocking)
+                get().checkTrialEligibility();
             } else {
-                set({ offerings: null, _rcUnsub: null });
+                // On web, default to showing trial messaging
+                set({ offerings: null, _rcUnsub: null, trialEligible: true, trialEligibilityChecked: true });
             }
 
             // Check subscription status
@@ -149,9 +158,36 @@ const useSubscriptionStore = create((set, get) => ({
     },
 
     /**
-     * Purchase Pause Gold subscription
+     * Check trial eligibility for showing "7 days free" messaging
+     * Called during initialize on native platforms
      */
-    purchaseGold: async () => {
+    checkTrialEligibility: async () => {
+        try {
+            const eligibility = await rcCheckTrialEligibility();
+
+            // Check if ANY product is eligible for trial
+            // Status 0 = UNKNOWN (assume eligible), 2 = ELIGIBLE
+            // Status 1 = INELIGIBLE, 3 = NO_INTRO_OFFER_EXISTS
+            const isEligible = Object.values(eligibility).some(
+                e => e.status === 0 || e.status === 2
+            );
+
+            set({ trialEligible: isEligible, trialEligibilityChecked: true });
+            console.log('[SubscriptionStore] Trial eligible:', isEligible);
+            return isEligible;
+        } catch (error) {
+            console.error('[SubscriptionStore] Check trial eligibility failed:', error);
+            // Default to showing trial messaging on error
+            set({ trialEligible: true, trialEligibilityChecked: true });
+            return true;
+        }
+    },
+
+    /**
+     * Purchase Pause Gold subscription
+     * @param {string} planType - 'yearly' or 'monthly'
+     */
+    purchaseGold: async (planType = 'monthly') => {
         set({ isLoading: true, error: null });
 
         try {
@@ -160,7 +196,7 @@ const useSubscriptionStore = create((set, get) => ({
                 return { success: false, error: 'Purchases are only available in the iOS/Android app.' };
             }
 
-            const result = await rcPurchaseGold();
+            const result = await rcPurchaseGold(planType);
 
             if (result.success) {
                 set({
@@ -168,6 +204,7 @@ const useSubscriptionStore = create((set, get) => ({
                     customerInfo: result.customerInfo,
                     limits: GOLD_LIMITS,
                     isLoading: false,
+                    trialEligible: false, // User has now used their trial
                 });
                 // Refresh usage so UI immediately reflects Gold limits (and any server-side tracking).
                 get().fetchUsage();

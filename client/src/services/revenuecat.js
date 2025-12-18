@@ -13,8 +13,9 @@ let isInitialized = false;
 
 // Configuration - use environment variable
 const REVENUECAT_API_KEY = import.meta.env.VITE_REVENUECAT_API_KEY || '';
-const ENTITLEMENT_ID = 'pause_gold';
-const PRODUCT_ID = 'pause_gold_monthly';
+const ENTITLEMENT_ID = 'Pause Gold';
+const PRODUCT_ID_MONTHLY = 'monthly';
+const PRODUCT_ID_YEARLY = 'yearly';
 
 /**
  * Check if we're running on a native platform (iOS/Android)
@@ -158,10 +159,51 @@ export const getOfferings = async () => {
 };
 
 /**
+ * Check if user is eligible for free trial / introductory offer
+ * @param {string[]} productIdentifiers - Product IDs to check
+ * @returns {object} Map of product ID -> eligibility status
+ * 
+ * Eligibility status values:
+ * - INTRO_ELIGIBILITY_STATUS_ELIGIBLE (2): User can get trial
+ * - INTRO_ELIGIBILITY_STATUS_INELIGIBLE (1): User already used trial
+ * - INTRO_ELIGIBILITY_STATUS_UNKNOWN (0): Couldn't determine (default to eligible)
+ * - INTRO_ELIGIBILITY_STATUS_NO_INTRO_OFFER_EXISTS (3): No trial configured
+ * 
+ * Note: On Android, this always returns UNKNOWN - let store handle it.
+ */
+export const checkTrialEligibility = async (productIdentifiers = [PRODUCT_ID_MONTHLY, PRODUCT_ID_YEARLY]) => {
+    if (!isNativePlatform() || !Purchases) {
+        // Default to eligible on web/unsupported
+        const result = {};
+        productIdentifiers.forEach(id => {
+            result[id] = { status: 0, description: 'UNKNOWN' }; // Unknown = assume eligible
+        });
+        return result;
+    }
+
+    try {
+        const eligibility = await Purchases.checkTrialOrIntroductoryPriceEligibility({
+            productIdentifiers,
+        });
+        console.log('[RevenueCat] Trial eligibility:', eligibility);
+        return eligibility;
+    } catch (error) {
+        console.error('[RevenueCat] Failed to check trial eligibility:', error);
+        // Default to eligible on error
+        const result = {};
+        productIdentifiers.forEach(id => {
+            result[id] = { status: 0, description: 'UNKNOWN' };
+        });
+        return result;
+    }
+};
+
+/**
  * Purchase Pause Gold subscription
+ * @param {string} planType - 'yearly' or 'monthly'
  * @returns {object} Purchase result with customerInfo
  */
-export const purchasePauseGold = async () => {
+export const purchasePauseGold = async (planType = 'monthly') => {
     if (!isNativePlatform() || !Purchases) {
         throw new Error('RevenueCat not available on this platform');
     }
@@ -174,13 +216,23 @@ export const purchasePauseGold = async () => {
             throw new Error('No offerings available');
         }
 
-        // Find the monthly package
-        const monthlyPackage = offerings.current.availablePackages.find(
-            pkg => pkg.identifier === '$rc_monthly' || pkg.product.identifier === PRODUCT_ID
-        ) || offerings.current.availablePackages[0];
+        // Find the correct package based on plan type
+        const targetProductId = planType === 'yearly' ? PRODUCT_ID_YEARLY : PRODUCT_ID_MONTHLY;
+        const rcPackageType = planType === 'yearly' ? '$rc_annual' : '$rc_monthly';
+
+        const selectedPackage = offerings.current.availablePackages.find(
+            pkg => pkg.identifier === rcPackageType || pkg.product.identifier === targetProductId
+        );
+
+        if (!selectedPackage) {
+            console.error('[RevenueCat] Available packages:', offerings.current.availablePackages.map(p => p.identifier));
+            throw new Error(`No ${planType} package found`);
+        }
+
+        console.log('[RevenueCat] Purchasing package:', selectedPackage.identifier, 'product:', selectedPackage.product.identifier);
 
         // Make the purchase
-        const result = await Purchases.purchasePackage({ aPackage: monthlyPackage });
+        const result = await Purchases.purchasePackage({ aPackage: selectedPackage });
 
         console.log('[RevenueCat] Purchase successful');
         return {
@@ -241,10 +293,12 @@ export default {
     checkPauseGoldStatus,
     getCustomerInfo,
     getOfferings,
+    checkTrialEligibility,
     purchasePauseGold,
     restorePurchases,
     logOutUser,
     onCustomerInfoUpdate,
     ENTITLEMENT_ID,
-    PRODUCT_ID,
+    PRODUCT_ID_MONTHLY,
+    PRODUCT_ID_YEARLY,
 };
