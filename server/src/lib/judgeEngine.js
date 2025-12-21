@@ -1,27 +1,49 @@
 /**
- * Judge Engine Service
+ * Judge Engine Service v2.0
  * 
- * This is the core deliberation pipeline that processes couple disputes
- * through a multi-step LLM chain based on Gottman Method and NVC principles.
+ * Multi-step therapeutic pipeline for couple conflict resolution:
  * 
- * Now using OpenRouter with DeepSeek R1 reasoning model
- * 
- * Pipeline Steps:
+ * NEW V2.0 PIPELINE:
  * 1. Safety Guardrail (Moderation API)
  * 2. Memory Retrieval (RAG - fetch historical context)
- * 3. Analytical Phase (Psychological analysis, JSON mode)
- * 4. Verdict Generation (Judge Whiskers persona)
- * 5. Background Memory Extraction (Stenographer agent)
+ * 3. Analyst + Repair Selection (intensity, dynamics, 3 resolutions)
+ * 4. Priming + Joint Menu (individual content + shared content)
+ * 5. Hybrid Resolution (if users pick different options)
+ * 6. Background Memory Extraction (Stenographer agent)
+ * 
+ * LEGACY PIPELINE (still supported for backward compat):
+ * 1. Moderation → 2. RAG → 3. Analysis → 4. Verdict
  */
 
 const { isOpenRouterConfigured, createChatCompletion, createModeration } = require('./openrouter');
-const { DeliberationInputSchema, AnalysisSchema, JudgeContentSchema } = require('./schemas');
-const { ANALYSIS_JSON_SCHEMA, VERDICT_JSON_SCHEMA } = require('./jsonSchemas');
 const {
+    DeliberationInputSchema,
+    AnalysisSchema,
+    JudgeContentSchema,
+    AnalystRepairOutputSchema,
+    PrimingJointOutputSchema,
+    HybridResolutionOutputSchema,
+} = require('./schemas');
+const {
+    ANALYSIS_JSON_SCHEMA,
+    VERDICT_JSON_SCHEMA,
+    ANALYST_REPAIR_JSON_SCHEMA,
+    PRIMING_JOINT_JSON_SCHEMA,
+    HYBRID_RESOLUTION_JSON_SCHEMA,
+} = require('./jsonSchemas');
+const {
+    // Legacy prompts
     ANALYST_SYSTEM_PROMPT,
     JUDGE_SYSTEM_PROMPT,
     buildAnalystUserPrompt,
     buildJudgeUserPrompt,
+    // New v2.0 prompts
+    ANALYST_REPAIR_SYSTEM_PROMPT,
+    PRIMING_JOINT_SYSTEM_PROMPT,
+    HYBRID_RESOLUTION_SYSTEM_PROMPT,
+    buildAnalystRepairUserPrompt,
+    buildPrimingJointUserPrompt,
+    buildHybridResolutionUserPrompt,
 } = require('./prompts');
 const { retrieveHistoricalContext, formatContextForPrompt, hasHistoricalContext } = require('./memoryRetrieval');
 const { triggerBackgroundExtraction } = require('./stenographer');
@@ -29,28 +51,347 @@ const { repairAndParseJSON } = require('./jsonRepair');
 
 const DEBUG_LOGS = process.env.NODE_ENV !== 'production';
 
-// Configuration - Using OpenRouter with DeepSeek R1 reasoning model
+// Configuration
 const CONFIG = {
-    model: 'deepseek/deepseek-v3.2', // DeepSeek's reasoning model via OpenRouter
-    analysisTemperature: 0.5, // Lower temp for consistent clinical analysis
-    verdictTemperature: 0.7,  // Higher temp for creative cat persona
-    maxTokens: 8000,          // Increased to prevent truncation
-    maxRetries: 3,            // Increased retries
+    model: 'deepseek/deepseek-v3.2',
+    analysisTemperature: 0.5,
+    verdictTemperature: 0.7,
+    maxTokens: 8000,
+    maxRetries: 3,
 };
 
 // Judge types for verdict generation (user-selectable)
 const JUDGE_MODELS = {
-    best: 'anthropic/claude-opus-4.5',     // Judge Whiskers - empathic, experienced
-    fast: 'deepseek/deepseek-v3.2',        // The Fast Judge - quick verdicts
-    logical: 'moonshotai/kimi-k2-thinking' // Judge Mittens - balanced, methodical
+    best: 'anthropic/claude-opus-4.5',
+    fast: 'deepseek/deepseek-v3.2',
+    logical: 'google/gemini-3-flash-preview'
 };
+
+// Hybrid resolution always uses this fast model
+const HYBRID_MODEL = 'x-ai/grok-4.1-fast';
+
+// ============================================================================
+// V2.0 PIPELINE FUNCTIONS
+// ============================================================================
+
+/**
+ * V2.0 Step 1: Analyst + Repair Selection
+ * 
+ * Performs deep psychological analysis and selects 3 resolution options.
+ * Uses user-selected model.
+ * 
+ * @param {object} input - Validated deliberation input
+ * @param {string} historicalContext - Formatted RAG context
+ * @param {string} judgeType - User-selected model type
+ * @returns {Promise<object>} - Analysis with 3 resolutions
+ */
+async function runAnalystRepair(input, historicalContext = '', judgeType = 'logical') {
+    const model = JUDGE_MODELS[judgeType] || CONFIG.model;
+    const userPrompt = buildAnalystRepairUserPrompt(input, historicalContext);
+    let lastError = null;
+
+    for (let attempt = 1; attempt <= CONFIG.maxRetries; attempt++) {
+        try {
+            console.log(`[Judge Engine v2] Analyst+Repair attempt ${attempt}/${CONFIG.maxRetries} using ${model}`);
+
+            const response = await createChatCompletion({
+                model,
+                messages: [
+                    { role: 'system', content: ANALYST_REPAIR_SYSTEM_PROMPT },
+                    { role: 'user', content: userPrompt },
+                ],
+                temperature: CONFIG.analysisTemperature,
+                maxTokens: CONFIG.maxTokens,
+                jsonSchema: ANALYST_REPAIR_JSON_SCHEMA,
+            });
+
+            const content = response.choices[0].message.content;
+            const finishReason = response.choices[0].finish_reason;
+
+            console.log('[Judge Engine v2] Raw analyst response length:', content?.length);
+            if (finishReason === 'length') {
+                console.warn('[Judge Engine v2] WARNING: Response was truncated!');
+            }
+
+            let parsed;
+            try {
+                parsed = JSON.parse(content);
+            } catch (parseError) {
+                console.log('[Judge Engine v2] Direct parse failed, attempting repair...');
+                parsed = repairAndParseJSON(content);
+            }
+
+            // Validate against v2.0 schema
+            const validated = AnalystRepairOutputSchema.parse(parsed);
+
+            console.log('[Judge Engine v2] Analyst+Repair complete:', {
+                intensity: validated.assessedIntensity,
+                resolutionCount: validated.resolutions?.length,
+            });
+
+            return validated;
+        } catch (error) {
+            console.error(`[Judge Engine v2] Analyst attempt ${attempt} failed:`, error.message);
+            lastError = error;
+
+            if (attempt < CONFIG.maxRetries) {
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+        }
+    }
+
+    throw new Error(`Analyst+Repair failed after ${CONFIG.maxRetries} attempts: ${lastError?.message}`);
+}
+
+/**
+ * V2.0 Step 2: Priming + Joint Menu Generation
+ * 
+ * Generates individual priming content for both users AND joint menu content
+ * in a single LLM call for efficiency.
+ * 
+ * @param {object} input - Validated deliberation input
+ * @param {object} analysis - Output from runAnalystRepair
+ * @param {string} historicalContext - Formatted RAG context
+ * @param {string} judgeType - User-selected model type
+ * @returns {Promise<object>} - Priming + Joint menu content
+ */
+async function runPrimingJoint(input, analysis, historicalContext = '', judgeType = 'logical') {
+    const model = JUDGE_MODELS[judgeType] || CONFIG.model;
+    const userPrompt = buildPrimingJointUserPrompt(
+        input,
+        analysis,
+        analysis.resolutions,
+        historicalContext
+    );
+    let lastError = null;
+
+    for (let attempt = 1; attempt <= CONFIG.maxRetries; attempt++) {
+        try {
+            console.log(`[Judge Engine v2] Priming+Joint attempt ${attempt}/${CONFIG.maxRetries} using ${model}`);
+
+            const response = await createChatCompletion({
+                model,
+                messages: [
+                    { role: 'system', content: PRIMING_JOINT_SYSTEM_PROMPT },
+                    { role: 'user', content: userPrompt },
+                ],
+                temperature: CONFIG.verdictTemperature,
+                maxTokens: CONFIG.maxTokens,
+                jsonSchema: PRIMING_JOINT_JSON_SCHEMA,
+            });
+
+            const content = response.choices[0].message.content;
+
+            let parsed;
+            try {
+                parsed = JSON.parse(content);
+            } catch (parseError) {
+                console.log('[Judge Engine v2] Direct parse failed, attempting repair...');
+                parsed = repairAndParseJSON(content);
+            }
+
+            const validated = PrimingJointOutputSchema.parse(parsed);
+
+            console.log('[Judge Engine v2] Priming+Joint complete:', {
+                voiceUsed: validated.voiceUsed,
+                hasUserAPriming: !!validated.individualPriming?.userA,
+                hasUserBPriming: !!validated.individualPriming?.userB,
+                hasJointMenu: !!validated.jointMenu,
+            });
+
+            return validated;
+        } catch (error) {
+            console.error(`[Judge Engine v2] Priming+Joint attempt ${attempt} failed:`, error.message);
+            lastError = error;
+
+            if (attempt < CONFIG.maxRetries) {
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+        }
+    }
+
+    throw new Error(`Priming+Joint failed after ${CONFIG.maxRetries} attempts: ${lastError?.message}`);
+}
+
+/**
+ * V2.0 Step 3: Hybrid Resolution Generation
+ * 
+ * Called ONLY when users pick different resolution options.
+ * Creates a hybrid that honors both choices.
+ * 
+ * ALWAYS uses x-ai/grok-4.1-fast for speed.
+ * 
+ * @param {object} input - Validated deliberation input
+ * @param {object} analysis - Output from runAnalystRepair
+ * @param {object} userAChoice - Resolution chosen by User A
+ * @param {object} userBChoice - Resolution chosen by User B
+ * @param {string} historicalContext - Formatted RAG context
+ * @returns {Promise<object>} - Hybrid resolution
+ */
+async function runHybridResolution(input, analysis, userAChoice, userBChoice, historicalContext = '') {
+    const userPrompt = buildHybridResolutionUserPrompt(
+        input,
+        analysis,
+        userAChoice,
+        userBChoice,
+        historicalContext
+    );
+    let lastError = null;
+
+    for (let attempt = 1; attempt <= CONFIG.maxRetries; attempt++) {
+        try {
+            console.log(`[Judge Engine v2] Hybrid attempt ${attempt}/${CONFIG.maxRetries} using ${HYBRID_MODEL}`);
+
+            const response = await createChatCompletion({
+                model: HYBRID_MODEL,
+                messages: [
+                    { role: 'system', content: HYBRID_RESOLUTION_SYSTEM_PROMPT },
+                    { role: 'user', content: userPrompt },
+                ],
+                temperature: 0.5,
+                maxTokens: 2000,
+                jsonSchema: HYBRID_RESOLUTION_JSON_SCHEMA,
+            });
+
+            const content = response.choices[0].message.content;
+
+            let parsed;
+            try {
+                parsed = JSON.parse(content);
+            } catch (parseError) {
+                console.log('[Judge Engine v2] Direct parse failed, attempting repair...');
+                parsed = repairAndParseJSON(content);
+            }
+
+            const validated = HybridResolutionOutputSchema.parse(parsed);
+
+            console.log('[Judge Engine v2] Hybrid resolution generated:', validated.hybridResolution?.title);
+
+            return validated;
+        } catch (error) {
+            console.error(`[Judge Engine v2] Hybrid attempt ${attempt} failed:`, error.message);
+            lastError = error;
+
+            if (attempt < CONFIG.maxRetries) {
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+        }
+    }
+
+    throw new Error(`Hybrid resolution failed after ${CONFIG.maxRetries} attempts: ${lastError?.message}`);
+}
+
+/**
+ * V2.0 Full Pipeline - Phase 1
+ * 
+ * Runs moderation, RAG retrieval, and analyst+repair selection.
+ * Returns analysis and 3 resolution options.
+ * 
+ * @param {object} rawInput - Raw input from API
+ * @param {object} options - { judgeType, userReportedIntensity }
+ * @returns {Promise<object>} - { analysis, resolutions, historicalContext }
+ */
+async function deliberatePhase1(rawInput, options = {}) {
+    const startTime = Date.now();
+
+    // Validate input
+    let input;
+    try {
+        input = DeliberationInputSchema.parse(rawInput);
+    } catch (error) {
+        throw new Error(`Invalid input: ${error.message}`);
+    }
+
+    if (!isOpenRouterConfigured()) {
+        throw new Error('OpenRouter API key not configured');
+    }
+
+    // Inject user-reported intensity if provided
+    if (options.userReportedIntensity) {
+        input.userReportedIntensity = options.userReportedIntensity;
+    }
+
+    // Step 1: Moderation
+    console.log('[Judge Engine v2] Running moderation...');
+    const modResult = await runModerationCheck(input);
+    if (modResult.requiresCounseling) {
+        throw new Error('Content flagged for safety. Counseling recommended.');
+    }
+
+    // Step 2: RAG
+    console.log('[Judge Engine v2] Retrieving historical context...');
+    let historicalContext = null;
+    let formattedContext = '';
+    try {
+        historicalContext = await retrieveHistoricalContext(input);
+        if (hasHistoricalContext(historicalContext)) {
+            formattedContext = formatContextForPrompt(historicalContext, input.participants);
+        }
+    } catch (error) {
+        console.log('[Judge Engine v2] RAG failed (non-blocking):', error.message);
+    }
+
+    // Step 3: Analyst + Repair
+    console.log('[Judge Engine v2] Running analyst + repair selection...');
+    const judgeType = options.judgeType || 'logical';
+    const analysisResult = await runAnalystRepair(input, formattedContext, judgeType);
+
+    const duration = Date.now() - startTime;
+    console.log(`[Judge Engine v2] Phase 1 complete in ${duration}ms`);
+
+    return {
+        input,
+        analysis: analysisResult,
+        resolutions: analysisResult.resolutions,
+        assessedIntensity: analysisResult.assessedIntensity,
+        historicalContext: formattedContext,
+        _meta: {
+            processingTimeMs: duration,
+            judgeType,
+            model: JUDGE_MODELS[judgeType] || CONFIG.model,
+        },
+    };
+}
+
+/**
+ * V2.0 Full Pipeline - Phase 2
+ * 
+ * Generates priming and joint menu content.
+ * 
+ * @param {object} phase1Result - Output from deliberatePhase1
+ * @param {object} options - { judgeType }
+ * @returns {Promise<object>} - { primingContent, jointMenu }
+ */
+async function deliberatePhase2(phase1Result, options = {}) {
+    const startTime = Date.now();
+    const judgeType = options.judgeType || 'logical';
+
+    const result = await runPrimingJoint(
+        phase1Result.input,
+        phase1Result.analysis,
+        phase1Result.historicalContext,
+        judgeType
+    );
+
+    const duration = Date.now() - startTime;
+    console.log(`[Judge Engine v2] Phase 2 complete in ${duration}ms`);
+
+    return {
+        voiceUsed: result.voiceUsed,
+        primingContent: result.individualPriming,
+        jointMenu: result.jointMenu,
+        _meta: {
+            processingTimeMs: duration,
+        },
+    };
+}
+
+// ============================================================================
+// LEGACY PIPELINE FUNCTIONS (for backward compatibility)
+// ============================================================================
 
 /**
  * Step 1: Safety Guardrail
- * Runs moderation check on user-submitted text to detect harmful content
- * 
- * @param {object} input - The validated deliberation input
- * @returns {Promise<{safe: boolean, flags?: string[]}>}
  */
 async function runModerationCheck(input) {
     const textsToCheck = [
@@ -67,12 +408,10 @@ async function runModerationCheck(input) {
         const result = moderation.results[0];
 
         if (result.flagged) {
-            // Extract which categories were flagged
             const flaggedCategories = Object.entries(result.categories)
                 .filter(([_, flagged]) => flagged)
                 .map(([category]) => category);
 
-            // Check for severe flags that require intervention
             const severeFlags = ['self-harm', 'self-harm/intent', 'self-harm/instructions', 'violence/graphic'];
             const hasSevereFlag = flaggedCategories.some(cat => severeFlags.includes(cat));
 
@@ -87,20 +426,12 @@ async function runModerationCheck(input) {
         return { safe: true, flagged: false };
     } catch (error) {
         console.error('Moderation check failed:', error);
-        // Fail open but log the error - don't block legitimate requests
         return { safe: true, flagged: false, error: error.message };
     }
 }
 
 /**
- * Step 2: Analytical Phase
- * Sends inputs to LLM for deep psychological analysis
- * 
- * Uses JSON mode with schema for consistent structured output
- * Includes retry logic and JSON repair for reliability
- * 
- * @param {object} input - The validated deliberation input
- * @returns {Promise<object>} - Structured psychological analysis
+ * Legacy Step 2: Analysis (backward compat)
  */
 async function runAnalysis(input, analysisModel) {
     const userPrompt = buildAnalystUserPrompt(input);
@@ -122,36 +453,18 @@ async function runAnalysis(input, analysisModel) {
             });
 
             const content = response.choices[0].message.content;
-            const finishReason = response.choices[0].finish_reason;
 
-            console.log('[Judge Engine] Raw analysis response length:', content?.length);
-            console.log('[Judge Engine] Finish reason:', finishReason);
-            if (DEBUG_LOGS) {
-                console.log('[Judge Engine] Raw analysis response:', content?.substring(0, 500) + '...');
-            }
-
-            // Check if response was truncated
-            if (finishReason === 'length') {
-                console.warn('[Judge Engine] WARNING: Response was truncated due to max_tokens!');
-            }
-
-            // Try to parse with repair capability
             let parsed;
             try {
                 parsed = JSON.parse(content);
             } catch (parseError) {
-                console.log('[Judge Engine] Direct parse failed, attempting repair...');
-                if (DEBUG_LOGS) console.log('[Judge Engine] Full response for debugging:', content);
                 parsed = repairAndParseJSON(content);
             }
 
-
-            // Handle case where LLM returns fields directly without 'analysis' wrapper
             if (!parsed.analysis && (parsed.identifiedDynamic || parsed.userA_Horsemen)) {
                 parsed = { analysis: parsed };
             }
 
-            // Validate against schema (will be flexible for new fields)
             const validated = AnalysisSchema.parse(parsed);
             return validated;
         } catch (error) {
@@ -159,8 +472,7 @@ async function runAnalysis(input, analysisModel) {
             lastError = error;
 
             if (attempt < CONFIG.maxRetries) {
-                console.log('[Judge Engine] Retrying analysis...');
-                await new Promise(resolve => setTimeout(resolve, 1000)); // Brief delay before retry
+                await new Promise(resolve => setTimeout(resolve, 1000));
             }
         }
     }
@@ -169,28 +481,15 @@ async function runAnalysis(input, analysisModel) {
 }
 
 /**
- * Step 3: Verdict Generation
- * Generates the Therapist Cat verdict with the new psychological framework
- * 
- * Uses JSON mode with schema for consistent structured output
- * Includes retry logic and JSON repair for reliability
- * 
- * @param {object} input - The validated deliberation input
- * @param {object} analysis - The psychological analysis from Step 2
- * @param {string} historicalContext - Optional formatted historical context from RAG
- * @param {string} judgeType - Selected judge type: 'best', 'fast', or 'logical'
- * @returns {Promise<object>} - The complete verdict content
+ * Legacy Step 3: Verdict Generation (backward compat)
  */
 async function generateVerdict(input, analysis, historicalContext = '', judgeType = 'logical') {
     const userPrompt = buildJudgeUserPrompt(input, analysis, historicalContext);
     const verdictModel = JUDGE_MODELS[judgeType] || JUDGE_MODELS.logical;
-    console.log(`[Judge Engine] Using model ${verdictModel} for verdict (judgeType: ${judgeType})`);
     let lastError = null;
 
     for (let attempt = 1; attempt <= CONFIG.maxRetries; attempt++) {
         try {
-            console.log(`[Judge Engine] Verdict attempt ${attempt}/${CONFIG.maxRetries}`);
-
             const response = await createChatCompletion({
                 model: verdictModel,
                 messages: [
@@ -202,91 +501,63 @@ async function generateVerdict(input, analysis, historicalContext = '', judgeTyp
                 jsonSchema: VERDICT_JSON_SCHEMA,
             });
 
-            // Defensive check for unexpected API response
             if (!response?.choices?.[0]?.message?.content) {
-                console.error('[Judge Engine] Unexpected API response structure:', JSON.stringify(response));
                 throw new Error('OpenRouter returned unexpected response structure');
             }
 
             const content = response.choices[0].message.content;
-            const finishReason = response.choices[0].finish_reason;
-            console.log('[Judge Engine] Raw verdict response length:', content?.length);
-            console.log('[Judge Engine] Finish reason:', finishReason);
-            if (DEBUG_LOGS) console.log('[Judge Engine] Raw verdict response:', content.substring(0, 500) + '...');
 
-            // Try to parse with repair capability
             let parsed;
             try {
                 parsed = JSON.parse(content);
             } catch (parseError) {
-                console.log('[Judge Engine] Direct parse failed, attempting repair...');
-                if (DEBUG_LOGS) console.log('[Judge Engine] Full response for repair:', content);
                 parsed = repairAndParseJSON(content);
             }
 
-            // Validate and normalize the verdict using the schema transform
             const validated = JudgeContentSchema.parse(parsed);
-
             return validated;
         } catch (error) {
             console.error(`[Judge Engine] Verdict attempt ${attempt} failed:`, error.message);
             lastError = error;
 
             if (attempt < CONFIG.maxRetries) {
-                console.log('[Judge Engine] Retrying verdict generation...');
-                await new Promise(resolve => setTimeout(resolve, 1000)); // Brief delay before retry
+                await new Promise(resolve => setTimeout(resolve, 1000));
             }
         }
     }
 
-    // After all retries failed, return a graceful fallback verdict
-    console.error(`[Judge Engine] All ${CONFIG.maxRetries} verdict attempts failed, using fallback`);
     return getFallbackVerdict(input, lastError);
 }
 
 /**
  * Generate a fallback verdict when LLM fails
- * Provides a valid verdict structure with honest messaging
  */
 function getFallbackVerdict(input, error) {
     return {
-        theSummary: "Judge Whiskers experienced some technical difficulties while processing your case. Both of your feelings are valid, and this conflict deserves proper attention. Please try submitting again in a moment.",
+        theSummary: "Judge Whiskers experienced technical difficulties. Both of your feelings are valid. Please try again.",
         theRuling_ThePurr: {
-            userA: `${input.participants.userA.name}, your feelings about this situation are completely valid. Even though I couldn't fully analyze your case, I can tell this matters to you.`,
-            userB: `${input.participants.userB.name}, your perspective is equally important. Technical issues prevented a full analysis, but your experience deserves to be heard.`
+            userA: `${input.participants.userA.name}, your feelings are valid.`,
+            userB: `${input.participants.userB.name}, your perspective is important.`
         },
         theRuling_TheHiss: [
-            "Due to technical difficulties, no specific patterns could be identified. This is not a reflection of your conflict's validity."
+            "Technical issues prevented pattern identification."
         ],
         theSentence: {
             title: "The Patient Pause",
-            description: "Take 5 minutes to sit together in comfortable silence. Hold hands if you feel comfortable. When ready, try submitting your case again.",
-            rationale: "Sometimes the universe asks us to slow down and simply be present with each other before diving into solutions."
+            description: "Take 5 minutes to sit together. Hold hands. Try again.",
+            rationale: "Sometimes we need to slow down."
         },
-        closingStatement: "Judge Whiskers apologizes for the interruption. Your case is important, and the court will be ready to give it proper attention shortly. In the meantime, remember: you're on the same team. 🐱💜",
-        _meta: {
-            fallback: true,
-            error: error?.message
-        }
+        closingStatement: "Judge Whiskers apologizes. Your case is important. 🐱💜",
+        _meta: { fallback: true, error: error?.message }
     };
 }
 
 /**
- * Main Deliberation Pipeline
- * Orchestrates the full judge engine workflow
- * 
- * @param {object} rawInput - Raw input from the API request
- * @param {object} options - Optional configuration
- * @param {object} options.previousVerdict - Previous verdict for addendum flow
- * @param {string} options.addendumText - New information to consider
- * @param {string} options.addendumFrom - Who submitted the addendum (userA/userB)
- * @param {string} options.judgeType - Selected judge type: 'best', 'fast', or 'logical'
- * @returns {Promise<object>} - Complete verdict response
+ * Legacy Main Pipeline (backward compat)
  */
 async function deliberate(rawInput, options = {}) {
     const startTime = Date.now();
 
-    // Validate input
     let input;
     try {
         input = DeliberationInputSchema.parse(rawInput);
@@ -299,76 +570,49 @@ async function deliberate(rawInput, options = {}) {
         };
     }
 
-    // Check if OpenRouter is configured
     if (!isOpenRouterConfigured()) {
         return {
             verdictId: generateVerdictId(),
             timestamp: new Date().toISOString(),
             status: 'error',
-            error: 'Judge Whiskers is sleeping. OpenRouter API key not configured.',
+            error: 'OpenRouter API key not configured.',
         };
     }
 
-    // If this is an addendum, augment the input
     if (options.addendumText) {
         const field = options.addendumFrom === 'userA' ? 'userA' : 'userB';
         input.submissions[field].cameraFacts += `\n\n[ADDENDUM]: ${options.addendumText}`;
-
-        // Add context about the previous verdict
-        if (options.previousVerdict) {
-            input._previousContext = {
-                previousSummary: options.previousVerdict.theSummary,
-                previousRepair: options.previousVerdict.theSentence?.title,
-                addendumNote: `${field === 'userA' ? input.participants.userA.name : input.participants.userB.name} has submitted additional context after the initial verdict.`
-            };
-        }
     }
 
-    // Step 1: Moderation Check
-    console.log('[Judge Engine] Step 1: Running moderation check...');
+    // Moderation
     const moderationResult = await runModerationCheck(input);
-
     if (moderationResult.requiresCounseling) {
-        console.log('[Judge Engine] Moderation flagged severe content');
         return {
             verdictId: generateVerdictId(),
             timestamp: new Date().toISOString(),
             status: 'unsafe_counseling_recommended',
-            error: 'The content submitted has been flagged for safety concerns. We recommend speaking with a professional counselor. If you or someone you know is in crisis, please contact a crisis helpline.',
+            error: 'Content flagged for safety. Counseling recommended.',
             flaggedCategories: moderationResult.categories,
         };
     }
 
-    // Step 2: Memory Retrieval (RAG Pipeline)
-    console.log('[Judge Engine] Step 2: Retrieving historical context...');
-    let historicalContext = null;
+    // RAG
     let formattedContext = '';
     try {
-        historicalContext = await retrieveHistoricalContext(input);
+        const historicalContext = await retrieveHistoricalContext(input);
         if (hasHistoricalContext(historicalContext)) {
             formattedContext = formatContextForPrompt(historicalContext, input.participants);
-            console.log('[Judge Engine] Historical context retrieved:', {
-                profilesFound: Object.keys(historicalContext.profiles.userA).length > 0 ||
-                    Object.keys(historicalContext.profiles.userB).length > 0,
-                memoriesFound: historicalContext.memories.length,
-            });
-        } else {
-            console.log('[Judge Engine] No historical context available');
         }
     } catch (error) {
-        console.log('[Judge Engine] Memory retrieval failed (non-blocking):', error.message);
-        // Continue without historical context - this is non-blocking
+        console.log('[Judge Engine] RAG failed:', error.message);
     }
 
-    // Step 3: Analysis Phase
+    // Analysis
     const judgeType = options.judgeType || 'logical';
     const analysisModel = JUDGE_MODELS[judgeType] || CONFIG.model;
-    console.log('[Judge Engine] Step 3: Running psychological analysis...');
     let analysis;
     try {
-        console.log(`[Judge Engine] Using model ${analysisModel} for analysis (judgeType: ${judgeType})`);
         analysis = await runAnalysis(input, analysisModel);
-        console.log('[Judge Engine] Analysis complete:', JSON.stringify(analysis, null, 2));
     } catch (error) {
         return {
             verdictId: generateVerdictId(),
@@ -378,12 +622,10 @@ async function deliberate(rawInput, options = {}) {
         };
     }
 
-    // Step 4: Verdict Generation
-    console.log(`[Judge Engine] Step 4: Generating verdict with judgeType=${judgeType}...`);
+    // Verdict
     let judgeContent;
     try {
         judgeContent = await generateVerdict(input, analysis, formattedContext, judgeType);
-        console.log('[Judge Engine] Verdict generated successfully');
     } catch (error) {
         return {
             verdictId: generateVerdictId(),
@@ -395,14 +637,10 @@ async function deliberate(rawInput, options = {}) {
 
     const verdictId = generateVerdictId();
     const duration = Date.now() - startTime;
-    console.log(`[Judge Engine] Pipeline completed in ${duration}ms`);
 
-    // Step 5: Trigger background memory extraction (non-blocking)
-    // This runs after the verdict is returned to the user
-    console.log('[Judge Engine] Step 5: Triggering background memory extraction...');
+    // Background extraction
     triggerBackgroundExtraction(input, verdictId);
 
-    // Build final response
     return {
         verdictId,
         timestamp: new Date().toISOString(),
@@ -411,22 +649,13 @@ async function deliberate(rawInput, options = {}) {
         isAddendum: !!options.addendumText,
         _meta: {
             analysis: analysis.analysis,
-            moderationPassed: !moderationResult.flagged,
             processingTimeMs: duration,
-            analysisModel,
-            verdictModel: JUDGE_MODELS[judgeType] || JUDGE_MODELS.logical,
             judgeType,
-            hasHistoricalContext: hasHistoricalContext(historicalContext),
-            memoriesUsed: historicalContext?.memories?.length || 0,
         },
     };
 }
 
-/**
- * Generate a unique verdict ID
- */
 function generateVerdictId() {
-    // Use crypto.randomUUID if available, fallback to timestamp-based
     if (typeof crypto !== 'undefined' && crypto.randomUUID) {
         return `v_${crypto.randomUUID().slice(0, 8)}`;
     }
@@ -434,10 +663,21 @@ function generateVerdictId() {
 }
 
 module.exports = {
+    // V2.0 pipeline functions
+    runAnalystRepair,
+    runPrimingJoint,
+    runHybridResolution,
+    deliberatePhase1,
+    deliberatePhase2,
+
+    // Legacy functions (backward compat)
     deliberate,
     runModerationCheck,
     runAnalysis,
     generateVerdict,
+
+    // Config
     CONFIG,
     JUDGE_MODELS,
+    HYBRID_MODEL,
 };

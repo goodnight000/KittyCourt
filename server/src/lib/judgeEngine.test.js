@@ -32,11 +32,16 @@ const validInput = {
     },
 };
 
-// Mock analysis response
+// Mock analysis response (updated for v2.0 schema)
 const validAnalysis = {
     analysis: {
+        identifiedDynamic: 'Pursuer-Distancer',
+        dynamicExplanation: 'Alex pursues connection while Sam distances',
         userA_Horsemen: ['Criticism'],
         userB_Horsemen: ['Defensiveness', 'Stonewalling'],
+        userA_VulnerableEmotion: 'Overwhelmed',
+        userB_VulnerableEmotion: 'Defensive',
+        conflictIntensity: 'medium',
         rootConflictTheme: 'Autonomy vs. Connection conflicts.',
         userA_VulnerableTranslation: 'Alex feels overwhelmed and needs partnership.',
         userB_VulnerableTranslation: 'Sam feels attacked and needs peace.',
@@ -85,21 +90,8 @@ describe('Schema Validation', () => {
             expect(() => DeliberationInputSchema.parse(invalidInput)).toThrow();
         });
 
-        it('should reject input with missing selectedPrimaryEmotion', () => {
-            const invalidInput = {
-                ...validInput,
-                submissions: {
-                    ...validInput.submissions,
-                    userB: {
-                        cameraFacts: 'Something happened',
-                        theStoryIamTellingMyself: 'A story',
-                        coreNeed: 'A need',
-                        // Missing selectedPrimaryEmotion
-                    },
-                },
-            };
-            expect(() => DeliberationInputSchema.parse(invalidInput)).toThrow();
-        });
+        // Note: selectedPrimaryEmotion now has a default value, so this test is removed
+        // as missing the field is no longer an error
 
         it('should accept valid unicode characters in text fields', () => {
             const unicodeInput = {

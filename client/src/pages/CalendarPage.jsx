@@ -349,7 +349,9 @@ const CalendarPage = () => {
             {/* Header */}
             <div className="flex items-center gap-3">
                 <div className="w-12 h-12 bg-gradient-to-br from-violet-100 to-pink-100 rounded-2xl flex items-center justify-center shadow-soft">
-                    <Calendar className="w-6 h-6 text-violet-600" />
+                    <img
+                        src="/assets/calendar.png"
+                    />
                 </div>
                 <div className="flex-1">
                     <h1 className="text-xl font-bold text-gradient">Our Calendar</h1>

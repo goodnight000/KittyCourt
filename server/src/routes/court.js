@@ -243,6 +243,102 @@ router.post('/addendum', async (req, res) => {
     }
 });
 
+// === V2.0 Pipeline Endpoints ===
+
+/**
+ * POST /api/court/priming/complete
+ * Mark priming page as read (v2.0 pipeline)
+ */
+router.post('/priming/complete', async (req, res) => {
+    try {
+        const { userId: fallbackUserId } = req.body;
+        const userId = await requireUserId(req, fallbackUserId);
+
+        await courtSessionManager.markPrimingComplete(userId);
+        const state = courtSessionManager.getStateForUser(userId);
+        res.json(state);
+    } catch (error) {
+        console.error('[API] /priming/complete error:', error);
+        res.status(error.statusCode || 400).json({ error: error.message });
+    }
+});
+
+/**
+ * POST /api/court/joint/ready
+ * Mark ready to proceed from joint menu (v2.0 pipeline)
+ */
+router.post('/joint/ready', async (req, res) => {
+    try {
+        const { userId: fallbackUserId } = req.body;
+        const userId = await requireUserId(req, fallbackUserId);
+
+        await courtSessionManager.markJointReady(userId);
+        const state = courtSessionManager.getStateForUser(userId);
+        res.json(state);
+    } catch (error) {
+        console.error('[API] /joint/ready error:', error);
+        res.status(error.statusCode || 400).json({ error: error.message });
+    }
+});
+
+/**
+ * POST /api/court/resolution/pick
+ * Submit resolution choice (v2.0 pipeline)
+ */
+router.post('/resolution/pick', async (req, res) => {
+    try {
+        const { userId: fallbackUserId, resolutionId } = req.body;
+        const userId = await requireUserId(req, fallbackUserId);
+
+        if (!resolutionId) {
+            return res.status(400).json({ error: 'resolutionId required' });
+        }
+
+        await courtSessionManager.submitResolutionPick(userId, resolutionId);
+        const state = courtSessionManager.getStateForUser(userId);
+        res.json(state);
+    } catch (error) {
+        console.error('[API] /resolution/pick error:', error);
+        res.status(error.statusCode || 400).json({ error: error.message });
+    }
+});
+
+/**
+ * POST /api/court/resolution/accept-partner
+ * Accept partner's resolution choice (v2.0 pipeline)
+ */
+router.post('/resolution/accept-partner', async (req, res) => {
+    try {
+        const { userId: fallbackUserId } = req.body;
+        const userId = await requireUserId(req, fallbackUserId);
+
+        await courtSessionManager.acceptPartnerResolution(userId);
+        const state = courtSessionManager.getStateForUser(userId);
+        res.json(state);
+    } catch (error) {
+        console.error('[API] /resolution/accept-partner error:', error);
+        res.status(error.statusCode || 400).json({ error: error.message });
+    }
+});
+
+/**
+ * POST /api/court/resolution/hybrid
+ * Request hybrid resolution generation (v2.0 pipeline)
+ */
+router.post('/resolution/hybrid', async (req, res) => {
+    try {
+        const { userId: fallbackUserId } = req.body;
+        const userId = await requireUserId(req, fallbackUserId);
+
+        await courtSessionManager.requestHybridResolution(userId);
+        const state = courtSessionManager.getStateForUser(userId);
+        res.json(state);
+    } catch (error) {
+        console.error('[API] /resolution/hybrid error:', error);
+        res.status(error.statusCode || 400).json({ error: error.message });
+    }
+});
+
 // === Debug ===
 
 router.get('/stats', (req, res) => {

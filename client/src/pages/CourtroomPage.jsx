@@ -598,8 +598,11 @@ const CourtroomPage = () => {
         );
     }
 
-    // Deliberating View - Show calming breathing meditation screen
-    if (activeCase.status === 'DELIBERATING') {
+    // Deliberating/Analyzing View - Show calming breathing meditation screen
+    // Handle both legacy DELIBERATING and new v2.0 ANALYZING phase
+    if (activeCase.status === 'DELIBERATING' ||
+        phase === COURT_PHASES.DELIBERATING ||
+        phase === COURT_PHASES.ANALYZING) {
         return <WaitingScreen isLoading={true} />;
     }
 
@@ -644,12 +647,17 @@ const CourtroomPage = () => {
 
     // Check court session status - Show Court at Rest when no active session or session is finished
     // CLOSED and SETTLED sessions should show the rest view (sleeping judge)
-    if (!courtSession || courtSession.status === 'CLOSED' || courtSession.status === 'SETTLED') {
+    // Also check phase from the new clean architecture (session.phase)
+    const sessionPhase = courtSession?.phase || courtSession?.status;
+    if (!courtSession ||
+        sessionPhase === 'CLOSED' || sessionPhase === 'SETTLED' ||
+        sessionPhase === 'IDLE' || phase === COURT_PHASES.CLOSED) {
         // Always show the sleeping judge when court is not in session
         return <CourtAtRest onServe={handleServe} navigate={navigate} />;
     }
 
-    if (courtSession.status === 'WAITING') {
+    if (sessionPhase === 'WAITING' || sessionPhase === 'PENDING' ||
+        phase === COURT_PHASES.PENDING_CREATOR || phase === COURT_PHASES.PENDING_PARTNER) {
         // Check if current user has joined based on creator status
         const hasJoined = isCreator
             ? (courtSession.creatorJoined || courtSession.userAJoined)

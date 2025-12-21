@@ -5,7 +5,26 @@ import { supabase } from './supabase';
 // - Prefer same-origin (/api) so dev uses the local server by default.
 // - Allow override via VITE_API_URL when explicitly set (e.g. pointing at Render).
 const ENV_API_URL = import.meta.env.VITE_API_URL;
-const API_BASE_URL = ENV_API_URL && ENV_API_URL.trim().length > 0 ? ENV_API_URL : '/api';
+
+const normalizeApiBase = (value) => {
+    if (!value) return '/api';
+    const trimmed = String(value).trim();
+    if (!trimmed) return '/api';
+    if (trimmed.startsWith('/')) {
+        return trimmed === '/' ? '/api' : trimmed;
+    }
+    try {
+        const url = new URL(trimmed);
+        if (!url.pathname || url.pathname === '/') {
+            url.pathname = '/api';
+        }
+        return url.toString().replace(/\/$/, '');
+    } catch (_err) {
+        return trimmed;
+    }
+};
+
+const API_BASE_URL = normalizeApiBase(ENV_API_URL);
 
 const api = axios.create({
     baseURL: API_BASE_URL,

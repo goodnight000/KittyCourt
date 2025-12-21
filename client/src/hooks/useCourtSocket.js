@@ -15,7 +15,11 @@ const getSocketUrl = () => {
     // VITE_API_URL is typically an API base like "http://localhost:3000/api".
     // Socket.IO must connect to the server origin, not the REST base path.
     if (import.meta.env.VITE_API_URL) {
-        return String(import.meta.env.VITE_API_URL).replace(/\/api\/?$/, '');
+        const trimmed = String(import.meta.env.VITE_API_URL).trim();
+        if (!trimmed) return window.location.origin;
+        if (trimmed.startsWith('/')) return window.location.origin;
+        const base = trimmed.replace(/\/api\/?$/, '');
+        return base || window.location.origin;
     }
     if (import.meta.env.DEV) {
         return 'http://localhost:3000';
@@ -76,7 +80,11 @@ export default function useCourtSocket() {
 
             // Register user
             if (user?.id) {
-                socket.emit('court:register', { userId: user.id });
+                socket.emit('court:register', { userId: user.id }, (resp) => {
+                    if (resp?.state) {
+                        onStateSync(resp.state);
+                    }
+                });
             }
         });
 
@@ -156,9 +164,13 @@ export default function useCourtSocket() {
     // Re-register when user changes
     useEffect(() => {
         if (user?.id && socketRef.current?.connected) {
-            socketRef.current.emit('court:register', { userId: user.id });
+            socketRef.current.emit('court:register', { userId: user.id }, (resp) => {
+                if (resp?.state) {
+                    onStateSync(resp.state);
+                }
+            });
         }
-    }, [user?.id]);
+    }, [user?.id, onStateSync]);
 
     return {
         isConnected,

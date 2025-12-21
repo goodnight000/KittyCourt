@@ -22,7 +22,11 @@ import {
     VerdictView,
     VerdictRating,
     DeliberatingScreen,
-    SettlementButton
+    SettlementButton,
+    PrimingPage,
+    JointMenuPage,
+    ResolutionSelectPage,
+    WaitingForPartnerStep
 } from '../components/court';
 
 export default function CourtroomPageV2() {
@@ -41,6 +45,7 @@ export default function CourtroomPageV2() {
         showOpeningAnimation,
         showCelebrationAnimation,
         error,
+        dismissedRatingSessionId,
         setLocalEvidence,
         setLocalFeelings,
         setLocalAddendum,
@@ -51,10 +56,14 @@ export default function CourtroomPageV2() {
         serve,
         accept,
         cancel,
+        dismiss,
         submitEvidence,
         acceptVerdict,
         submitAddendum,
         submitVerdictRating,
+        markPrimingComplete,
+        markJointReady,
+        submitResolutionPick,
         fetchState,
         reset
     } = useCourtStore();
@@ -67,15 +76,43 @@ export default function CourtroomPageV2() {
     const isCreator = session?.creatorId === authUser?.id;
 
     const verdictResponse = session?.verdict;
+    const verdictError = verdictResponse?.status && verdictResponse.status !== 'success'
+        ? verdictResponse
+        : null;
     const verdict = useMemo(() => {
         if (!verdictResponse) return null;
         return verdictResponse.judgeContent || verdictResponse;
     }, [verdictResponse]);
 
     const analysis = useMemo(() => {
-        if (!verdictResponse) return null;
-        return verdictResponse?._meta?.analysis || null;
-    }, [verdictResponse]);
+        if (verdictResponse?._meta?.analysis) return verdictResponse._meta.analysis;
+        return session?.analysis?.analysis || null;
+    }, [verdictResponse, session?.analysis]);
+
+    const primingContent = useMemo(() => {
+        if (!session?.primingContent) return null;
+        return isCreator ? session.primingContent.userA : session.primingContent.userB;
+    }, [session?.primingContent, isCreator]);
+
+    const jointMenu = session?.jointMenu || null;
+    const resolutions = session?.resolutions || [];
+
+    const myPick = useMemo(() => {
+        if (!session?.resolutionPicks) return null;
+        return isCreator ? session.resolutionPicks.userA : session.resolutionPicks.userB;
+    }, [session?.resolutionPicks, isCreator]);
+
+    const mismatchOriginal = session?.mismatchOriginal || null;
+    const mismatchPicks = session?.mismatchPicks || null;
+    const myMismatchPick = mismatchPicks
+        ? (isCreator ? mismatchPicks.userA : mismatchPicks.userB)
+        : null;
+    const myOriginalPickId = mismatchOriginal
+        ? (isCreator ? mismatchOriginal.userA : mismatchOriginal.userB)
+        : null;
+    const partnerOriginalPickId = mismatchOriginal
+        ? (isCreator ? mismatchOriginal.userB : mismatchOriginal.userA)
+        : null;
 
     const activeCase = useMemo(() => {
         return {
@@ -97,6 +134,7 @@ export default function CourtroomPageV2() {
         const prev = prevViewPhaseRef.current;
         const next = myViewPhase;
         prevViewPhaseRef.current = next;
+        const ratingDismissed = session?.id && dismissedRatingSessionId === session.id;
 
         const cameFromPending = prev === VIEW_PHASE.PENDING_CREATOR || prev === VIEW_PHASE.PENDING_PARTNER;
         if (cameFromPending && next === VIEW_PHASE.EVIDENCE) {
@@ -107,12 +145,16 @@ export default function CourtroomPageV2() {
         if (cameFromVerdictFlow && next === VIEW_PHASE.CLOSED) {
             // Celebration first, then rating.
             setShowRatingPopup(false);
-            setShowCelebrationAnimation(true);
+            if (!ratingDismissed) {
+                setShowCelebrationAnimation(true);
+            }
         } else if (prev !== VIEW_PHASE.CLOSED && next === VIEW_PHASE.CLOSED) {
             // If we didn't witness the verdict flow (e.g. came back later), just show rating.
-            setShowRatingPopup(true);
+            if (!ratingDismissed) {
+                setShowRatingPopup(true);
+            }
         }
-    }, [myViewPhase, setShowRatingPopup, setShowOpeningAnimation, setShowCelebrationAnimation]);
+    }, [myViewPhase, session?.id, dismissedRatingSessionId, setShowRatingPopup, setShowOpeningAnimation, setShowCelebrationAnimation]);
 
     // Bug fix: If we sent an action but didn't get a state update (WS hiccup), force a REST resync.
     const lastSyncAt = useCourtStore((s) => s.lastSyncAt);
@@ -199,12 +241,106 @@ export default function CourtroomPageV2() {
                 return <WaitingForEvidence session={session} partnerName={partnerName} myName={myName} />;
 
             case VIEW_PHASE.DELIBERATING:
+            case VIEW_PHASE.ANALYZING:
                 return <DeliberatingScreen isLoading={isGeneratingVerdict || true} />;
+
+            case VIEW_PHASE.PRIMING:
+                return (
+                    <PrimingPage
+                        priming={primingContent}
+                        myName={myName}
+                        partnerName={partnerName}
+                        onComplete={markPrimingComplete}
+                        isSubmitting={isSubmitting}
+                    />
+                );
+
+            case VIEW_PHASE.WAITING_PRIMING:
+                return (
+                    <WaitingForPartnerStep
+                        title="Priming complete"
+                        subtitle="Waiting for your partner to finish their reflection"
+                        partnerName={partnerName}
+                    />
+                );
+
+            case VIEW_PHASE.JOINT_MENU:
+                return (
+                    <JointMenuPage
+                        jointMenu={jointMenu}
+                        myName={myName}
+                        partnerName={partnerName}
+                        isCreator={isCreator}
+                        onReady={markJointReady}
+                        isSubmitting={isSubmitting}
+                    />
+                );
+
+            case VIEW_PHASE.WAITING_JOINT:
+                return (
+                    <WaitingForPartnerStep
+                        title="Joint menu viewed"
+                        subtitle="Waiting for your partner to continue"
+                        partnerName={partnerName}
+                    />
+                );
+
+            case VIEW_PHASE.RESOLUTION_SELECT:
+                return (
+                    <ResolutionSelectPage
+                        resolutions={resolutions}
+                        myPick={myPick}
+                        myName={myName}
+                        partnerName={partnerName}
+                        onConfirm={submitResolutionPick}
+                        isSubmitting={isSubmitting}
+                        mode={myPick ? 'waiting' : 'select'}
+                    />
+                );
+
+            case VIEW_PHASE.RESOLUTION_MISMATCH:
+                return (
+                    <ResolutionSelectPage
+                        resolutions={resolutions}
+                        myName={myName}
+                        partnerName={partnerName}
+                        onConfirm={submitResolutionPick}
+                        isSubmitting={isSubmitting}
+                        mode="mismatch"
+                        myOriginalPickId={myOriginalPickId}
+                        partnerOriginalPickId={partnerOriginalPickId}
+                        mismatchPick={myMismatchPick}
+                        hybridResolution={session?.hybridResolution || null}
+                        hybridPending={session?.hybridResolutionPending || false}
+                    />
+                );
+
+            case VIEW_PHASE.WAITING_RESOLUTION:
+                return (
+                    <ResolutionSelectPage
+                        resolutions={resolutions}
+                        myPick={myPick}
+                        myName={myName}
+                        partnerName={partnerName}
+                        onConfirm={submitResolutionPick}
+                        isSubmitting={isSubmitting}
+                        mode="waiting"
+                    />
+                );
 
             case VIEW_PHASE.WAITING_ACCEPT:
             case VIEW_PHASE.VERDICT: {
                 const userAName = isCreator ? myName : partnerName;
                 const userBName = isCreator ? partnerName : myName;
+
+                if (verdictError) {
+                    return (
+                        <VerdictErrorCard
+                            message={verdictError.error || 'Verdict generation failed. Please try again.'}
+                            onReset={dismiss}
+                        />
+                    );
+                }
 
                 return (
                     <VerdictView
@@ -271,7 +407,6 @@ export default function CourtroomPageV2() {
                 {/* Rating popup mounts globally so it can appear after CLOSED */}
                 <VerdictRating
                     onRate={(rating) => submitVerdictRating(rating)}
-                    onSkip={() => reset()}
                 />
             </div>
         </RequirePartner>
@@ -462,5 +597,24 @@ function AddendumModal({ open, onClose, value, onChange, onSubmit, isSubmitting 
                 </Motion.div>
             )}
         </AnimatePresence>
+    );
+}
+
+function VerdictErrorCard({ message, onReset }) {
+    return (
+        <div className="max-w-md mx-auto glass-card p-5 text-center space-y-3">
+            <div className="w-12 h-12 rounded-2xl bg-red-100 mx-auto flex items-center justify-center">
+                <Gavel className="w-6 h-6 text-red-500" />
+            </div>
+            <h2 className="text-lg font-bold text-court-brown">Unable to Generate Verdict</h2>
+            <p className="text-sm text-court-brownLight">{message}</p>
+            <button
+                onClick={onReset}
+                className="w-full py-2.5 px-4 rounded-xl text-white font-extrabold shadow-lg"
+                style={{ background: 'linear-gradient(135deg, #1c1c84 0%, #000035 100%)' }}
+            >
+                Return to Court Lobby
+            </button>
+        </div>
     );
 }

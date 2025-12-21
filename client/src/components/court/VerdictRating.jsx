@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Star, X, Sparkles } from 'lucide-react';
+import { Star, X } from 'lucide-react';
 import useCourtStore from '../../store/courtStore';
 
 /**
@@ -28,7 +28,13 @@ export default function VerdictRating({ onRate, onSkip }) {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [localError, setLocalError] = useState('');
 
-    const { showRatingPopup, setShowRatingPopup, reset, error: storeError } = useCourtStore();
+    const {
+        showRatingPopup,
+        setShowRatingPopup,
+        dismissRating,
+        session,
+        error: storeError
+    } = useCourtStore();
 
     const handleSubmit = async () => {
         if (selectedRating === 0) return;
@@ -39,9 +45,9 @@ export default function VerdictRating({ onRate, onSkip }) {
             if (onRate) {
                 await onRate(selectedRating);
             }
-            // Only close/reset after successful submission.
+            // Only close after successful submission.
+            dismissRating(session?.id);
             setShowRatingPopup(false);
-            reset();
         } catch (e) {
             setLocalError('Could not save your rating. Please try again.');
         } finally {
@@ -53,8 +59,8 @@ export default function VerdictRating({ onRate, onSkip }) {
         if (onSkip) {
             onSkip();
         }
+        dismissRating(session?.id);
         setShowRatingPopup(false);
-        reset();
     };
 
     const displayRating = hoveredStar || selectedRating;
@@ -93,14 +99,6 @@ export default function VerdictRating({ onRate, onSkip }) {
 
                             {/* Glass overlay */}
                             <div className="absolute inset-0 bg-white/5 backdrop-blur-xl" />
-
-                            {/* Sparkle decorations */}
-                            <div className="absolute top-4 right-8 text-yellow-400/30">
-                                <Sparkles className="w-6 h-6" />
-                            </div>
-                            <div className="absolute bottom-8 left-6 text-purple-400/30">
-                                <Sparkles className="w-4 h-4" />
-                            </div>
 
                             {/* Content */}
                             <div className="relative p-8">

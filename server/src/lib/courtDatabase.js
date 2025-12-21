@@ -7,11 +7,83 @@
 
 const { getSupabase, isSupabaseConfigured } = require('./supabase');
 
+let warnedMissingConfig = false;
+const MISSING_COLUMN_CODE = '42703';
+const MISSING_TABLE_CODE = '42P01';
+const MISSING_COLUMN_REGEX = /column "([^"]+)"/i;
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const FK_VIOLATION_CODE = '23503';
+const INVALID_TEXT_CODE = '22P02';
+
+const warnIfMissingConfig = () => {
+    if (warnedMissingConfig) return;
+    warnedMissingConfig = true;
+    console.warn('[DB] Supabase not configured. Court sessions will not persist.');
+};
+
+const normalizeUuid = (value) => {
+    if (!value || typeof value !== 'string') return null;
+    return UUID_REGEX.test(value) ? value : null;
+};
+
+const buildMinimalPayload = (session) => ({
+    id: session.id,
+    created_by: session.creatorId,
+    partner_id: normalizeUuid(session.partnerId),
+    couple_id: normalizeUuid(session.coupleId),
+    status: session.phase || 'EVIDENCE',
+    phase: session.phase || 'EVIDENCE',
+    created_at: new Date(session.createdAt).toISOString(),
+    expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+});
+
+const stripMissingColumn = (payload, error) => {
+    const message = error?.message || '';
+    const match = message.match(MISSING_COLUMN_REGEX);
+    if (!match) return null;
+    const column = match[1];
+    if (!(column in payload)) return null;
+    const next = { ...payload };
+    delete next[column];
+    return { next, column };
+};
+
+const writeWithFallback = async (label, writeFn, payload) => {
+    let current = { ...payload };
+    const removed = new Set();
+
+    while (true) {
+        const { error } = await writeFn(current);
+        if (!error) return true;
+
+        if (error.code === MISSING_TABLE_CODE) {
+            console.error(`[DB] ${label} failed: court_sessions table missing (apply migrations).`);
+            return false;
+        }
+
+        if (error.code !== MISSING_COLUMN_CODE) {
+            throw error;
+        }
+
+        const stripped = stripMissingColumn(current, error);
+        if (!stripped || removed.has(stripped.column)) {
+            throw error;
+        }
+
+        removed.add(stripped.column);
+        console.warn(`[DB] ${label} missing column "${stripped.column}". Retrying without it.`);
+        current = stripped.next;
+    }
+};
+
 /**
  * Checkpoint session to database
  */
 async function checkpoint(session, action) {
-    if (!isSupabaseConfigured()) return;
+    if (!isSupabaseConfigured()) {
+        warnIfMissingConfig();
+        return;
+    }
 
     const supabase = getSupabase();
 
@@ -51,40 +123,82 @@ async function checkpoint(session, action) {
         id: session.id,
         created_by: session.creatorId,
         partner_id: session.partnerId,
+        couple_id: normalizeUuid(session.coupleId),
         status: statusMap[session.phase] || session.phase || 'EVIDENCE',
+        phase: session.phase,
         creator_joined: true,
         partner_joined: session.phase !== 'PENDING',
         case_id: session.caseId || null,
         judge_type: session.judgeType || 'logical',
         evidence_submissions: evidence,
+        user_a_evidence: session.creator.evidence || '',
+        user_a_feelings: session.creator.feelings || '',
+        user_b_evidence: session.partner.evidence || '',
+        user_b_feelings: session.partner.feelings || '',
         settle_requests: settleRequests,
         verdict_acceptances: acceptances,
         verdict: session.verdict,
-        resolved_at: session.resolvedAt ? new Date(session.resolvedAt).toISOString() : null
+        resolved_at: session.resolvedAt ? new Date(session.resolvedAt).toISOString() : null,
+        analysis: session.analysis || null,
+        resolutions: session.resolutions || null,
+        assessed_intensity: session.assessedIntensity || null,
+        priming_content: session.primingContent || null,
+        joint_menu: session.jointMenu || null,
+        user_a_priming_ready: session.creator.primingReady || false,
+        user_b_priming_ready: session.partner.primingReady || false,
+        user_a_joint_ready: session.creator.jointReady || false,
+        user_b_joint_ready: session.partner.jointReady || false,
+        user_a_resolution_pick: session.userAResolutionPick || null,
+        user_b_resolution_pick: session.userBResolutionPick || null,
+        hybrid_resolution: session.hybridResolution || null,
+        final_resolution: session.finalResolution || null
     };
 
     try {
         if (action === 'create') {
             // Insert new session
-            const { error } = await supabase
-                .from('court_sessions')
-                .insert({
-                    ...data,
-                    created_at: new Date(session.createdAt).toISOString(),
-                    expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
-                });
-
-            if (error) throw error;
-            console.log(`[DB] Created session ${session.id}`);
+            const payload = {
+                ...data,
+                created_at: new Date(session.createdAt).toISOString(),
+                expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+            };
+            try {
+                const wrote = await writeWithFallback('create session', (next) => (
+                    supabase.from('court_sessions').insert(next)
+                ), payload);
+                if (wrote) {
+                    console.log(`[DB] Created session ${session.id}`);
+                }
+            } catch (error) {
+                console.error('[DB] Create session failed, attempting minimal insert:', error);
+                const minimal = buildMinimalPayload(session);
+                if (error?.code === FK_VIOLATION_CODE && /partner_id/i.test(error?.message || '')) {
+                    minimal.partner_id = null;
+                }
+                if (error?.code === INVALID_TEXT_CODE) {
+                    minimal.partner_id = normalizeUuid(minimal.partner_id);
+                    minimal.couple_id = normalizeUuid(minimal.couple_id);
+                }
+                const wrote = await writeWithFallback('create session (minimal)', (next) => (
+                    supabase.from('court_sessions').insert(next)
+                ), minimal);
+                if (wrote) {
+                    console.warn(`[DB] Created minimal session ${session.id}`);
+                }
+            }
         } else {
-            // Update existing session
-            const { error } = await supabase
-                .from('court_sessions')
-                .update(data)
-                .eq('id', session.id);
-
-            if (error) throw error;
-            console.log(`[DB] Updated session ${session.id} (${action})`);
+            // Update existing session (upsert ensures row exists)
+            const payload = {
+                ...data,
+                created_at: new Date(session.createdAt).toISOString(),
+                expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+            };
+            const wrote = await writeWithFallback('upsert session', (next) => (
+                supabase.from('court_sessions').upsert(next, { onConflict: 'id' })
+            ), payload);
+            if (wrote) {
+                console.log(`[DB] Upserted session ${session.id} (${action})`);
+            }
         }
     } catch (error) {
         console.error('[DB] Checkpoint failed:', error);
@@ -99,7 +213,10 @@ async function checkpoint(session, action) {
  * Returns the created case id.
  */
 async function saveCaseFromSession(session) {
-    if (!isSupabaseConfigured()) return null;
+    if (!isSupabaseConfigured()) {
+        warnIfMissingConfig();
+        return null;
+    }
     if (!session?.verdict) return null;
 
     const supabase = getSupabase();
@@ -121,8 +238,29 @@ async function saveCaseFromSession(session) {
     // Judge engine returns an envelope { status, judgeContent, _meta, ... }
     const verdictEnvelope = session.verdict;
     const verdictContent = verdictEnvelope?.judgeContent || verdictEnvelope;
-
-    const analysisMeta = verdictEnvelope?._meta?.analysis || {};
+    const analysisMeta = session.analysis?.caseMetadata || verdictEnvelope?._meta?.analysis?.caseMetadata || verdictEnvelope?._meta?.analysis || {};
+    const finalResolution = session.finalResolution || verdictEnvelope?._meta?.finalResolution || null;
+    const inferredHybrid = finalResolution?.id && session.hybridResolution?.id
+        ? finalResolution.id === session.hybridResolution.id
+        : false;
+    const isHybrid = typeof verdictEnvelope?._meta?.isHybrid === 'boolean'
+        ? verdictEnvelope._meta.isHybrid
+        : inferredHybrid;
+    const verdictPayload = verdictEnvelope?.judgeContent
+        ? {
+            ...verdictEnvelope.judgeContent,
+            _meta: {
+                ...(verdictEnvelope._meta || {}),
+                analysis: session.analysis || verdictEnvelope?._meta?.analysis || null,
+                assessedIntensity: session.assessedIntensity || verdictEnvelope?._meta?.assessedIntensity || null,
+                resolutions: session.resolutions || verdictEnvelope?._meta?.resolutions || null,
+                primingContent: session.primingContent || verdictEnvelope?._meta?.primingContent || null,
+                jointMenu: session.jointMenu || verdictEnvelope?._meta?.jointMenu || null,
+                finalResolution,
+                isHybrid
+            }
+        }
+        : verdictContent;
 
     // Create the case
     const { data: createdCase, error: caseError } = await supabase
@@ -135,10 +273,10 @@ async function saveCaseFromSession(session) {
             user_b_input: bEvidence || '',
             user_b_feelings: bFeelings || '',
             status: 'RESOLVED',
-            case_title: analysisMeta.caseTitle || null,
-            severity_level: analysisMeta.severityLevel || null,
+            case_title: analysisMeta.caseTitle || analysisMeta.case_title || null,
+            severity_level: analysisMeta.severityLevel || analysisMeta.severity_level || null,
             primary_hiss_tag: analysisMeta.primaryHissTag || null,
-            short_resolution: analysisMeta.shortResolution || null,
+            short_resolution: analysisMeta.shortResolution || finalResolution?.title || null,
         })
         .select()
         .single();
@@ -158,7 +296,7 @@ async function saveCaseFromSession(session) {
         .insert({
             case_id: createdCase.id,
             version: 1,
-            content: verdictContent,
+            content: verdictPayload,
             addendum_by: addendumBy,
             addendum_text: session.addendum?.text || null,
         });
@@ -176,7 +314,10 @@ async function saveCaseFromSession(session) {
  * Delete session from database
  */
 async function deleteSession(sessionId) {
-    if (!isSupabaseConfigured()) return;
+    if (!isSupabaseConfigured()) {
+        warnIfMissingConfig();
+        return;
+    }
 
     const supabase = getSupabase();
 
@@ -198,14 +339,28 @@ async function deleteSession(sessionId) {
  * Fetch active sessions for recovery
  */
 async function getActiveSessions() {
-    if (!isSupabaseConfigured()) return [];
+    if (!isSupabaseConfigured()) {
+        warnIfMissingConfig();
+        return [];
+    }
 
     const supabase = getSupabase();
 
     const { data, error } = await supabase
         .from('court_sessions')
         .select('*')
-        .in('status', ['PENDING', 'WAITING', 'IN_SESSION', 'EVIDENCE', 'DELIBERATING', 'VERDICT']);
+        .in('status', [
+            'PENDING',
+            'WAITING',
+            'IN_SESSION',
+            'EVIDENCE',
+            'DELIBERATING',
+            'ANALYZING',
+            'PRIMING',
+            'JOINT_READY',
+            'RESOLUTION',
+            'VERDICT'
+        ]);
 
     if (error) {
         console.error('[DB] Fetch active sessions failed:', error);
@@ -219,7 +374,10 @@ async function getActiveSessions() {
  * Clean up old sessions
  */
 async function cleanupOldSessions() {
-    if (!isSupabaseConfigured()) return;
+    if (!isSupabaseConfigured()) {
+        warnIfMissingConfig();
+        return;
+    }
 
     const supabase = getSupabase();
 
@@ -229,7 +387,16 @@ async function cleanupOldSessions() {
     const { error } = await supabase
         .from('court_sessions')
         .update({ status: 'CLOSED' })
-        .in('status', ['PENDING', 'EVIDENCE', 'DELIBERATING', 'VERDICT'])
+        .in('status', [
+            'PENDING',
+            'EVIDENCE',
+            'DELIBERATING',
+            'ANALYZING',
+            'PRIMING',
+            'JOINT_READY',
+            'RESOLUTION',
+            'VERDICT'
+        ])
         .lt('created_at', cutoff);
 
     if (error) {

@@ -6,14 +6,25 @@
  */
 
 const path = require('path');
+const fs = require('fs');
 const http = require('http');
 const express = require('express');
 
-// Load environment variables from server/.env explicitly
-require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
+// Load environment variables (prefer repo root .env, allow server/.env to override)
+const dotenv = require('dotenv');
+const repoEnvPath = path.resolve(__dirname, '../../.env');
+const serverEnvPath = path.resolve(__dirname, '../.env');
+
+if (fs.existsSync(repoEnvPath)) {
+    dotenv.config({ path: repoEnvPath });
+}
+if (fs.existsSync(serverEnvPath)) {
+    dotenv.config({ path: serverEnvPath, override: true });
+}
 
 // Import Supabase client
 const { isSupabaseConfigured } = require('./lib/supabase');
+const { isOpenRouterConfigured } = require('./lib/openrouter');
 const { requireSupabase, requireAuthUserId, getPartnerIdForUser } = require('./lib/auth');
 const { corsMiddleware, securityHeaders } = require('./lib/security');
 const { canUseFeature } = require('./lib/usageLimits');
@@ -32,21 +43,16 @@ const { initializeCourtServices } = require('./lib/courtInit');
 const app = express();
 const server = http.createServer(app);
 const PORT = process.env.PORT || 3000;
+const HOST = process.env.HOST || (process.env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1');
 
 app.set('trust proxy', 1);
 app.disable('x-powered-by');
 app.use(securityHeaders);
 
 // Initialize court services (WebSocket, SessionManager, DB recovery)
-if (isSupabaseConfigured()) {
-    initializeCourtServices(server).catch(err => {
-        console.error('[App] Court services initialization failed:', err);
-    });
-} else {
-    // Still init WebSocket without DB
-    const courtWebSocket = require('./lib/courtWebSocket');
-    courtWebSocket.initialize(server);
-}
+initializeCourtServices(server).catch(err => {
+    console.error('[App] Court services initialization failed:', err);
+});
 
 app.use(corsMiddleware());
 app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || '256kb' }));
@@ -1017,6 +1023,7 @@ app.get('/api/health', (req, res) => {
     res.json({
         status: 'ok',
         supabase: isSupabaseConfigured(),
+        openrouter: isOpenRouterConfigured(),
         timestamp: new Date().toISOString()
     });
 });
@@ -1030,7 +1037,17 @@ app.use((err, req, res, _next) => {
     return res.status(500).json({ error: safeErrorMessage(err) });
 });
 
-server.listen(PORT, '0.0.0.0', () => {
+server.on('error', (error) => {
+    if (error?.code === 'EADDRINUSE' || error?.code === 'EPERM') {
+        console.error(`[App] Failed to bind ${HOST}:${PORT} (${error.code}).`);
+        console.error('[App] Try freeing the port or running with PORT=<free_port> npm run dev');
+    } else {
+        console.error('[App] Server error:', error);
+    }
+    process.exit(1);
+});
+
+server.listen(PORT, HOST, () => {
     console.log(`Server running on port ${PORT}`);
     console.log(`Supabase configured: ${isSupabaseConfigured()}`);
     console.log(`WebSocket server initialized`);

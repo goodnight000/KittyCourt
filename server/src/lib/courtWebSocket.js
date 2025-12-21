@@ -63,7 +63,7 @@ class CourtWebSocketService {
             console.log(`[WS] Client connected: ${socket.id}`);
 
             // === Registration ===
-            socket.on('court:register', async ({ userId } = {}) => {
+            socket.on('court:register', async ({ userId } = {}, ack) => {
                 // In production (or whenever Supabase is configured), userId is derived from auth.
                 if (!socket.userId) {
                     if (process.env.NODE_ENV === 'production') {
@@ -88,12 +88,13 @@ class CourtWebSocketService {
                 // Send current state
                 const state = courtSessionManager.getStateForUser(socket.userId);
                 socket.emit('court:state', state);
+                if (typeof ack === 'function') ack({ ok: true, state });
             });
 
             // === Court Actions ===
 
             // Serve partner
-            socket.on('court:serve', async ({ partnerId, coupleId }, ack) => {
+            socket.on('court:serve', async ({ partnerId, coupleId, judgeType }, ack) => {
                 try {
                     if (!socket.userId) throw new Error('Not registered');
                     if (!partnerId) throw new Error('partnerId required');
@@ -104,8 +105,9 @@ class CourtWebSocketService {
                             throw new Error('Invalid partnerId for current user');
                         }
                     }
-                    await courtSessionManager.serve(socket.userId, partnerId, coupleId);
-                    if (typeof ack === 'function') ack({ ok: true });
+                    await courtSessionManager.serve(socket.userId, partnerId, coupleId, judgeType);
+                    const state = courtSessionManager.getStateForUser(socket.userId);
+                    if (typeof ack === 'function') ack({ ok: true, state });
                 } catch (error) {
                     console.error('[WS] serve error:', error.message);
                     socket.emit('court:error', { message: error.message });
@@ -118,7 +120,8 @@ class CourtWebSocketService {
                 try {
                     if (!socket.userId) throw new Error('Not registered');
                     await courtSessionManager.accept(socket.userId);
-                    if (typeof ack === 'function') ack({ ok: true });
+                    const state = courtSessionManager.getStateForUser(socket.userId);
+                    if (typeof ack === 'function') ack({ ok: true, state });
                 } catch (error) {
                     console.error('[WS] accept error:', error.message);
                     socket.emit('court:error', { message: error.message });
@@ -131,9 +134,23 @@ class CourtWebSocketService {
                 try {
                     if (!socket.userId) throw new Error('Not registered');
                     await courtSessionManager.cancel(socket.userId);
-                    if (typeof ack === 'function') ack({ ok: true });
+                    const state = courtSessionManager.getStateForUser(socket.userId);
+                    if (typeof ack === 'function') ack({ ok: true, state });
                 } catch (error) {
                     console.error('[WS] cancel error:', error.message);
+                    socket.emit('court:error', { message: error.message });
+                    if (typeof ack === 'function') ack({ ok: false, error: error.message });
+                }
+            });
+
+            // Dismiss session (from any phase - for error recovery)
+            socket.on('court:dismiss', async (ack) => {
+                try {
+                    if (!socket.userId) throw new Error('Not registered');
+                    await courtSessionManager.dismiss(socket.userId);
+                    if (typeof ack === 'function') ack({ ok: true });
+                } catch (error) {
+                    console.error('[WS] dismiss error:', error.message);
                     socket.emit('court:error', { message: error.message });
                     if (typeof ack === 'function') ack({ ok: false, error: error.message });
                 }
@@ -144,7 +161,8 @@ class CourtWebSocketService {
                 try {
                     if (!socket.userId) throw new Error('Not registered');
                     await courtSessionManager.submitEvidence(socket.userId, evidence, feelings);
-                    if (typeof ack === 'function') ack({ ok: true });
+                    const state = courtSessionManager.getStateForUser(socket.userId);
+                    if (typeof ack === 'function') ack({ ok: true, state });
                 } catch (error) {
                     console.error('[WS] submit_evidence error:', error.message);
                     socket.emit('court:error', { message: error.message });
@@ -157,7 +175,8 @@ class CourtWebSocketService {
                 try {
                     if (!socket.userId) throw new Error('Not registered');
                     await courtSessionManager.acceptVerdict(socket.userId);
-                    if (typeof ack === 'function') ack({ ok: true });
+                    const state = courtSessionManager.getStateForUser(socket.userId);
+                    if (typeof ack === 'function') ack({ ok: true, state });
                 } catch (error) {
                     console.error('[WS] accept_verdict error:', error.message);
                     socket.emit('court:error', { message: error.message });
@@ -170,7 +189,8 @@ class CourtWebSocketService {
                 try {
                     if (!socket.userId) throw new Error('Not registered');
                     courtSessionManager.requestSettlement(socket.userId);
-                    if (typeof ack === 'function') ack({ ok: true });
+                    const state = courtSessionManager.getStateForUser(socket.userId);
+                    if (typeof ack === 'function') ack({ ok: true, state });
                 } catch (error) {
                     console.error('[WS] request_settle error:', error.message);
                     socket.emit('court:error', { message: error.message });
@@ -183,7 +203,8 @@ class CourtWebSocketService {
                 try {
                     if (!socket.userId) throw new Error('Not registered');
                     await courtSessionManager.acceptSettlement(socket.userId);
-                    if (typeof ack === 'function') ack({ ok: true });
+                    const state = courtSessionManager.getStateForUser(socket.userId);
+                    if (typeof ack === 'function') ack({ ok: true, state });
                 } catch (error) {
                     console.error('[WS] accept_settle error:', error.message);
                     socket.emit('court:error', { message: error.message });
@@ -210,9 +231,83 @@ class CourtWebSocketService {
                 try {
                     if (!socket.userId) throw new Error('Not registered');
                     await courtSessionManager.submitAddendum(socket.userId, text);
-                    if (typeof ack === 'function') ack({ ok: true });
+                    const state = courtSessionManager.getStateForUser(socket.userId);
+                    if (typeof ack === 'function') ack({ ok: true, state });
                 } catch (error) {
                     console.error('[WS] submit_addendum error:', error.message);
+                    socket.emit('court:error', { message: error.message });
+                    if (typeof ack === 'function') ack({ ok: false, error: error.message });
+                }
+            });
+
+            // === V2.0 Actions ===
+
+            // Mark priming complete
+            socket.on('court:priming_complete', async (ack) => {
+                try {
+                    if (!socket.userId) throw new Error('Not registered');
+                    await courtSessionManager.markPrimingComplete(socket.userId);
+                    const state = courtSessionManager.getStateForUser(socket.userId);
+                    if (typeof ack === 'function') ack({ ok: true, state });
+                } catch (error) {
+                    console.error('[WS] priming_complete error:', error.message);
+                    socket.emit('court:error', { message: error.message });
+                    if (typeof ack === 'function') ack({ ok: false, error: error.message });
+                }
+            });
+
+            // Mark joint menu ready
+            socket.on('court:joint_ready', async (ack) => {
+                try {
+                    if (!socket.userId) throw new Error('Not registered');
+                    await courtSessionManager.markJointReady(socket.userId);
+                    const state = courtSessionManager.getStateForUser(socket.userId);
+                    if (typeof ack === 'function') ack({ ok: true, state });
+                } catch (error) {
+                    console.error('[WS] joint_ready error:', error.message);
+                    socket.emit('court:error', { message: error.message });
+                    if (typeof ack === 'function') ack({ ok: false, error: error.message });
+                }
+            });
+
+            // Submit resolution pick
+            socket.on('court:resolution_pick', async ({ resolutionId }, ack) => {
+                try {
+                    if (!socket.userId) throw new Error('Not registered');
+                    if (!resolutionId) throw new Error('resolutionId required');
+                    await courtSessionManager.submitResolutionPick(socket.userId, resolutionId);
+                    const state = courtSessionManager.getStateForUser(socket.userId);
+                    if (typeof ack === 'function') ack({ ok: true, state });
+                } catch (error) {
+                    console.error('[WS] resolution_pick error:', error.message);
+                    socket.emit('court:error', { message: error.message });
+                    if (typeof ack === 'function') ack({ ok: false, error: error.message });
+                }
+            });
+
+            // Accept partner resolution
+            socket.on('court:resolution_accept_partner', async (ack) => {
+                try {
+                    if (!socket.userId) throw new Error('Not registered');
+                    await courtSessionManager.acceptPartnerResolution(socket.userId);
+                    const state = courtSessionManager.getStateForUser(socket.userId);
+                    if (typeof ack === 'function') ack({ ok: true, state });
+                } catch (error) {
+                    console.error('[WS] resolution_accept_partner error:', error.message);
+                    socket.emit('court:error', { message: error.message });
+                    if (typeof ack === 'function') ack({ ok: false, error: error.message });
+                }
+            });
+
+            // Request hybrid resolution
+            socket.on('court:resolution_hybrid', async (ack) => {
+                try {
+                    if (!socket.userId) throw new Error('Not registered');
+                    await courtSessionManager.requestHybridResolution(socket.userId);
+                    const state = courtSessionManager.getStateForUser(socket.userId);
+                    if (typeof ack === 'function') ack({ ok: true, state });
+                } catch (error) {
+                    console.error('[WS] resolution_hybrid error:', error.message);
                     socket.emit('court:error', { message: error.message });
                     if (typeof ack === 'function') ack({ ok: false, error: error.message });
                 }

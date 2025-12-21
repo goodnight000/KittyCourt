@@ -83,6 +83,21 @@ const HistoryPage = () => {
         });
     };
 
+    const safeParse = (value) => {
+        if (!value) return null;
+        try {
+            return typeof value === 'string' ? JSON.parse(value) : value;
+        } catch (_err) {
+            return null;
+        }
+    };
+
+    const getVerdictContent = (caseItem) => {
+        if (!caseItem) return null;
+        const raw = caseItem.verdict || caseItem.allVerdicts?.[0]?.content || null;
+        return safeParse(raw);
+    };
+
     return (
         <div className="space-y-5">
             {/* Header */}
@@ -131,12 +146,15 @@ const HistoryPage = () => {
                         const severity = SEVERITY_CONFIG[caseItem.severityLevel] || SEVERITY_CONFIG.friction;
                         const SeverityIcon = severity.icon;
 
-                        // Get the primary Horseman badge color
-                        const horseBadgeClass = HORSEMAN_COLORS[caseItem.primaryHissTag] || 'bg-neutral-100 text-neutral-600';
-
                         // Count verdicts/addendums
                         const verdictCount = caseItem.allVerdicts?.length || 1;
                         const hasAddendums = verdictCount > 1;
+
+                        const verdictContent = getVerdictContent(caseItem);
+                        const sentence = verdictContent?.theSentence || verdictContent?.theSentence_RepairAttempt || null;
+                        const resolutionTitle = sentence?.title || caseItem.shortResolution || 'Resolution';
+                        const resolutionDescription = sentence?.description || caseItem.shortResolution || 'A plan for both partners.';
+                        const summary = verdictContent?.theSummary || verdictContent?.translationSummary || '';
 
                         return (
                             <motion.button
@@ -146,63 +164,61 @@ const HistoryPage = () => {
                                 transition={{ delay: index * 0.05 }}
                                 whileTap={{ scale: 0.98 }}
                                 onClick={() => navigate(`/history/${caseItem.id}`)}
-                                className="w-full glass-card overflow-hidden flex text-left"
+                                className="w-full glass-card overflow-hidden text-left p-4 space-y-3"
                             >
-                                {/* Colored Severity Stripe */}
-                                <div className={`w-1.5 ${severity.stripe} flex-shrink-0`} />
-
-                                <div className="flex-1 p-4">
-                                    <div className="flex items-start justify-between gap-3">
-                                        <div className="flex-1 min-w-0">
-                                            {/* Case Title */}
-                                            <h3 className="font-bold text-neutral-800 text-sm leading-snug mb-1.5 line-clamp-2">
-                                                {caseItem.caseTitle || `Case #${index + 1}`}
-                                            </h3>
-
-                                            {/* Badges Row */}
-                                            <div className="flex flex-wrap items-center gap-1.5 mb-2">
-                                                {/* Severity Badge */}
-                                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${severity.bg} ${severity.text}`}>
-                                                    <SeverityIcon className="w-3 h-3" />
-                                                    {severity.label}
-                                                </span>
-
-                                                {/* Primary Horseman Badge */}
-                                                {caseItem.primaryHissTag && caseItem.primaryHissTag !== 'None' && (
-                                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${horseBadgeClass}`}>
-                                                        {caseItem.primaryHissTag}
-                                                    </span>
-                                                )}
-
-                                                {/* Addendum Badge */}
-                                                {hasAddendums && (
-                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-violet-100 text-violet-700">
-                                                        <FileText className="w-3 h-3" />
-                                                        {verdictCount - 1} Addendum{verdictCount > 2 ? 's' : ''}
-                                                    </span>
-                                                )}
-                                            </div>
-
-                                            {/* Short Resolution */}
-                                            {caseItem.shortResolution && (
-                                                <p className="text-xs text-neutral-500 flex items-center gap-1">
-                                                    <span className="text-pink-400">💕</span>
-                                                    {caseItem.shortResolution}
-                                                </p>
-                                            )}
-
-                                            {/* Date */}
-                                            <div className="flex items-center gap-1 text-[10px] text-neutral-400 mt-2">
-                                                <Calendar className="w-3 h-3" />
-                                                {formatDate(caseItem.createdAt)}
-                                            </div>
-                                        </div>
-
-                                        {/* Arrow Icon */}
-                                        <div className="flex-shrink-0 mt-1">
-                                            <ChevronRight className="w-5 h-5 text-neutral-400" />
+                                <div className="flex items-start justify-between gap-3">
+                                    <div className="flex-1 min-w-0">
+                                        <h3 className="font-bold text-neutral-800 text-sm leading-snug line-clamp-2">
+                                            {caseItem.caseTitle || `Case #${index + 1}`}
+                                        </h3>
+                                        <div className="flex items-center gap-1 text-[10px] text-neutral-400 mt-1">
+                                            <Calendar className="w-3 h-3" />
+                                            {formatDate(caseItem.createdAt)}
                                         </div>
                                     </div>
+                                    <ChevronRight className="w-5 h-5 text-neutral-400 mt-1" />
+                                </div>
+
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${severity.bg} ${severity.text}`}>
+                                        <SeverityIcon className="w-3 h-3" />
+                                        {severity.label}
+                                    </span>
+                                    {caseItem.primaryHissTag && caseItem.primaryHissTag !== 'None' && (
+                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${HORSEMAN_COLORS[caseItem.primaryHissTag] || 'bg-neutral-100 text-neutral-600'}`}>
+                                            {caseItem.primaryHissTag}
+                                        </span>
+                                    )}
+                                    {hasAddendums && (
+                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-violet-100 text-violet-700">
+                                            <FileText className="w-3 h-3" />
+                                            {verdictCount - 1} Addendum{verdictCount > 2 ? 's' : ''}
+                                        </span>
+                                    )}
+                                </div>
+
+                                <div className="rounded-2xl border border-green-200/70 bg-green-50/70 p-3 space-y-1">
+                                    <div className="text-[10px] uppercase font-bold text-green-700 tracking-wide">
+                                        Resolution chosen
+                                    </div>
+                                    <div className="text-sm font-bold text-court-brown">
+                                        {resolutionTitle}
+                                    </div>
+                                    <p className="text-xs text-court-brownLight line-clamp-2">
+                                        {resolutionDescription}
+                                    </p>
+                                </div>
+
+                                {summary && (
+                                    <p className="text-xs text-neutral-500 line-clamp-2">
+                                        {summary}
+                                    </p>
+                                )}
+
+                                <div className="flex items-center gap-2 text-[10px] text-court-brownLight">
+                                    <span className="px-2 py-0.5 rounded-full bg-court-cream/60 border border-court-tan/30">Analyze</span>
+                                    <span className="px-2 py-0.5 rounded-full bg-court-cream/60 border border-court-tan/30">Prime</span>
+                                    <span className="px-2 py-0.5 rounded-full bg-court-cream/60 border border-court-tan/30">Resolve</span>
                                 </div>
                             </motion.button>
                         );

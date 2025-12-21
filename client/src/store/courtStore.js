@@ -16,12 +16,27 @@ export const VIEW_PHASE = {
     PENDING_PARTNER: 'PENDING_PARTNER',
     EVIDENCE: 'EVIDENCE',
     WAITING_EVIDENCE: 'WAITING_EVIDENCE',
+    // Legacy
     DELIBERATING: 'DELIBERATING',
+    IN_SESSION: 'IN_SESSION', // Legacy alias
+    // V2.0 new view phases
+    ANALYZING: 'ANALYZING',
+    PRIMING: 'PRIMING',
+    WAITING_PRIMING: 'WAITING_PRIMING',
+    JOINT_MENU: 'JOINT_MENU',
+    WAITING_JOINT: 'WAITING_JOINT',
+    RESOLUTION_SELECT: 'RESOLUTION_SELECT',
+    RESOLUTION_MISMATCH: 'RESOLUTION_MISMATCH',
+    WAITING_RESOLUTION: 'WAITING_RESOLUTION',
+    // Final phases
     VERDICT: 'VERDICT',
     WAITING_ACCEPT: 'WAITING_ACCEPT',
     RATING: 'RATING',
     CLOSED: 'CLOSED'
 };
+
+// Alias for backward compatibility with CourtroomPage
+export const COURT_PHASES = VIEW_PHASE;
 
 // Socket reference (set by useCourtSocket hook)
 let socketRef = null;
@@ -57,6 +72,7 @@ const useCourtStore = create((set, get) => ({
     showSettlementRequest: false,
     settlementDeclinedNotice: null,
     hasUnreadVerdict: false,
+    dismissedRatingSessionId: null,
     error: null,
 
     // === State Setters ===
@@ -71,6 +87,7 @@ const useCourtStore = create((set, get) => ({
     clearSettlementDeclinedNotice: () => set({ settlementDeclinedNotice: null }),
     setIsConnected: (connected) => set({ isConnected: connected }),
     markVerdictSeen: () => set({ hasUnreadVerdict: false }),
+    dismissRating: (sessionId) => set({ dismissedRatingSessionId: sessionId || null, showRatingPopup: false }),
 
     // === Handlers (from WebSocket/API) ===
 
@@ -99,7 +116,7 @@ const useCourtStore = create((set, get) => ({
             lastSyncAt: Date.now(),
             hasUnreadVerdict: nextHasUnreadVerdict,
             // Detect deliberating
-            isGeneratingVerdict: myViewPhase === VIEW_PHASE.DELIBERATING,
+            isGeneratingVerdict: [VIEW_PHASE.DELIBERATING, VIEW_PHASE.ANALYZING].includes(myViewPhase),
             // UI-only animations never persist across sessions
             ...(isSessionCleared || isNewSession ? { showOpeningAnimation: false, showCelebrationAnimation: false } : {}),
             // Clear stale local inputs when a session ends or a new session starts
@@ -109,7 +126,8 @@ const useCourtStore = create((set, get) => ({
             // Settlement request UI should not persist across ended sessions
             ...(isSessionCleared ? { showSettlementRequest: false } : {}),
             // Decline indicator should not leak across sessions
-            ...(isSessionCleared || isNewSession ? { settlementDeclinedNotice: null } : {})
+            ...(isSessionCleared || isNewSession ? { settlementDeclinedNotice: null } : {}),
+            ...(isSessionCleared || isNewSession ? { dismissedRatingSessionId: null } : {})
         });
     },
 
@@ -240,6 +258,43 @@ const useCourtStore = create((set, get) => ({
             } catch (error) {
                 get().onError(error.response?.data?.error || error.message);
             }
+        }
+    },
+
+    /**
+     * Dismiss session from any phase (for error recovery)
+     */
+    dismiss: async () => {
+        set({ isSubmitting: true, error: null });
+
+        if (socketRef?.connected) {
+            await new Promise((resolve) => {
+                let done = false;
+                const timeout = setTimeout(() => {
+                    if (done) return;
+                    done = true;
+                    set({ isSubmitting: false });
+                    // Force reset local state even if server didn't respond
+                    get().reset();
+                    resolve();
+                }, 2500);
+
+                socketRef.emit('court:dismiss', (resp) => {
+                    if (done) return;
+                    done = true;
+                    clearTimeout(timeout);
+                    if (resp?.state) get().onStateSync(resp.state);
+                    if (resp?.error) {
+                        // If dismiss fails (e.g., no session), just reset locally
+                        get().reset();
+                    }
+                    set({ isSubmitting: false });
+                    resolve();
+                });
+            });
+        } else {
+            // No API fallback for dismiss - just reset locally
+            get().reset();
         }
     },
 
@@ -473,6 +528,192 @@ const useCourtStore = create((set, get) => ({
     },
 
     /**
+     * Mark priming as complete (v2.0)
+     */
+    markPrimingComplete: async () => {
+        set({ isSubmitting: true, error: null });
+
+        if (socketRef?.connected) {
+            await new Promise((resolve) => {
+                let done = false;
+                const timeout = setTimeout(() => {
+                    if (done) return;
+                    done = true;
+                    set({ isSubmitting: false });
+                    get().fetchState({ force: true }).finally(resolve);
+                }, 2500);
+
+                socketRef.emit('court:priming_complete', (resp) => {
+                    if (done) return;
+                    done = true;
+                    clearTimeout(timeout);
+                    if (resp?.state) get().onStateSync(resp.state);
+                    if (resp?.error) get().onError(resp.error);
+                    set({ isSubmitting: false });
+                    resolve();
+                });
+            });
+        } else {
+            try {
+                const userId = get()._getUserId();
+                const response = await api.post(`${COURT_API}/priming/complete`, { userId });
+                get().onStateSync(response.data);
+            } catch (error) {
+                get().onError(error.response?.data?.error || error.message);
+            }
+        }
+    },
+
+    /**
+     * Mark joint menu as ready (v2.0)
+     */
+    markJointReady: async () => {
+        set({ isSubmitting: true, error: null });
+
+        if (socketRef?.connected) {
+            await new Promise((resolve) => {
+                let done = false;
+                const timeout = setTimeout(() => {
+                    if (done) return;
+                    done = true;
+                    set({ isSubmitting: false });
+                    get().fetchState({ force: true }).finally(resolve);
+                }, 2500);
+
+                socketRef.emit('court:joint_ready', (resp) => {
+                    if (done) return;
+                    done = true;
+                    clearTimeout(timeout);
+                    if (resp?.state) get().onStateSync(resp.state);
+                    if (resp?.error) get().onError(resp.error);
+                    set({ isSubmitting: false });
+                    resolve();
+                });
+            });
+        } else {
+            try {
+                const userId = get()._getUserId();
+                const response = await api.post(`${COURT_API}/joint/ready`, { userId });
+                get().onStateSync(response.data);
+            } catch (error) {
+                get().onError(error.response?.data?.error || error.message);
+            }
+        }
+    },
+
+    /**
+     * Submit resolution pick (v2.0)
+     */
+    submitResolutionPick: async (resolutionId) => {
+        if (!resolutionId) return;
+        set({ isSubmitting: true, error: null });
+
+        if (socketRef?.connected) {
+            await new Promise((resolve) => {
+                let done = false;
+                const timeout = setTimeout(() => {
+                    if (done) return;
+                    done = true;
+                    set({ isSubmitting: false });
+                    get().fetchState({ force: true }).finally(resolve);
+                }, 2500);
+
+                socketRef.emit('court:resolution_pick', { resolutionId }, (resp) => {
+                    if (done) return;
+                    done = true;
+                    clearTimeout(timeout);
+                    if (resp?.state) get().onStateSync(resp.state);
+                    if (resp?.error) get().onError(resp.error);
+                    set({ isSubmitting: false });
+                    resolve();
+                });
+            });
+        } else {
+            try {
+                const userId = get()._getUserId();
+                const response = await api.post(`${COURT_API}/resolution/pick`, { userId, resolutionId });
+                get().onStateSync(response.data);
+            } catch (error) {
+                get().onError(error.response?.data?.error || error.message);
+            }
+        }
+    },
+
+    /**
+     * Accept partner's resolution (v2.0)
+     */
+    acceptPartnerResolution: async () => {
+        set({ isSubmitting: true, error: null });
+
+        if (socketRef?.connected) {
+            await new Promise((resolve) => {
+                let done = false;
+                const timeout = setTimeout(() => {
+                    if (done) return;
+                    done = true;
+                    set({ isSubmitting: false });
+                    get().fetchState({ force: true }).finally(resolve);
+                }, 2500);
+
+                socketRef.emit('court:resolution_accept_partner', (resp) => {
+                    if (done) return;
+                    done = true;
+                    clearTimeout(timeout);
+                    if (resp?.state) get().onStateSync(resp.state);
+                    if (resp?.error) get().onError(resp.error);
+                    set({ isSubmitting: false });
+                    resolve();
+                });
+            });
+        } else {
+            try {
+                const userId = get()._getUserId();
+                const response = await api.post(`${COURT_API}/resolution/accept-partner`, { userId });
+                get().onStateSync(response.data);
+            } catch (error) {
+                get().onError(error.response?.data?.error || error.message);
+            }
+        }
+    },
+
+    /**
+     * Request hybrid resolution (v2.0)
+     */
+    requestHybridResolution: async () => {
+        set({ isSubmitting: true, error: null });
+
+        if (socketRef?.connected) {
+            await new Promise((resolve) => {
+                let done = false;
+                const timeout = setTimeout(() => {
+                    if (done) return;
+                    done = true;
+                    set({ isSubmitting: false });
+                    get().fetchState({ force: true }).finally(resolve);
+                }, 5000);
+
+                socketRef.emit('court:resolution_hybrid', (resp) => {
+                    if (done) return;
+                    done = true;
+                    clearTimeout(timeout);
+                    if (resp?.state) get().onStateSync(resp.state);
+                    if (resp?.error) get().onError(resp.error);
+                    set({ isSubmitting: false });
+                    resolve();
+                });
+            });
+        } else {
+            try {
+                const userId = get()._getUserId();
+                const response = await api.post(`${COURT_API}/resolution/hybrid`, { userId });
+                get().onStateSync(response.data);
+            } catch (error) {
+                get().onError(error.response?.data?.error || error.message);
+            }
+        }
+    },
+
+    /**
      * Submit verdict rating (1-5) for the latest verdict on the resolved case.
      * Stored per-user on the backend.
      */
@@ -520,7 +761,9 @@ const useCourtStore = create((set, get) => ({
             if (!userId) return;
 
             // If WebSocket is connected, server will push the authoritative state.
-            if (!force && (socketRef?.connected || get().isConnected)) {
+            const lastSyncAt = get().lastSyncAt;
+            const stale = !lastSyncAt || Date.now() - lastSyncAt > 10000;
+            if (!force && (socketRef?.connected || get().isConnected) && !stale) {
                 return;
             }
 
@@ -585,6 +828,13 @@ const useCourtStore = create((set, get) => ({
             id: session.creatorId === userId ? session.partnerId : session.creatorId,
             isCreator: session.creatorId !== userId
         };
+    },
+
+    /**
+     * Get current phase (for backward compatibility)
+     */
+    getPhase: () => {
+        return get().myViewPhase || get().phase || VIEW_PHASE.IDLE;
     }
 }));
 

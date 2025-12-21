@@ -8,7 +8,12 @@
 const { courtSessionManager } = require('./courtSessionManager');
 const courtWebSocket = require('./courtWebSocket');
 const courtDatabase = require('./courtDatabase');
-const { deliberate } = require('./judgeEngine');
+const {
+    deliberate,
+    deliberatePhase1,
+    deliberatePhase2,
+    runHybridResolution
+} = require('./judgeEngine');
 const { triggerBackgroundExtraction } = require('./stenographer');
 
 /**
@@ -21,9 +26,15 @@ async function initializeCourtServices(httpServer) {
     // 1. Connect database service to session manager
     courtSessionManager.setDatabaseService(courtDatabase);
 
-    // 2. Connect judge engine to session manager
+    // 2. Connect judge engine to session manager (v2.0 pipeline + legacy)
     courtSessionManager.setJudgeEngine({
+        // V2.0 pipeline functions
+        deliberatePhase1,
+        deliberatePhase2,
+        runHybridResolution,
+        // Legacy function (backward compat)
         deliberate,
+        // Background processing
         triggerBackgroundExtraction
     });
 

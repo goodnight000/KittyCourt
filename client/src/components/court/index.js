@@ -13,3 +13,7 @@ export { default as VerdictView } from './VerdictView';
 export { default as TimeoutDisplay } from './TimeoutDisplay';
 export { default as SettlementButton } from './SettlementButton';
 export { default as VerdictRating } from './VerdictRating';
+export { default as PrimingPage } from './PrimingPage';
+export { default as JointMenuPage } from './JointMenuPage';
+export { default as ResolutionSelectPage } from './ResolutionSelectPage';
+export { default as WaitingForPartnerStep } from './WaitingForPartnerStep';
