@@ -20,6 +20,9 @@ async function generateEmbedding(text) {
     const apiKey = process.env.OPENAI_API_KEY;
     
     if (!apiKey || apiKey === 'your_openai_api_key_here') {
+        if (process.env.NODE_ENV === 'test') {
+            return new Array(EMBEDDING_DIMENSION).fill(0);
+        }
         throw new Error('OPENAI_API_KEY is not configured for embeddings.');
     }
     
@@ -59,6 +62,9 @@ async function generateEmbeddings(texts) {
     const apiKey = process.env.OPENAI_API_KEY;
     
     if (!apiKey || apiKey === 'your_openai_api_key_here') {
+        if (process.env.NODE_ENV === 'test') {
+            return texts.map(() => new Array(EMBEDDING_DIMENSION).fill(0));
+        }
         throw new Error('OPENAI_API_KEY is not configured for embeddings.');
     }
     
@@ -96,15 +102,20 @@ async function generateEmbeddings(texts) {
  * @param {string} caseInputs.userAFeelings - User A's feelings
  * @param {string} caseInputs.userBFacts - User B's facts
  * @param {string} caseInputs.userBFeelings - User B's feelings
+ * @param {Array} caseInputs.addendumHistory - Optional addendum entries
  * @returns {Promise<number[]>} The query embedding vector
  */
 async function generateCaseQueryEmbedding(caseInputs) {
     // Combine all case inputs into a single query text
+    const addendumText = Array.isArray(caseInputs.addendumHistory)
+        ? caseInputs.addendumHistory.map(entry => entry?.text).filter(Boolean).join('\n\n')
+        : '';
     const queryText = [
         caseInputs.userAFacts || '',
         caseInputs.userAFeelings || '',
         caseInputs.userBFacts || '',
         caseInputs.userBFeelings || '',
+        addendumText
     ].filter(Boolean).join('\n\n');
     
     return generateEmbedding(queryText);

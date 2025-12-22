@@ -8,13 +8,8 @@
  * Uses Grok 4.1 Fast via OpenRouter with reasoning for high-quality extraction.
  */
 
-const { generateEmbedding, generateEmbeddings } = require('./embeddings');
-const {
-    searchSimilarMemories,
-    insertMemory,
-    reinforceMemory,
-    isSupabaseConfigured
-} = require('./supabase');
+const embeddings = require('./embeddings');
+const supabase = require('./supabase');
 const { createChatCompletion, isOpenRouterConfigured } = require('./openrouter');
 
 // Configuration
@@ -99,7 +94,17 @@ If you cannot extract meaningful insights for a user, return an empty insights a
  * @returns {string} The formatted prompt
  */
 function buildExtractionPrompt(caseData) {
-    const { participants, submissions } = caseData;
+    const { participants, submissions, addendumHistory } = caseData;
+    const addendumLines = Array.isArray(addendumHistory) && addendumHistory.length > 0
+        ? addendumHistory.map((entry, index) => {
+            const fromLabel = entry.fromUser === 'userA'
+                ? participants.userA.name
+                : entry.fromUser === 'userB'
+                    ? participants.userB.name
+                    : 'A partner';
+            return `${index + 1}. ${fromLabel}: "${entry.text}"`;
+        }).join('\n')
+        : 'No addendums filed.';
 
     return `Extract psychological insights from this couple's conflict:
 
@@ -114,6 +119,9 @@ function buildExtractionPrompt(caseData) {
 **Primary emotion:** ${submissions.userB.selectedPrimaryEmotion}
 **Their inner narrative:** "${submissions.userB.theStoryIamTellingMyself}"
 **What they need:** ${submissions.userB.coreNeed}
+
+## Addendums
+${addendumLines}
 
 Extract lasting psychological insights about each person that would be relevant for understanding future conflicts.`;
 }
@@ -186,15 +194,15 @@ async function processUserInsights(userId, insights, sourceCaseId) {
 
     // Generate embeddings for all insights in batch
     const insightTexts = insights.map(i => i.text);
-    const embeddings = await generateEmbeddings(insightTexts);
+    const embeddingsBatch = await embeddings.generateEmbeddings(insightTexts);
 
     for (let i = 0; i < insights.length; i++) {
         const insight = insights[i];
-        const embedding = embeddings[i];
+        const embedding = embeddingsBatch[i];
 
         try {
             // Search for similar existing memories
-            const similar = await searchSimilarMemories(
+            const similar = await supabase.searchSimilarMemories(
                 embedding,
                 userId,
                 CONFIG.similarityThreshold,
@@ -203,12 +211,12 @@ async function processUserInsights(userId, insights, sourceCaseId) {
 
             if (similar.length > 0) {
                 // Found a similar memory - reinforce it instead of duplicating
-                await reinforceMemory(similar[0].id);
+                await supabase.reinforceMemory(similar[0].id);
                 stats.reinforced++;
                 console.log(`[Stenographer] Reinforced existing memory: "${similar[0].memory_text.slice(0, 50)}..."`);
             } else {
                 // No match - insert new memory
-                await insertMemory({
+                await supabase.insertMemory({
                     userId,
                     memoryText: insight.text,
                     memoryType: insight.type,
@@ -240,7 +248,7 @@ async function extractAndStoreInsights(caseData, caseId) {
     console.log('[Stenographer] Starting insight extraction for case:', caseId);
 
     // Check if Supabase is configured
-    if (!isSupabaseConfigured()) {
+    if (!supabase.isSupabaseConfigured()) {
         console.log('[Stenographer] Supabase not configured, skipping memory extraction');
         return {
             success: false,

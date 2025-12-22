@@ -16,9 +16,6 @@ export const VIEW_PHASE = {
     PENDING_PARTNER: 'PENDING_PARTNER',
     EVIDENCE: 'EVIDENCE',
     WAITING_EVIDENCE: 'WAITING_EVIDENCE',
-    // Legacy
-    DELIBERATING: 'DELIBERATING',
-    IN_SESSION: 'IN_SESSION', // Legacy alias
     // V2.0 new view phases
     ANALYZING: 'ANALYZING',
     PRIMING: 'PRIMING',
@@ -35,7 +32,7 @@ export const VIEW_PHASE = {
     CLOSED: 'CLOSED'
 };
 
-// Alias for backward compatibility with CourtroomPage
+// Alias for UI convenience
 export const COURT_PHASES = VIEW_PHASE;
 
 // Socket reference (set by useCourtSocket hook)
@@ -116,7 +113,7 @@ const useCourtStore = create((set, get) => ({
             lastSyncAt: Date.now(),
             hasUnreadVerdict: nextHasUnreadVerdict,
             // Detect deliberating
-            isGeneratingVerdict: [VIEW_PHASE.DELIBERATING, VIEW_PHASE.ANALYZING].includes(myViewPhase),
+            isGeneratingVerdict: VIEW_PHASE.ANALYZING === myViewPhase,
             // UI-only animations never persist across sessions
             ...(isSessionCleared || isNewSession ? { showOpeningAnimation: false, showCelebrationAnimation: false } : {}),
             // Clear stale local inputs when a session ends or a new session starts

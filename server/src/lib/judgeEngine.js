@@ -10,33 +10,21 @@
  * 4. Priming + Joint Menu (individual content + shared content)
  * 5. Hybrid Resolution (if users pick different options)
  * 6. Background Memory Extraction (Stenographer agent)
- * 
- * LEGACY PIPELINE (still supported for backward compat):
- * 1. Moderation → 2. RAG → 3. Analysis → 4. Verdict
  */
 
 const { isOpenRouterConfigured, createChatCompletion, createModeration } = require('./openrouter');
 const {
     DeliberationInputSchema,
-    AnalysisSchema,
-    JudgeContentSchema,
     AnalystRepairOutputSchema,
     PrimingJointOutputSchema,
     HybridResolutionOutputSchema,
 } = require('./schemas');
 const {
-    ANALYSIS_JSON_SCHEMA,
-    VERDICT_JSON_SCHEMA,
     ANALYST_REPAIR_JSON_SCHEMA,
     PRIMING_JOINT_JSON_SCHEMA,
     HYBRID_RESOLUTION_JSON_SCHEMA,
 } = require('./jsonSchemas');
 const {
-    // Legacy prompts
-    ANALYST_SYSTEM_PROMPT,
-    JUDGE_SYSTEM_PROMPT,
-    buildAnalystUserPrompt,
-    buildJudgeUserPrompt,
     // New v2.0 prompts
     ANALYST_REPAIR_SYSTEM_PROMPT,
     PRIMING_JOINT_SYSTEM_PROMPT,
@@ -46,7 +34,6 @@ const {
     buildHybridResolutionUserPrompt,
 } = require('./prompts');
 const { retrieveHistoricalContext, formatContextForPrompt, hasHistoricalContext } = require('./memoryRetrieval');
-const { triggerBackgroundExtraction } = require('./stenographer');
 const { repairAndParseJSON } = require('./jsonRepair');
 
 const DEBUG_LOGS = process.env.NODE_ENV !== 'production';
@@ -430,238 +417,6 @@ async function runModerationCheck(input) {
     }
 }
 
-/**
- * Legacy Step 2: Analysis (backward compat)
- */
-async function runAnalysis(input, analysisModel) {
-    const userPrompt = buildAnalystUserPrompt(input);
-    let lastError = null;
-
-    for (let attempt = 1; attempt <= CONFIG.maxRetries; attempt++) {
-        try {
-            console.log(`[Judge Engine] Analysis attempt ${attempt}/${CONFIG.maxRetries}`);
-
-            const response = await createChatCompletion({
-                model: analysisModel,
-                messages: [
-                    { role: 'system', content: ANALYST_SYSTEM_PROMPT },
-                    { role: 'user', content: userPrompt },
-                ],
-                temperature: CONFIG.analysisTemperature,
-                maxTokens: CONFIG.maxTokens,
-                jsonSchema: ANALYSIS_JSON_SCHEMA,
-            });
-
-            const content = response.choices[0].message.content;
-
-            let parsed;
-            try {
-                parsed = JSON.parse(content);
-            } catch (parseError) {
-                parsed = repairAndParseJSON(content);
-            }
-
-            if (!parsed.analysis && (parsed.identifiedDynamic || parsed.userA_Horsemen)) {
-                parsed = { analysis: parsed };
-            }
-
-            const validated = AnalysisSchema.parse(parsed);
-            return validated;
-        } catch (error) {
-            console.error(`[Judge Engine] Analysis attempt ${attempt} failed:`, error.message);
-            lastError = error;
-
-            if (attempt < CONFIG.maxRetries) {
-                await new Promise(resolve => setTimeout(resolve, 1000));
-            }
-        }
-    }
-
-    throw new Error(`Analysis failed after ${CONFIG.maxRetries} attempts: ${lastError?.message}`);
-}
-
-/**
- * Legacy Step 3: Verdict Generation (backward compat)
- */
-async function generateVerdict(input, analysis, historicalContext = '', judgeType = 'logical') {
-    const userPrompt = buildJudgeUserPrompt(input, analysis, historicalContext);
-    const verdictModel = JUDGE_MODELS[judgeType] || JUDGE_MODELS.logical;
-    let lastError = null;
-
-    for (let attempt = 1; attempt <= CONFIG.maxRetries; attempt++) {
-        try {
-            const response = await createChatCompletion({
-                model: verdictModel,
-                messages: [
-                    { role: 'system', content: JUDGE_SYSTEM_PROMPT },
-                    { role: 'user', content: userPrompt },
-                ],
-                temperature: CONFIG.verdictTemperature,
-                maxTokens: CONFIG.maxTokens,
-                jsonSchema: VERDICT_JSON_SCHEMA,
-            });
-
-            if (!response?.choices?.[0]?.message?.content) {
-                throw new Error('OpenRouter returned unexpected response structure');
-            }
-
-            const content = response.choices[0].message.content;
-
-            let parsed;
-            try {
-                parsed = JSON.parse(content);
-            } catch (parseError) {
-                parsed = repairAndParseJSON(content);
-            }
-
-            const validated = JudgeContentSchema.parse(parsed);
-            return validated;
-        } catch (error) {
-            console.error(`[Judge Engine] Verdict attempt ${attempt} failed:`, error.message);
-            lastError = error;
-
-            if (attempt < CONFIG.maxRetries) {
-                await new Promise(resolve => setTimeout(resolve, 1000));
-            }
-        }
-    }
-
-    return getFallbackVerdict(input, lastError);
-}
-
-/**
- * Generate a fallback verdict when LLM fails
- */
-function getFallbackVerdict(input, error) {
-    return {
-        theSummary: "Judge Whiskers experienced technical difficulties. Both of your feelings are valid. Please try again.",
-        theRuling_ThePurr: {
-            userA: `${input.participants.userA.name}, your feelings are valid.`,
-            userB: `${input.participants.userB.name}, your perspective is important.`
-        },
-        theRuling_TheHiss: [
-            "Technical issues prevented pattern identification."
-        ],
-        theSentence: {
-            title: "The Patient Pause",
-            description: "Take 5 minutes to sit together. Hold hands. Try again.",
-            rationale: "Sometimes we need to slow down."
-        },
-        closingStatement: "Judge Whiskers apologizes. Your case is important. 🐱💜",
-        _meta: { fallback: true, error: error?.message }
-    };
-}
-
-/**
- * Legacy Main Pipeline (backward compat)
- */
-async function deliberate(rawInput, options = {}) {
-    const startTime = Date.now();
-
-    let input;
-    try {
-        input = DeliberationInputSchema.parse(rawInput);
-    } catch (error) {
-        return {
-            verdictId: generateVerdictId(),
-            timestamp: new Date().toISOString(),
-            status: 'error',
-            error: `Invalid input: ${error.message}`,
-        };
-    }
-
-    if (!isOpenRouterConfigured()) {
-        return {
-            verdictId: generateVerdictId(),
-            timestamp: new Date().toISOString(),
-            status: 'error',
-            error: 'OpenRouter API key not configured.',
-        };
-    }
-
-    if (options.addendumText) {
-        const field = options.addendumFrom === 'userA' ? 'userA' : 'userB';
-        input.submissions[field].cameraFacts += `\n\n[ADDENDUM]: ${options.addendumText}`;
-    }
-
-    // Moderation
-    const moderationResult = await runModerationCheck(input);
-    if (moderationResult.requiresCounseling) {
-        return {
-            verdictId: generateVerdictId(),
-            timestamp: new Date().toISOString(),
-            status: 'unsafe_counseling_recommended',
-            error: 'Content flagged for safety. Counseling recommended.',
-            flaggedCategories: moderationResult.categories,
-        };
-    }
-
-    // RAG
-    let formattedContext = '';
-    try {
-        const historicalContext = await retrieveHistoricalContext(input);
-        if (hasHistoricalContext(historicalContext)) {
-            formattedContext = formatContextForPrompt(historicalContext, input.participants);
-        }
-    } catch (error) {
-        console.log('[Judge Engine] RAG failed:', error.message);
-    }
-
-    // Analysis
-    const judgeType = options.judgeType || 'logical';
-    const analysisModel = JUDGE_MODELS[judgeType] || CONFIG.model;
-    let analysis;
-    try {
-        analysis = await runAnalysis(input, analysisModel);
-    } catch (error) {
-        return {
-            verdictId: generateVerdictId(),
-            timestamp: new Date().toISOString(),
-            status: 'error',
-            error: error.message,
-        };
-    }
-
-    // Verdict
-    let judgeContent;
-    try {
-        judgeContent = await generateVerdict(input, analysis, formattedContext, judgeType);
-    } catch (error) {
-        return {
-            verdictId: generateVerdictId(),
-            timestamp: new Date().toISOString(),
-            status: 'error',
-            error: error.message,
-        };
-    }
-
-    const verdictId = generateVerdictId();
-    const duration = Date.now() - startTime;
-
-    // Background extraction
-    triggerBackgroundExtraction(input, verdictId);
-
-    return {
-        verdictId,
-        timestamp: new Date().toISOString(),
-        status: 'success',
-        judgeContent,
-        isAddendum: !!options.addendumText,
-        _meta: {
-            analysis: analysis.analysis,
-            processingTimeMs: duration,
-            judgeType,
-        },
-    };
-}
-
-function generateVerdictId() {
-    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-        return `v_${crypto.randomUUID().slice(0, 8)}`;
-    }
-    return `v_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
-}
-
 module.exports = {
     // V2.0 pipeline functions
     runAnalystRepair,
@@ -669,12 +424,7 @@ module.exports = {
     runHybridResolution,
     deliberatePhase1,
     deliberatePhase2,
-
-    // Legacy functions (backward compat)
-    deliberate,
     runModerationCheck,
-    runAnalysis,
-    generateVerdict,
 
     // Config
     CONFIG,

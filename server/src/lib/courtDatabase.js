@@ -114,7 +114,6 @@ async function checkpoint(session, action) {
     const statusMap = {
         'PENDING': 'PENDING',
         'EVIDENCE': 'EVIDENCE',
-        'DELIBERATING': 'DELIBERATING',
         'VERDICT': 'VERDICT',
         'CLOSED': 'CLOSED'
     };
@@ -139,6 +138,9 @@ async function checkpoint(session, action) {
         verdict_acceptances: acceptances,
         verdict: session.verdict,
         resolved_at: session.resolvedAt ? new Date(session.resolvedAt).toISOString() : null,
+        addendum_history: session.addendumHistory || [],
+        addendum_count: session.addendumCount || 0,
+        verdict_history: session.verdictHistory || [],
         analysis: session.analysis || null,
         resolutions: session.resolutions || null,
         assessed_intensity: session.assessedIntensity || null,
@@ -236,31 +238,42 @@ async function saveCaseFromSession(session) {
     const bFeelings = creatorIsUserA ? session.partner?.feelings : session.creator?.feelings;
 
     // Judge engine returns an envelope { status, judgeContent, _meta, ... }
-    const verdictEnvelope = session.verdict;
+    const verdictHistory = Array.isArray(session.verdictHistory) && session.verdictHistory.length > 0
+        ? session.verdictHistory
+        : [{
+            version: 1,
+            content: session.verdict,
+            addendumBy: null,
+            addendumText: null,
+            createdAt: new Date(session.resolvedAt || Date.now()).toISOString()
+        }];
+
+    const latestEntry = verdictHistory[verdictHistory.length - 1];
+    const verdictEnvelope = latestEntry?.content || session.verdict;
     const verdictContent = verdictEnvelope?.judgeContent || verdictEnvelope;
-    const analysisMeta = session.analysis?.caseMetadata || verdictEnvelope?._meta?.analysis?.caseMetadata || verdictEnvelope?._meta?.analysis || {};
+    const analysisMeta = session.analysis?.caseMetadata
+        || verdictEnvelope?._meta?.analysis?.caseMetadata
+        || verdictEnvelope?._meta?.analysis
+        || {};
     const finalResolution = session.finalResolution || verdictEnvelope?._meta?.finalResolution || null;
-    const inferredHybrid = finalResolution?.id && session.hybridResolution?.id
-        ? finalResolution.id === session.hybridResolution.id
-        : false;
-    const isHybrid = typeof verdictEnvelope?._meta?.isHybrid === 'boolean'
-        ? verdictEnvelope._meta.isHybrid
-        : inferredHybrid;
-    const verdictPayload = verdictEnvelope?.judgeContent
-        ? {
-            ...verdictEnvelope.judgeContent,
-            _meta: {
-                ...(verdictEnvelope._meta || {}),
-                analysis: session.analysis || verdictEnvelope?._meta?.analysis || null,
-                assessedIntensity: session.assessedIntensity || verdictEnvelope?._meta?.assessedIntensity || null,
-                resolutions: session.resolutions || verdictEnvelope?._meta?.resolutions || null,
-                primingContent: session.primingContent || verdictEnvelope?._meta?.primingContent || null,
-                jointMenu: session.jointMenu || verdictEnvelope?._meta?.jointMenu || null,
-                finalResolution,
-                isHybrid
-            }
-        }
-        : verdictContent;
+    const normalizeVerdictPayload = (envelope) => {
+        if (!envelope) return null;
+        const content = envelope?.judgeContent || envelope;
+        const entryIsHybrid = typeof envelope?._meta?.isHybrid === 'boolean'
+            ? envelope._meta.isHybrid
+            : false;
+        const mergedMeta = {
+            ...(envelope?._meta || {}),
+            analysis: envelope?._meta?.analysis || null,
+            assessedIntensity: envelope?._meta?.assessedIntensity || null,
+            resolutions: envelope?._meta?.resolutions || null,
+            primingContent: envelope?._meta?.primingContent || null,
+            jointMenu: envelope?._meta?.jointMenu || null,
+            finalResolution: envelope?._meta?.finalResolution || finalResolution || null,
+            isHybrid: entryIsHybrid
+        };
+        return envelope?.judgeContent ? { ...content, _meta: mergedMeta } : content;
+    };
 
     // Create the case
     const { data: createdCase, error: caseError } = await supabase
@@ -286,23 +299,23 @@ async function saveCaseFromSession(session) {
         throw caseError;
     }
 
-    // Insert verdict version 1
-    const addendumBy = session.addendum?.userId
-        ? (String(session.addendum.userId) === String(userAId) ? 'user_a' : 'user_b')
-        : null;
+    const verdictRows = verdictHistory
+        .slice()
+        .sort((a, b) => (a.version || 0) - (b.version || 0))
+        .map((entry, index) => ({
+            case_id: createdCase.id,
+            version: entry.version || index + 1,
+            content: normalizeVerdictPayload(entry.content),
+            addendum_by: entry.addendumBy || null,
+            addendum_text: entry.addendumText || null
+        }));
 
     const { error: verdictError } = await supabase
         .from('verdicts')
-        .insert({
-            case_id: createdCase.id,
-            version: 1,
-            content: verdictPayload,
-            addendum_by: addendumBy,
-            addendum_text: session.addendum?.text || null,
-        });
+        .insert(verdictRows);
 
     if (verdictError) {
-        console.error('[DB] Failed to insert verdict for case:', verdictError);
+        console.error('[DB] Failed to insert verdicts for case:', verdictError);
         throw verdictError;
     }
 
@@ -352,9 +365,7 @@ async function getActiveSessions() {
         .in('status', [
             'PENDING',
             'WAITING',
-            'IN_SESSION',
             'EVIDENCE',
-            'DELIBERATING',
             'ANALYZING',
             'PRIMING',
             'JOINT_READY',
@@ -390,7 +401,6 @@ async function cleanupOldSessions() {
         .in('status', [
             'PENDING',
             'EVIDENCE',
-            'DELIBERATING',
             'ANALYZING',
             'PRIMING',
             'JOINT_READY',

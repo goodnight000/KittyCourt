@@ -8,7 +8,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { DeliberationInputSchema, AnalysisSchema, HorsemanType } from './schemas.js';
+import { DeliberationInputSchema, AnalystRepairOutputSchema, HorsemanType } from './schemas.js';
 
 // Sample valid input
 const validInput = {
@@ -32,8 +32,12 @@ const validInput = {
     },
 };
 
-// Mock analysis response (updated for v2.0 schema)
-const validAnalysis = {
+// Mock analyst + repair response (v2.0 schema)
+const validAnalystRepair = {
+    userReportedIntensity: null,
+    assessedIntensity: 'medium',
+    intensityMismatch: false,
+    analysisDepth: 'full',
     analysis: {
         identifiedDynamic: 'Pursuer-Distancer',
         dynamicExplanation: 'Alex pursues connection while Sam distances',
@@ -41,11 +45,38 @@ const validAnalysis = {
         userB_Horsemen: ['Defensiveness', 'Stonewalling'],
         userA_VulnerableEmotion: 'Overwhelmed',
         userB_VulnerableEmotion: 'Defensive',
-        conflictIntensity: 'medium',
         rootConflictTheme: 'Autonomy vs. Connection conflicts.',
-        userA_VulnerableTranslation: 'Alex feels overwhelmed and needs partnership.',
-        userB_VulnerableTranslation: 'Sam feels attacked and needs peace.',
     },
+    caseMetadata: {
+        caseTitle: 'Dish duty clash',
+        severityLevel: 'friction',
+    },
+    resolutions: [
+        {
+            id: 'resolution_1',
+            title: 'Reset together',
+            repairAttemptIds: ['verbal_1'],
+            combinedDescription: 'Set a timer and reset the conversation.',
+            rationale: 'Creates safety and clarity.',
+            estimatedDuration: '10 minutes',
+        },
+        {
+            id: 'resolution_2',
+            title: 'Shared plan',
+            repairAttemptIds: ['practical_0'],
+            combinedDescription: 'Agree on a simple chores plan.',
+            rationale: 'Reduces ambiguity and resentment.',
+            estimatedDuration: '15 minutes',
+        },
+        {
+            id: 'resolution_3',
+            title: 'Soften and reconnect',
+            repairAttemptIds: ['emotional_2'],
+            combinedDescription: 'Start with validation and one request.',
+            rationale: 'Turns conflict into collaboration.',
+            estimatedDuration: '12 minutes',
+        },
+    ],
 };
 
 describe('Schema Validation', () => {
@@ -109,39 +140,9 @@ describe('Schema Validation', () => {
         });
     });
 
-    describe('AnalysisSchema', () => {
-        it('should validate correct analysis output', () => {
-            expect(() => AnalysisSchema.parse(validAnalysis)).not.toThrow();
-        });
-
-        it('should accept "None" as a valid horseman type', () => {
-            const analysisWithNone = {
-                analysis: {
-                    ...validAnalysis.analysis,
-                    userA_Horsemen: ['None'],
-                },
-            };
-            expect(() => AnalysisSchema.parse(analysisWithNone)).not.toThrow();
-        });
-
-        it('should accept all four horsemen types', () => {
-            const allHorsemen = {
-                analysis: {
-                    ...validAnalysis.analysis,
-                    userA_Horsemen: ['Criticism', 'Contempt', 'Defensiveness', 'Stonewalling'],
-                },
-            };
-            expect(() => AnalysisSchema.parse(allHorsemen)).not.toThrow();
-        });
-
-        it('should reject invalid horseman types', () => {
-            const invalidHorsemen = {
-                analysis: {
-                    ...validAnalysis.analysis,
-                    userA_Horsemen: ['Anger'], // Not a valid horseman
-                },
-            };
-            expect(() => AnalysisSchema.parse(invalidHorsemen)).toThrow();
+    describe('AnalystRepairOutputSchema', () => {
+        it('should validate correct analyst + repair output', () => {
+            expect(() => AnalystRepairOutputSchema.parse(validAnalystRepair)).not.toThrow();
         });
     });
 

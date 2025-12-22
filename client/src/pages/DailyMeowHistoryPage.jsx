@@ -9,29 +9,41 @@ import useCacheStore, { CACHE_TTL, CACHE_KEYS } from '../store/useCacheStore';
 import api from '../services/api';
 import { ChevronLeft } from 'lucide-react';
 
-// Mood options for display
+// Mood options with custom images (matching DailyMeowPage.jsx)
 const MOOD_OPTIONS = [
-    { id: 'happy', emoji: '😊', label: 'Happy' },
-    { id: 'loved', emoji: '🥰', label: 'Loved' },
-    { id: 'grateful', emoji: '🙏', label: 'Grateful' },
-    { id: 'excited', emoji: '🤩', label: 'Excited' },
-    { id: 'peaceful', emoji: '😌', label: 'Peaceful' },
-    { id: 'playful', emoji: '😜', label: 'Playful' },
-    { id: 'cozy', emoji: '🥹', label: 'Cozy' },
-    { id: 'romantic', emoji: '😍', label: 'Romantic' },
-    { id: 'silly', emoji: '🤪', label: 'Silly' },
-    { id: 'hopeful', emoji: '✨', label: 'Hopeful' },
-    { id: 'tired', emoji: '😴', label: 'Tired' },
-    { id: 'stressed', emoji: '😩', label: 'Stressed' },
-    { id: 'anxious', emoji: '😰', label: 'Anxious' },
-    { id: 'sad', emoji: '😢', label: 'Sad' },
-    { id: 'frustrated', emoji: '😤', label: 'Frustrated' },
-    { id: 'overwhelmed', emoji: '🤯', label: 'Overwhelmed' },
-    { id: 'lonely', emoji: '🥺', label: 'Lonely' },
-    { id: 'confused', emoji: '😵‍💫', label: 'Confused' },
-    { id: 'meh', emoji: '😐', label: 'Meh' },
-    { id: 'hangry', emoji: '🤤', label: 'Hangry' },
+    // Positive moods
+    { id: 'happy', image: '/assets/emotions/happy.png', label: 'Happy' },
+    { id: 'loved', image: '/assets/emotions/loved.png', label: 'Loved' },
+    { id: 'grateful', image: '/assets/emotions/grateful.png', label: 'Grateful' },
+    { id: 'excited', image: '/assets/emotions/excited.png', label: 'Excited' },
+    { id: 'peaceful', image: '/assets/emotions/peaceful.png', label: 'Peaceful' },
+    { id: 'playful', image: '/assets/emotions/playful.png', label: 'Playful' },
+    { id: 'cozy', image: '/assets/emotions/cozy.png', label: 'Cozy' },
+    { id: 'romantic', image: '/assets/emotions/romantic.png', label: 'Romantic' },
+    { id: 'silly', image: '/assets/emotions/silly.png', label: 'Silly' },
+    { id: 'hopeful', image: '/assets/emotions/hopeful.png', label: 'Hopeful' },
+    // Neutral/Challenging moods
+    { id: 'tired', image: '/assets/emotions/tired.png', label: 'Tired' },
+    { id: 'stressed', image: '/assets/emotions/stressed.png', label: 'Stressed' },
+    { id: 'anxious', image: '/assets/emotions/anxious.png', label: 'Anxious' },
+    { id: 'sad', image: '/assets/emotions/sad.png', label: 'Sad' },
+    { id: 'frustrated', image: '/assets/emotions/frustrated.png', label: 'Frustrated' },
+    { id: 'overwhelmed', image: '/assets/emotions/overwhelmed.png', label: 'Overwhelmed' },
+    { id: 'lonely', image: '/assets/emotions/lonely.png', label: 'Lonely' },
+    { id: 'confused', image: '/assets/emotions/confused.png', label: 'Confused' },
+    { id: 'meh', image: '/assets/emotions/meh.png', label: 'Meh' },
+    { id: 'hangry', image: '/assets/emotions/hangry.png', label: 'Hangry' },
 ];
+
+// MoodIcon component to render custom images
+const MoodIcon = ({ moodId, className = 'w-6 h-6' }) => {
+    const mood = MOOD_OPTIONS.find(m => m.id === moodId);
+    if (!mood) return null;
+    if (mood.image) {
+        return <img src={mood.image} alt={mood.label} className={`${className} object-contain`} />;
+    }
+    return null;
+};
 
 const DailyMeowHistoryPage = () => {
     const navigate = useNavigate();
@@ -159,6 +171,15 @@ const DailyMeowHistoryPage = () => {
         const parseDay = (day) => new Date(`${day}T00:00:00`);
         const sorted = [...completed].sort((a, b) => parseDay(b.assigned_date) - parseDay(a.assigned_date));
 
+        // Bug 4 fix: Check if most recent is within last 1 day (today or yesterday)
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const mostRecent = parseDay(sorted[0].assigned_date);
+        const daysSinceLast = Math.round((today - mostRecent) / (1000 * 60 * 60 * 24));
+
+        // If most recent answer is more than 1 day ago, streak is broken
+        if (daysSinceLast > 1) return 0;
+
         const msPerDay = 1000 * 60 * 60 * 24;
         let streakCount = 1;
 
@@ -279,7 +300,7 @@ const DailyMeowHistoryPage = () => {
                                         <div className="text-[11px] font-bold text-neutral-600 mb-2">{myDisplayName} felt</div>
                                         <div className="flex items-center gap-1.5 flex-wrap">
                                             {getMoodList(selectedEntry.my_answer).map(id => (
-                                                <span key={id} className="text-2xl">{getMoodData(id)?.emoji}</span>
+                                                <MoodIcon key={id} moodId={id} className="w-8 h-8" />
                                             ))}
                                         </div>
                                     </div>
@@ -287,7 +308,7 @@ const DailyMeowHistoryPage = () => {
                                         <div className="text-[11px] font-bold text-neutral-600 mb-2">{partnerDisplayName} felt</div>
                                         <div className="flex items-center gap-1.5 flex-wrap">
                                             {getMoodList(selectedEntry.partner_answer).map(id => (
-                                                <span key={id} className="text-2xl">{getMoodData(id)?.emoji}</span>
+                                                <MoodIcon key={id} moodId={id} className="w-8 h-8" />
                                             ))}
                                         </div>
                                     </div>

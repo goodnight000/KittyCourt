@@ -340,6 +340,17 @@ const buildAnalystRepairUserPrompt = (input, historicalContext = '') => {
   // Get user-reported intensity if provided
   const userReportedIntensity = input.userReportedIntensity || null;
 
+  const addendumLines = (input.addendumHistory || []).length
+    ? input.addendumHistory.map((entry, index) => {
+      const fromLabel = entry.fromUser === 'userA'
+        ? input.participants.userA.name
+        : entry.fromUser === 'userB'
+          ? input.participants.userB.name
+          : 'A partner';
+      return `${index + 1}. ${fromLabel}: "${entry.text}"`;
+    }).join('\n')
+    : 'No addendums filed.';
+
   return `Analyze this couple's conflict and select 3 resolution options.
 
 ## Participants
@@ -368,6 +379,9 @@ ${historicalContext || "No prior history available"}
 ### ${input.participants.userB.name}
 - **Facts (what happened)**: "${input.submissions.userB.cameraFacts}"
 - **Feelings (how it made them feel)**: "${input.submissions.userB.theStoryIamTellingMyself}"
+
+## Addendums
+${addendumLines}
 
 ## REPAIR LIBRARY
 Select from these. You may combine ANY number per resolution. Reference by ID (e.g., "physical_0", "verbal_2").
@@ -449,22 +463,6 @@ ${historicalContext || "No prior history"}
 Create hybrid resolution as JSON.`;
 };
 
-// ============================================================================
-// LEGACY PROMPTS (for backward compatibility during migration)
-// ============================================================================
-
-// Keep the old prompts for any existing code that references them
-const ANALYST_SYSTEM_PROMPT = ANALYST_REPAIR_SYSTEM_PROMPT;
-const JUDGE_SYSTEM_PROMPT = PRIMING_JOINT_SYSTEM_PROMPT;
-
-// Legacy prompt builders that map to new ones
-const buildAnalystUserPrompt = (input) => buildAnalystRepairUserPrompt(input);
-const buildJudgeUserPrompt = (input, analysis, historicalContext = '') => {
-  // For backward compat, create a minimal resolutions array
-  const mockResolutions = [];
-  return buildPrimingJointUserPrompt(input, { analysis: analysis.analysis }, mockResolutions, historicalContext);
-};
-
 module.exports = {
   // New v2.0 prompts
   ANALYST_REPAIR_SYSTEM_PROMPT,
@@ -474,11 +472,5 @@ module.exports = {
   buildPrimingJointUserPrompt,
   buildHybridResolutionUserPrompt,
   formatRepairLibraryForPrompt,
-
-  // Legacy exports for backward compatibility
-  ANALYST_SYSTEM_PROMPT,
-  JUDGE_SYSTEM_PROMPT,
-  buildAnalystUserPrompt,
-  buildJudgeUserPrompt,
   formatProfileContext,
 };

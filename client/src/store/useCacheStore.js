@@ -19,6 +19,7 @@ export const CACHE_TTL = {
 export const CACHE_KEYS = {
     STREAK: 'streak',
     DAILY_HISTORY: 'daily-history',
+    DAILY_QUESTION: 'daily-question',
     CALENDAR_EVENTS: 'calendar:events',
     CASE_HISTORY: 'cases',
     APPRECIATIONS: 'appreciations',

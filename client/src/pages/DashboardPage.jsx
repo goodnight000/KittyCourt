@@ -75,18 +75,31 @@ const DashboardPage = () => {
         fetchStreak();
     }, [authUser?.id, connectedPartner?.id]);
 
-    // Fetch today's question for dashboard preview
+    // Fetch today's question for dashboard preview (with caching)
     useEffect(() => {
         const fetchTodaysQuestion = async () => {
             if (!authUser?.id || !connectedPartner?.id) {
                 setQuestionLoading(false);
                 return;
             }
+
+            const cacheKey = `${CACHE_KEYS.DAILY_QUESTION}:${authUser.id}:${connectedPartner.id}`;
+
+            // Check cache first
+            const cached = useCacheStore.getState().getCached(cacheKey);
+            if (cached !== null) {
+                setTodaysQuestion(cached);
+                setQuestionLoading(false);
+                return;
+            }
+
             try {
                 setQuestionLoading(true);
                 const response = await api.get('/daily-questions/today', {
                     params: { userId: authUser.id, partnerId: connectedPartner.id }
                 });
+                // Cache for 2 minutes (shorter TTL since this can change when partner answers)
+                useCacheStore.getState().setCache(cacheKey, response.data, 2 * 60 * 1000);
                 setTodaysQuestion(response.data);
             } catch (err) {
                 console.error('Failed to fetch daily question:', err);
@@ -149,7 +162,8 @@ const DashboardPage = () => {
 
     // Derive answer states
     const hasAnswered = !!todaysQuestion?.my_answer;
-    const partnerHasAnswered = !!todaysQuestion?.partner_answer;
+    // Use partner_has_answered flag from API (shows status even before we answer, content remains hidden)
+    const partnerHasAnswered = !!todaysQuestion?.partner_has_answered || !!todaysQuestion?.partner_answer;
     const bothAnswered = hasAnswered && partnerHasAnswered;
     const neitherAnswered = !hasAnswered && !partnerHasAnswered;
 
@@ -223,15 +237,17 @@ const DashboardPage = () => {
                 transition={{ delay: 0.1 }}
                 whileTap={{ scale: 0.995 }}
                 onClick={() => navigate('/daily-meow')}
-                className="relative overflow-hidden rounded-[32px] cursor-pointer shadow-xl flex-1 min-h-[220px] flex flex-col"
-                style={{ background: 'linear-gradient(135deg, #B85C6B 0%, #8B4049 100%)' }}
+                className="relative overflow-hidden rounded-[32px] cursor-pointer shadow-xl flex-1 min-h-[260px] flex flex-col"
             >
-                {/* Background Pattern - Subtle Cats */}
-                <div className="absolute inset-0 opacity-5 pointer-events-none">
-                    <div className="absolute top-4 right-10 transform rotate-12 text-4xl">🐱</div>
-                    <div className="absolute bottom-6 left-12 transform -rotate-12 text-3xl">😺</div>
-                    <div className="absolute top-1/2 left-4 transform rotate-45 text-2xl">😸</div>
-                </div>
+                {/* Background Image */}
+                <img
+                    src="/assets/butons/dailyQ-template.png"
+                    alt=""
+                    className="absolute inset-0 w-full h-full object-cover"
+                />
+
+                {/* Dark overlay for better text readability */}
+                <div className="absolute inset-0 bg-black/10" />
 
                 {bothAnswered && (
                     <Motion.div
@@ -248,20 +264,20 @@ const DashboardPage = () => {
                 <div className="relative z-10 p-6 flex flex-col h-full items-center justify-center text-center">
                     {/* Header Badge */}
                     <div className="mb-4">
-                        <span className={`px-3 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase bg-white/20 text-white backdrop-blur-sm border border-white/20`}>
+                        <span className={`px-3 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase bg-[#8B6F47]/80 text-white backdrop-blur-sm border border-[#6B5635]/30`}>
                             {bothAnswered ? 'Completed' : hasAnswered ? 'Waiting for Partner' : 'Daily Question'}
                         </span>
                     </div>
 
                     {/* Question Text */}
-                    <h3 className="text-2xl font-bold text-white mb-6 leading-tight max-w-sm mx-auto" style={{ fontFamily: 'var(--font-display), Quicksand, sans-serif' }}>
+                    <h3 className="text-2xl font-bold text-[#4A3728] mb-6 leading-tight max-w-sm mx-auto" style={{ fontFamily: 'var(--font-display), Quicksand, sans-serif' }}>
                         {questionLoading ? 'Loading...' : (todaysQuestion?.question || "What's on your mind today?")}
                     </h3>
 
                     {/* Status Indicators - Fully Rounded Capsule Pills with Overlapping Heart */}
                     <div className="flex items-center justify-center">
-                        {/* User Status Pill */}
-                        <div className={`flex items-center gap-2 pl-2 pr-5 py-2 rounded-full relative z-0 translate-x-3 ${hasAnswered ? 'bg-white' : 'bg-[#9E525E]'}`}>
+                        {/* User Status Pill - Using warm brown to match parchment */}
+                        <div className={`flex items-center gap-2 pl-2 pr-5 py-2 rounded-full relative z-0 translate-x-3 ${hasAnswered ? 'bg-white' : 'bg-[#8B6F47]'}`}>
                             {/* User Avatar */}
                             <div className={`w-8 h-8 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0 bg-neutral-200`}>
                                 {myAvatar ? (
@@ -282,13 +298,13 @@ const DashboardPage = () => {
 
                         {/* Heart Connector - Overlaps both pills */}
                         <div className="relative z-20 mx-[-6px]">
-                            <div className="w-9 h-9 bg-white rounded-full flex items-center justify-center shadow-sm border-[3px] border-[#9B4E5A]">
-                                <Heart className={`w-3.5 h-3.5 ${bothAnswered ? 'text-[#B85C6B] fill-current' : 'text-[#B85C6B]'}`} />
+                            <div className="w-9 h-9 bg-white rounded-full flex items-center justify-center shadow-sm border-[3px] border-[#8B6F47]">
+                                <Heart className={`w-3.5 h-3.5 ${bothAnswered ? 'text-[#6B5635] fill-current' : 'text-[#8B6F47]'}`} />
                             </div>
                         </div>
 
-                        {/* Partner Status Pill */}
-                        <div className={`flex items-center gap-2 pl-5 pr-2 py-2 rounded-full relative z-0 -translate-x-3 ${partnerHasAnswered ? 'bg-white' : 'bg-[#9E525E]'}`}>
+                        {/* Partner Status Pill - Using warm brown to match parchment */}
+                        <div className={`flex items-center gap-2 pl-5 pr-2 py-2 rounded-full relative z-0 -translate-x-3 ${partnerHasAnswered ? 'bg-white' : 'bg-[#8B6F47]'}`}>
                             <div className="text-right">
                                 <p className={`text-[10px] font-bold leading-tight ${partnerHasAnswered ? 'text-neutral-800' : 'text-white'}`}>
                                     {partnerName?.split(' ')[0]}: {partnerHasAnswered ? '✓' : ''}

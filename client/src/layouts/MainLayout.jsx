@@ -59,8 +59,8 @@ const MainLayout = () => {
     return (
         <div className="min-h-screen min-h-[100dvh] flex flex-col font-sans">
             {/* Main Scrollable Content - with safe area for Dynamic Island/notch */}
-            <main className="flex-1 overflow-y-auto overscroll-contain" style={{ paddingTop: 'max(env(safe-area-inset-top), 44px)' }}>
-                <div className="px-4 py-5 pb-20 max-w-lg mx-auto">
+            <main className="flex-1 overflow-y-auto overscroll-contain" style={{ paddingTop: 'max(env(safe-area-inset-top), 24px)' }}>
+                <div className="px-4 py-6 pb-20 max-w-lg mx-auto">
                     <AnimatePresence mode="wait">
                         <motion.div
                             key={location.pathname}

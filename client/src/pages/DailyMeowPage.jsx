@@ -9,6 +9,7 @@ import useAuthStore from '../store/useAuthStore';
 import useCacheStore, { CACHE_KEYS } from '../store/useCacheStore';
 import RequirePartner from '../components/RequirePartner';
 import api from '../services/api';
+import { subscribeToDailyAnswers, supabase } from '../services/supabase';
 
 // 20 mood/feeling options with emojis - organized by positive/neutral/challenging
 const MOOD_OPTIONS = [
@@ -59,6 +60,8 @@ const DailyMeowPage = () => {
     const [submitting, setSubmitting] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
     const [step, setStep] = useState('mood'); // 'mood' | 'answer' | 'done'
+    const [showCompletionView, setShowCompletionView] = useState(false); // Bug 2: show completion before next backlog
+    const [hasBacklog, setHasBacklog] = useState(false); // Track if there's a backlog question
 
     // Timeout for loading state to prevent infinite loading
     useEffect(() => {
@@ -100,6 +103,8 @@ const DailyMeowPage = () => {
             }
 
             setTodaysQuestion(questionData);
+            // Track if this is a backlog question (for Bug 2 continue button)
+            setHasBacklog(!!questionData.is_backlog);
 
             // Determine initial state based on existing answer
             if (questionData.my_answer) {
@@ -137,6 +142,31 @@ const DailyMeowPage = () => {
             setLoading(false);
         }
     }, [myId, partnerId, hasPartner, fetchTodaysQuestion]);
+
+    // Bug 1: Real-time subscription for partner answer updates
+    useEffect(() => {
+        const assignmentId = todaysQuestion?.assignment_id;
+        const hasAnswered = !!todaysQuestion?.my_answer;
+        const partnerHasAnswered = !!todaysQuestion?.partner_answer;
+
+        // Only subscribe if user has answered but partner hasn't
+        if (!assignmentId || !hasAnswered || partnerHasAnswered) {
+            return;
+        }
+
+        console.log('[DailyMeow] Setting up real-time subscription for assignment:', assignmentId);
+
+        const subscription = subscribeToDailyAnswers(assignmentId, (payload) => {
+            console.log('[DailyMeow] Partner answer received:', payload);
+            // Refetch to get updated data including partner's answer
+            fetchTodaysQuestion();
+        });
+
+        return () => {
+            console.log('[DailyMeow] Cleaning up subscription');
+            supabase.removeChannel(subscription);
+        };
+    }, [todaysQuestion?.assignment_id, todaysQuestion?.my_answer, todaysQuestion?.partner_answer, fetchTodaysQuestion]);
 
     // Require partner
     if (!hasPartner) {
@@ -186,7 +216,7 @@ const DailyMeowPage = () => {
             setSubmitting(true);
             // Lock moods on submission
             setMoodLocked(true);
-            await api.post('/daily-questions/answer', {
+            const response = await api.post('/daily-questions/answer', {
                 userId: myId,
                 assignmentId: todaysQuestion.assignment_id,
                 answer: answer.trim(),
@@ -201,7 +231,24 @@ const DailyMeowPage = () => {
             setShowSuccess(true);
             setTimeout(() => setShowSuccess(false), 2000);
 
-            await fetchTodaysQuestion();
+            // Bug 2 Fix: If both answered, update local state with partner's answer
+            // The API now returns partner_answer, so we can display it immediately
+            if (response.data?.both_answered) {
+                // Update the current question state to include partner's answer
+                if (response.data.partner_answer) {
+                    setTodaysQuestion(prev => ({
+                        ...prev,
+                        partner_answer: response.data.partner_answer,
+                        my_answer: prev.my_answer || response.data.answer
+                    }));
+                }
+                // Show completion view - user sees their and partner's answers before potentially moving on
+                setShowCompletionView(true);
+                setStep('done');
+            } else {
+                // Partner hasn't answered yet - fetch updates normally
+                await fetchTodaysQuestion();
+            }
         } catch (err) {
             console.error('Error submitting answer:', err);
             setError('Failed to submit answer');
@@ -539,26 +586,38 @@ const DailyMeowPage = () => {
                                     >
                                         {/* Emotions */}
                                         <div className="grid grid-cols-2 gap-3">
-                                            <div className="bg-white/70 rounded-2xl border border-white p-3 shadow-sm">
-                                                <div className="text-[11px] font-bold text-neutral-600 mb-2">You felt</div>
+                                            <div className="bg-white/70 rounded-2xl border border-white p-4 shadow-sm">
+                                                <div className="text-xs font-bold text-neutral-600 mb-3">You felt</div>
                                                 {selectedMoods.length > 0 ? (
-                                                    <div className="flex items-center gap-1.5 flex-wrap">
-                                                        {selectedMoods.map(m => (
-                                                            <MoodIcon key={m} moodId={m} className="w-7 h-7" />
-                                                        ))}
+                                                    <div className="flex items-start gap-3 flex-wrap">
+                                                        {selectedMoods.map(m => {
+                                                            const mood = MOOD_OPTIONS.find(opt => opt.id === m);
+                                                            return (
+                                                                <div key={m} className="flex flex-col items-center gap-1">
+                                                                    <MoodIcon moodId={m} className="w-10 h-10" />
+                                                                    <span className="text-[10px] font-medium text-neutral-500 text-center">{mood?.label || m}</span>
+                                                                </div>
+                                                            );
+                                                        })}
                                                     </div>
                                                 ) : (
                                                     <div className="text-xs text-neutral-400">—</div>
                                                 )}
                                             </div>
-                                            <div className="bg-white/70 rounded-2xl border border-white p-3 shadow-sm">
-                                                <div className="text-[11px] font-bold text-neutral-600 mb-2">{partnerDisplayName} felt</div>
+                                            <div className="bg-white/70 rounded-2xl border border-white p-4 shadow-sm">
+                                                <div className="text-xs font-bold text-neutral-600 mb-3">{partnerDisplayName} felt</div>
                                                 {partnerHasAnswered ? (
                                                     partnerMoodIds.length > 0 ? (
-                                                        <div className="flex items-center gap-1.5 flex-wrap">
-                                                            {partnerMoodIds.map(m => (
-                                                                <MoodIcon key={m} moodId={m} className="w-7 h-7" />
-                                                            ))}
+                                                        <div className="flex items-start gap-3 flex-wrap">
+                                                            {partnerMoodIds.map(m => {
+                                                                const mood = MOOD_OPTIONS.find(opt => opt.id === m);
+                                                                return (
+                                                                    <div key={m} className="flex flex-col items-center gap-1">
+                                                                        <MoodIcon moodId={m} className="w-10 h-10" />
+                                                                        <span className="text-[10px] font-medium text-neutral-500 text-center">{mood?.label || m}</span>
+                                                                    </div>
+                                                                );
+                                                            })}
                                                         </div>
                                                     ) : (
                                                         <div className="text-xs text-neutral-400">—</div>
@@ -575,16 +634,7 @@ const DailyMeowPage = () => {
                                         {/* My Answer */}
                                         <div className="bg-white/70 rounded-2xl p-4 border border-white shadow-sm">
                                             <div className="flex items-center justify-between mb-2">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-sm font-bold text-amber-700">Your answer</span>
-                                                    {selectedMoods.length > 0 && (
-                                                        <span className="flex items-center gap-1">
-                                                            {selectedMoods.map(m => (
-                                                                <MoodIcon key={m} moodId={m} className="w-5 h-5" />
-                                                            ))}
-                                                        </span>
-                                                    )}
-                                                </div>
+                                                <span className="text-sm font-bold text-amber-700">Your answer</span>
                                                 <button
                                                     onClick={startEditing}
                                                     className="flex items-center gap-1 text-xs text-amber-600 font-medium hover:text-amber-700 px-2 py-1 rounded-lg hover:bg-amber-50"
@@ -609,16 +659,7 @@ const DailyMeowPage = () => {
                                                 animate={{ opacity: 1, y: 0 }}
                                                 className="bg-white/70 rounded-2xl p-4 border border-pink-200 shadow-sm"
                                             >
-                                                <div className="flex items-center gap-2 mb-2">
-                                                    <span className="text-sm font-bold text-pink-700">{partnerDisplayName}'s answer</span>
-                                                    {(todaysQuestion.partner_answer?.moods || (todaysQuestion.partner_answer?.mood ? [todaysQuestion.partner_answer.mood] : [])).length > 0 && (
-                                                        <span className="flex items-center gap-1">
-                                                            {(todaysQuestion.partner_answer?.moods || [todaysQuestion.partner_answer.mood]).slice(0, 3).map(m => (
-                                                                <MoodIcon key={m} moodId={m} className="w-5 h-5" />
-                                                            ))}
-                                                        </span>
-                                                    )}
-                                                </div>
+                                                <span className="text-sm font-bold text-pink-700">{partnerDisplayName}'s answer</span>
                                                 <p className="text-neutral-700 leading-relaxed">
                                                     {todaysQuestion.partner_answer?.answer}
                                                 </p>
@@ -638,11 +679,34 @@ const DailyMeowPage = () => {
                                                 initial={{ scale: 0, opacity: 0 }}
                                                 animate={{ scale: 1, opacity: 1 }}
                                                 transition={{ type: "spring", delay: 0.2 }}
-                                                className="flex justify-center"
+                                                className="flex flex-col items-center gap-3"
                                             >
                                                 <span className="px-5 py-2.5 bg-gradient-to-r from-emerald-100 to-teal-100 rounded-full text-sm font-bold text-emerald-700 flex items-center gap-2 shadow-sm">
                                                     ✨ You both answered! +5 Kibbles each
                                                 </span>
+
+                                                {/* Bug 2: Continue button only shows when there's a backlog and completion view is active */}
+                                                {showCompletionView && hasBacklog && (
+                                                    <Motion.button
+                                                        initial={{ opacity: 0, y: 10 }}
+                                                        animate={{ opacity: 1, y: 0 }}
+                                                        transition={{ delay: 0.4 }}
+                                                        whileTap={{ scale: 0.98 }}
+                                                        onClick={() => {
+                                                            setShowCompletionView(false);
+                                                            // Reset state for next question
+                                                            setAnswer('');
+                                                            setSelectedMoods([]);
+                                                            setMoodLocked(false);
+                                                            setStep('mood');
+                                                            fetchTodaysQuestion();
+                                                        }}
+                                                        className="px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold rounded-2xl shadow-lg flex items-center gap-2"
+                                                    >
+                                                        <ChevronRight className="w-5 h-5" />
+                                                        Continue to Next Question
+                                                    </Motion.button>
+                                                )}
                                             </Motion.div>
                                         )}
                                     </Motion.div>

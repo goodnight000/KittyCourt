@@ -156,15 +156,26 @@ export const getProfile = async (userId) => {
 };
 
 /**
- * Check if partner code exists and get that user's profile
+ * Look up a user by their partner code (secure - only returns ID)
+ * Uses an RPC function to prevent exposing profile data to other users
  */
 export const findByPartnerCode = async (code) => {
-    const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('partner_code', code)
-        .single();
-    return { data, error };
+    // Use the secure RPC function that only returns the user ID
+    const { data, error } = await supabase.rpc('lookup_user_by_partner_code', {
+        code: code
+    });
+
+    if (error) {
+        return { data: null, error };
+    }
+
+    // RPC returns an array of {id} objects, get the first one
+    if (!data || data.length === 0) {
+        return { data: null, error: { message: 'Partner code not found' } };
+    }
+
+    // Return just the ID in a format compatible with existing code
+    return { data: { id: data[0].id }, error: null };
 };
 
 // ============================================
@@ -188,7 +199,7 @@ export const sendPartnerRequest = async (receiverId, message = '') => {
 
     if (existingRequests && existingRequests.length > 0) {
         const request = existingRequests[0];
-        
+
         if (request.status === 'pending') {
             if (request.sender_id === user.id) {
                 return { error: 'You already sent a request to this person. Waiting for their response!' };
@@ -395,4 +406,27 @@ export const subscribeToProfileChanges = (userId, callback) => {
     return subscription;
 };
 
+/**
+ * Subscribe to daily answer changes for real-time updates
+ * Used to notify User 1 when User 2 submits their answer
+ */
+export const subscribeToDailyAnswers = (assignmentId, callback) => {
+    const subscription = supabase
+        .channel(`daily_answers_${assignmentId}`)
+        .on(
+            'postgres_changes',
+            {
+                event: 'INSERT',
+                schema: 'public',
+                table: 'daily_answers',
+                filter: `assignment_id=eq.${assignmentId}`
+            },
+            callback
+        )
+        .subscribe();
+
+    return subscription;
+};
+
 export default supabase;
+

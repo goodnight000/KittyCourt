@@ -47,16 +47,19 @@ Server requires `.env` file in `server/` directory with:
 
 ### Judge Engine Pipeline (Critical Path)
 
-The AI verdict system (`server/src/lib/judgeEngine.js`) runs a **5-step sequential chain**:
+The AI verdict system (`server/src/lib/judgeEngine.js`) runs a **6-step flow**:
 
-1. **Safety Guardrail** - OpenAI Moderation API filters harmful content
+1. **Safety Guardrail** - Moderation via OpenRouter
 2. **Memory Retrieval (RAG)** - Fetches historical patterns from pgvector
-3. **Analytical Phase** - DeepSeek V3.2 performs psychological analysis (JSON schema mode)
-4. **Verdict Generation** - User-selectable judge model with persona injection:
-   - `best`: Claude Opus 4.5 (Judge Whiskers - empathic)
-   - `fast`: DeepSeek V3.2 (The Fast Judge)
-   - `logical`: Kimi K2 Thinking (Judge Mittens - methodical)
-5. **Background Extraction** - Stenographer agent extracts behavioral patterns for future cases
+3. **Analyst + Repair Selection** - Picks 3 resolution options
+4. **Priming + Joint Menu** - Generates individual priming + shared menu
+5. **Hybrid Resolution** - Only when users pick different options
+6. **Background Extraction** - Stenographer agent stores long-term memory
+
+Judge models:
+- `best`: anthropic/claude-opus-4.5 (Judge Whiskers)
+- `fast`: deepseek/deepseek-v3.2
+- `logical`: google/gemini-3-flash-preview
 
 **Key Files:**
 - `server/src/lib/prompts.js` - Psychological framework (DO NOT modify without understanding)
@@ -90,10 +93,10 @@ const { user, profile, partner, hasPartner, signIn, acceptRequest } = useAuthSto
 const { caseHistory, fetchCaseHistory, currentUser } = useAppStore();
 
 // courtStore.js - Court sessions only (real-time coordination)
-const { courtSession, activeCase, generateVerdict, submitSide } = useCourtStore();
+const { session, myViewPhase, serve, accept, submitEvidence, markPrimingComplete } = useCourtStore();
 ```
 
-**Case Status Flow:** `DRAFT → LOCKED_A → DELIBERATING → RESOLVED`
+**Court Session Flow:** `IDLE → PENDING → EVIDENCE → ANALYZING → PRIMING → JOINT_READY → RESOLUTION → VERDICT → CLOSED`
 
 **IMPORTANT:** Always use `profile?.display_name` or `partner?.display_name`, never "User A/B" pattern in UI code.
 
@@ -137,9 +140,8 @@ All data stored in Supabase PostgreSQL with RLS. Key migrations:
 ## API Structure
 
 **Backend Routes (`server/src/routes/`):**
-- `/api/judge/deliberate` - Main verdict endpoint (POST)
+- `/api/court/*` - Court sessions (REST + WebSocket)
 - `/api/memory/*` - Profile and memory management
-- `/api/court-sessions/*` - Real-time session coordination (WebSocket support)
 - `/api/cases?userAId=&userBId=` - Case history filtered by couple
 - `/api/appreciations/:userId` - Appreciations received by user
 - `/api/daily-questions/*` - Daily check-in questions
@@ -179,7 +181,7 @@ Tailwind CSS with court-themed palette (`client/tailwind.config.js`):
 **Client Tests (`client/src/test/`):**
 - Vitest + React Testing Library
 - `setup.js` - Global test configuration
-- `courtroom.test.js` - Example test file
+ 
 
 **Server Tests (`server/src/lib/`):**
 - Vitest for unit tests

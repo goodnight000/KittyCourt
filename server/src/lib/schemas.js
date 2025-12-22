@@ -36,6 +36,13 @@ const SubmissionSchema = z.object({
     coreNeed: z.string().optional().default('understanding'),
 });
 
+const AddendumEntrySchema = z.object({
+    userId: z.string().optional(),
+    fromUser: z.enum(['userA', 'userB']).optional(),
+    text: z.string().min(1),
+    submittedAt: z.number().optional(),
+});
+
 const DeliberationInputSchema = z.object({
     participants: z.object({
         userA: ParticipantSchema,
@@ -45,6 +52,7 @@ const DeliberationInputSchema = z.object({
         userA: SubmissionSchema,
         userB: SubmissionSchema,
     }),
+    addendumHistory: z.array(AddendumEntrySchema).optional().default([]),
     // New: User can optionally self-report conflict intensity
     userReportedIntensity: z.enum(['high', 'medium', 'low']).optional().nullable(),
 });
@@ -147,84 +155,6 @@ const HybridResolutionOutputSchema = z.object({
     bridgingMessage: z.string(),
 });
 
-// ============================================================================
-// LEGACY SCHEMAS (for backward compatibility)
-// ============================================================================
-
-const RepairType = z.enum([
-    'The 20-Minute Reset',
-    'The 20-Second Hug',
-    'The Speaker-Listener Exercise',
-    'The Soft Startup Redo'
-]);
-
-const AnalysisSchema = z.object({
-    analysis: z.object({
-        identifiedDynamic: z.string(),
-        dynamicExplanation: z.string().optional(),
-        userA_Horsemen: z.array(HorsemanType),
-        userB_Horsemen: z.array(HorsemanType),
-        userA_VulnerableEmotion: z.string(),
-        userB_VulnerableEmotion: z.string(),
-        conflictIntensity: z.string(),
-        rootConflictTheme: z.string(),
-        userA_VulnerableTranslation: z.string(),
-        userB_VulnerableTranslation: z.string(),
-        recommendedRepair: z.string().optional(),
-        caseTitle: z.string().optional(),
-        severityLevel: z.string().optional(),
-        primaryHissTag: z.string().nullable().optional(),
-        shortResolution: z.string().optional(),
-    }),
-});
-
-const RepairAttemptSchema = z.object({
-    title: z.string(),
-    description: z.string(),
-    rationale: z.string().optional(),
-});
-
-const JudgeContentSchema = z.object({
-    theSummary: z.string().optional(),
-    translationSummary: z.string().optional(),
-    theRuling_ThePurr: z.object({
-        userA: z.string(),
-        userB: z.string(),
-    }).optional(),
-    validation_ThePurr: z.object({
-        userA: z.string(),
-        userB: z.string(),
-    }).optional(),
-    theRuling_TheHiss: z.array(z.string()).optional(),
-    callouts_TheHiss: z.array(z.string()).optional(),
-    theSentence: RepairAttemptSchema.optional(),
-    theSentence_RepairAttempt: RepairAttemptSchema.optional(),
-    closingStatement: z.string().optional(),
-    openingStatement: z.string().optional(),
-}).transform((data) => {
-    return {
-        theSummary: data.theSummary || data.translationSummary || '',
-        theRuling_ThePurr: data.theRuling_ThePurr || data.validation_ThePurr || { userA: '', userB: '' },
-        theRuling_TheHiss: data.theRuling_TheHiss || data.callouts_TheHiss || [],
-        theSentence: data.theSentence || data.theSentence_RepairAttempt || { title: '', description: '' },
-        closingStatement: data.closingStatement || data.openingStatement || '',
-    };
-});
-
-const VerdictOutputSchema = z.object({
-    verdictId: z.string(),
-    timestamp: z.string(),
-    status: z.enum(['success', 'error', 'unsafe_counseling_recommended']),
-    judgeContent: JudgeContentSchema.optional(),
-    error: z.string().optional(),
-});
-
-const ModerationResultSchema = z.object({
-    flagged: z.boolean(),
-    categories: z.record(z.boolean()).optional(),
-    category_scores: z.record(z.number()).optional(),
-});
-
 module.exports = {
     // Input schemas
     ParticipantSchema,
@@ -238,12 +168,6 @@ module.exports = {
     ResolutionSchema,
     IndividualPrimingSchema,
     JointMenuSchema,
-
-    // Legacy schemas for backward compatibility
-    AnalysisSchema,
-    VerdictOutputSchema,
-    JudgeContentSchema,
-    ModerationResultSchema,
 
     // Type enums
     HorsemanType,

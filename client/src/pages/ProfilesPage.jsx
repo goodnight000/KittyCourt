@@ -15,14 +15,14 @@ import { upsertProfile } from '../services/supabase';
 import Paywall from '../components/Paywall';
 
 const AVATAR_OPTIONS = [
-    { id: 'cat_orange', emoji: '🐱', label: 'Orange Cat' },
-    { id: 'cat_black', emoji: '🐈‍⬛', label: 'Black Cat' },
-    { id: 'cat_heart', emoji: '😻', label: 'Love Cat' },
-    { id: 'bunny', emoji: '🐰', label: 'Bunny' },
-    { id: 'bear', emoji: '🐻', label: 'Bear' },
-    { id: 'fox', emoji: '🦊', label: 'Fox' },
-    { id: 'panda', emoji: '🐼', label: 'Panda' },
-    { id: 'penguin', emoji: '🐧', label: 'Penguin' },
+    { id: 'cat', image: '/assets/profile-pic/cat.png', label: 'Cat' },
+    { id: 'bunny', image: '/assets/profile-pic/bunny.png', label: 'Bunny' },
+    { id: 'bear', image: '/assets/profile-pic/bear.png', label: 'Bear' },
+    { id: 'fox', image: '/assets/profile-pic/fox.png', label: 'Fox' },
+    { id: 'panda', image: '/assets/profile-pic/panda.png', label: 'Panda' },
+    { id: 'penguin', image: '/assets/profile-pic/penguin.png', label: 'Penguin' },
+    { id: 'dog', image: '/assets/profile-pic/dog.png', label: 'Dog' },
+    { id: 'capybara', image: '/assets/profile-pic/capybara.png', label: 'Capybara' },
 ];
 
 const LOVE_LANGUAGES = [
@@ -55,7 +55,7 @@ const ProfilesPage = () => {
             nickname: profile?.display_name || storedData.nickname || '',
             birthday: profile?.birthday || storedData.birthday || '',
             loveLanguage: profile?.love_language || storedData.loveLanguage || '',
-            avatar: storedData.avatar || 'cat_orange',
+            avatar: storedData.avatar || 'cat',
             anniversaryDate: profile?.anniversary_date || storedData.anniversaryDate || '',
             profilePicture: storedData.profilePicture || null,
         };
@@ -75,7 +75,7 @@ const ProfilesPage = () => {
                 nickname: profile?.display_name || storedData.nickname || '',
                 birthday: profile?.birthday || storedData.birthday || '',
                 loveLanguage: profile?.love_language || storedData.loveLanguage || '',
-                avatar: storedData.avatar || 'cat_orange',
+                avatar: storedData.avatar || 'cat',
                 anniversaryDate: profile?.anniversary_date || storedData.anniversaryDate || '',
                 profilePicture: storedData.profilePicture || null,
             });
@@ -151,8 +151,8 @@ const ProfilesPage = () => {
     const questionsAnswered = profile?.questions_answered || 0;
     const partnerQuestionsAnswered = connectedPartner?.questions_answered || 0;
 
-    // Get selected avatar emoji
-    const selectedAvatar = AVATAR_OPTIONS.find(a => a.id === profileData.avatar)?.emoji || '🐱';
+    // Get selected avatar image
+    const selectedAvatar = AVATAR_OPTIONS.find(a => a.id === profileData.avatar);
     const selectedLoveLanguage = LOVE_LANGUAGES.find(l => l.id === profileData.loveLanguage);
 
     return (
@@ -215,7 +215,7 @@ const ProfilesPage = () => {
                                 <motion.div
                                     whileTap={{ scale: 0.95 }}
                                     onClick={() => setShowEditModal(true)}
-                                    className="w-20 h-20 bg-gradient-to-br from-violet-100 to-pink-100 rounded-2xl flex items-center justify-center text-4xl shadow-soft cursor-pointer relative overflow-hidden"
+                                    className="w-20 h-24 bg-gradient-to-br from-violet-100 to-pink-100 rounded-2xl flex items-center justify-center shadow-soft cursor-pointer relative overflow-hidden"
                                 >
                                     {profileData.profilePicture ? (
                                         <img
@@ -223,8 +223,10 @@ const ProfilesPage = () => {
                                             alt="Profile"
                                             className="w-full h-full object-cover"
                                         />
+                                    ) : selectedAvatar?.image ? (
+                                        <img src={selectedAvatar.image} alt={selectedAvatar.label} className="w-full h-full object-contain p-1" />
                                     ) : (
-                                        selectedAvatar
+                                        <img src="/assets/profile-pic/cat.png" alt="Cat" className="w-full h-full object-contain p-1" />
                                     )}
                                     <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-sm">
                                         <Edit3 className="w-3 h-3 text-violet-500" />
@@ -533,8 +535,12 @@ const ProfilesPage = () => {
                         {/* Relationship Card */}
                         <motion.div className="glass-card p-5 bg-gradient-to-br from-court-cream/80 to-court-tan/60 text-center">
                             <div className="flex items-center justify-center gap-4 mb-4">
-                                <div className="w-16 h-16 bg-gradient-to-br from-court-cream to-court-tan rounded-2xl flex items-center justify-center text-3xl shadow-soft">
-                                    {selectedAvatar}
+                                <div className="w-16 h-16 bg-gradient-to-br from-court-cream to-court-tan rounded-2xl flex items-center justify-center shadow-soft overflow-hidden">
+                                    {selectedAvatar?.image ? (
+                                        <img src={selectedAvatar.image} alt={selectedAvatar.label} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <img src="/assets/profile-pic/cat.png" alt="Cat" className="w-full h-full object-cover" />
+                                    )}
                                 </div>
                                 <motion.div
                                     animate={{ scale: [1, 1.2, 1] }}
@@ -543,12 +549,17 @@ const ProfilesPage = () => {
                                 >
                                     💕
                                 </motion.div>
-                                <div className="w-16 h-16 bg-gradient-to-br from-violet-100 to-violet-200 rounded-2xl flex items-center justify-center text-3xl shadow-soft">
+                                <div className="w-16 h-16 bg-gradient-to-br from-violet-100 to-violet-200 rounded-2xl flex items-center justify-center shadow-soft overflow-hidden">
                                     {(() => {
-                                        if (!connectedPartner?.id) return '😻';
+                                        if (!connectedPartner?.id) return <img src="/assets/profile-pic/cat.png" alt="Cat" className="w-full h-full object-cover" />;
                                         const partnerProfile = localStorage.getItem(`catjudge_profile_${connectedPartner.id}`);
-                                        const partnerAvatar = partnerProfile ? JSON.parse(partnerProfile).avatar : 'cat_heart';
-                                        return AVATAR_OPTIONS.find(a => a.id === partnerAvatar)?.emoji || '😻';
+                                        const partnerAvatarId = partnerProfile ? JSON.parse(partnerProfile).avatar : 'cat';
+                                        const partnerAvatar = AVATAR_OPTIONS.find(a => a.id === partnerAvatarId);
+                                        return partnerAvatar?.image ? (
+                                            <img src={partnerAvatar.image} alt={partnerAvatar.label} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <img src="/assets/profile-pic/cat.png" alt="Cat" className="w-full h-full object-cover" />
+                                        );
                                     })()}
                                 </div>
                             </div>
@@ -806,7 +817,7 @@ const EditProfileModal = ({ profileData, onSave, onClose }) => {
                 <div>
                     <label className="text-xs font-bold text-neutral-500 mb-2 block">Profile Picture 📸</label>
                     <div className="flex items-center gap-4">
-                        <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-violet-100 to-pink-100 flex items-center justify-center overflow-hidden shadow-soft">
+                        <div className="w-20 h-24 rounded-2xl bg-gradient-to-br from-violet-100 to-pink-100 flex items-center justify-center overflow-hidden shadow-soft">
                             {formData.profilePicture ? (
                                 <img
                                     src={formData.profilePicture}
@@ -814,7 +825,11 @@ const EditProfileModal = ({ profileData, onSave, onClose }) => {
                                     className="w-full h-full object-cover"
                                 />
                             ) : (
-                                <span className="text-4xl">{AVATAR_OPTIONS.find(a => a.id === formData.avatar)?.emoji || '🐱'}</span>
+                                <img
+                                    src={AVATAR_OPTIONS.find(a => a.id === formData.avatar)?.image || '/assets/profile-pic/cat.png'}
+                                    alt={AVATAR_OPTIONS.find(a => a.id === formData.avatar)?.label || 'Avatar'}
+                                    className="w-full h-full object-contain p-1"
+                                />
                             )}
                         </div>
                         <div className="flex-1 space-y-2">
@@ -861,12 +876,12 @@ const EditProfileModal = ({ profileData, onSave, onClose }) => {
                             <button
                                 key={avatar.id}
                                 onClick={() => setFormData({ ...formData, avatar: avatar.id, profilePicture: null })}
-                                className={`p-3 rounded-xl text-2xl transition-all ${formData.avatar === avatar.id && !formData.profilePicture
+                                className={`p-1 rounded-xl transition-all ${formData.avatar === avatar.id && !formData.profilePicture
                                     ? 'bg-violet-100 ring-2 ring-violet-400'
                                     : 'bg-neutral-50 hover:bg-neutral-100'
                                     }`}
                             >
-                                {avatar.emoji}
+                                <img src={avatar.image} alt={avatar.label} className="w-full h-16 object-contain" />
                             </button>
                         ))}
                     </div>

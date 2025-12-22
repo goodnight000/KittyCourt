@@ -251,9 +251,12 @@ const CalendarPage = () => {
 
     const getEventsForDate = (date) => {
         return events.filter(event => {
+            // Guard against events with no date
+            const dateStr = event?.date;
+            if (!dateStr) return false;
+
             // Parse date string as local date by appending T00:00:00
             // This prevents timezone shift when parsing "YYYY-MM-DD" strings
-            const dateStr = event.date;
             const eventDate = dateStr.includes('T')
                 ? new Date(dateStr)
                 : new Date(dateStr + 'T00:00:00');
@@ -321,7 +324,8 @@ const CalendarPage = () => {
         // Check cache first
         const cached = useCacheStore.getState().getCached(cacheKey);
         if (cached !== null) {
-            setPlannedEventKeys(cached);
+            // Cache stores arrays (Sets don't serialize to JSON), convert back to Set
+            setPlannedEventKeys(new Set(Array.isArray(cached) ? cached : []));
             return;
         }
 
@@ -331,10 +335,10 @@ const CalendarPage = () => {
                 const response = await api.post('/calendar/event-plans/exists', { eventKeys });
                 const exists = response.data?.exists || {};
                 if (cancelled) return;
-                const plannedSet = new Set(Object.keys(exists).filter((k) => exists[k]));
-                // Cache the result
-                useCacheStore.getState().setCache(cacheKey, plannedSet, CACHE_TTL.EVENT_PLANS);
-                setPlannedEventKeys(plannedSet);
+                const plannedArray = Object.keys(exists).filter((k) => exists[k]);
+                // Cache as array (Sets don't serialize properly to JSON)
+                useCacheStore.getState().setCache(cacheKey, plannedArray, CACHE_TTL.EVENT_PLANS);
+                setPlannedEventKeys(new Set(plannedArray));
             } catch {
                 if (cancelled) return;
                 setPlannedEventKeys(new Set());
@@ -350,7 +354,7 @@ const CalendarPage = () => {
             <div className="flex items-center gap-3">
                 <div className="w-12 h-12 bg-gradient-to-br from-violet-100 to-pink-100 rounded-2xl flex items-center justify-center shadow-soft">
                     <img
-                        src="/assets/calendar.png"
+                        src="/assets/icons/calendar.png"
                     />
                 </div>
                 <div className="flex-1">
@@ -364,13 +368,14 @@ const CalendarPage = () => {
                         setShowAddModal(true);
                     }}
                     disabled={isLoading}
-                    className="w-10 h-10 rounded-xl flex items-center justify-center shadow-md"
-                    style={{ background: 'linear-gradient(135deg, #B85C6B 0%, #8B4049 100%)' }}
+                    className="w-10 h-10"
                 >
                     {isLoading ? (
                         <Loader2 className="w-5 h-5 text-white animate-spin" />
                     ) : (
-                        <Plus className="w-5 h-5 text-white" />
+                        <img
+                            src="/assets/icons/plus.png"
+                        />
                     )}
                 </Motion.button>
             </div>
@@ -584,8 +589,10 @@ const CalendarPage = () => {
 const EventCard = ({ event, delay, onClick, onPlanClick, showPlanButton, hasSavedPlan }) => {
     const eventType = EVENT_TYPES.find(t => t.id === event.type) || EVENT_TYPES[4];
     // Parse date string as local date to prevent timezone shift
-    const dateStr = event.date;
-    const eventDate = dateStr?.includes('T') ? new Date(dateStr) : new Date(dateStr + 'T00:00:00');
+    const dateStr = event?.date || '';
+    // Guard against missing date
+    if (!dateStr) return null;
+    const eventDate = dateStr.includes('T') ? new Date(dateStr) : new Date(dateStr + 'T00:00:00');
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const eventStart = new Date(eventDate);

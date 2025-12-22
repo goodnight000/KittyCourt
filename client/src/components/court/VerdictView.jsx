@@ -12,12 +12,18 @@ import {
 const VerdictView = ({
     activeCase, verdict, analysis, allVerdicts, selectedVerdictVersion,
     setSelectedVerdictVersion, userAName, userBName, setShowAddendumModal,
-    resetCase, navigate, currentUser, onAcceptVerdict, isInitiator
+    resetCase, navigate, currentUser, onAcceptVerdict, isInitiator,
+    addendumRemaining = null,
+    addendumLimit = null
 }) => {
     const isUserA = isInitiator;
     const hasAccepted = isUserA ? activeCase.userAAccepted : activeCase.userBAccepted;
     const partnerHasAccepted = isUserA ? activeCase.userBAccepted : activeCase.userAAccepted;
     const partnerName = isUserA ? userBName : userAName;
+    const addendumDisabled = addendumRemaining !== null && addendumRemaining <= 0;
+    const addendumStatus = addendumLimit !== null && addendumRemaining !== null
+        ? `${addendumRemaining} of ${addendumLimit} addendums left`
+        : null;
 
     return (
         <div className="space-y-4 pb-4">
@@ -247,7 +253,10 @@ const VerdictView = ({
                 <motion.button
                     whileTap={{ scale: 0.98 }}
                     onClick={() => setShowAddendumModal(true)}
-                    className="glass-card w-full p-4 flex items-center justify-between hover:bg-white/80 transition-colors"
+                    disabled={addendumDisabled}
+                    className={`glass-card w-full p-4 flex items-center justify-between transition-colors ${
+                        addendumDisabled ? 'opacity-60 cursor-not-allowed' : 'hover:bg-white/80'
+                    }`}
                 >
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-court-gold/20 rounded-xl flex items-center justify-center">
@@ -255,7 +264,14 @@ const VerdictView = ({
                         </div>
                         <div className="text-left">
                             <p className="font-bold text-court-brown text-sm">File an Addendum</p>
-                            <p className="text-xs text-court-brownLight">Add more context for reconsideration</p>
+                            <p className="text-xs text-court-brownLight">
+                                {addendumDisabled ? 'Addendum limit reached' : 'Add more context for reconsideration'}
+                            </p>
+                            {addendumStatus && (
+                                <p className="text-[10px] text-court-brownLight mt-1">
+                                    {addendumStatus}
+                                </p>
+                            )}
                         </div>
                     </div>
                     <ChevronRight className="w-5 h-5 text-court-brownLight" />

@@ -71,6 +71,7 @@ async function retrieveHistoricalContext(caseData) {
             userAFeelings: submissions.userA.theStoryIamTellingMyself,
             userBFacts: submissions.userB.cameraFacts,
             userBFeelings: submissions.userB.theStoryIamTellingMyself,
+            addendumHistory: caseData.addendumHistory || []
         });
 
         // Step 3: Retrieve relevant episodic memories via vector search
@@ -142,6 +143,9 @@ function formatContextForPrompt(context, participants) {
 
         if (profile.loveLanguages && profile.loveLanguages.length > 0) {
             lines.push(`- **Love Language:** ${profile.loveLanguages.join(', ')}`);
+        }
+        if (profile.attachmentStyle) {
+            lines.push(`- **Attachment Style:** ${profile.attachmentStyle}`);
         }
         if (profile.communicationStyle) {
             lines.push(`- **Communication Style:** ${profile.communicationStyle}`);

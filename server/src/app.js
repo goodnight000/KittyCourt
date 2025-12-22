@@ -30,7 +30,6 @@ const { corsMiddleware, securityHeaders } = require('./lib/security');
 const { canUseFeature } = require('./lib/usageLimits');
 
 // Import routes
-const judgeRoutes = require('./routes/judge');
 const memoryRoutes = require('./routes/memory');
 const dailyQuestionsRoutes = require('./routes/dailyQuestions');
 const usageRoutes = require('./routes/usage');
@@ -39,6 +38,24 @@ const webhookRoutes = require('./routes/webhooks');
 // NEW: Clean court architecture
 const courtRoutes = require('./routes/court');
 const { initializeCourtServices } = require('./lib/courtInit');
+
+// Rate limiting for expensive operations
+const { createRateLimiter } = require('./lib/rateLimit');
+
+// Rate limiters for different operation types
+// Court sessions: 10 serves per 5 minutes per user (prevents session spam)
+const courtServeRateLimiter = createRateLimiter({
+    windowMs: 5 * 60 * 1000, // 5 minutes
+    max: 10,
+    keyGenerator: (req) => req.headers.authorization || req.ip || 'unknown',
+});
+
+// Cases: 20 case operations per 10 minutes per user (AI generation is expensive)
+const casesRateLimiter = createRateLimiter({
+    windowMs: 10 * 60 * 1000, // 10 minutes
+    max: 20,
+    keyGenerator: (req) => req.headers.authorization || req.ip || 'unknown',
+});
 
 const app = express();
 const server = http.createServer(app);
@@ -63,16 +80,15 @@ const safeErrorMessage = (error) => (isProd ? 'Internal server error' : (error?.
 
 // --- Routes ---
 
-// --- Judge Engine Routes ---
-app.use('/api/judge', judgeRoutes);
-
 // --- Memory System Routes ---
 app.use('/api/memory', memoryRoutes);
 
 // --- Daily Questions Routes ---
 app.use('/api/daily-questions', dailyQuestionsRoutes);
 
-// --- Court Session Routes (NEW Clean Architecture) ---
+// --- Court Session Routes (NEW Clean Architecture)
+// Apply rate limiting to court serve operations
+app.use('/api/court/serve', courtServeRateLimiter);
 app.use('/api/court', courtRoutes);
 
 // --- Usage Tracking Routes (Subscription limits) ---
@@ -83,8 +99,8 @@ app.use('/api/webhooks', webhookRoutes);
 
 // --- Cases with Verdicts ---
 
-// Submit a Case (or update it)
-app.post('/api/cases', async (req, res) => {
+// Submit a Case (or update it) - rate limited to prevent AI abuse
+app.post('/api/cases', casesRateLimiter, async (req, res) => {
     try {
         const viewerId = await requireAuthUserId(req);
         const {
@@ -1013,7 +1029,7 @@ app.get('/', (req, res) => {
         status: 'running',
         endpoints: {
             health: '/api/health',
-            judge: '/api/judge/health'
+            court: '/api/court'
         }
     });
 });

@@ -15,13 +15,34 @@ const requireSupabase = () => {
 };
 
 /**
- * Get or create usage record for current period
+ * Get couple usage record for current period
+ * Uses the get_couple_usage RPC to sum usage across both partners
  */
-async function getOrCreateUsageRecord(userId) {
+async function getCoupleUsageRecord(userId) {
     const supabase = requireSupabase();
     const periodStart = getCurrentPeriodStartUTC();
 
-    // Try to get existing record
+    // Try using the couple-aware RPC function first
+    try {
+        const { data, error } = await supabase.rpc('get_couple_usage', {
+            p_user_id: userId,
+            p_period_start: periodStart,
+        });
+
+        if (!error && data && data.length > 0) {
+            return {
+                lightning_count: data[0].lightning_count || 0,
+                mittens_count: data[0].mittens_count || 0,
+                whiskers_count: data[0].whiskers_count || 0,
+                plan_count: data[0].plan_count || 0,
+                period_start: periodStart,
+            };
+        }
+    } catch (_e) {
+        // Fall through to legacy per-user query
+    }
+
+    // Fallback: legacy per-user query (for backwards compatibility)
     let { data: record, error: fetchError } = await supabase
         .from('usage_tracking')
         .select('*')
@@ -29,23 +50,15 @@ async function getOrCreateUsageRecord(userId) {
         .eq('period_start', periodStart)
         .single();
 
-    // If no record exists, create one
+    // If no record exists, return zeros
     if (fetchError && fetchError.code === 'PGRST116') {
-        const { data: newRecord, error: insertError } = await supabase
-            .from('usage_tracking')
-            .insert({
-                user_id: userId,
-                period_start: periodStart,
-                lightning_count: 0,
-                mittens_count: 0,
-                whiskers_count: 0,
-                plan_count: 0,
-            })
-            .select()
-            .single();
-
-        if (insertError) throw insertError;
-        record = newRecord;
+        return {
+            lightning_count: 0,
+            mittens_count: 0,
+            whiskers_count: 0,
+            plan_count: 0,
+            period_start: periodStart,
+        };
     } else if (fetchError && fetchError.code === '42P01') {
         // migration not applied yet
         return {
@@ -140,7 +153,7 @@ router.get('/', async (req, res) => {
             return res.status(401).json({ error: 'Unauthorized' });
         }
 
-        const record = await getOrCreateUsageRecord(userId);
+        const record = await getCoupleUsageRecord(userId);
 
         res.json({
             lightningUsed: record.lightning_count || 0,
@@ -204,7 +217,7 @@ router.get('/can-use', async (req, res) => {
         }
 
         const [record, tier] = await Promise.all([
-            getOrCreateUsageRecord(userId),
+            getCoupleUsageRecord(userId),
             getUserSubscriptionTier(userId),
         ]);
 

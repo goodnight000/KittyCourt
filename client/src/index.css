@@ -35,18 +35,34 @@ html, body {
   overscroll-behavior: none;
 }
 
-/* Mobile-optimized Scrollbar */
+/* Hide scrollbar for a premium mobile app feel */
+/* For Webkit browsers (Chrome, Safari, iOS) */
 ::-webkit-scrollbar {
-  width: 4px;
+  display: none;
+  width: 0;
+  height: 0;
 }
 
-::-webkit-scrollbar-track {
-  background: transparent;
+/* For Firefox */
+html {
+  scrollbar-width: none;
 }
 
-::-webkit-scrollbar-thumb {
-  background: #D4C4A8;
-  border-radius: 9999px;
+/* For IE/Edge */
+body {
+  -ms-overflow-style: none;
+}
+
+/* Ensure all scrollable containers also hide scrollbars */
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+*::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 /* Glass Card Component */

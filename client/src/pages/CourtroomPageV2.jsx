@@ -96,6 +96,9 @@ export default function CourtroomPageV2() {
 
     const jointMenu = session?.jointMenu || null;
     const resolutions = session?.resolutions || [];
+    const addendumLimit = session?.addendumLimit ?? 2;
+    const addendumCount = session?.addendumCount ?? 0;
+    const addendumRemaining = session?.addendumRemaining ?? Math.max(addendumLimit - addendumCount, 0);
 
     const myPick = useMemo(() => {
         if (!session?.resolutionPicks) return null;
@@ -197,6 +200,9 @@ export default function CourtroomPageV2() {
     const handleSubmitAddendum = async () => {
         // Close immediately for snappy UX (submission continues in background).
         setShowAddendumModal(false);
+        if (addendumRemaining <= 0) {
+            return;
+        }
         await submitAddendum();
     };
 
@@ -240,7 +246,6 @@ export default function CourtroomPageV2() {
             case VIEW_PHASE.WAITING_EVIDENCE:
                 return <WaitingForEvidence session={session} partnerName={partnerName} myName={myName} />;
 
-            case VIEW_PHASE.DELIBERATING:
             case VIEW_PHASE.ANALYZING:
                 return <DeliberatingScreen isLoading={isGeneratingVerdict || true} />;
 
@@ -358,6 +363,8 @@ export default function CourtroomPageV2() {
                         currentUser={null}
                         onAcceptVerdict={acceptVerdict}
                         isInitiator={isCreator}
+                        addendumRemaining={addendumRemaining}
+                        addendumLimit={addendumLimit}
                     />
                 );
             }
@@ -402,6 +409,8 @@ export default function CourtroomPageV2() {
                     onChange={setLocalAddendum}
                     onSubmit={handleSubmitAddendum}
                     isSubmitting={isSubmitting}
+                    addendumRemaining={addendumRemaining}
+                    addendumLimit={addendumLimit}
                 />
 
                 {/* Rating popup mounts globally so it can appear after CLOSED */}
@@ -546,7 +555,8 @@ function EvidenceForm({
     );
 }
 
-function AddendumModal({ open, onClose, value, onChange, onSubmit, isSubmitting }) {
+function AddendumModal({ open, onClose, value, onChange, onSubmit, isSubmitting, addendumRemaining, addendumLimit }) {
+    const limitReached = addendumRemaining !== null && addendumRemaining <= 0;
     return (
         <AnimatePresence>
             {open && (
@@ -568,6 +578,11 @@ function AddendumModal({ open, onClose, value, onChange, onSubmit, isSubmitting 
                         <p className="text-sm text-court-brownLight mb-4">
                             Add any missing context. The court will re-deliberate and replace the verdict.
                         </p>
+                        {addendumLimit !== null && (
+                            <div className="mb-4 rounded-xl border border-court-tan/40 bg-court-cream/60 px-3 py-2 text-xs text-court-brown">
+                                Shared addendums: {addendumRemaining} of {addendumLimit} remaining.
+                            </div>
+                        )}
                         <textarea
                             value={value}
                             onChange={(e) => onChange(e.target.value)}
@@ -576,6 +591,7 @@ function AddendumModal({ open, onClose, value, onChange, onSubmit, isSubmitting 
                                 focus:border-court-gold focus:ring-2 focus:ring-court-gold/20 
                                 bg-white/50 text-court-brown placeholder-court-brownLight/50
                                 transition-all resize-none"
+                            disabled={limitReached}
                         />
                         <div className="flex gap-3 mt-4">
                             <button
@@ -586,11 +602,11 @@ function AddendumModal({ open, onClose, value, onChange, onSubmit, isSubmitting 
                             </button>
                             <button
                                 onClick={onSubmit}
-                                disabled={isSubmitting || !value?.trim()}
+                                disabled={limitReached || isSubmitting || !value?.trim()}
                                 className="flex-1 py-2 px-4 rounded-lg text-white font-extrabold disabled:opacity-50 shadow-lg"
                                 style={{ background: 'linear-gradient(135deg, #1c1c84 0%, #000035 100%)' }}
                             >
-                                Submit
+                                {limitReached ? 'Limit reached' : 'Submit'}
                             </button>
                         </div>
                     </Motion.div>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Gavel, Zap, Scale, Sparkles, Lock, Crown } from 'lucide-react';
 import useSubscriptionStore from '../../store/useSubscriptionStore';
@@ -52,7 +52,14 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
     const [showPaywall, setShowPaywall] = useState(false);
     const [paywallReason, setPaywallReason] = useState(null);
 
-    const { canUseJudge, getUsageDisplay, isGold, isLoading } = useSubscriptionStore();
+    const { canUseJudge, getUsageDisplay, isGold, isLoading, fetchUsage } = useSubscriptionStore();
+
+    // Refresh usage data when modal opens to ensure accurate counts
+    useEffect(() => {
+        if (isOpen) {
+            fetchUsage();
+        }
+    }, [isOpen, fetchUsage]);
 
     const handleJudgeClick = (judge) => {
         const status = canUseJudge(judge.id);

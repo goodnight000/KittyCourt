@@ -248,7 +248,7 @@ const CaseDetailPage = () => {
                 </div>
                 {!analysisData && !primingContent && !jointMenu && (
                     <p className="text-xs text-neutral-500">
-                        This case was judged with the classic pipeline, so priming and joint menu details are not available.
+                        Priming and joint menu details were not stored for this case.
                     </p>
                 )}
             </motion.div>

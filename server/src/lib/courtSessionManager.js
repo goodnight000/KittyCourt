@@ -4,7 +4,7 @@
  * Single source of truth for court session state.
  * In-memory management with database checkpoints only.
  * 
- * Phases: IDLE → PENDING → EVIDENCE → DELIBERATING → VERDICT → CLOSED
+ * Phases: IDLE → PENDING → EVIDENCE → ANALYZING → PRIMING → JOINT_READY → RESOLUTION → VERDICT → CLOSED
  */
 
 const { v4: uuidv4 } = require('uuid');
@@ -17,8 +17,6 @@ const PHASE = {
     IDLE: 'IDLE',
     PENDING: 'PENDING',
     EVIDENCE: 'EVIDENCE',
-    // Legacy phase (kept for backward compat)
-    DELIBERATING: 'DELIBERATING',
     // V2.0 new phases
     ANALYZING: 'ANALYZING',       // LLM Call 1 in progress
     PRIMING: 'PRIMING',           // Users viewing individual priming pages
@@ -36,8 +34,6 @@ const VIEW_PHASE = {
     PENDING_PARTNER: 'PENDING_PARTNER',
     EVIDENCE: 'EVIDENCE',
     WAITING_EVIDENCE: 'WAITING_EVIDENCE',
-    // Legacy
-    DELIBERATING: 'DELIBERATING',
     // V2.0 new view phases
     ANALYZING: 'ANALYZING',                   // LLM Call 1 running
     PRIMING: 'PRIMING',                       // Viewing individual priming
@@ -66,6 +62,7 @@ const TIMEOUT = {
     SETTLE_REQUEST: 5 * 60 * 1000   // 5 minutes for settlement response
 };
 
+const ADDENDUM_LIMIT = 2;
 const HYBRID_RESOLUTION_ID = 'resolution_hybrid';
 
 class CourtSessionManager {
@@ -131,7 +128,6 @@ class CourtSessionManager {
                 }
                 return VIEW_PHASE.EVIDENCE;
 
-            case PHASE.DELIBERATING:
             case PHASE.ANALYZING:
                 return VIEW_PHASE.ANALYZING;
 
@@ -209,6 +205,9 @@ class CourtSessionManager {
             settlementRequested: session.settlementRequested,
             createdAt: session.createdAt,
             resolvedAt: session.resolvedAt || null,
+            addendumCount: session.addendumCount || 0,
+            addendumLimit: ADDENDUM_LIMIT,
+            addendumRemaining: Math.max(ADDENDUM_LIMIT - (session.addendumCount || 0), 0),
             // V2.0 fields
             analysis: session.analysis || null,
             resolutions: session.resolutions || null,
@@ -273,7 +272,9 @@ class CourtSessionManager {
             creator: this._emptyUserState(),
             partner: this._emptyUserState(),
             verdict: null,
-            addendum: null,
+            addendumHistory: [],
+            addendumCount: 0,
+            verdictHistory: [],
             settlementRequested: null,
             settlementTimeoutId: null,
             timeoutId: null,
@@ -407,11 +408,9 @@ class CourtSessionManager {
                 session.timeoutId = null;
             }
 
-            // Transition to analysis phase (v2) or legacy deliberation
-            const canUseV2 = typeof this.judgeEngine?.deliberatePhase1 === 'function'
-                && typeof this.judgeEngine?.deliberatePhase2 === 'function';
-            session.phase = canUseV2 ? PHASE.ANALYZING : PHASE.DELIBERATING;
-            console.log(`[Court] Session ${session.id} → ${session.phase}`);
+            // Transition to analysis phase (v2)
+            session.phase = PHASE.ANALYZING;
+            console.log(`[Court] Session ${session.id} → ANALYZING`);
 
             // Notify both immediately
             this._notifyBoth(session);
@@ -461,8 +460,8 @@ class CourtSessionManager {
     requestSettlement(userId) {
         const session = this.getSessionForUser(userId);
         if (!session) throw new Error('No active session');
-        if (![PHASE.EVIDENCE, PHASE.DELIBERATING].includes(session.phase)) {
-            throw new Error('Settlement only allowed during EVIDENCE or DELIBERATING');
+        if (![PHASE.EVIDENCE, PHASE.ANALYZING].includes(session.phase)) {
+            throw new Error('Settlement only allowed during EVIDENCE or ANALYZING');
         }
 
         session.settlementRequested = userId;
@@ -554,6 +553,10 @@ class CourtSessionManager {
         if (!session) throw new Error('No active session');
         if (session.phase !== PHASE.VERDICT) throw new Error('Addendum only allowed in VERDICT phase');
 
+        if ((session.addendumCount || 0) >= ADDENDUM_LIMIT) {
+            throw new Error('Addendum limit reached for this case.');
+        }
+
         // Cancel any existing verdict auto-close timer before re-deliberation
         if (session.timeoutId) {
             clearTimeout(session.timeoutId);
@@ -561,23 +564,46 @@ class CourtSessionManager {
         }
 
         const isCreator = session.creatorId === userId;
-
-        // Store addendum
-        session.addendum = {
+        const fromUser = isCreator ? 'userA' : 'userB';
+        const entry = {
             userId,
+            fromUser,
             text,
-            fromCreator: isCreator,
             submittedAt: Date.now()
         };
+        session.addendumHistory = [...(session.addendumHistory || []), entry];
+        session.addendumCount = (session.addendumCount || 0) + 1;
 
         // Reset acceptances
         session.creator.verdictAccepted = false;
         session.partner.verdictAccepted = false;
 
-        // Transition back to deliberating for re-generation
-        session.phase = PHASE.DELIBERATING;
-        console.log(`[Court] Addendum submitted, re-generating verdict`);
+        // Reset v2 pipeline state for re-run
+        session.analysis = null;
+        session.resolutions = null;
+        session.assessedIntensity = null;
+        session.primingContent = null;
+        session.jointMenu = null;
+        session.creator.primingReady = false;
+        session.partner.primingReady = false;
+        session.creator.jointReady = false;
+        session.partner.jointReady = false;
+        session.userAResolutionPick = null;
+        session.userBResolutionPick = null;
+        session.hybridResolution = null;
+        session.finalResolution = null;
+        session.mismatchOriginal = null;
+        session.mismatchPicks = null;
+        session.mismatchLock = null;
+        session.mismatchLockBy = null;
+        session.hybridResolutionPending = false;
+        session.verdict = null;
+        session.resolvedAt = null;
+        session.phase = PHASE.ANALYZING;
 
+        console.log(`[Court] Addendum submitted, re-running v2 pipeline`);
+
+        await this._dbCheckpoint(session, 'addendum_submitted');
         this._notifyBoth(session);
 
         // Re-generate verdict with addendum
@@ -826,12 +852,17 @@ class CourtSessionManager {
                 closingStatement: session.jointMenu?.closingWisdom || 'May this resolution bring you closer together.'
             },
             _meta: {
+                analysis: session.analysis || null,
                 assessedIntensity: session.assessedIntensity,
                 resolutions: session.resolutions,
+                primingContent: session.primingContent || null,
+                jointMenu: session.jointMenu || null,
                 finalResolution: session.finalResolution,
                 isHybrid
             }
         };
+
+        this._recordVerdictVersion(session);
 
         session.resolvedAt = Date.now();
         session.phase = PHASE.VERDICT;
@@ -845,6 +876,24 @@ class CourtSessionManager {
     }
 
     // === Private Helpers ===
+
+    _recordVerdictVersion(session) {
+        if (!session?.verdict) return;
+        const history = Array.isArray(session.verdictHistory) ? session.verdictHistory : [];
+        const version = history.length + 1;
+        const addendumIndex = version - 2;
+        const addendumEntry = addendumIndex >= 0 ? session.addendumHistory?.[addendumIndex] : null;
+
+        history.push({
+            version,
+            content: session.verdict,
+            addendumBy: addendumEntry?.fromUser || null,
+            addendumText: addendumEntry?.text || null,
+            createdAt: new Date().toISOString()
+        });
+
+        session.verdictHistory = history;
+    }
 
     _buildCaseData(session) {
         const caseData = {
@@ -861,13 +910,9 @@ class CourtSessionManager {
                     cameraFacts: session.partner.evidence,
                     theStoryIamTellingMyself: session.partner.feelings
                 }
-            }
+            },
+            addendumHistory: session.addendumHistory || []
         };
-
-        if (session.addendum) {
-            const key = session.addendum.fromCreator ? 'userA' : 'userB';
-            caseData.submissions[key].addendum = session.addendum.text;
-        }
 
         return caseData;
     }
@@ -1053,122 +1098,80 @@ class CourtSessionManager {
                 console.warn('[Court] Failed to verify usage limits:', e?.message || e);
             }
 
-            // Use v2.0 pipeline if available
             const canUseV2 = typeof this.judgeEngine?.deliberatePhase1 === 'function'
                 && typeof this.judgeEngine?.deliberatePhase2 === 'function';
 
-            if (canUseV2) {
-                // V2.0 Pipeline: Phase 1 - Analyst + Repair Selection
-                session.phase = PHASE.ANALYZING;
-                this._notifyBoth(session);
-
-                // Safety timeout for long-running analysis
-                session.timeoutId = setTimeout(() => {
-                    this._handleAnalyzingTimeout(session.coupleId);
-                }, TIMEOUT.ANALYZING);
-
-                console.log(`[Court] V2.0 Phase 1: Analyst + Repair for session ${session.id}`);
-                const phase1Result = await this.judgeEngine.deliberatePhase1(caseData, {
-                    judgeType: session.judgeType || 'logical'
-                });
-
-                // Store analysis and resolutions
-                session.analysis = phase1Result.analysis;
-                session.resolutions = phase1Result.resolutions;
-                session.assessedIntensity = phase1Result.assessedIntensity;
-                session.historicalContext = phase1Result.historicalContext || null;
-
-                // V2.0 Pipeline: Phase 2 - Priming + Joint Menu
-                console.log(`[Court] V2.0 Phase 2: Priming + Joint Menu for session ${session.id}`);
-                const phase2Result = await this.judgeEngine.deliberatePhase2(phase1Result, {
-                    judgeType: session.judgeType || 'logical'
-                });
-
-                // Store priming and joint content
-                session.primingContent = phase2Result.primingContent;
-                session.jointMenu = phase2Result.jointMenu;
-
-                // Clear analysis timeout before moving on
-                if (session.timeoutId) {
-                    clearTimeout(session.timeoutId);
-                    session.timeoutId = null;
-                }
-
-                // Record usage
-                try {
-                    const judgeType = session.judgeType || 'logical';
-                    const usageType = judgeType === 'fast'
-                        ? 'lightning'
-                        : judgeType === 'best'
-                            ? 'whiskers'
-                            : 'mittens';
-                    await incrementUsage({ userId: session.creatorId, type: usageType });
-                } catch (e) {
-                    console.warn('[Court] Failed to increment usage:', e?.message || e);
-                }
-
-                // Transition to PRIMING phase
-                session.phase = PHASE.PRIMING;
-
-                // Set priming timeout
-                session.timeoutId = setTimeout(() => {
-                    this._handlePrimingTimeout(session.coupleId);
-                }, TIMEOUT.PRIMING);
-
-                await this._dbCheckpoint(session, 'priming_generated');
-                this._notifyBoth(session);
-
-                console.log(`[Court] V2.0 pipeline complete for session ${session.id} → PRIMING`);
-            } else if (process.env.ALLOW_LEGACY_PIPELINE === 'true' && this.judgeEngine?.deliberate) {
-                // Legacy pipeline fallback (explicitly enabled)
-                console.log(`[Court] Using legacy pipeline for session ${session.id}`);
-                const result = await this.judgeEngine.deliberate(caseData, {
-                    judgeType: session.judgeType || 'logical'
-                });
-
-                if (result?.status && result.status !== 'success') {
-                    console.error(`[Court] Legacy pipeline failed for session ${session.id}: ${result.error || 'unknown error'}`);
-                    session.verdict = { status: 'error', error: result.error || 'Legacy pipeline failed' };
-                    session.resolvedAt = Date.now();
-                    session.phase = PHASE.VERDICT;
-                    await this._dbCheckpoint(session, 'legacy_failed');
-                    this._notifyBoth(session);
-                    return;
-                }
-
-                session.verdict = result;
-                session.resolvedAt = Date.now();
-                session.phase = PHASE.VERDICT;
-
-                // Record usage
-                try {
-                    const judgeType = session.judgeType || 'logical';
-                    const usageType = judgeType === 'fast'
-                        ? 'lightning'
-                        : judgeType === 'best'
-                            ? 'whiskers'
-                            : 'mittens';
-                    await incrementUsage({ userId: session.creatorId, type: usageType });
-                } catch (e) {
-                    console.warn('[Court] Failed to increment usage:', e?.message || e);
-                }
-
-                session.timeoutId = setTimeout(() => {
-                    this._handleVerdictTimeout(session.coupleId);
-                }, TIMEOUT.VERDICT);
-
-                await this._dbCheckpoint(session, 'verdict');
-                this._notifyBoth(session);
-
-                console.log(`[Court] Legacy verdict generated for session ${session.id}`);
-            } else {
-                console.error('[Court] V2.0 pipeline unavailable and legacy fallback disabled');
+            if (!canUseV2) {
+                console.error('[Court] V2.0 pipeline unavailable');
                 session.verdict = { status: 'error', error: 'V2 pipeline unavailable. Please restart the server.' };
                 session.resolvedAt = Date.now();
                 session.phase = PHASE.VERDICT;
                 await this._dbCheckpoint(session, 'pipeline_unavailable');
                 this._notifyBoth(session);
+                return;
             }
+
+            // V2.0 Pipeline: Phase 1 - Analyst + Repair Selection
+            session.phase = PHASE.ANALYZING;
+            this._notifyBoth(session);
+
+            // Safety timeout for long-running analysis
+            session.timeoutId = setTimeout(() => {
+                this._handleAnalyzingTimeout(session.coupleId);
+            }, TIMEOUT.ANALYZING);
+
+            console.log(`[Court] V2.0 Phase 1: Analyst + Repair for session ${session.id}`);
+            const phase1Result = await this.judgeEngine.deliberatePhase1(caseData, {
+                judgeType: session.judgeType || 'logical'
+            });
+
+            // Store analysis and resolutions
+            session.analysis = phase1Result.analysis;
+            session.resolutions = phase1Result.resolutions;
+            session.assessedIntensity = phase1Result.assessedIntensity;
+            session.historicalContext = phase1Result.historicalContext || null;
+
+            // V2.0 Pipeline: Phase 2 - Priming + Joint Menu
+            console.log(`[Court] V2.0 Phase 2: Priming + Joint Menu for session ${session.id}`);
+            const phase2Result = await this.judgeEngine.deliberatePhase2(phase1Result, {
+                judgeType: session.judgeType || 'logical'
+            });
+
+            // Store priming and joint content
+            session.primingContent = phase2Result.primingContent;
+            session.jointMenu = phase2Result.jointMenu;
+
+            // Clear analysis timeout before moving on
+            if (session.timeoutId) {
+                clearTimeout(session.timeoutId);
+                session.timeoutId = null;
+            }
+
+            // Record usage
+            try {
+                const judgeType = session.judgeType || 'logical';
+                const usageType = judgeType === 'fast'
+                    ? 'lightning'
+                    : judgeType === 'best'
+                        ? 'whiskers'
+                        : 'mittens';
+                await incrementUsage({ userId: session.creatorId, type: usageType });
+            } catch (e) {
+                console.warn('[Court] Failed to increment usage:', e?.message || e);
+            }
+
+            // Transition to PRIMING phase
+            session.phase = PHASE.PRIMING;
+
+            // Set priming timeout
+            session.timeoutId = setTimeout(() => {
+                this._handlePrimingTimeout(session.coupleId);
+            }, TIMEOUT.PRIMING);
+
+            await this._dbCheckpoint(session, 'priming_generated');
+            this._notifyBoth(session);
+
+            console.log(`[Court] V2.0 pipeline complete for session ${session.id} → PRIMING`);
         } catch (error) {
             console.error('[Court] Verdict generation failed:', error);
             session.verdict = { status: 'error', error: error?.message || 'Verdict generation failed' };
@@ -1345,9 +1348,8 @@ class CourtSessionManager {
             if (status === 'PRIMING') return PHASE.PRIMING;
             if (status === 'JOINT_READY') return PHASE.JOINT_READY;
             if (status === 'RESOLUTION') return PHASE.RESOLUTION;
-            if (status === 'DELIBERATING') return PHASE.DELIBERATING;
             if (status === 'VERDICT') return PHASE.VERDICT;
-            if (status === 'EVIDENCE' || status === 'IN_SESSION') return PHASE.EVIDENCE;
+            if (status === 'EVIDENCE') return PHASE.EVIDENCE;
             // Fallback heuristics
             if (db.verdict) return PHASE.VERDICT;
             return PHASE.EVIDENCE;
@@ -1382,7 +1384,9 @@ class CourtSessionManager {
                 jointReady: db.user_b_joint_ready || false
             },
             verdict: db.verdict,
-            addendum: null,
+            addendumHistory: db.addendum_history || [],
+            addendumCount: db.addendum_count || (db.addendum_history ? db.addendum_history.length : 0),
+            verdictHistory: db.verdict_history || [],
             settlementRequested,
             timeoutId: null,
             settlementTimeoutId: null,

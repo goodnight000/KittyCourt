@@ -8,35 +8,30 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { createRequire } from 'node:module';
 
-// Mock the external services before importing modules
-vi.mock('./supabase', () => ({
-    isSupabaseConfigured: vi.fn(() => true),
-    searchSimilarMemories: vi.fn(),
-    insertMemory: vi.fn(),
-    reinforceMemory: vi.fn(),
-    retrieveRelevantMemories: vi.fn(),
-    getUserProfile: vi.fn(),
-}));
+const require = createRequire(import.meta.url);
+const supabase = require('./supabase');
+const embeddings = require('./embeddings');
+const { buildExtractionPrompt, processUserInsights, STENOGRAPHER_SYSTEM_PROMPT } = require('./stenographer');
+const { formatContextForPrompt, hasHistoricalContext } = require('./memoryRetrieval');
 
-vi.mock('./embeddings', () => ({
-    generateEmbedding: vi.fn(),
-    generateEmbeddings: vi.fn(),
-    generateCaseQueryEmbedding: vi.fn(),
-    isEmbeddingsConfigured: vi.fn(() => true),
-}));
+let searchSimilarMemories;
+let insertMemory;
+let reinforceMemory;
+let generateEmbeddings;
+let isSupabaseConfigured;
 
-// Import after mocking
-import { buildExtractionPrompt, processUserInsights, STENOGRAPHER_SYSTEM_PROMPT } from './stenographer';
-import { formatContextForPrompt, hasHistoricalContext } from './memoryRetrieval';
-import { searchSimilarMemories, insertMemory, reinforceMemory } from './supabase';
-import { generateEmbeddings } from './embeddings';
+beforeEach(() => {
+    vi.restoreAllMocks();
+    searchSimilarMemories = vi.spyOn(supabase, 'searchSimilarMemories');
+    insertMemory = vi.spyOn(supabase, 'insertMemory');
+    reinforceMemory = vi.spyOn(supabase, 'reinforceMemory');
+    isSupabaseConfigured = vi.spyOn(supabase, 'isSupabaseConfigured').mockReturnValue(true);
+    generateEmbeddings = vi.spyOn(embeddings, 'generateEmbeddings');
+});
 
 describe('Stenographer Agent', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-    });
-
     describe('buildExtractionPrompt', () => {
         it('should format case data into extraction prompt', () => {
             const caseData = {

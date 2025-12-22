@@ -63,6 +63,22 @@ function securityHeaders(req, res, next) {
     res.setHeader('Cross-Origin-Resource-Policy', 'same-site');
     res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
     res.setHeader('X-Frame-Options', 'DENY');
+
+    // Content Security Policy - defense in depth against XSS
+    // Note: 'unsafe-inline' for styles is needed for React's inline styling
+    const cspDirectives = [
+        "default-src 'self'",
+        "script-src 'self'",
+        "style-src 'self' 'unsafe-inline'",
+        "img-src 'self' data: blob: https:",
+        "font-src 'self' https://fonts.gstatic.com",
+        "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.openai.com",
+        "frame-ancestors 'none'",
+        "base-uri 'self'",
+        "form-action 'self'",
+    ].join('; ');
+    res.setHeader('Content-Security-Policy', cspDirectives);
+
     next();
 }
 

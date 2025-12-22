@@ -4,6 +4,8 @@
 
 The v2.0 judging system implements a **multi-stage therapeutic pipeline** for couple conflict resolution. Instead of a single LLM call that produces a verdict, the new system guides couples through a collaborative resolution process.
 
+Note: The legacy v1 pipeline has been removed. There is no fallback path.
+
 ---
 
 ## Expected Flow
@@ -15,7 +17,7 @@ The v2.0 judging system implements a **multi-stage therapeutic pipeline** for co
 │                                                                             │
 │  1. EVIDENCE PHASE                                                          │
 │     ├─ Both users submit their facts and feelings                           │
-│     └─ Phase: EVIDENCE → DELIBERATING                                       │
+│     └─ Phase: EVIDENCE → ANALYZING                                          │
 │                                                                             │
 │  2. ANALYZING PHASE (LLM Call 1)                                            │
 │     ├─ Safety moderation check                                              │
@@ -25,7 +27,7 @@ The v2.0 judging system implements a **multi-stage therapeutic pipeline** for co
 │     │   ├─ Detects Four Horsemen patterns                                   │
 │     │   ├─ Assesses intensity (high/medium/low)                             │
 │     │   └─ Generates 3 resolution options                                   │
-│     └─ Phase: DELIBERATING → ANALYZING → PRIMING                            │
+│     └─ Phase: ANALYZING → PRIMING                                           │
 │                                                                             │
 │  3. PRIMING PHASE (LLM Call 2)                                              │
 │     ├─ Generates personalized priming content for each user                 │
@@ -66,7 +68,7 @@ The v2.0 judging system implements a **multi-stage therapeutic pipeline** for co
 
 | Phase | Description | Timeout |
 |-------|-------------|---------|
-| `ANALYZING` | LLM analyzing conflict and generating resolutions | 1 hour |
+| `ANALYZING` | LLM analyzing conflict and generating resolutions | 5 minutes |
 | `PRIMING` | Users reading personalized reflection content | 1 hour |
 | `JOINT_READY` | Both users ready to view joint menu | 1 hour |
 | `RESOLUTION` | Users picking preferred resolution | 1 hour |
@@ -88,7 +90,7 @@ The v2.0 judging system implements a **multi-stage therapeutic pipeline** for co
 | File | Changes |
 |------|---------|
 | `client/src/store/courtStore.js` | Added v2.0 VIEW_PHASE values, COURT_PHASES alias |
-| `client/src/pages/CourtroomPage.jsx` | Added ANALYZING phase routing |
+| `client/src/pages/CourtroomPageV2.jsx` | Added ANALYZING phase routing |
 
 ---
 
@@ -107,7 +109,7 @@ After both users submit evidence, the verdict page ("Judge Whiskers Has Spoken")
 1. ~~`courtInit.js` only passed `deliberate` function, not v2.0 functions~~ (Fixed)
 2. ~~Frontend `courtSession.status` vs backend `session.phase` mismatch~~ (Fixed)
 3. **Server may not have been restarted** after code changes
-4. **Frontend routing may still be falling through to legacy verdict view**
+4. **Frontend routing may still be falling through to verdict view**
 
 **Investigation Needed:**
 - Check server console for v2.0 pipeline logs (`[Court] V2.0 Phase 1:`, `[Court] V2.0 Phase 2:`)
@@ -116,38 +118,11 @@ After both users submit evidence, the verdict page ("Judge Whiskers Has Spoken")
 
 ---
 
-### Bug 2: Old Judging System Running Instead of V2.0
-**Status:** 🟡 Possibly Fixed (needs verification)
-
-**Symptom:**
-Not seeing individualized priming feedback or resolution selection.
-
-**Root Cause:** 
-`courtInit.js` wasn't passing the new v2.0 functions (`deliberatePhase1`, `deliberatePhase2`, `runHybridResolution`).
-
-**Fix Applied:**
-Updated `courtInit.js` lines 11-28 to pass all v2.0 functions.
-
-**Verification Steps:**
-1. Restart the server
-2. Check logs for `[Court] V2.0 Phase 1: Analyst + Repair for session`
-3. If logs show legacy pipeline, check why the `if (this.judgeEngine.deliberatePhase1)` check fails
-
----
-
 ### Bug 3: No V2.0 UI Pages Exist Yet
-**Status:** 🟠 Pending Implementation
+**Status:** ✅ Fixed
 
-**Symptom:**
-Even if v2.0 pipeline runs, there are no UI pages to display the new content.
-
-**Missing Components:**
-- `PrimingPage.jsx` - Individual reflection content display
-- `JointMenuPage.jsx` - Shared menu display
-- `ResolutionSelectPage.jsx` - Pick A, B, or C resolution
-
-**Impact:**
-Without these pages, even a working v2.0 pipeline would have nowhere to display its output.
+**Notes:**
+The v2.0 UI pages now exist and are wired in `client/src/pages/CourtroomPageV2.jsx`.
 
 ---
 
@@ -162,7 +137,6 @@ cd server && npm run dev
 # ✅ "[Court] V2.0 Phase 1: Analyst + Repair for session ..."
 # ✅ "[Court] V2.0 Phase 2: Priming + Joint Menu for session ..."
 # ✅ "[Court] V2.0 pipeline complete for session ... → PRIMING"
-# ❌ "[Court] Using legacy pipeline for session ..." (indicates fallback)
 ```
 
 ### Frontend-Side

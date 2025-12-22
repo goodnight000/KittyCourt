@@ -168,18 +168,10 @@ const useAppStore = create(
 
                 try {
                     // Log appreciation (partner receives it)
+                    // Note: Backend automatically awards kibble, so no separate transaction needed
                     await api.post('/appreciations', {
-                        receiverId: connectedPartner.id,
-                        giverId: authUser.id,
+                        toUserId: connectedPartner.id,
                         message: description
-                    });
-
-                    // Award kibble to partner
-                    await api.post('/economy/transaction', {
-                        userId: connectedPartner.id,
-                        amount: 5,
-                        type: 'EARN',
-                        description: `Appreciation from ${authUser.display_name || 'partner'}`
                     });
 
                     // Invalidate partner's appreciations cache (they received a new one)
@@ -205,19 +197,12 @@ const useAppStore = create(
                         throw new Error('Not enough kibble!');
                     }
 
-                    // Deduct kibble
+                    // Deduct kibble (the transaction description serves as the redemption log)
                     await api.post('/economy/transaction', {
                         userId: authUser.id,
                         amount: -coupon.cost,
                         type: 'SPEND',
                         description: `Redeemed: ${coupon.title}`
-                    });
-
-                    // Log the redemption
-                    await api.post('/redemptions', {
-                        userId: authUser.id,
-                        couponId: coupon.id,
-                        couponTitle: coupon.title
                     });
 
                     // Refresh user balance

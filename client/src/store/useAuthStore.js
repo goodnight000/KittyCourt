@@ -503,25 +503,37 @@ const useAuthStore = create(
                     return { error: "You can't connect with yourself! 😹" };
                 }
 
-                // Find user by partner code
-                const { data: targetUser, error: findError } = await findByPartnerCode(partnerCode);
-                if (findError || !targetUser) {
+                // Find user ID by partner code (secure lookup - only returns ID)
+                const { data: targetUserLookup, error: findError } = await findByPartnerCode(partnerCode);
+                if (findError || !targetUserLookup) {
                     return { error: 'Partner code not found. Please check and try again.' };
                 }
 
-                // Check if target already has a partner
-                if (targetUser.partner_id) {
+                // Now fetch the target user's profile to check partner status
+                // This uses RLS which allows viewing your own profile and partner's profile
+                // For connection requests, we need to verify they don't already have a partner
+                const { data: targetUser, error: profileError } = await getProfile(targetUserLookup.id);
+
+                if (profileError) {
+                    // Expected - can't view their profile if not connected yet (RLS restricts access)
+                    // This is fine - we can still send the request and let them decide
+                    console.log('[Auth] Cannot view target profile (RLS restriction) - proceeding with request');
+                }
+
+                // If we could view their profile and they have a partner, reject
+                if (targetUser?.partner_id) {
                     return { error: 'This user is already connected with someone.' };
                 }
 
-                // Send the request
-                const { data, error } = await sendPartnerRequest(targetUser.id);
+                // Send the request using just the ID
+                const { data, error } = await sendPartnerRequest(targetUserLookup.id);
                 if (error) {
                     return { error: error.message || error };
                 }
 
-                set({ sentRequest: { ...data, receiver: targetUser } });
-                return { data, receiverName: targetUser.display_name };
+                // Set sent request - use ID since we may not have full profile access
+                set({ sentRequest: { ...data, receiver: targetUser || { id: targetUserLookup.id } } });
+                return { data, receiverName: targetUser?.display_name || 'your partner' };
             },
 
             // Refresh pending requests
