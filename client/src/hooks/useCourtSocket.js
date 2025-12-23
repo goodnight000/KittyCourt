@@ -12,7 +12,7 @@ import useAuthStore from '../store/useAuthStore';
 
 // Get socket server URL
 const getSocketUrl = () => {
-    // VITE_API_URL is typically an API base like "http://localhost:3000/api".
+    // VITE_API_URL is typically an API base like "http://localhost:3001/api".
     // Socket.IO must connect to the server origin, not the REST base path.
     if (import.meta.env.VITE_API_URL) {
         const trimmed = String(import.meta.env.VITE_API_URL).trim();
@@ -22,7 +22,7 @@ const getSocketUrl = () => {
         return base || window.location.origin;
     }
     if (import.meta.env.DEV) {
-        return 'http://localhost:3000';
+        return 'http://localhost:3001';
     }
     return window.location.origin;
 };
@@ -46,6 +46,10 @@ export default function useCourtSocket() {
     const onSettlementRequested = useCourtStore(state => state.onSettlementRequested);
     const onSettlementDeclined = useCourtStore(state => state.onSettlementDeclined);
     const storeSetConnected = useCourtStore(state => state.setIsConnected);
+
+    // Use refs to avoid stale closures in socket event handlers
+    const handlersRef = useRef({ onStateSync, onError, onSettlementRequested, onSettlementDeclined, storeSetConnected });
+    handlersRef.current = { onStateSync, onError, onSettlementRequested, onSettlementDeclined, storeSetConnected };
 
     // Initialize socket connection
     const connect = useCallback(() => {
@@ -76,13 +80,13 @@ export default function useCourtSocket() {
             console.log('[WS] Connected:', socket.id);
             reconnectAttempts.current = 0;
             setIsConnected(true);
-            storeSetConnected(true);
+            handlersRef.current.storeSetConnected(true);
 
             // Register user
             if (user?.id) {
                 socket.emit('court:register', { userId: user.id }, (resp) => {
                     if (resp?.state) {
-                        onStateSync(resp.state);
+                        handlersRef.current.onStateSync(resp.state);
                     }
                 });
             }
@@ -91,7 +95,7 @@ export default function useCourtSocket() {
         socket.on('disconnect', (reason) => {
             console.log('[WS] Disconnected:', reason);
             setIsConnected(false);
-            storeSetConnected(false);
+            handlersRef.current.storeSetConnected(false);
 
             // Attempt reconnection
             if (reason !== 'io client disconnect') {
@@ -115,29 +119,29 @@ export default function useCourtSocket() {
 
         socket.on('court:state', (data) => {
             console.log('[WS] State sync:', data.myViewPhase);
-            onStateSync(data);
+            handlersRef.current.onStateSync(data);
         });
 
         socket.on('court:error', ({ message }) => {
             console.warn('[WS] Error:', message);
-            onError(message);
+            handlersRef.current.onError(message);
         });
 
         socket.on('court:settlement_requested', () => {
             console.log('[WS] Settlement requested');
-            onSettlementRequested();
+            handlersRef.current.onSettlementRequested();
         });
 
         socket.on('court:settlement_declined', (payload) => {
             console.log('[WS] Settlement declined');
-            onSettlementDeclined(payload);
+            handlersRef.current.onSettlementDeclined(payload);
         });
 
         socketRef.current = socket;
         setSocketRef(socket);
 
         return socket;
-    }, [user?.id, session?.access_token, onStateSync, onError, onSettlementRequested, onSettlementDeclined, storeSetConnected]);
+    }, [user?.id, session?.access_token]);
 
     // Disconnect
     const disconnect = useCallback(() => {

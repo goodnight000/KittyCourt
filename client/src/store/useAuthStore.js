@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { quotaSafeLocalStorage } from './quotaSafeStorage';
 import {
     supabase,
     signInWithEmail as supabaseSignInWithEmail,
@@ -736,13 +737,43 @@ const useAuthStore = create(
         }),
         {
             name: 'catjudge-auth',
+            storage: quotaSafeLocalStorage,
             partialize: (state) => ({
                 // Persist non-secret UI state to avoid blocking on network at boot.
-                profile: state.profile,
-                partner: state.partner,
+                // Strip large avatar_url/data URLs to prevent localStorage quota issues.
+                profile: state.profile
+                    ? {
+                        ...state.profile,
+                        avatar_url:
+                            typeof state.profile.avatar_url === 'string' &&
+                            (state.profile.avatar_url.startsWith('data:') || state.profile.avatar_url.length > 2048)
+                                ? undefined
+                                : state.profile.avatar_url,
+                    }
+                    : null,
+                partner: state.partner
+                    ? {
+                        ...state.partner,
+                        avatar_url:
+                            typeof state.partner.avatar_url === 'string' &&
+                            (state.partner.avatar_url.startsWith('data:') || state.partner.avatar_url.length > 2048)
+                                ? undefined
+                                : state.partner.avatar_url,
+                    }
+                    : null,
                 hasPartner: state.hasPartner,
                 onboardingComplete: state.onboardingComplete,
-                onboardingData: state.onboardingData,
+                // Onboarding data sometimes contains avatarUrl (base64). Persist only small bits.
+                onboardingData: state.onboardingData
+                    ? {
+                        ...state.onboardingData,
+                        avatarUrl:
+                            typeof state.onboardingData.avatarUrl === 'string' &&
+                            (state.onboardingData.avatarUrl.startsWith('data:') || state.onboardingData.avatarUrl.length > 2048)
+                                ? undefined
+                                : state.onboardingData.avatarUrl,
+                    }
+                    : {},
                 onboardingStep: state.onboardingStep,
             }),
         }

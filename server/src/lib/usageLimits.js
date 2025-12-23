@@ -46,45 +46,81 @@ function getLimits(tier) {
 
 async function getUsageRecord(userId, periodStart) {
     const effectivePeriodStart = periodStart || getCurrentPeriodStartUTC();
-    if (!isSupabaseConfigured()) {
-        return {
-            period_start: effectivePeriodStart,
-            lightning_count: 0,
-            mittens_count: 0,
-            whiskers_count: 0,
-            plan_count: 0,
-        };
-    }
-
-    const supabase = getSupabase();
-    const { data: record, error } = await supabase
-        .from('usage_tracking')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('period_start', effectivePeriodStart)
-        .maybeSingle();
-
-    if (error) {
-        // Missing migration/table.
-        if (error.code === '42P01') {
-            return {
-                period_start: effectivePeriodStart,
-                lightning_count: 0,
-                mittens_count: 0,
-                whiskers_count: 0,
-                plan_count: 0,
-            };
-        }
-        throw error;
-    }
-
-    return record || {
+    const emptyRecord = {
         period_start: effectivePeriodStart,
         lightning_count: 0,
         mittens_count: 0,
         whiskers_count: 0,
         plan_count: 0,
     };
+
+    if (!isSupabaseConfigured()) {
+        return emptyRecord;
+    }
+
+    const supabase = getSupabase();
+
+    // Prefer couple-wide usage (shared limits).
+    try {
+        const { data, error } = await supabase.rpc('get_couple_usage', {
+            p_user_id: userId,
+            p_period_start: effectivePeriodStart,
+        });
+
+        if (!error && data && data.length > 0) {
+            return {
+                lightning_count: data[0].lightning_count || 0,
+                mittens_count: data[0].mittens_count || 0,
+                whiskers_count: data[0].whiskers_count || 0,
+                plan_count: data[0].plan_count || 0,
+                period_start: effectivePeriodStart,
+            };
+        }
+    } catch (_e) {
+        // Fall through to couple_id query.
+    }
+
+    try {
+        const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('partner_id')
+            .eq('id', userId)
+            .maybeSingle();
+
+        if (profileError) throw profileError;
+
+        const partnerId = profile?.partner_id || null;
+        const coupleId = partnerId
+            ? [String(userId), String(partnerId)].sort().join('-')
+            : String(userId);
+
+        const { data: rows, error: coupleError } = await supabase
+            .from('usage_tracking')
+            .select('lightning_count, mittens_count, whiskers_count, plan_count')
+            .eq('couple_id', coupleId)
+            .eq('period_start', effectivePeriodStart);
+
+        if (coupleError) throw coupleError;
+
+        return (rows || []).reduce((acc, row) => ({
+            period_start: effectivePeriodStart,
+            lightning_count: acc.lightning_count + (row.lightning_count || 0),
+            mittens_count: acc.mittens_count + (row.mittens_count || 0),
+            whiskers_count: acc.whiskers_count + (row.whiskers_count || 0),
+            plan_count: acc.plan_count + (row.plan_count || 0),
+        }), {
+            period_start: effectivePeriodStart,
+            lightning_count: 0,
+            mittens_count: 0,
+            whiskers_count: 0,
+            plan_count: 0,
+        });
+    } catch (error) {
+        if (error.code === '42P01' || error.code === '42703') {
+            return emptyRecord;
+        }
+        throw error;
+    }
 }
 
 async function canUseFeature({ userId, type }) {

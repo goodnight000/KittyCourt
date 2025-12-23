@@ -1,25 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
 import { Users, Sparkles, Heart, Leaf, ArrowRight, Clock } from 'lucide-react';
 
 const JointMenuPage = ({ jointMenu, myName, partnerName, isCreator, onReady, isSubmitting }) => {
     const displayPartnerName = partnerName || 'Partner';
     const displayMyName = myName || 'You';
-    const [scrollProgress, setScrollProgress] = useState(0);
-    const journeySteps = ['Evidence', 'Priming', 'Joint', 'Resolution', 'Verdict'];
+    const journeySteps = ['Priming', 'Joint', 'Resolution', 'Verdict'];
     const currentStepIndex = 2;
 
-    useEffect(() => {
-        const handleScroll = () => {
-            const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
-            const total = scrollHeight - clientHeight;
-            const progress = total > 0 ? Math.min(1, Math.max(0, scrollTop / total)) : 0;
-            setScrollProgress(progress);
-        };
-        handleScroll();
-        window.addEventListener('scroll', handleScroll, { passive: true });
-        return () => window.removeEventListener('scroll', handleScroll);
-    }, []);
     if (!jointMenu) {
         return (
             <div className="max-w-md mx-auto glass-card p-4 text-center">
@@ -34,18 +22,9 @@ const JointMenuPage = ({ jointMenu, myName, partnerName, isCreator, onReady, isS
 
     return (
         <div className="max-w-2xl mx-auto space-y-5 pb-6">
-            <div className="sticky top-0 z-20">
-                <div className="h-1 w-full rounded-full bg-white/70 overflow-hidden">
-                    <div
-                        className="h-full bg-gradient-to-r from-court-gold via-court-tan to-court-brown"
-                        style={{ width: `${Math.round(scrollProgress * 100)}%` }}
-                    />
-                </div>
-            </div>
-
             <div className="sticky top-3 z-10">
                 <div className="glass-card p-3 bg-white/70 border border-court-tan/30">
-                    <div className="text-[10px] uppercase tracking-[0.2em] text-court-brownLight">
+                    <div className="text-[12px] uppercase tracking-[0.2em] text-court-brownLight">
                         Journey map
                     </div>
                     <div className="mt-2 flex items-center gap-3 overflow-x-auto">
@@ -57,10 +36,10 @@ const JointMenuPage = ({ jointMenu, myName, partnerName, isCreator, onReady, isS
                                     <span
                                         className={`w-2 h-2 rounded-full ${isActive ? 'bg-court-gold' : isComplete ? 'bg-green-500/80' : 'bg-court-tan/40'}`}
                                     />
-                                    <span className={`text-[11px] font-semibold ${isActive ? 'text-court-brown' : 'text-court-brownLight'}`}>
+                                    <span className={`text-[12px] font-semibold ${isActive ? 'text-court-brown' : 'text-court-brownLight'}`}>
                                         {step}
                                     </span>
-                                    {index < journeySteps.length - 1 && <span className="h-px w-6 bg-court-tan/40" />}
+                                    {index < journeySteps.length - 1 && <span className="h-px w-12 bg-court-tan/40" />}
                                 </div>
                             );
                         })}

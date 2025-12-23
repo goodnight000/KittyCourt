@@ -544,13 +544,13 @@ const DailyMeowPage = () => {
                                             onChange={(e) => setAnswer(e.target.value)}
                                             placeholder="Say the first thing that comes to mind…"
                                             className="flex-1 min-h-[150px] bg-white/70 rounded-2xl p-4 text-neutral-700 border border-white focus:border-amber-300 focus:ring-2 focus:ring-amber-100 outline-none resize-none text-base placeholder:text-neutral-400"
-                                            maxLength={2000}
+                                            maxLength={1000}
                                             autoFocus
                                         />
 
                                         <div className="flex items-center justify-between mt-2">
                                             <span className="text-xs text-neutral-500">A few honest sentences is perfect</span>
-                                            <span className="text-xs text-neutral-400">{answer.length}/2000</span>
+                                            <span className="text-xs text-neutral-400">{answer.length}/1000</span>
                                         </div>
 
                                         <Motion.button
@@ -736,12 +736,12 @@ const DailyMeowPage = () => {
                                             value={editingAnswer}
                                             onChange={(e) => setEditingAnswer(e.target.value)}
                                             className="flex-1 min-h-[150px] bg-white/70 rounded-2xl p-4 text-neutral-700 border border-amber-300 focus:ring-2 focus:ring-amber-100 outline-none resize-none text-base"
-                                            maxLength={2000}
+                                            maxLength={1000}
                                             autoFocus
                                         />
 
                                         <div className="flex items-center justify-end mt-2">
-                                            <span className="text-xs text-neutral-400">{editingAnswer.length}/2000</span>
+                                            <span className="text-xs text-neutral-400">{editingAnswer.length}/1000</span>
                                         </div>
 
                                         <div className="flex gap-3 mt-4">

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Gavel, Zap, Scale, Sparkles, Lock, Crown } from 'lucide-react';
 import useSubscriptionStore from '../../store/useSubscriptionStore';
@@ -61,16 +61,18 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
         }
     }, [isOpen, fetchUsage]);
 
+    const getPaywallReason = useCallback((judge) => {
+        if (judge.id === 'best' && !isGold) {
+            return 'Judge Whiskers is exclusive to Pause Gold members';
+        }
+        return `You've used all your ${judge.name} rulings this month`;
+    }, [isGold]);
+
     const handleJudgeClick = (judge) => {
         const status = canUseJudge(judge.id);
 
         if (!status.allowed) {
-            // Show paywall with reason
-            if (judge.id === 'best' && !isGold) {
-                setPaywallReason('Judge Whiskers is exclusive to Pause Gold members');
-            } else {
-                setPaywallReason(`You've used all your ${judge.name} rulings this month`);
-            }
+            setPaywallReason(getPaywallReason(judge));
             setShowPaywall(true);
             return;
         }
@@ -78,11 +80,36 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
         setSelectedJudge(judge.id);
     };
 
-    const handleServe = () => {
-        if (selectedJudge) {
-            onServe(selectedJudge);
+    useEffect(() => {
+        if (!selectedJudge) return;
+        const status = canUseJudge(selectedJudge);
+        if (!status.allowed) {
+            const judge = JUDGES.find((item) => item.id === selectedJudge);
             setSelectedJudge(null);
+            if (judge) {
+                setPaywallReason(getPaywallReason(judge));
+                setShowPaywall(true);
+            }
         }
+    }, [selectedJudge, canUseJudge, getPaywallReason]);
+
+    const handleServe = async () => {
+        if (!selectedJudge) return;
+
+        await fetchUsage();
+        const status = canUseJudge(selectedJudge);
+        if (!status.allowed) {
+            const judge = JUDGES.find((item) => item.id === selectedJudge);
+            setSelectedJudge(null);
+            if (judge) {
+                setPaywallReason(getPaywallReason(judge));
+                setShowPaywall(true);
+            }
+            return;
+        }
+
+        onServe(selectedJudge);
+        setSelectedJudge(null);
     };
 
     const handleClose = () => {
@@ -94,6 +121,9 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
         setShowPaywall(false);
         setPaywallReason(null);
     };
+
+    const selectedStatus = selectedJudge ? canUseJudge(selectedJudge) : null;
+    const canServe = !!selectedJudge && selectedStatus?.allowed;
 
     return (
         <>
@@ -270,15 +300,15 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
                             {/* Serve Button */}
                             <motion.button
                                 onClick={handleServe}
-                                disabled={!selectedJudge}
-                                whileTap={selectedJudge ? { scale: 0.98 } : {}}
-                                className={`w-full py-4 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-all duration-300 ${selectedJudge
+                                disabled={!canServe}
+                                whileTap={canServe ? { scale: 0.98 } : {}}
+                                className={`w-full py-4 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-all duration-300 ${canServe
                                     ? 'btn-primary shadow-lg'
                                     : 'bg-court-tan/50 cursor-not-allowed text-court-brownLight'
                                     }`}
                             >
                                 <Gavel className="w-5 h-5" />
-                                {selectedJudge ? 'Serve Your Partner' : 'Select a Judge'}
+                                {canServe ? 'Serve Your Partner' : 'Select a Judge'}
                             </motion.button>
 
                             {/* Cancel link */}

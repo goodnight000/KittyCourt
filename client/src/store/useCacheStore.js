@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { quotaSafeSessionStorage } from './quotaSafeStorage';
 
 /**
  * Cache TTL constants (in milliseconds)
@@ -124,6 +125,8 @@ const useCacheStore = create(
         }),
         {
             name: 'pause-cache',
+            // Cache can get large (case history/appreciations). Keep it out of localStorage.
+            storage: quotaSafeSessionStorage,
             partialize: (state) => ({ cache: state.cache }),
         }
     )

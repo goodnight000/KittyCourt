@@ -20,22 +20,10 @@ const ResolutionSelectPage = ({
     const displayMyName = myName || 'You';
     const isMismatch = mode === 'mismatch';
     const [pendingPick, setPendingPick] = useState(null);
-    const [scrollProgress, setScrollProgress] = useState(0);
     const optionLabels = ['Option A', 'Option B', 'Option C'];
-    const journeySteps = ['Evidence', 'Priming', 'Joint', 'Resolution', 'Verdict'];
+    const journeySteps = ['Priming', 'Joint', 'Resolution', 'Verdict'];
     const currentStepIndex = 3;
 
-    useEffect(() => {
-        const handleScroll = () => {
-            const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
-            const total = scrollHeight - clientHeight;
-            const progress = total > 0 ? Math.min(1, Math.max(0, scrollTop / total)) : 0;
-            setScrollProgress(progress);
-        };
-        handleScroll();
-        window.addEventListener('scroll', handleScroll, { passive: true });
-        return () => window.removeEventListener('scroll', handleScroll);
-    }, []);
 
     const findResolution = (id) => {
         if (!id) return null;
@@ -80,21 +68,11 @@ const ResolutionSelectPage = ({
         );
     }
 
-    const renderProgress = () => (
-        <div className="sticky top-0 z-20">
-            <div className="h-1 w-full rounded-full bg-white/70 overflow-hidden">
-                <div
-                    className="h-full bg-gradient-to-r from-court-gold via-court-tan to-court-brown"
-                    style={{ width: `${Math.round(scrollProgress * 100)}%` }}
-                />
-            </div>
-        </div>
-    );
 
     const renderJourneyMap = () => (
         <div className="sticky top-3 z-10">
             <div className="glass-card p-3 bg-white/70 border border-court-tan/30">
-                <div className="text-[10px] uppercase tracking-[0.2em] text-court-brownLight">
+                <div className="text-[12px] uppercase tracking-[0.2em] text-court-brownLight">
                     Journey map
                 </div>
                 <div className="mt-2 flex items-center gap-3 overflow-x-auto">
@@ -106,10 +84,10 @@ const ResolutionSelectPage = ({
                                 <span
                                     className={`w-2 h-2 rounded-full ${isActive ? 'bg-court-gold' : isComplete ? 'bg-green-500/80' : 'bg-court-tan/40'}`}
                                 />
-                                <span className={`text-[11px] font-semibold ${isActive ? 'text-court-brown' : 'text-court-brownLight'}`}>
+                                <span className={`text-[12px] font-semibold ${isActive ? 'text-court-brown' : 'text-court-brownLight'}`}>
                                     {step}
                                 </span>
-                                {index < journeySteps.length - 1 && <span className="h-px w-6 bg-court-tan/40" />}
+                                {index < journeySteps.length - 1 && <span className="h-px w-12 bg-court-tan/40" />}
                             </div>
                         );
                     })}
@@ -155,15 +133,25 @@ const ResolutionSelectPage = ({
             <motion.div
                 key={resolution.id}
                 initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                className={`glass-card p-4 space-y-3 border-2 relative overflow-hidden ${
-                    selected ? 'border-green-500/80 bg-white' : 'border-court-tan/30 bg-white/70'
-                } ${disabled ? 'opacity-70' : ''}`}
+                animate={{
+                    opacity: 1,
+                    y: 0,
+                    scale: selected ? 1.02 : 1,
+                    boxShadow: selected
+                        ? '0 4px 20px rgba(34, 197, 94, 0.25), 0 0 0 2px rgba(34, 197, 94, 0.1)'
+                        : '0 1px 3px rgba(0, 0, 0, 0.05)'
+                }}
+                transition={{
+                    scale: { type: 'spring', stiffness: 400, damping: 25 },
+                    boxShadow: { duration: 0.2 }
+                }}
+                whileTap={!disabled ? { scale: 0.98 } : undefined}
+                className={`glass-card p-4 space-y-3 border-2 relative overflow-hidden cursor-pointer ${selected ? 'border-green-500/80 bg-white' : 'border-court-tan/30 bg-white/70'
+                    } ${disabled ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
                 <div
-                    className={`absolute inset-x-0 top-0 h-1 ${
-                        selected ? 'bg-green-500/70' : 'bg-gradient-to-r from-court-gold/60 via-court-tan/40 to-transparent'
-                    }`}
+                    className={`absolute inset-x-0 top-0 h-1 ${selected ? 'bg-green-500/70' : 'bg-gradient-to-r from-court-gold/60 via-court-tan/40 to-transparent'
+                        }`}
                 />
                 {badge && (
                     <div className="text-[10px] font-bold text-court-brownLight uppercase tracking-wide">
@@ -185,10 +173,20 @@ const ResolutionSelectPage = ({
                             </div>
                         </div>
                         {selected && (
-                            <div className="flex items-center gap-1 text-xs font-bold text-green-600">
+                            <motion.div
+                                initial={{ scale: 0, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                transition={{
+                                    type: 'spring',
+                                    stiffness: 500,
+                                    damping: 15,
+                                    delay: 0.05
+                                }}
+                                className="flex items-center gap-1 text-xs font-bold text-green-600"
+                            >
                                 <CheckCircle className="w-4 h-4" />
                                 Selected
-                            </div>
+                            </motion.div>
                         )}
                     </div>
                     <p className="text-sm text-court-brown leading-relaxed">
@@ -207,7 +205,6 @@ const ResolutionSelectPage = ({
     if (mode === 'waiting') {
         return (
             <div className="max-w-2xl mx-auto space-y-5 pb-6">
-                {renderProgress()}
                 {renderJourneyMap()}
                 <motion.div
                     initial={{ opacity: 0, y: 12 }}
@@ -239,7 +236,6 @@ const ResolutionSelectPage = ({
 
     return (
         <div className="max-w-2xl mx-auto space-y-5 pb-6">
-            {renderProgress()}
             {renderJourneyMap()}
 
             <motion.div

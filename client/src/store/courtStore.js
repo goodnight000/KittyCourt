@@ -8,6 +8,7 @@
 import { create } from 'zustand';
 import api from '../services/api';
 import useAuthStore from './useAuthStore';
+import { emitWithFallback } from '../utils/socketApiHelper';
 
 // View phases (must match server)
 export const VIEW_PHASE = {
@@ -91,10 +92,13 @@ const useCourtStore = create((set, get) => ({
     onStateSync: ({ phase, myViewPhase, session }) => {
         const prevView = get().myViewPhase;
         const prevSessionId = get().session?.id;
+        const userId = get()._getUserId();
 
         const nextSessionId = session?.id;
         const isNewSession = !!(nextSessionId && nextSessionId !== prevSessionId);
         const isSessionCleared = !session;
+        const settlementRequested = session?.settlementRequested || null;
+        const shouldShowSettlementRequest = !!(settlementRequested && userId && settlementRequested !== userId);
 
         const nextHasUnreadVerdict = (() => {
             const verdictPhases = [VIEW_PHASE.VERDICT, VIEW_PHASE.WAITING_ACCEPT];
@@ -112,6 +116,7 @@ const useCourtStore = create((set, get) => ({
             isSubmitting: false,
             lastSyncAt: Date.now(),
             hasUnreadVerdict: nextHasUnreadVerdict,
+            showSettlementRequest: isSessionCleared ? false : shouldShowSettlementRequest,
             // Detect deliberating
             isGeneratingVerdict: VIEW_PHASE.ANALYZING === myViewPhase,
             // UI-only animations never persist across sessions
@@ -120,8 +125,6 @@ const useCourtStore = create((set, get) => ({
             ...(isSessionCleared || isNewSession
                 ? { localEvidence: '', localFeelings: '', localAddendum: '' }
                 : {}),
-            // Settlement request UI should not persist across ended sessions
-            ...(isSessionCleared ? { showSettlementRequest: false } : {}),
             // Decline indicator should not leak across sessions
             ...(isSessionCleared || isNewSession ? { settlementDeclinedNotice: null } : {}),
             ...(isSessionCleared || isNewSession ? { dismissedRatingSessionId: null } : {})

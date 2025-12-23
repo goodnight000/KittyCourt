@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import api from '../services/api';
 import useCacheStore, { CACHE_TTL, CACHE_KEYS } from './useCacheStore';
+import { quotaSafeLocalStorage, sanitizeProfileForStorage } from './quotaSafeStorage';
 
 /**
  * useAppStore - Application-wide state
@@ -218,9 +219,14 @@ const useAppStore = create(
         }),
         {
             name: 'cat-judge-storage',
+            storage: quotaSafeLocalStorage,
             partialize: (state) => ({
-                currentUser: state.currentUser,
-                users: state.users,
+                // Keep persisted payload small. Large fields like base64 avatar_url
+                // can easily exceed localStorage quota.
+                currentUser: sanitizeProfileForStorage(state.currentUser),
+                users: Array.isArray(state.users)
+                    ? state.users.map(sanitizeProfileForStorage)
+                    : [],
             }),
         }
     )
