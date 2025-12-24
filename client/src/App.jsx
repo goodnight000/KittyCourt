@@ -60,7 +60,7 @@ const ProtectedRoute = ({ children }) => {
 
 // App Routes Component
 const AppRoutes = () => {
-    const { initialize, isLoading, isAuthenticated, onboardingComplete, pendingRequests, hasPartner } = useAuthStore();
+    const { initialize, isLoading, isAuthenticated, onboardingComplete, pendingRequests, hasPartner, refreshPendingRequests } = useAuthStore();
     const initializedRef = useRef(false);
 
     useEffect(() => {
@@ -81,6 +81,21 @@ const AppRoutes = () => {
             console.error('[App] Initialize failed:', err);
         });
     }, [initialize]);
+
+    // Global polling for pending partner requests (fallback for realtime)
+    useEffect(() => {
+        if (!isAuthenticated || hasPartner) return;
+
+        // Initial fetch
+        refreshPendingRequests();
+
+        // Poll every 10 seconds for new requests
+        const interval = setInterval(() => {
+            refreshPendingRequests();
+        }, 10000);
+
+        return () => clearInterval(interval);
+    }, [isAuthenticated, hasPartner, refreshPendingRequests]);
 
     console.log('[App] Render - isLoading:', isLoading, 'isAuthenticated:', isAuthenticated);
 

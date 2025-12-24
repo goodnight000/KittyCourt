@@ -3,12 +3,24 @@ import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
     ArrowRight, ArrowLeft, Sparkles, Heart,
-    Calendar, Check, User,
+    Calendar, Check, User, Camera, Upload,
     AlertTriangle, Mail, Lock, Eye, EyeOff
 } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 import { validateDate } from '../utils/helpers';
 import Paywall from '../components/Paywall';
+
+// Available preset avatars
+const AVATAR_PRESETS = [
+    { id: 'bear', src: '/assets/profile-pic/bear.png', label: 'Bear' },
+    { id: 'bunny', src: '/assets/profile-pic/bunny.png', label: 'Bunny' },
+    { id: 'capybara', src: '/assets/profile-pic/capybara.png', label: 'Capybara' },
+    { id: 'cat', src: '/assets/profile-pic/cat.png', label: 'Cat' },
+    { id: 'dog', src: '/assets/profile-pic/dog.png', label: 'Dog' },
+    { id: 'fox', src: '/assets/profile-pic/fox.png', label: 'Fox' },
+    { id: 'panda', src: '/assets/profile-pic/panda.png', label: 'Panda' },
+    { id: 'penguin', src: '/assets/profile-pic/penguin.png', label: 'Penguin' },
+];
 
 // Onboarding Steps Configuration
 const ONBOARDING_STEPS = [
@@ -30,6 +42,13 @@ const ONBOARDING_STEPS = [
         subtitle: "Pick a name that feels like you",
         icon: '👤',
         field: 'displayName',
+    },
+    {
+        id: 'avatar',
+        title: "Choose Your Avatar! 🐾",
+        subtitle: "Pick a profile picture or upload your own",
+        icon: '📸',
+        field: 'avatarUrl',
     },
     {
         id: 'birthday',
@@ -347,6 +366,8 @@ const OnboardingPage = () => {
             if (currentStepData.field === 'petPeeves') return true;
             return value && value.length > 0;
         }
+        // Avatar is optional - users can skip and add later
+        if (currentStepData.field === 'avatarUrl') return true;
         return !!value;
     };
 
@@ -541,8 +562,8 @@ const OnboardingPage = () => {
                                     }
                                 }}
                                 className={`w-full pl-12 pr-4 py-4 bg-white border-2 rounded-2xl text-neutral-700 text-lg focus:outline-none focus:ring-2 transition-all ${birthdayError
-                                        ? 'border-red-300 focus:border-red-400 focus:ring-red-200'
-                                        : 'border-neutral-200 focus:border-court-gold focus:ring-court-gold/20'
+                                    ? 'border-red-300 focus:border-red-400 focus:ring-red-200'
+                                    : 'border-neutral-200 focus:border-court-gold focus:ring-court-gold/20'
                                     }`}
                             />
                         </div>
@@ -554,6 +575,122 @@ const OnboardingPage = () => {
                         )}
                         <p className="text-sm text-neutral-400 text-center">
                             Your partner will be reminded to wish you a happy birthday! 🎈
+                        </p>
+                    </Motion.div>
+                );
+
+            case 'avatar':
+                return (
+                    <Motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="space-y-6"
+                    >
+                        {/* Current selection preview */}
+                        <div className="flex flex-col items-center">
+                            <div className="w-28 h-28 rounded-full overflow-hidden border-4 border-court-gold shadow-lg bg-white">
+                                {onboardingData.avatarUrl ? (
+                                    <img
+                                        src={onboardingData.avatarUrl}
+                                        alt="Your avatar"
+                                        className="w-full h-full object-cover"
+                                    />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center bg-neutral-100 text-neutral-400">
+                                        <User className="w-12 h-12" />
+                                    </div>
+                                )}
+                            </div>
+                            <p className="text-sm text-neutral-500 mt-2">
+                                {onboardingData.avatarUrl ? 'Looking good! ✨' : 'Choose an avatar below'}
+                            </p>
+                        </div>
+
+                        {/* Preset avatars grid */}
+                        <div>
+                            <p className="text-xs text-neutral-400 uppercase tracking-wider mb-3 text-center">Pick an animal friend</p>
+                            <div className="grid grid-cols-4 gap-3">
+                                {AVATAR_PRESETS.map((avatar, index) => (
+                                    <Motion.button
+                                        key={avatar.id}
+                                        initial={{ opacity: 0, scale: 0.8 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        transition={{ delay: index * 0.05 }}
+                                        whileTap={{ scale: 0.9 }}
+                                        onClick={() => updateOnboardingData({ avatarUrl: avatar.src })}
+                                        className={`aspect-square rounded-2xl overflow-hidden border-3 transition-all ${onboardingData.avatarUrl === avatar.src
+                                            ? 'border-court-gold ring-2 ring-court-gold/30 shadow-lg'
+                                            : 'border-neutral-200 hover:border-neutral-300'
+                                            }`}
+                                    >
+                                        <img
+                                            src={avatar.src}
+                                            alt={avatar.label}
+                                            className="w-full h-full object-cover"
+                                        />
+                                    </Motion.button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Divider */}
+                        <div className="flex items-center gap-4">
+                            <div className="flex-1 h-px bg-neutral-200" />
+                            <span className="text-neutral-400 text-xs">or</span>
+                            <div className="flex-1 h-px bg-neutral-200" />
+                        </div>
+
+                        {/* Upload options */}
+                        <div className="flex gap-3">
+                            <label className="flex-1 cursor-pointer">
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                            const reader = new FileReader();
+                                            reader.onload = (event) => {
+                                                updateOnboardingData({ avatarUrl: event.target.result });
+                                            };
+                                            reader.readAsDataURL(file);
+                                        }
+                                    }}
+                                />
+                                <div className="flex items-center justify-center gap-2 py-3 px-4 bg-white border-2 border-neutral-200 rounded-xl hover:border-neutral-300 hover:bg-neutral-50 transition-all">
+                                    <Upload className="w-5 h-5 text-neutral-500" />
+                                    <span className="font-medium text-neutral-700">Upload</span>
+                                </div>
+                            </label>
+
+                            <label className="flex-1 cursor-pointer">
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    capture="user"
+                                    className="hidden"
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                            const reader = new FileReader();
+                                            reader.onload = (event) => {
+                                                updateOnboardingData({ avatarUrl: event.target.result });
+                                            };
+                                            reader.readAsDataURL(file);
+                                        }
+                                    }}
+                                />
+                                <div className="flex items-center justify-center gap-2 py-3 px-4 bg-white border-2 border-neutral-200 rounded-xl hover:border-neutral-300 hover:bg-neutral-50 transition-all">
+                                    <Camera className="w-5 h-5 text-neutral-500" />
+                                    <span className="font-medium text-neutral-700">Camera</span>
+                                </div>
+                            </label>
+                        </div>
+
+                        {/* Skip option */}
+                        <p className="text-xs text-neutral-400 text-center">
+                            You can always change this later in settings
                         </p>
                     </Motion.div>
                 );

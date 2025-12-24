@@ -167,24 +167,26 @@ const DashboardPage = () => {
     const bothAnswered = hasAnswered && partnerHasAnswered;
     const neitherAnswered = !hasAnswered && !partnerHasAnswered;
 
-    // Helper to get effective avatar - matches ProfilesPage.jsx logic
-    const getMyAvatar = () => {
-        // Primary: localStorage profilePicture (for immediate updates before Supabase sync)
-        try {
-            const stored = localStorage.getItem(`catjudge_profile_${currentUser?.id}`);
-            if (stored) {
-                const data = JSON.parse(stored);
-                if (data.profilePicture) return data.profilePicture;
-            }
-        } catch (e) {
-            console.error('Error reading local profile:', e);
-        }
-        // Fallback: Supabase avatar_url ONLY (not Google OAuth avatar)
-        return profile?.avatar_url || null;
+    // Avatar URLs now come from database (either preset path or Storage URL)
+    // Fallback to a consistent default avatar based on name if none set
+    const DEFAULT_AVATARS = [
+        '/assets/profile-pic/bear.png',
+        '/assets/profile-pic/bunny.png',
+        '/assets/profile-pic/capybara.png',
+        '/assets/profile-pic/cat.png',
+        '/assets/profile-pic/dog.png',
+        '/assets/profile-pic/fox.png',
+        '/assets/profile-pic/panda.png',
+        '/assets/profile-pic/penguin.png',
+    ];
+    const getDefaultAvatar = (name) => {
+        if (!name) return DEFAULT_AVATARS[0];
+        // Use name hash to get consistent avatar per user
+        const hash = name.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+        return DEFAULT_AVATARS[hash % DEFAULT_AVATARS.length];
     };
-
-    const myAvatar = getMyAvatar();
-    const partnerAvatar = connectedPartner?.avatar_url || null;
+    const myAvatar = profile?.avatar_url || getDefaultAvatar(myName);
+    const partnerAvatar = connectedPartner?.avatar_url || getDefaultAvatar(partnerName);
     return (
         <div className="space-y-5">
             {/* Stats Strip - Prominent at top */}

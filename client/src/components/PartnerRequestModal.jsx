@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, X, Check, UserPlus, Loader2, Calendar, AlertCircle } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 import { validateAnniversaryDate } from '../utils/helpers';
+import Paywall from './Paywall';
 
 const PartnerRequestModal = () => {
     const { pendingRequests, acceptRequest, rejectRequest } = useAuthStore();
@@ -11,6 +12,7 @@ const PartnerRequestModal = () => {
     const [showAnniversaryStep, setShowAnniversaryStep] = useState(false);
     const [anniversaryDate, setAnniversaryDate] = useState('');
     const [anniversaryError, setAnniversaryError] = useState('');
+    const [showPaywall, setShowPaywall] = useState(false);
 
     // Get the first pending request (we show one at a time)
     const request = pendingRequests?.[0];
@@ -51,6 +53,9 @@ const PartnerRequestModal = () => {
         setAction(null);
         setShowAnniversaryStep(false);
         setAnniversaryDate('');
+
+        // Show paywall after successful connection
+        setShowPaywall(true);
     };
 
     const handleReject = async () => {
@@ -70,10 +75,22 @@ const PartnerRequestModal = () => {
         setAnniversaryError('');
     };
 
+    // Show paywall after connection even if no more pending requests
+    if (showPaywall) {
+        return (
+            <Paywall
+                isOpen={true}
+                onClose={() => setShowPaywall(false)}
+                triggerReason="Congratulations on connecting with your partner! 🎉 Upgrade to Pause Gold for unlimited access."
+            />
+        );
+    }
+
     if (!request) return null;
 
     const senderName = request.sender?.display_name || 'Someone';
     const senderAvatar = request.sender?.avatar_url;
+    const senderPartnerCode = request.sender?.partner_code;
 
     return (
         <AnimatePresence>
@@ -108,7 +125,7 @@ const PartnerRequestModal = () => {
                         <p className="text-pink-100 text-sm mt-1">
                             {showAnniversaryStep
                                 ? 'When did you start dating?'
-                                : 'Someone wants to connect with you'}
+                                : `${senderName} wants to connect with you`}
                         </p>
                     </div>
 
@@ -196,8 +213,8 @@ const PartnerRequestModal = () => {
                             /* Partner Request Info Step */
                             <>
                                 {/* Sender Info */}
-                                <div className="flex items-center gap-4 mb-6">
-                                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-court-gold to-court-brown flex items-center justify-center text-3xl">
+                                <div className="flex items-center gap-4 mb-4">
+                                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-court-gold to-court-brown flex items-center justify-center text-3xl overflow-hidden">
                                         {senderAvatar ? (
                                             <img
                                                 src={senderAvatar}
@@ -215,6 +232,19 @@ const PartnerRequestModal = () => {
                                         </p>
                                     </div>
                                 </div>
+
+                                {/* Partner Code for Verification */}
+                                {senderPartnerCode && (
+                                    <div className="bg-neutral-50 rounded-xl p-3 mb-4 border border-neutral-100">
+                                        <p className="text-xs text-neutral-400 text-center mb-1">Their Partner Code</p>
+                                        <p className="text-lg font-mono font-bold text-neutral-700 text-center tracking-widest">
+                                            {senderPartnerCode}
+                                        </p>
+                                        <p className="text-xs text-neutral-400 text-center mt-1">
+                                            Confirm this matches what they shared with you
+                                        </p>
+                                    </div>
+                                )}
 
                                 {/* Message (if any) */}
                                 {request.message && (

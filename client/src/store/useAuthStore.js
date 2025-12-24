@@ -628,13 +628,33 @@ const useAuthStore = create(
                     const partnerCode = existingProfile?.partner_code || generatePartnerCode();
                     console.log('[completeOnboarding] Using partner code:', partnerCode);
 
+                    // Process avatar - upload to storage if it's a custom upload
+                    let avatarUrl = onboardingData.avatarUrl || null;
+                    if (avatarUrl && avatarUrl.startsWith('data:')) {
+                        // It's a base64 upload - need to upload to Supabase Storage
+                        try {
+                            const { processAvatarForSave } = await import('../services/avatarService');
+                            const { url, error: avatarError } = await processAvatarForSave(user.id, avatarUrl);
+                            if (avatarError) {
+                                console.warn('[completeOnboarding] Avatar upload failed:', avatarError);
+                                // Continue without avatar rather than failing onboarding
+                                avatarUrl = null;
+                            } else {
+                                avatarUrl = url;
+                            }
+                        } catch (e) {
+                            console.warn('[completeOnboarding] Avatar processing exception:', e);
+                            avatarUrl = null;
+                        }
+                    }
+
                     const profileData = {
                         id: user.id,
                         email: user.email,
                         partner_code: partnerCode,
                         display_name: onboardingData.displayName,
                         birthday: onboardingData.birthday,
-                        avatar_url: onboardingData.avatarUrl || null,
+                        avatar_url: avatarUrl,
                         love_language: onboardingData.loveLanguage,
                         communication_style: onboardingData.communicationStyle,
                         conflict_style: onboardingData.conflictStyle,
@@ -746,7 +766,7 @@ const useAuthStore = create(
                         ...state.profile,
                         avatar_url:
                             typeof state.profile.avatar_url === 'string' &&
-                            (state.profile.avatar_url.startsWith('data:') || state.profile.avatar_url.length > 2048)
+                                (state.profile.avatar_url.startsWith('data:') || state.profile.avatar_url.length > 2048)
                                 ? undefined
                                 : state.profile.avatar_url,
                     }
@@ -756,7 +776,7 @@ const useAuthStore = create(
                         ...state.partner,
                         avatar_url:
                             typeof state.partner.avatar_url === 'string' &&
-                            (state.partner.avatar_url.startsWith('data:') || state.partner.avatar_url.length > 2048)
+                                (state.partner.avatar_url.startsWith('data:') || state.partner.avatar_url.length > 2048)
                                 ? undefined
                                 : state.partner.avatar_url,
                     }
@@ -769,7 +789,7 @@ const useAuthStore = create(
                         ...state.onboardingData,
                         avatarUrl:
                             typeof state.onboardingData.avatarUrl === 'string' &&
-                            (state.onboardingData.avatarUrl.startsWith('data:') || state.onboardingData.avatarUrl.length > 2048)
+                                (state.onboardingData.avatarUrl.startsWith('data:') || state.onboardingData.avatarUrl.length > 2048)
                                 ? undefined
                                 : state.onboardingData.avatarUrl,
                     }

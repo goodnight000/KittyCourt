@@ -238,19 +238,26 @@ export const getPendingRequests = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { data: [], error: 'Not authenticated' };
 
-    const { data, error } = await supabase
-        .from('partner_requests')
-        .select(`
-            *,
-            sender:profiles!partner_requests_sender_id_fkey (
-                id, display_name, avatar_url, partner_code
-            )
-        `)
-        .eq('receiver_id', user.id)
-        .eq('status', 'pending')
-        .order('created_at', { ascending: false });
+    const { data, error } = await supabase.rpc('get_pending_partner_requests');
+    if (error) return { data: [], error };
 
-    return { data: data || [], error };
+    const mapped = (data || []).map((row) => ({
+        id: row.id,
+        sender_id: row.sender_id,
+        receiver_id: row.receiver_id,
+        status: row.status,
+        message: row.message,
+        created_at: row.created_at,
+        responded_at: row.responded_at,
+        sender: {
+            id: row.sender_id,
+            display_name: row.sender_display_name,
+            avatar_url: row.sender_avatar_url,
+            partner_code: row.sender_partner_code
+        }
+    }));
+
+    return { data: mapped, error: null };
 };
 
 /**
@@ -260,19 +267,29 @@ export const getSentRequest = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { data: null, error: 'Not authenticated' };
 
-    const { data, error } = await supabase
-        .from('partner_requests')
-        .select(`
-            *,
-            receiver:profiles!partner_requests_receiver_id_fkey (
-                id, display_name, avatar_url, partner_code
-            )
-        `)
-        .eq('sender_id', user.id)
-        .eq('status', 'pending')
-        .single();
+    const { data, error } = await supabase.rpc('get_sent_partner_requests');
+    if (error) return { data: null, error };
 
-    return { data, error };
+    const row = data?.[0];
+    if (!row) return { data: null, error: null };
+
+    const mapped = {
+        id: row.id,
+        sender_id: row.sender_id,
+        receiver_id: row.receiver_id,
+        status: row.status,
+        message: row.message,
+        created_at: row.created_at,
+        responded_at: row.responded_at,
+        receiver: {
+            id: row.receiver_id,
+            display_name: row.receiver_display_name,
+            avatar_url: row.receiver_avatar_url,
+            partner_code: row.receiver_partner_code
+        }
+    };
+
+    return { data: mapped, error: null };
 };
 
 /**
@@ -311,23 +328,21 @@ export const acceptPartnerRequest = async (requestId, anniversaryDate = null) =>
 
 /**
  * Reject a partner connection request
+ * Deletes the request row to allow future requests between the same users
  */
 export const rejectPartnerRequest = async (requestId) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { error: 'Not authenticated' };
 
-    const { data, error } = await supabase
+    // Delete the request instead of marking as rejected
+    // This allows the sender to send a new request in the future
+    const { error } = await supabase
         .from('partner_requests')
-        .update({
-            status: 'rejected',
-            responded_at: new Date().toISOString()
-        })
+        .delete()
         .eq('id', requestId)
-        .eq('receiver_id', user.id)
-        .select()
-        .single();
+        .eq('receiver_id', user.id);
 
-    return { data, error };
+    return { data: { id: requestId, status: 'rejected' }, error };
 };
 
 /**
@@ -429,4 +444,3 @@ export const subscribeToDailyAnswers = (assignmentId, callback) => {
 };
 
 export default supabase;
-

@@ -107,9 +107,24 @@ const ProfilesPage = () => {
                     updateData.anniversary_date = newData.anniversaryDate;
                 }
 
-                // Include avatar_url if profile picture changed
+                // Process avatar - upload to storage if it's a custom upload (base64)
                 if (newData.profilePicture) {
-                    updateData.avatar_url = newData.profilePicture;
+                    let avatarUrl = newData.profilePicture;
+                    if (avatarUrl.startsWith('data:')) {
+                        // It's a base64 upload - need to upload to Supabase Storage
+                        try {
+                            const { processAvatarForSave } = await import('../services/avatarService');
+                            const { url, error: avatarError } = await processAvatarForSave(authUser.id, avatarUrl);
+                            if (avatarError) {
+                                console.warn('[ProfilesPage] Avatar upload failed:', avatarError);
+                            } else {
+                                avatarUrl = url;
+                            }
+                        } catch (e) {
+                            console.warn('[ProfilesPage] Avatar processing exception:', e);
+                        }
+                    }
+                    updateData.avatar_url = avatarUrl;
                 }
 
                 console.log('[ProfilesPage] Updating profile with:', updateData);
