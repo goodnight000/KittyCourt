@@ -856,7 +856,7 @@ const AddEventModal = ({ selectedDate, onAdd, onClose }) => {
                         type="date"
                         value={date}
                         onChange={(e) => handleDateChange(e.target.value)}
-                        className={`w-full bg-neutral-50 border-2 rounded-xl p-3 text-neutral-700 focus:ring-2 focus:outline-none text-sm ${dateError
+                        className={`w-102 max-w-102 bg-neutral-50 border-2 rounded-xl p-3 text-neutral-700 focus:ring-2 focus:outline-none text-sm ${dateError
                             ? 'border-red-300 focus:ring-red-200 focus:border-red-300'
                             : 'border-neutral-100 focus:ring-violet-200 focus:border-violet-300'
                             }`}
