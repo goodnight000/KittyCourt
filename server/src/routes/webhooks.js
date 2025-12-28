@@ -10,8 +10,9 @@ const crypto = require('crypto');
 const { getSupabase, isSupabaseConfigured } = require('../lib/supabase');
 
 const REVENUECAT_WEBHOOK_TOKEN = process.env.REVENUECAT_WEBHOOK_TOKEN || '';
-const PAUSE_GOLD_ENTITLEMENT = 'pause_gold';
-const PAUSE_GOLD_PRODUCT = 'pause_gold_monthly';
+// Support both formats: 'Pause Gold' (with space) or 'pause_gold' (snake_case).
+const PAUSE_GOLD_ENTITLEMENTS = new Set(['pause_gold', 'pause gold']);
+const PAUSE_GOLD_PRODUCTS = new Set(['pause_gold_monthly', 'pause_gold_yearly', 'monthly', 'yearly']);
 const isProd = process.env.NODE_ENV === 'production';
 
 /**
@@ -67,7 +68,15 @@ router.post('/revenuecat', async (req, res) => {
         const productId = event.event?.product_id;
         const expiresAt = event.event?.expiration_at_ms;
         const entitlementIds = event.event?.entitlement_ids || [];
-        const affectsGold = entitlementIds.includes(PAUSE_GOLD_ENTITLEMENT) || productId === PAUSE_GOLD_PRODUCT;
+
+        // Check if this event affects Pause Gold subscription
+        // Support multiple entitlement formats and product names
+        const hasPauseGoldEntitlement = entitlementIds.some(id => {
+            if (!id) return false;
+            return PAUSE_GOLD_ENTITLEMENTS.has(String(id).toLowerCase());
+        });
+        const productIdKey = typeof productId === 'string' ? productId.toLowerCase() : '';
+        const affectsGold = hasPauseGoldEntitlement || PAUSE_GOLD_PRODUCTS.has(productIdKey);
 
         if (!appUserId) {
             console.warn('[Webhook] No app_user_id in event');

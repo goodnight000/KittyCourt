@@ -59,8 +59,8 @@ const MainLayout = () => {
     return (
         <div className="min-h-screen min-h-[100dvh] flex flex-col font-sans">
             {/* Main Scrollable Content - with safe area for Dynamic Island/notch */}
-            <main className="flex-1 overflow-y-auto overscroll-contain" style={{ paddingTop: 'max(env(safe-area-inset-top), 24px)' }}>
-                <div className="px-4 py-6 pb-20 max-w-lg mx-auto">
+            <main className="flex-1 overflow-y-auto overscroll-contain safe-top">
+                <div className="px-4 py-5 pb-20 max-w-lg mx-auto">
                     <AnimatePresence mode="wait">
                         <motion.div
                             key={location.pathname}
@@ -80,9 +80,9 @@ const MainLayout = () => {
                 initial={{ y: 100 }}
                 animate={{ y: 0 }}
                 transition={{ delay: 0.1, type: "spring", stiffness: 300, damping: 30 }}
-                className="fixed bottom-0 left-1/2 -translate-x-1/2 z-40 w-full max-w-lg bg-white/80 backdrop-blur-xl border-t border-court-tan/30 shadow-soft-lg safe-bottom rounded-t-2xl"
+                className="fixed bottom-0 left-1/2 -translate-x-1/2 z-40 w-full max-w-lg bg-white/80 backdrop-blur-xl border-t border-court-tan/30 shadow-soft-lg pb-2 rounded-t-2xl"
             >
-                <div className="flex items-center justify-around h-20 px-2">
+                <div className="flex items-center justify-around h-18 px-2">
                     <TabItem to="/" icon={<Home size={26} />} label="Home" />
                     <TabItem
                         to="/courtroom"
@@ -164,4 +164,3 @@ const TabItem = ({ to, icon, label, isAlerting }) => (
 );
 
 export default MainLayout;
-

@@ -14,6 +14,15 @@ html {
   -webkit-text-size-adjust: 100%;
 }
 
+:root {
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-top-extra: 16px;
+  --safe-area-bottom-extra: 42px;
+  --app-safe-top: calc(var(--safe-area-top) + var(--safe-area-top-extra));
+  --app-safe-bottom: calc(var(--safe-area-bottom) + var(--safe-area-bottom-extra));
+}
+
 body {
   font-family: var(--font-sans);
   color: #4A3728;
@@ -31,7 +40,8 @@ body {
 }
 
 /* Prevent overscroll bounce on iOS */
-html, body {
+html,
+body {
   overscroll-behavior: none;
 }
 
@@ -75,7 +85,7 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.8);
   border-bottom: 1px solid rgba(212, 196, 168, 0.3);
   padding: 1rem;
-  box-shadow: 
+  box-shadow:
     0 8px 32px rgba(74, 55, 40, 0.08),
     0 2px 8px rgba(74, 55, 40, 0.04),
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
@@ -200,11 +210,11 @@ body {
 
 /* Safe Area Utilities */
 .safe-top {
-  padding-top: env(safe-area-inset-top, 0px);
+  padding-top: var(--app-safe-top);
 }
 
 .safe-bottom {
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-bottom: var(--safe-area-bottom);
 }
 
 /* Perspective for 3D effects */
@@ -213,7 +223,8 @@ body {
 }
 
 /* Prevent text selection on interactive elements */
-button, a {
+button,
+a {
   -webkit-user-select: none;
   user-select: none;
 }
@@ -232,7 +243,10 @@ button, a {
 
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;

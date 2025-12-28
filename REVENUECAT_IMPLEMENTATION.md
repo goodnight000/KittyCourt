@@ -42,10 +42,15 @@ Add to `client/.env`:
 VITE_REVENUECAT_API_KEY=your_api_key_here
 ```
 
+Add to `server/.env`:
+```
+REVENUECAT_SECRET_KEY=your_revenuecat_secret_key_here
+```
+
 ## RevenueCat Configuration
 
-- **Entitlement ID:** `pause_gold`
-- **Product ID:** `pause_gold_monthly`
+- **Entitlement ID:** `pause_gold` (server also tolerates `Pause Gold`)
+- **Product IDs:** `pause_gold_monthly`, `pause_gold_yearly` (client accepts `monthly` / `yearly` aliases)
 
 ## Testing
 

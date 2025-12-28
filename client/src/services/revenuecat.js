@@ -13,9 +13,10 @@ let isInitialized = false;
 
 // Configuration - use environment variable
 const REVENUECAT_API_KEY = import.meta.env.VITE_REVENUECAT_API_KEY || '';
-const ENTITLEMENT_ID = 'Pause Gold';
-const PRODUCT_ID_MONTHLY = 'monthly';
-const PRODUCT_ID_YEARLY = 'yearly';
+export const ENTITLEMENT_ID = 'Pause Gold';
+export const PRODUCT_ID_MONTHLY = 'monthly';
+export const PRODUCT_ID_YEARLY = 'yearly';
+export const ENTITLEMENT_ID_ALT = 'pause_gold';
 
 /**
  * Check if we're running on a native platform (iOS/Android)
@@ -113,7 +114,9 @@ export const checkPauseGoldStatus = async () => {
 
     try {
         const { customerInfo } = await Purchases.getCustomerInfo();
-        const isGold = customerInfo.entitlements.active[ENTITLEMENT_ID] !== undefined;
+        const entitlements = customerInfo?.entitlements?.active || {};
+        const isGold = entitlements[ENTITLEMENT_ID] !== undefined ||
+            entitlements[ENTITLEMENT_ID_ALT] !== undefined;
         console.log('[RevenueCat] Pause Gold status:', isGold);
         return isGold;
     } catch (error) {
@@ -218,15 +221,39 @@ export const purchasePauseGold = async (planType = 'monthly') => {
 
         // Find the correct package based on plan type
         const targetProductId = planType === 'yearly' ? PRODUCT_ID_YEARLY : PRODUCT_ID_MONTHLY;
-        const rcPackageType = planType === 'yearly' ? '$rc_annual' : '$rc_monthly';
 
-        const selectedPackage = offerings.current.availablePackages.find(
-            pkg => pkg.identifier === rcPackageType || pkg.product.identifier === targetProductId
-        );
+        // RevenueCat package identifiers can vary - check multiple formats
+        // Common formats: '$rc_annual', '$rc_monthly', 'annual', 'monthly', or the product ID itself
+        const selectedPackage = offerings.current.availablePackages.find(pkg => {
+            const pkgId = pkg.identifier?.toLowerCase() || '';
+            const productId = pkg.product?.identifier?.toLowerCase() || '';
+
+            if (planType === 'yearly') {
+                return pkgId === '$rc_annual' ||
+                    pkgId === 'annual' ||
+                    pkgId === 'yearly' ||
+                    pkgId.includes('annual') ||
+                    pkgId.includes('yearly') ||
+                    productId === targetProductId.toLowerCase();
+            } else {
+                return pkgId === '$rc_monthly' ||
+                    pkgId === 'monthly' ||
+                    pkgId.includes('monthly') ||
+                    productId === targetProductId.toLowerCase();
+            }
+        });
 
         if (!selectedPackage) {
-            console.error('[RevenueCat] Available packages:', offerings.current.availablePackages.map(p => p.identifier));
-            throw new Error(`No ${planType} package found`);
+            // Log available packages for debugging
+            console.error('[RevenueCat] Could not find package for plan type:', planType);
+            console.error('[RevenueCat] Available packages:',
+                offerings.current.availablePackages.map(p => ({
+                    identifier: p.identifier,
+                    productIdentifier: p.product?.identifier,
+                    packageType: p.packageType
+                }))
+            );
+            throw new Error(`No ${planType} package found. Check RevenueCat configuration.`);
         }
 
         console.log('[RevenueCat] Purchasing package:', selectedPackage.identifier, 'product:', selectedPackage.product.identifier);
@@ -299,6 +326,7 @@ export default {
     logOutUser,
     onCustomerInfoUpdate,
     ENTITLEMENT_ID,
+    ENTITLEMENT_ID_ALT,
     PRODUCT_ID_MONTHLY,
     PRODUCT_ID_YEARLY,
 };

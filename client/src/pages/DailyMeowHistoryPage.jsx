@@ -8,6 +8,7 @@ import useAuthStore from '../store/useAuthStore';
 import useCacheStore, { CACHE_TTL, CACHE_KEYS } from '../store/useCacheStore';
 import api from '../services/api';
 import { ChevronLeft } from 'lucide-react';
+import RequirePartner from '../components/RequirePartner';
 
 // Mood options with custom images (matching DailyMeowPage.jsx)
 const MOOD_OPTIONS = [
@@ -94,6 +95,8 @@ const DailyMeowHistoryPage = () => {
     useEffect(() => {
         if (myId && partnerId) {
             fetchHistory();
+        } else {
+            setLoading(false);
         }
     }, [fetchHistory, myId, partnerId]);
 
@@ -199,7 +202,11 @@ const DailyMeowHistoryPage = () => {
     }
 
     return (
-        <div className="space-y-5">
+        <RequirePartner
+            feature="Question Archives"
+            description="Connect with your partner to unlock your shared question history."
+        >
+            <div className="space-y-5">
             {/* Header */}
             <Motion.div
                 initial={{ opacity: 0, y: -10 }}
@@ -404,7 +411,8 @@ const DailyMeowHistoryPage = () => {
                     </div>
                 )}
             </div>
-        </div>
+            </div>
+        </RequirePartner>
     );
 };
 

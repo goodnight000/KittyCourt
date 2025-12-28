@@ -4,6 +4,7 @@ import { Heart, X, Check, UserPlus, Loader2, Calendar, AlertCircle } from 'lucid
 import useAuthStore from '../store/useAuthStore';
 import { validateAnniversaryDate } from '../utils/helpers';
 import Paywall from './Paywall';
+import ProfilePicture from './ProfilePicture';
 
 const PartnerRequestModal = () => {
     const { pendingRequests, acceptRequest, rejectRequest } = useAuthStore();
@@ -135,16 +136,12 @@ const PartnerRequestModal = () => {
                             /* Anniversary Date Input Step */
                             <>
                                 <div className="text-center mb-6">
-                                    <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-court-gold to-court-brown flex items-center justify-center text-3xl mb-3">
-                                        {senderAvatar ? (
-                                            <img
-                                                src={senderAvatar}
-                                                alt={senderName}
-                                                className="w-full h-full rounded-full object-cover"
-                                            />
-                                        ) : (
-                                            '😺'
-                                        )}
+                                    <div className="w-16 h-16 mx-auto mb-3">
+                                        <ProfilePicture
+                                            avatarUrl={senderAvatar}
+                                            name={senderName}
+                                            size="lg"
+                                        />
                                     </div>
                                     <p className="text-sm text-neutral-600">
                                         Connecting with <span className="font-bold">{senderName}</span>
@@ -214,17 +211,11 @@ const PartnerRequestModal = () => {
                             <>
                                 {/* Sender Info */}
                                 <div className="flex items-center gap-4 mb-4">
-                                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-court-gold to-court-brown flex items-center justify-center text-3xl overflow-hidden">
-                                        {senderAvatar ? (
-                                            <img
-                                                src={senderAvatar}
-                                                alt={senderName}
-                                                className="w-full h-full rounded-full object-cover"
-                                            />
-                                        ) : (
-                                            '😺'
-                                        )}
-                                    </div>
+                                    <ProfilePicture
+                                        avatarUrl={senderAvatar}
+                                        name={senderName}
+                                        size="lg"
+                                    />
                                     <div className="flex-1">
                                         <p className="font-bold text-lg text-neutral-800">{senderName}</p>
                                         <p className="text-sm text-neutral-500">

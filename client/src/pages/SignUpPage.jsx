@@ -72,7 +72,7 @@ const SignUpPage = () => {
 
     if (success) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-court-cream via-white to-court-tan/30 flex flex-col items-center justify-center p-6">
+            <div className="min-h-screen bg-gradient-to-br from-court-cream via-white to-court-tan/30 flex flex-col items-center justify-center p-6 safe-top">
                 <Motion.div
                     initial={{ scale: 0.8, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
@@ -102,7 +102,7 @@ const SignUpPage = () => {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-court-cream via-white to-court-tan/30 flex flex-col items-center justify-center p-6">
+        <div className="min-h-screen bg-gradient-to-br from-court-cream via-white to-court-tan/30 flex flex-col items-center justify-center p-6 safe-top">
             {/* Background Decorations */}
             <div className="fixed inset-0 pointer-events-none overflow-hidden">
                 <Motion.div

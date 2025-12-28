@@ -85,7 +85,7 @@ const ConnectPartnerPage = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-court-cream via-white to-court-tan/30 flex flex-col items-center justify-center p-6">
+        <div className="min-h-screen bg-gradient-to-br from-court-cream via-white to-court-tan/30 flex flex-col items-center justify-center p-6 safe-top">
             {/* Floating decorations */}
             <div className="fixed inset-0 pointer-events-none overflow-hidden">
                 <motion.div

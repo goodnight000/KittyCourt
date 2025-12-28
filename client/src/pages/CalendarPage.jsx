@@ -629,61 +629,65 @@ const EventCard = ({ event, delay, onClick, onPlanClick, showPlanButton, hasSave
             <div className={`absolute inset-y-0 left-0 w-1.5 bg-gradient-to-b ${accent[eventType.color] || accent.blue}`} />
             <div className="absolute top-0 right-0 w-24 h-24 bg-white/30 rounded-full -translate-y-1/2 translate-x-1/2 blur-xl" />
 
-            <div className="relative z-10 p-3 pl-4 flex items-center gap-3">
-                <div className="w-11 h-11 rounded-2xl bg-white/70 border border-white/60 shadow-sm flex items-center justify-center text-2xl">
-                    {event.emoji}
-                </div>
-
-                <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                        <h4 className="font-bold text-neutral-800 text-sm truncate">{event.title}</h4>
-                        {timingLabel && (
-                            <span
-                                className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-extrabold ${isToday
-                                    ? 'bg-gradient-to-r from-amber-400 to-orange-400 text-white shadow-sm'
-                                    : 'bg-neutral-100 text-neutral-600'
-                                    }`}
-                            >
-                                {timingLabel}
-                            </span>
-                        )}
+            <div className="relative z-10 p-3 pl-4">
+                <div className="flex items-start gap-3">
+                    <div className="w-11 h-11 rounded-2xl bg-white/70 border border-white/60 shadow-sm flex items-center justify-center text-2xl">
+                        {event.emoji}
                     </div>
 
-                    <div className="mt-1 flex items-center gap-2 text-xs text-neutral-500">
-                        <span className="truncate">
-                            {eventDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                        </span>
-                        <span className="text-neutral-300">•</span>
-                        <span className="px-2 py-0.5 rounded-full bg-white/70 border border-white/50 text-[10px] font-bold text-neutral-600">
-                            {eventType.label}
-                        </span>
-                        <span className="text-neutral-300">•</span>
-                        {event.isSecret ? (
-                            <span className="px-2 py-0.5 rounded-full bg-[#1c1c84]/10 text-[#1c1c84] text-[10px] font-extrabold inline-flex items-center gap-1">
-                                <Lock className="w-3 h-3" />
-                                Secret
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <h4 className="font-bold text-neutral-800 text-sm truncate">{event.title}</h4>
+                            {timingLabel && (
+                                <span
+                                    className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-extrabold ${isToday
+                                        ? 'bg-gradient-to-r from-amber-400 to-orange-400 text-white shadow-sm'
+                                        : 'bg-neutral-100 text-neutral-600'
+                                        }`}
+                                >
+                                    {timingLabel}
+                                </span>
+                            )}
+                        </div>
+
+                        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-neutral-500">
+                            <span className="truncate">
+                                {eventDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                             </span>
-                        ) : (
-                            <span className="px-2 py-0.5 rounded-full bg-pink-100 text-pink-700 text-[10px] font-extrabold">
-                                Shared
+                            <span className="text-neutral-300">•</span>
+                            <span className="px-2 py-0.5 rounded-full bg-white/70 border border-white/50 text-[10px] font-bold text-neutral-600">
+                                {eventType.label}
                             </span>
-                        )}
+                            <span className="text-neutral-300">•</span>
+                            {event.isSecret ? (
+                                <span className="px-2 py-0.5 rounded-full bg-[#1c1c84]/10 text-[#1c1c84] text-[10px] font-extrabold inline-flex items-center gap-1">
+                                    <Lock className="w-3 h-3" />
+                                    Secret
+                                </span>
+                            ) : (
+                                <span className="px-2 py-0.5 rounded-full bg-pink-100 text-pink-700 text-[10px] font-extrabold">
+                                    Shared
+                                </span>
+                            )}
+                        </div>
                     </div>
                 </div>
 
                 {showPlanButton && (
-                    <Motion.button
-                        whileTap={{ scale: 0.97 }}
-                        onClick={onPlanClick}
-                        className={`shrink-0 h-10 px-3 rounded-full text-xs font-bold flex items-center gap-2 transition-all ${isSoon
-                            ? 'text-white shadow-lg'
-                            : 'bg-white/70 text-court-brown border border-court-tan/50 shadow-soft hover:bg-white'
-                            }`}
-                        style={isSoon ? { background: 'linear-gradient(135deg, #B85C6B 0%, #8B4049 100%)' } : {}}
-                    >
-                        <Wand2 className="w-4 h-4" />
-                        <span>{hasSavedPlan ? 'View my plan' : 'Help me plan'}</span>
-                    </Motion.button>
+                    <div className="mt-3 flex">
+                        <Motion.button
+                            whileTap={{ scale: 0.97 }}
+                            onClick={onPlanClick}
+                            className={`w-full h-10 px-4 rounded-full text-xs font-bold flex items-center justify-center gap-2 transition-all ${isSoon
+                                ? 'text-white shadow-lg'
+                                : 'bg-white/70 text-court-brown border border-court-tan/50 shadow-soft hover:bg-white'
+                                }`}
+                            style={isSoon ? { background: 'linear-gradient(135deg, #B85C6B 0%, #8B4049 100%)' } : {}}
+                        >
+                            <Wand2 className="w-4 h-4" />
+                            <span>{hasSavedPlan ? 'View my plan' : 'Help me plan'}</span>
+                        </Motion.button>
+                    </div>
                 )}
             </div>
         </Motion.div>

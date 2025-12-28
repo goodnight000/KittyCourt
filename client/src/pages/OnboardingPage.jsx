@@ -9,18 +9,9 @@ import {
 import useAuthStore from '../store/useAuthStore';
 import { validateDate } from '../utils/helpers';
 import Paywall from '../components/Paywall';
+import { PRESET_AVATARS } from '../services/avatarService';
 
-// Available preset avatars
-const AVATAR_PRESETS = [
-    { id: 'bear', src: '/assets/profile-pic/bear.png', label: 'Bear' },
-    { id: 'bunny', src: '/assets/profile-pic/bunny.png', label: 'Bunny' },
-    { id: 'capybara', src: '/assets/profile-pic/capybara.png', label: 'Capybara' },
-    { id: 'cat', src: '/assets/profile-pic/cat.png', label: 'Cat' },
-    { id: 'dog', src: '/assets/profile-pic/dog.png', label: 'Dog' },
-    { id: 'fox', src: '/assets/profile-pic/fox.png', label: 'Fox' },
-    { id: 'panda', src: '/assets/profile-pic/panda.png', label: 'Panda' },
-    { id: 'penguin', src: '/assets/profile-pic/penguin.png', label: 'Penguin' },
-];
+// Note: PRESET_AVATARS is now imported from avatarService
 
 // Onboarding Steps Configuration
 const ONBOARDING_STEPS = [
@@ -358,6 +349,32 @@ const OnboardingPage = () => {
         return value === optionId;
     };
 
+    const handleAvatarFile = (file) => {
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            alert('Please select an image file');
+            return;
+        }
+
+        if (file.size > 5 * 1024 * 1024) {
+            alert('Image must be less than 5MB');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const result = event.target?.result;
+            if (typeof result !== 'string') {
+                alert('Failed to read image');
+                return;
+            }
+            updateOnboardingData({ avatarUrl: result });
+        };
+        reader.onerror = () => alert('Failed to read image');
+        reader.readAsDataURL(file);
+    };
+
     const canProceed = () => {
         if (!currentStepData.field) return true;
         const value = onboardingData[currentStepData.field];
@@ -366,8 +383,8 @@ const OnboardingPage = () => {
             if (currentStepData.field === 'petPeeves') return true;
             return value && value.length > 0;
         }
-        // Avatar is optional - users can skip and add later
-        if (currentStepData.field === 'avatarUrl') return true;
+        // Avatar is REQUIRED - users must select a profile picture
+        // No special case for avatarUrl - it follows the standard required check
         return !!value;
     };
 
@@ -544,7 +561,7 @@ const OnboardingPage = () => {
                         animate={{ opacity: 1, y: 0 }}
                         className="space-y-6"
                     >
-                        <div className="relative">
+                        <div className="relative w-full">
                             <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
                             <input
                                 type="date"
@@ -561,7 +578,7 @@ const OnboardingPage = () => {
                                         setBirthdayError(null);
                                     }
                                 }}
-                                className={`w-full pl-12 pr-4 py-4 bg-white border-2 rounded-2xl text-neutral-700 text-lg focus:outline-none focus:ring-2 transition-all ${birthdayError
+                                className={`w-full min-w-0 max-w-full box-border pl-12 pr-4 py-4 bg-white border-2 rounded-2xl text-neutral-700 text-lg focus:outline-none focus:ring-2 transition-all ${birthdayError
                                     ? 'border-red-300 focus:border-red-400 focus:ring-red-200'
                                     : 'border-neutral-200 focus:border-court-gold focus:ring-court-gold/20'
                                     }`}
@@ -588,7 +605,7 @@ const OnboardingPage = () => {
                     >
                         {/* Current selection preview */}
                         <div className="flex flex-col items-center">
-                            <div className="w-28 h-28 rounded-full overflow-hidden border-4 border-court-gold shadow-lg bg-white">
+                            <div className={`w-20 h-24 rounded-2xl overflow-hidden border-4 shadow-lg bg-white transition-all ${onboardingData.avatarUrl ? 'border-court-gold' : 'border-red-300'}`}>
                                 {onboardingData.avatarUrl ? (
                                     <img
                                         src={onboardingData.avatarUrl}
@@ -601,8 +618,8 @@ const OnboardingPage = () => {
                                     </div>
                                 )}
                             </div>
-                            <p className="text-sm text-neutral-500 mt-2">
-                                {onboardingData.avatarUrl ? 'Looking good! ✨' : 'Choose an avatar below'}
+                            <p className={`text-sm mt-2 ${onboardingData.avatarUrl ? 'text-neutral-500' : 'text-red-500 font-medium'}`}>
+                                {onboardingData.avatarUrl ? 'Looking good! ✨' : 'Please select a profile picture'}
                             </p>
                         </div>
 
@@ -610,21 +627,21 @@ const OnboardingPage = () => {
                         <div>
                             <p className="text-xs text-neutral-400 uppercase tracking-wider mb-3 text-center">Pick an animal friend</p>
                             <div className="grid grid-cols-4 gap-3">
-                                {AVATAR_PRESETS.map((avatar, index) => (
+                                {PRESET_AVATARS.map((avatar, index) => (
                                     <Motion.button
                                         key={avatar.id}
                                         initial={{ opacity: 0, scale: 0.8 }}
                                         animate={{ opacity: 1, scale: 1 }}
                                         transition={{ delay: index * 0.05 }}
                                         whileTap={{ scale: 0.9 }}
-                                        onClick={() => updateOnboardingData({ avatarUrl: avatar.src })}
-                                        className={`aspect-square rounded-2xl overflow-hidden border-3 transition-all ${onboardingData.avatarUrl === avatar.src
+                                        onClick={() => updateOnboardingData({ avatarUrl: avatar.path })}
+                                        className={`aspect-square rounded-2xl overflow-hidden border-3 transition-all ${onboardingData.avatarUrl === avatar.path
                                             ? 'border-court-gold ring-2 ring-court-gold/30 shadow-lg'
                                             : 'border-neutral-200 hover:border-neutral-300'
                                             }`}
                                     >
                                         <img
-                                            src={avatar.src}
+                                            src={avatar.path}
                                             alt={avatar.label}
                                             className="w-full h-full object-cover"
                                         />
@@ -649,13 +666,7 @@ const OnboardingPage = () => {
                                     className="hidden"
                                     onChange={(e) => {
                                         const file = e.target.files?.[0];
-                                        if (file) {
-                                            const reader = new FileReader();
-                                            reader.onload = (event) => {
-                                                updateOnboardingData({ avatarUrl: event.target.result });
-                                            };
-                                            reader.readAsDataURL(file);
-                                        }
+                                        handleAvatarFile(file);
                                     }}
                                 />
                                 <div className="flex items-center justify-center gap-2 py-3 px-4 bg-white border-2 border-neutral-200 rounded-xl hover:border-neutral-300 hover:bg-neutral-50 transition-all">
@@ -672,13 +683,7 @@ const OnboardingPage = () => {
                                     className="hidden"
                                     onChange={(e) => {
                                         const file = e.target.files?.[0];
-                                        if (file) {
-                                            const reader = new FileReader();
-                                            reader.onload = (event) => {
-                                                updateOnboardingData({ avatarUrl: event.target.result });
-                                            };
-                                            reader.readAsDataURL(file);
-                                        }
+                                        handleAvatarFile(file);
                                     }}
                                 />
                                 <div className="flex items-center justify-center gap-2 py-3 px-4 bg-white border-2 border-neutral-200 rounded-xl hover:border-neutral-300 hover:bg-neutral-50 transition-all">
@@ -688,9 +693,9 @@ const OnboardingPage = () => {
                             </label>
                         </div>
 
-                        {/* Skip option */}
+                        {/* Note about changing later */}
                         <p className="text-xs text-neutral-400 text-center">
-                            You can always change this later in settings
+                            You can change this later in your profile settings
                         </p>
                     </Motion.div>
                 );
@@ -910,7 +915,10 @@ const OnboardingPage = () => {
             />
 
             {/* Progress Bar */}
-            <div className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-lg border-b border-neutral-100">
+            <div
+                className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-lg border-b border-neutral-100"
+                style={{ paddingTop: 'var(--app-safe-top)' }}
+            >
                 <div className="max-w-lg mx-auto px-6 py-4">
                     <div className="flex items-center justify-between mb-2">
                         <span className="text-xs text-neutral-400">
@@ -933,7 +941,10 @@ const OnboardingPage = () => {
             </div>
 
             {/* Main Content */}
-            <div className="flex-1 flex flex-col max-w-lg mx-auto w-full px-6 pt-24 pb-32">
+            <div
+                className="flex-1 flex flex-col max-w-lg mx-auto w-full px-6 pb-32"
+                style={{ paddingTop: 'calc(6rem + var(--app-safe-top))' }}
+            >
                 <AnimatePresence mode="wait">
                     <Motion.div
                         key={currentStepData.id}

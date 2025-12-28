@@ -18,6 +18,8 @@ import {
     purchasePauseGold as rcPurchaseGold,
     restorePurchases as rcRestorePurchases,
     onCustomerInfoUpdate,
+    ENTITLEMENT_ID,
+    ENTITLEMENT_ID_ALT,
 } from '../services/revenuecat';
 
 /**
@@ -143,6 +145,21 @@ const useSubscriptionStore = create((set, get) => ({
                 customerInfo = await getCustomerInfo();
             }
 
+            // Fallback: check backend subscription_tier
+            // This handles cases where webhook updated DB but client state is stale
+            if (!isGold) {
+                try {
+                    const response = await api.get('/subscription/status');
+                    if (response.data?.tier === 'pause_gold') {
+                        console.log('[SubscriptionStore] Gold status confirmed from backend');
+                        isGold = true;
+                    }
+                } catch (e) {
+                    // Backend endpoint may not exist yet, ignore
+                    console.warn('[SubscriptionStore] Backend status check failed:', e.message);
+                }
+            }
+
             set({
                 isGold,
                 customerInfo,
@@ -206,7 +223,22 @@ const useSubscriptionStore = create((set, get) => ({
                     isLoading: false,
                     trialEligible: false, // User has now used their trial
                 });
-                // Refresh usage so UI immediately reflects Gold limits (and any server-side tracking).
+
+                // Notify backend about subscription change for immediate sync
+                // This helps in sandbox testing where webhooks may be delayed
+                try {
+                    const productId = result.customerInfo?.activeSubscriptions?.[0] || planType;
+                    await api.post('/subscription/sync', {
+                        tier: 'pause_gold',
+                        productId,
+                    });
+                    console.log('[SubscriptionStore] Backend sync successful');
+                } catch (e) {
+                    // Backend sync is best-effort, webhook will handle it eventually
+                    console.warn('[SubscriptionStore] Backend sync failed (will rely on webhook):', e.message);
+                }
+
+                // Refresh usage so UI immediately reflects Gold limits
                 get().fetchUsage();
                 return { success: true };
             } else if (result.cancelled) {
@@ -233,7 +265,10 @@ const useSubscriptionStore = create((set, get) => ({
             }
 
             const customerInfo = await rcRestorePurchases();
-            const isGold = customerInfo?.entitlements?.active?.pause_gold !== undefined;
+            // Check both entitlement ID formats to avoid mismatches.
+            const entitlements = customerInfo?.entitlements?.active || {};
+            const isGold = entitlements[ENTITLEMENT_ID] !== undefined ||
+                entitlements[ENTITLEMENT_ID_ALT] !== undefined;
 
             set({
                 isGold,
@@ -241,6 +276,17 @@ const useSubscriptionStore = create((set, get) => ({
                 limits: isGold ? GOLD_LIMITS : FREE_LIMITS,
                 isLoading: false,
             });
+
+            try {
+                const productId = customerInfo?.activeSubscriptions?.[0];
+                await api.post('/subscription/sync', {
+                    tier: isGold ? 'pause_gold' : 'free',
+                    productId,
+                });
+                console.log('[SubscriptionStore] Backend sync after restore successful');
+            } catch (e) {
+                console.warn('[SubscriptionStore] Backend sync after restore failed:', e.message);
+            }
 
             get().fetchUsage();
             return { success: true, isGold };

@@ -11,19 +11,9 @@ import useAppStore from '../store/useAppStore';
 import useAuthStore from '../store/useAuthStore';
 import useSubscriptionStore from '../store/useSubscriptionStore';
 import { validateBirthdayDate } from '../utils/helpers';
-import { upsertProfile } from '../services/supabase';
 import Paywall from '../components/Paywall';
-
-const AVATAR_OPTIONS = [
-    { id: 'cat', image: '/assets/profile-pic/cat.png', label: 'Cat' },
-    { id: 'bunny', image: '/assets/profile-pic/bunny.png', label: 'Bunny' },
-    { id: 'bear', image: '/assets/profile-pic/bear.png', label: 'Bear' },
-    { id: 'fox', image: '/assets/profile-pic/fox.png', label: 'Fox' },
-    { id: 'panda', image: '/assets/profile-pic/panda.png', label: 'Panda' },
-    { id: 'penguin', image: '/assets/profile-pic/penguin.png', label: 'Penguin' },
-    { id: 'dog', image: '/assets/profile-pic/dog.png', label: 'Dog' },
-    { id: 'capybara', image: '/assets/profile-pic/capybara.png', label: 'Capybara' },
-];
+import ProfilePicture from '../components/ProfilePicture';
+import { PRESET_AVATARS, processAvatarForSave } from '../services/avatarService';
 
 const LOVE_LANGUAGES = [
     { id: 'words', label: 'Words of Affirmation', emoji: '💬' },
@@ -45,42 +35,29 @@ const ProfilesPage = () => {
     const [copied, setCopied] = useState(false);
     const [showPaywall, setShowPaywall] = useState(false);
 
-    // Profile settings - initialize from Supabase profile, fallback to localStorage
-    const [profileData, setProfileData] = useState(() => {
-        const stored = localStorage.getItem(`catjudge_profile_${currentUser?.id}`);
-        const storedData = stored ? JSON.parse(stored) : {};
-
-        // Merge with Supabase profile data (Supabase takes priority for name/birthday/anniversary)
-        return {
-            nickname: profile?.display_name || storedData.nickname || '',
-            birthday: profile?.birthday || storedData.birthday || '',
-            loveLanguage: profile?.love_language || storedData.loveLanguage || '',
-            avatar: storedData.avatar || 'cat',
-            anniversaryDate: profile?.anniversary_date || storedData.anniversaryDate || '',
-            profilePicture: storedData.profilePicture || null,
-        };
-    });
+    // Profile settings - ONLY from Supabase profile (no localStorage for avatars)
+    const [profileData, setProfileData] = useState(() => ({
+        nickname: profile?.display_name || '',
+        birthday: profile?.birthday || '',
+        loveLanguage: profile?.love_language || '',
+        avatarUrl: profile?.avatar_url || null,
+        anniversaryDate: profile?.anniversary_date || '',
+    }));
 
     useEffect(() => {
         fetchAppreciations();
     }, [fetchAppreciations]);
 
     useEffect(() => {
-        if (currentUser?.id) {
-            const stored = localStorage.getItem(`catjudge_profile_${currentUser.id}`);
-            const storedData = stored ? JSON.parse(stored) : {};
-
-            // Merge Supabase profile with localStorage (Supabase takes priority)
-            setProfileData({
-                nickname: profile?.display_name || storedData.nickname || '',
-                birthday: profile?.birthday || storedData.birthday || '',
-                loveLanguage: profile?.love_language || storedData.loveLanguage || '',
-                avatar: storedData.avatar || 'cat',
-                anniversaryDate: profile?.anniversary_date || storedData.anniversaryDate || '',
-                profilePicture: storedData.profilePicture || null,
-            });
-        }
-    }, [currentUser?.id, profile]);
+        // Update profileData when profile changes (from Supabase only)
+        setProfileData({
+            nickname: profile?.display_name || '',
+            birthday: profile?.birthday || '',
+            loveLanguage: profile?.love_language || '',
+            avatarUrl: profile?.avatar_url || null,
+            anniversaryDate: profile?.anniversary_date || '',
+        });
+    }, [profile]);
 
     const saveProfile = async (newData) => {
         console.log('[ProfilesPage] saveProfile called with:', newData);
@@ -88,14 +65,11 @@ const ProfilesPage = () => {
 
         // Update local state immediately for responsive UI
         setProfileData(newData);
-        localStorage.setItem(`catjudge_profile_${currentUser?.id}`, JSON.stringify(newData));
-        console.log('[ProfilesPage] Local state and localStorage updated');
 
         // Persist to Supabase
         if (authUser?.id) {
             try {
                 // Build update object with only the fields we want to change
-                // Avoid sending anniversary_date if not changed (it's immutable once set)
                 const updateData = {
                     display_name: newData.nickname || null,
                     love_language: newData.loveLanguage || null,
@@ -108,28 +82,18 @@ const ProfilesPage = () => {
                 }
 
                 // Process avatar - upload to storage if it's a custom upload (base64)
-                if (newData.profilePicture) {
-                    let avatarUrl = newData.profilePicture;
-                    if (avatarUrl.startsWith('data:')) {
-                        // It's a base64 upload - need to upload to Supabase Storage
-                        try {
-                            const { processAvatarForSave } = await import('../services/avatarService');
-                            const { url, error: avatarError } = await processAvatarForSave(authUser.id, avatarUrl);
-                            if (avatarError) {
-                                console.warn('[ProfilesPage] Avatar upload failed:', avatarError);
-                            } else {
-                                avatarUrl = url;
-                            }
-                        } catch (e) {
-                            console.warn('[ProfilesPage] Avatar processing exception:', e);
-                        }
+                if (newData.avatarUrl) {
+                    const { url, error: avatarError } = await processAvatarForSave(authUser.id, newData.avatarUrl);
+                    if (avatarError) {
+                        console.warn('[ProfilesPage] Avatar upload failed:', avatarError);
+                    } else {
+                        updateData.avatar_url = url;
                     }
-                    updateData.avatar_url = avatarUrl;
                 }
 
                 console.log('[ProfilesPage] Updating profile with:', updateData);
 
-                // Use direct Supabase update instead of upsert to avoid RLS/constraint issues
+                // Use direct Supabase update
                 const { supabase } = await import('../services/supabase');
                 const { data, error } = await supabase
                     .from('profiles')
@@ -145,9 +109,7 @@ const ProfilesPage = () => {
                 } else {
                     console.log('[ProfilesPage] Profile saved to Supabase successfully');
                     // Refresh auth store profile to propagate changes throughout the app
-                    console.log('[ProfilesPage] Calling refreshProfile...');
                     await refreshProfile();
-                    console.log('[ProfilesPage] refreshProfile completed');
                 }
             } catch (err) {
                 console.error('[ProfilesPage] Exception saving profile:', err);
@@ -166,28 +128,11 @@ const ProfilesPage = () => {
     const questionsAnswered = profile?.questions_answered || 0;
     const partnerQuestionsAnswered = connectedPartner?.questions_answered || 0;
 
-    // Get selected avatar image
-    const selectedAvatar = AVATAR_OPTIONS.find(a => a.id === profileData.avatar);
+    // Get love language
     const selectedLoveLanguage = LOVE_LANGUAGES.find(l => l.id === profileData.loveLanguage);
 
     return (
         <div className="space-y-5">
-            {/* Header */}
-            <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="text-center"
-            >
-                <motion.span
-                    animate={{ rotate: [0, 10, -10, 0] }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                    className="text-3xl inline-block mb-2"
-                >
-                    💕
-                </motion.span>
-                <h1 className="text-xl font-bold text-gradient">Profiles</h1>
-                <p className="text-neutral-500 text-sm">You & your partner</p>
-            </motion.div>
 
             {/* Tab Switcher */}
             <div className="flex bg-white/60 rounded-2xl p-1.5 gap-1">
@@ -230,19 +175,13 @@ const ProfilesPage = () => {
                                 <motion.div
                                     whileTap={{ scale: 0.95 }}
                                     onClick={() => setShowEditModal(true)}
-                                    className="w-20 h-24 bg-gradient-to-br from-violet-100 to-pink-100 rounded-2xl flex items-center justify-center shadow-soft cursor-pointer relative overflow-hidden"
+                                    className="relative cursor-pointer"
                                 >
-                                    {profileData.profilePicture ? (
-                                        <img
-                                            src={profileData.profilePicture}
-                                            alt="Profile"
-                                            className="w-full h-full object-cover"
-                                        />
-                                    ) : selectedAvatar?.image ? (
-                                        <img src={selectedAvatar.image} alt={selectedAvatar.label} className="w-full h-full object-contain p-1" />
-                                    ) : (
-                                        <img src="/assets/profile-pic/cat.png" alt="Cat" className="w-full h-full object-contain p-1" />
-                                    )}
+                                    <ProfilePicture
+                                        avatarUrl={profileData.avatarUrl}
+                                        name={profileData.nickname || currentUser?.name}
+                                        size="xl"
+                                    />
                                     <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-sm">
                                         <Edit3 className="w-3 h-3 text-violet-500" />
                                     </div>
@@ -489,15 +428,12 @@ const ProfilesPage = () => {
                                 className="glass-card p-5 bg-gradient-to-br from-green-50/80 to-emerald-50/60 border border-green-200/50"
                             >
                                 <div className="flex items-center gap-3">
-                                    <div className="w-14 h-14 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center text-2xl">
-                                        {connectedPartner.avatar_url ? (
-                                            <img
-                                                src={connectedPartner.avatar_url}
-                                                alt={connectedPartner.display_name}
-                                                className="w-full h-full rounded-full object-cover"
-                                            />
-                                        ) : '💕'}
-                                    </div>
+                                    <ProfilePicture
+                                        avatarUrl={connectedPartner.avatar_url}
+                                        name={connectedPartner.display_name}
+                                        size="lg"
+                                        className="rounded-full"
+                                    />
                                     <div className="flex-1">
                                         <p className="text-xs text-green-600 font-medium flex items-center gap-1">
                                             <Check className="w-3 h-3" /> Connected
@@ -550,13 +486,11 @@ const ProfilesPage = () => {
                         {/* Relationship Card */}
                         <motion.div className="glass-card p-5 bg-gradient-to-br from-court-cream/80 to-court-tan/60 text-center">
                             <div className="flex items-center justify-center gap-4 mb-4">
-                                <div className="w-16 h-16 bg-gradient-to-br from-court-cream to-court-tan rounded-2xl flex items-center justify-center shadow-soft overflow-hidden">
-                                    {selectedAvatar?.image ? (
-                                        <img src={selectedAvatar.image} alt={selectedAvatar.label} className="w-full h-full object-cover" />
-                                    ) : (
-                                        <img src="/assets/profile-pic/cat.png" alt="Cat" className="w-full h-full object-cover" />
-                                    )}
-                                </div>
+                                <ProfilePicture
+                                    avatarUrl={profileData.avatarUrl}
+                                    name={profileData.nickname || currentUser?.name}
+                                    size="lg"
+                                />
                                 <motion.div
                                     animate={{ scale: [1, 1.2, 1] }}
                                     transition={{ duration: 1.5, repeat: Infinity }}
@@ -564,19 +498,11 @@ const ProfilesPage = () => {
                                 >
                                     💕
                                 </motion.div>
-                                <div className="w-16 h-16 bg-gradient-to-br from-violet-100 to-violet-200 rounded-2xl flex items-center justify-center shadow-soft overflow-hidden">
-                                    {(() => {
-                                        if (!connectedPartner?.id) return <img src="/assets/profile-pic/cat.png" alt="Cat" className="w-full h-full object-cover" />;
-                                        const partnerProfile = localStorage.getItem(`catjudge_profile_${connectedPartner.id}`);
-                                        const partnerAvatarId = partnerProfile ? JSON.parse(partnerProfile).avatar : 'cat';
-                                        const partnerAvatar = AVATAR_OPTIONS.find(a => a.id === partnerAvatarId);
-                                        return partnerAvatar?.image ? (
-                                            <img src={partnerAvatar.image} alt={partnerAvatar.label} className="w-full h-full object-cover" />
-                                        ) : (
-                                            <img src="/assets/profile-pic/cat.png" alt="Cat" className="w-full h-full object-cover" />
-                                        );
-                                    })()}
-                                </div>
+                                <ProfilePicture
+                                    avatarUrl={connectedPartner?.avatar_url}
+                                    name={connectedPartner?.display_name}
+                                    size="lg"
+                                />
                             </div>
                             <h2 className="font-bold text-neutral-800 text-lg">
                                 {profileData.nickname || profile?.display_name || currentUser?.name} & {connectedPartner?.display_name || 'Partner'}
@@ -770,10 +696,10 @@ const EditProfileModal = ({ profileData, onSave, onClose }) => {
 
         setUploading(true);
         try {
-            // Convert to base64 for preview and storage
+            // Convert to base64 for preview (compression happens on save)
             const reader = new FileReader();
             reader.onloadend = () => {
-                setFormData({ ...formData, profilePicture: reader.result });
+                setFormData({ ...formData, avatarUrl: reader.result });
                 setUploading(false);
             };
             reader.onerror = () => {
@@ -833,18 +759,16 @@ const EditProfileModal = ({ profileData, onSave, onClose }) => {
                     <label className="text-xs font-bold text-neutral-500 mb-2 block">Profile Picture 📸</label>
                     <div className="flex items-center gap-4">
                         <div className="w-20 h-24 rounded-2xl bg-gradient-to-br from-violet-100 to-pink-100 flex items-center justify-center overflow-hidden shadow-soft">
-                            {formData.profilePicture ? (
+                            {formData.avatarUrl ? (
                                 <img
-                                    src={formData.profilePicture}
+                                    src={formData.avatarUrl}
                                     alt="Profile"
                                     className="w-full h-full object-cover"
                                 />
                             ) : (
-                                <img
-                                    src={AVATAR_OPTIONS.find(a => a.id === formData.avatar)?.image || '/assets/profile-pic/cat.png'}
-                                    alt={AVATAR_OPTIONS.find(a => a.id === formData.avatar)?.label || 'Avatar'}
-                                    className="w-full h-full object-contain p-1"
-                                />
+                                <div className="w-full h-full flex items-center justify-center bg-neutral-100 text-neutral-400">
+                                    <User className="w-10 h-10" />
+                                </div>
                             )}
                         </div>
                         <div className="flex-1 space-y-2">
@@ -873,30 +797,22 @@ const EditProfileModal = ({ profileData, onSave, onClose }) => {
                             />
                         </div>
                     </div>
-                    {formData.profilePicture && (
-                        <button
-                            onClick={() => setFormData({ ...formData, profilePicture: null })}
-                            className="text-xs text-red-500 mt-2 underline"
-                        >
-                            Remove photo
-                        </button>
-                    )}
                 </div>
 
                 {/* Avatar Selection */}
                 <div>
-                    <label className="text-xs font-bold text-neutral-500 mb-2 block">Or Choose Avatar</label>
+                    <label className="text-xs font-bold text-neutral-500 mb-2 block">Or Choose an Avatar</label>
                     <div className="grid grid-cols-4 gap-2">
-                        {AVATAR_OPTIONS.map((avatar) => (
+                        {PRESET_AVATARS.map((avatar) => (
                             <button
                                 key={avatar.id}
-                                onClick={() => setFormData({ ...formData, avatar: avatar.id, profilePicture: null })}
-                                className={`p-1 rounded-xl transition-all ${formData.avatar === avatar.id && !formData.profilePicture
+                                onClick={() => setFormData({ ...formData, avatarUrl: avatar.path })}
+                                className={`p-1 rounded-xl transition-all ${formData.avatarUrl === avatar.path
                                     ? 'bg-violet-100 ring-2 ring-violet-400'
                                     : 'bg-neutral-50 hover:bg-neutral-100'
                                     }`}
                             >
-                                <img src={avatar.image} alt={avatar.label} className="w-full h-16 object-contain" />
+                                <img src={avatar.path} alt={avatar.label} className="w-full h-16 object-contain" />
                             </button>
                         ))}
                     </div>

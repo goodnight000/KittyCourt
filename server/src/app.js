@@ -32,6 +32,7 @@ const memoryRoutes = require('./routes/memory');
 const dailyQuestionsRoutes = require('./routes/dailyQuestions');
 const usageRoutes = require('./routes/usage');
 const webhookRoutes = require('./routes/webhooks');
+const subscriptionRoutes = require('./routes/subscription');
 const casesRoutes = require('./routes/cases');
 const economyRoutes = require('./routes/economy');
 const appreciationsRoutes = require('./routes/appreciations');
@@ -95,6 +96,9 @@ app.use('/api/usage', usageRoutes);
 
 // Webhook Routes (RevenueCat, etc.)
 app.use('/api/webhooks', webhookRoutes);
+
+// Subscription Status Routes
+app.use('/api/subscription', subscriptionRoutes);
 
 // Cases Routes (with rate limiting)
 app.use('/api/cases', casesRateLimiter, casesRoutes);

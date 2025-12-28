@@ -2,29 +2,32 @@
  * Avatar Service - Handles avatar uploads and URL management
  * 
  * Preset avatars: Stored as path strings (e.g., "/assets/profile-pic/cat.png")
- * Custom uploads: Uploaded to Supabase Storage, stored as public URLs
+ * Custom uploads: Compressed to 512x512 max, converted to WebP, uploaded to Supabase Storage
  */
 
 import { supabase } from './supabase';
 
-// List of preset avatar paths
+// List of preset avatars with metadata
 export const PRESET_AVATARS = [
-    '/assets/profile-pic/bear.png',
-    '/assets/profile-pic/bunny.png',
-    '/assets/profile-pic/capybara.png',
-    '/assets/profile-pic/cat.png',
-    '/assets/profile-pic/dog.png',
-    '/assets/profile-pic/fox.png',
-    '/assets/profile-pic/panda.png',
-    '/assets/profile-pic/penguin.png',
+    { id: 'bear', path: '/assets/profile-pic/bear.png', label: 'Bear' },
+    { id: 'bunny', path: '/assets/profile-pic/bunny.png', label: 'Bunny' },
+    { id: 'capybara', path: '/assets/profile-pic/capybara.png', label: 'Capybara' },
+    { id: 'cat', path: '/assets/profile-pic/cat.png', label: 'Cat' },
+    { id: 'dog', path: '/assets/profile-pic/dog.png', label: 'Dog' },
+    { id: 'fox', path: '/assets/profile-pic/fox.png', label: 'Fox' },
+    { id: 'panda', path: '/assets/profile-pic/panda.png', label: 'Panda' },
+    { id: 'penguin', path: '/assets/profile-pic/penguin.png', label: 'Penguin' },
 ];
+
+// Legacy: Array of just paths for backwards compatibility checks
+export const PRESET_AVATAR_PATHS = PRESET_AVATARS.map(a => a.path);
 
 /**
  * Check if a URL is a preset avatar path
  */
 export const isPresetAvatar = (url) => {
     if (!url) return false;
-    return PRESET_AVATARS.includes(url) || url.startsWith('/assets/profile-pic/');
+    return PRESET_AVATAR_PATHS.includes(url) || url.startsWith('/assets/profile-pic/');
 };
 
 /**
@@ -36,19 +39,85 @@ export const isBase64DataUrl = (url) => {
 };
 
 /**
- * Convert a File or base64 string to a File object
+ * Compress and resize an image for upload
+ * - Max dimensions: 512x512 (maintaining aspect ratio)
+ * - Format: WebP for optimal compression
+ * - Quality: 0.8
+ * 
+ * @param {string} base64DataUrl - The base64 data URL of the image
+ * @returns {Promise<Blob>} - Compressed image as a Blob
  */
-const toFile = async (input, userId) => {
+export const compressImage = (base64DataUrl) => {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+            // Calculate new dimensions (max 512x512, maintain aspect ratio)
+            const MAX_SIZE = 512;
+            let { width, height } = img;
+
+            if (width > height) {
+                if (width > MAX_SIZE) {
+                    height = Math.round((height * MAX_SIZE) / width);
+                    width = MAX_SIZE;
+                }
+            } else {
+                if (height > MAX_SIZE) {
+                    width = Math.round((width * MAX_SIZE) / height);
+                    height = MAX_SIZE;
+                }
+            }
+
+            // Create canvas and draw resized image
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+
+            // Convert to WebP blob
+            canvas.toBlob(
+                (blob) => {
+                    if (blob) {
+                        console.log(`[avatarService] Compressed image: ${Math.round(blob.size / 1024)}KB`);
+                        resolve(blob);
+                    } else {
+                        reject(new Error('Failed to compress image'));
+                    }
+                },
+                'image/webp',
+                0.8
+            );
+        };
+        img.onerror = () => reject(new Error('Failed to load image for compression'));
+        img.src = base64DataUrl;
+    });
+};
+
+/**
+ * Convert a File, Blob, or base64 string to a File object
+ * Applies compression for base64 data URLs
+ */
+const toFile = async (input) => {
     if (input instanceof File) {
+        // If it's already a file, check if we should compress it
+        if (input.size > 100 * 1024) { // Compress if > 100KB
+            const reader = new FileReader();
+            const base64 = await new Promise((resolve, reject) => {
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(input);
+            });
+            const blob = await compressImage(base64);
+            return new File([blob], 'avatar.webp', { type: 'image/webp' });
+        }
         return input;
     }
 
-    // Convert base64 data URL to File
+    // Convert base64 data URL to compressed File
     if (typeof input === 'string' && input.startsWith('data:')) {
-        const response = await fetch(input);
-        const blob = await response.blob();
-        const extension = blob.type.split('/')[1] || 'png';
-        return new File([blob], `avatar.${extension}`, { type: blob.type });
+        const blob = await compressImage(input);
+        return new File([blob], 'avatar.webp', { type: 'image/webp' });
     }
 
     return null;
@@ -66,14 +135,13 @@ export const uploadAvatar = async (userId, imageData) => {
     }
 
     try {
-        const file = await toFile(imageData, userId);
+        const file = await toFile(imageData);
         if (!file) {
             return { url: null, error: 'Invalid image data' };
         }
 
-        // File path in storage: {userId}/avatar.{extension}
-        const extension = file.name.split('.').pop() || 'png';
-        const filePath = `${userId}/avatar.${extension}`;
+        // Always use .webp extension for compressed uploads
+        const filePath = `${userId}/avatar.webp`;
 
         // Upload to Supabase Storage (upsert)
         const { data, error } = await supabase.storage
@@ -81,6 +149,7 @@ export const uploadAvatar = async (userId, imageData) => {
             .upload(filePath, file, {
                 cacheControl: '3600',
                 upsert: true, // Replace existing avatar
+                contentType: 'image/webp',
             });
 
         if (error) {
@@ -110,7 +179,7 @@ export const uploadAvatar = async (userId, imageData) => {
 /**
  * Process avatar selection - returns the URL to save to database
  * - Preset avatars: Returns the path string as-is
- * - Custom uploads: Uploads to Storage and returns public URL
+ * - Custom uploads: Compresses and uploads to Storage, returns public URL
  * 
  * @param {string} userId - User's ID
  * @param {string} avatarValue - Either a preset path or base64 data URL
@@ -131,13 +200,16 @@ export const processAvatarForSave = async (userId, avatarValue) => {
         return { url: avatarValue, error: null };
     }
 
-    // It's a base64 upload - upload to Storage
+    // It's a base64 upload - compress and upload to Storage
     return await uploadAvatar(userId, avatarValue);
 };
 
 /**
  * Get the display URL for an avatar
  * Handles preset paths, storage URLs, and null values
+ * 
+ * @param {string|null} avatarUrl - The avatar URL from database
+ * @returns {string|null} - The URL to display, or null
  */
 export const getAvatarDisplayUrl = (avatarUrl) => {
     if (!avatarUrl) {

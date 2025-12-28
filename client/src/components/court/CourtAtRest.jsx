@@ -64,7 +64,7 @@ const CourtAtRest = ({ onServe, navigate }) => {
     ];
 
     return (
-        <div className="relative h-[calc(100dvh-100px)] flex flex-col items-center justify-start px-4 py-2 overflow-hidden">
+        <div className="relative h-[calc(100dvh-100px)] flex flex-col items-center justify-start px-4 py-20 overflow-hidden">
             {/* Judge Selection Modal */}
             <JudgeSelection
                 isOpen={showJudgeSelection}

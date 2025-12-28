@@ -90,7 +90,7 @@ const ResetPasswordPage = () => {
 
     if (checkingSession) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-court-cream via-white to-court-tan/30 flex items-center justify-center">
+            <div className="min-h-screen bg-gradient-to-br from-court-cream via-white to-court-tan/30 flex items-center justify-center safe-top">
                 <motion.div
                     animate={{ rotate: 360 }}
                     transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
@@ -102,7 +102,7 @@ const ResetPasswordPage = () => {
 
     if (!isValidSession) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-court-cream via-white to-court-tan/30 flex flex-col items-center justify-center p-6">
+            <div className="min-h-screen bg-gradient-to-br from-court-cream via-white to-court-tan/30 flex flex-col items-center justify-center p-6 safe-top">
                 <motion.div
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -140,7 +140,7 @@ const ResetPasswordPage = () => {
 
     if (success) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-court-cream via-white to-court-tan/30 flex flex-col items-center justify-center p-6">
+            <div className="min-h-screen bg-gradient-to-br from-court-cream via-white to-court-tan/30 flex flex-col items-center justify-center p-6 safe-top">
                 <motion.div
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -181,7 +181,7 @@ const ResetPasswordPage = () => {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-court-cream via-white to-court-tan/30 flex flex-col items-center justify-center p-6">
+        <div className="min-h-screen bg-gradient-to-br from-court-cream via-white to-court-tan/30 flex flex-col items-center justify-center p-6 safe-top">
             {/* Background Decorations */}
             <div className="fixed inset-0 pointer-events-none overflow-hidden">
                 <motion.div

@@ -6,10 +6,11 @@ import useAppStore from '../store/useAppStore';
 import useAuthStore from '../store/useAuthStore';
 import useCacheStore, { CACHE_TTL, CACHE_KEYS } from '../store/useCacheStore';
 import api from '../services/api';
+import ProfilePicture from '../components/ProfilePicture';
 
 const DashboardPage = () => {
     const navigate = useNavigate();
-    const { currentUser, users, logGoodDeed } = useAppStore();
+    const { currentUser, logGoodDeed } = useAppStore();
     const { hasPartner, profile, partner: connectedPartner, user: authUser } = useAuthStore();
     const [showGoodDeedModal, setShowGoodDeedModal] = useState(false);
     const [questionStreak, setQuestionStreak] = useState(0);
@@ -17,7 +18,7 @@ const DashboardPage = () => {
     const [questionLoading, setQuestionLoading] = useState(true);
 
     // Get partner name - prefer connected partner from auth store
-    const partnerName = connectedPartner?.display_name || users?.find(u => u.id !== currentUser?.id)?.name || 'Partner';
+    const partnerName = connectedPartner?.display_name || 'Partner';
     // Get current user's display name
     const myName = profile?.display_name || currentUser?.display_name || currentUser?.name || 'Me';
     // Get profile pictures
@@ -168,25 +169,10 @@ const DashboardPage = () => {
     const neitherAnswered = !hasAnswered && !partnerHasAnswered;
 
     // Avatar URLs now come from database (either preset path or Storage URL)
-    // Fallback to a consistent default avatar based on name if none set
-    const DEFAULT_AVATARS = [
-        '/assets/profile-pic/bear.png',
-        '/assets/profile-pic/bunny.png',
-        '/assets/profile-pic/capybara.png',
-        '/assets/profile-pic/cat.png',
-        '/assets/profile-pic/dog.png',
-        '/assets/profile-pic/fox.png',
-        '/assets/profile-pic/panda.png',
-        '/assets/profile-pic/penguin.png',
-    ];
-    const getDefaultAvatar = (name) => {
-        if (!name) return DEFAULT_AVATARS[0];
-        // Use name hash to get consistent avatar per user
-        const hash = name.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
-        return DEFAULT_AVATARS[hash % DEFAULT_AVATARS.length];
-    };
-    const myAvatar = profile?.avatar_url || getDefaultAvatar(myName);
-    const partnerAvatar = connectedPartner?.avatar_url || getDefaultAvatar(partnerName);
+    // ProfilePicture component handles fallbacks
+    const myAvatarUrl = profile?.avatar_url;
+    const partnerAvatarUrl = connectedPartner?.avatar_url;
+    const showPartnerPrompt = !hasPartner;
     return (
         <div className="space-y-5">
             {/* Stats Strip - Prominent at top */}
@@ -238,7 +224,7 @@ const DashboardPage = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
                 whileTap={{ scale: 0.995 }}
-                onClick={() => navigate('/daily-meow')}
+                onClick={() => navigate(hasPartner ? '/daily-meow' : '/connect')}
                 className="relative overflow-hidden rounded-[32px] cursor-pointer shadow-xl flex-1 min-h-[260px] flex flex-col"
             >
                 {/* Background Image */}
@@ -264,83 +250,123 @@ const DashboardPage = () => {
                 )}
 
                 <div className="relative z-10 p-6 flex flex-col h-full items-center justify-center text-center">
-                    {/* Header Badge */}
-                    <div className="mb-4">
-                        <span className={`px-3 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase bg-[#8B6F47]/80 text-white backdrop-blur-sm border border-[#6B5635]/30`}>
-                            {bothAnswered ? 'Completed' : hasAnswered ? 'Waiting for Partner' : 'Daily Question'}
-                        </span>
-                    </div>
+                    {showPartnerPrompt ? (
+                        <>
+                            <div className="mb-4">
+                                <span className="px-3 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase bg-white/80 text-[#8B6F47] backdrop-blur-sm border border-white/60">
+                                    Connect to unlock
+                                </span>
+                            </div>
+                            <h3 className="text-xl font-bold text-[#4A3728] mb-5 leading-snug max-w-sm mx-auto" style={{ fontFamily: 'var(--font-display), Quicksand, sans-serif' }}>
+                                Connect with your partner now to access this feature!
+                            </h3>
+                            <div className="flex items-center justify-center">
+                                <div className="flex items-center gap-2 pl-2 pr-4 py-2 rounded-full bg-white/80 border border-white/70 shadow-sm translate-x-3">
+                                    <ProfilePicture
+                                        avatarUrl={myAvatarUrl}
+                                        name={myName}
+                                        size="sm"
+                                        className="rounded-full"
+                                    />
+                                    <div className="text-left">
+                                        <p className="text-[10px] font-bold leading-tight text-neutral-700">You</p>
+                                        <p className="text-[9px] leading-tight text-neutral-400">Ready</p>
+                                    </div>
+                                </div>
+                                <div className="relative z-20 mx-[-6px]">
+                                    <div className="w-9 h-9 bg-white rounded-full flex items-center justify-center shadow-sm border-[3px] border-[#8B6F47]/60">
+                                        <Heart className="w-3.5 h-3.5 text-[#8B6F47]" />
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2 pl-4 pr-2 py-2 rounded-full bg-white/60 border border-white/70 shadow-sm -translate-x-3">
+                                    <div className="w-8 h-8 rounded-full border-2 border-dashed border-neutral-300 bg-white/70" />
+                                    <div className="text-left">
+                                        <p className="text-[10px] font-bold leading-tight text-neutral-600">Partner</p>
+                                        <p className="text-[9px] leading-tight text-neutral-400">Not connected</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <p className="mt-4 text-xs text-neutral-500">Tap to connect</p>
+                        </>
+                    ) : (
+                        <>
+                            {/* Header Badge */}
+                            <div className="mb-4">
+                                <span className={`px-3 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase bg-[#8B6F47]/80 text-white backdrop-blur-sm border border-[#6B5635]/30`}>
+                                    {bothAnswered ? 'Completed' : hasAnswered ? 'Waiting for Partner' : 'Daily Question'}
+                                </span>
+                            </div>
 
-                    {/* Question Text */}
-                    <h3 className="text-2xl font-bold text-[#4A3728] mb-6 leading-tight max-w-sm mx-auto" style={{ fontFamily: 'var(--font-display), Quicksand, sans-serif' }}>
-                        {questionLoading ? 'Loading...' : (todaysQuestion?.question || "What's on your mind today?")}
-                    </h3>
+                            {/* Question Text */}
+                            <h3 className="text-2xl font-bold text-[#4A3728] mb-6 leading-tight max-w-sm mx-auto" style={{ fontFamily: 'var(--font-display), Quicksand, sans-serif' }}>
+                                {questionLoading ? 'Loading...' : (todaysQuestion?.question || "What's on your mind today?")}
+                            </h3>
 
-                    {/* Status Indicators - Fully Rounded Capsule Pills with Overlapping Heart */}
-                    <div className="flex items-center justify-center">
-                        {/* User Status Pill - Using warm brown to match parchment */}
-                        <div className={`flex items-center gap-2 pl-2 pr-5 py-2 rounded-full relative z-0 translate-x-3 ${hasAnswered ? 'bg-white' : 'bg-[#8B6F47]'}`}>
-                            {/* User Avatar */}
-                            <div className={`w-8 h-8 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0 bg-neutral-200`}>
-                                {myAvatar ? (
-                                    <img src={myAvatar} alt="Me" className="w-full h-full object-cover" />
-                                ) : (
-                                    <span className="text-xs font-bold text-neutral-500">{myName?.charAt(0)?.toUpperCase()}</span>
-                                )}
-                            </div>
-                            <div className="text-left">
-                                <p className={`text-[10px] font-bold leading-tight ${hasAnswered ? 'text-neutral-800' : 'text-white'}`}>
-                                    You: {hasAnswered ? '✓' : ''}
-                                </p>
-                                <p className={`text-[9px] leading-tight ${hasAnswered ? 'text-neutral-500' : 'text-white/70'}`}>
-                                    {hasAnswered ? 'Answered' : 'Waiting...'}
-                                </p>
-                            </div>
-                        </div>
+                            {/* Status Indicators - Fully Rounded Capsule Pills with Overlapping Heart */}
+                            <div className="flex items-center justify-center">
+                                {/* User Status Pill - Using warm brown to match parchment */}
+                                <div className={`flex items-center gap-2 pl-2 pr-5 py-2 rounded-full relative z-0 translate-x-3 ${hasAnswered ? 'bg-white' : 'bg-[#8B6F47]'}`}>
+                                    {/* User Avatar */}
+                                    <ProfilePicture
+                                        avatarUrl={myAvatarUrl}
+                                        name={myName}
+                                        size="sm"
+                                        className="rounded-full"
+                                    />
+                                    <div className="text-left">
+                                        <p className={`text-[10px] font-bold leading-tight ${hasAnswered ? 'text-neutral-800' : 'text-white'}`}>
+                                            You: {hasAnswered ? '✓' : ''}
+                                        </p>
+                                        <p className={`text-[9px] leading-tight ${hasAnswered ? 'text-neutral-500' : 'text-white/70'}`}>
+                                            {hasAnswered ? 'Answered' : 'Waiting...'}
+                                        </p>
+                                    </div>
+                                </div>
 
-                        {/* Heart Connector - Overlaps both pills */}
-                        <div className="relative z-20 mx-[-6px]">
-                            <div className="w-9 h-9 bg-white rounded-full flex items-center justify-center shadow-sm border-[3px] border-[#8B6F47]">
-                                <Heart className={`w-3.5 h-3.5 ${bothAnswered ? 'text-[#6B5635] fill-current' : 'text-[#8B6F47]'}`} />
-                            </div>
-                        </div>
+                                {/* Heart Connector - Overlaps both pills */}
+                                <div className="relative z-20 mx-[-6px]">
+                                    <div className="w-9 h-9 bg-white rounded-full flex items-center justify-center shadow-sm border-[3px] border-[#8B6F47]">
+                                        <Heart className={`w-3.5 h-3.5 ${bothAnswered ? 'text-[#6B5635] fill-current' : 'text-[#8B6F47]'}`} />
+                                    </div>
+                                </div>
 
-                        {/* Partner Status Pill - Using warm brown to match parchment */}
-                        <div className={`flex items-center gap-2 pl-5 pr-2 py-2 rounded-full relative z-0 -translate-x-3 ${partnerHasAnswered ? 'bg-white' : 'bg-[#8B6F47]'}`}>
-                            <div className="text-right">
-                                <p className={`text-[10px] font-bold leading-tight ${partnerHasAnswered ? 'text-neutral-800' : 'text-white'}`}>
-                                    {partnerName?.split(' ')[0]}: {partnerHasAnswered ? '✓' : ''}
-                                </p>
-                                <p className={`text-[9px] leading-tight ${partnerHasAnswered ? 'text-neutral-500' : 'text-white/70'}`}>
-                                    {partnerHasAnswered ? 'Answered' : (
-                                        <span className="inline-flex items-center">
-                                            Waiting
-                                            <Motion.span
-                                                animate={{ opacity: [0, 1, 0] }}
-                                                transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-                                            >.</Motion.span>
-                                            <Motion.span
-                                                animate={{ opacity: [0, 1, 0] }}
-                                                transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut", delay: 0.2 }}
-                                            >.</Motion.span>
-                                            <Motion.span
-                                                animate={{ opacity: [0, 1, 0] }}
-                                                transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut", delay: 0.4 }}
-                                            >.</Motion.span>
-                                        </span>
-                                    )}
-                                </p>
+                                {/* Partner Status Pill - Using warm brown to match parchment */}
+                                <div className={`flex items-center gap-2 pl-5 pr-2 py-2 rounded-full relative z-0 -translate-x-3 ${partnerHasAnswered ? 'bg-white' : 'bg-[#8B6F47]'}`}>
+                                    <div className="text-right">
+                                        <p className={`text-[10px] font-bold leading-tight ${partnerHasAnswered ? 'text-neutral-800' : 'text-white'}`}>
+                                            {partnerName?.split(' ')[0]}: {partnerHasAnswered ? '✓' : ''}
+                                        </p>
+                                        <p className={`text-[9px] leading-tight ${partnerHasAnswered ? 'text-neutral-500' : 'text-white/70'}`}>
+                                            {partnerHasAnswered ? 'Answered' : (
+                                                <span className="inline-flex items-center">
+                                                    Waiting
+                                                    <Motion.span
+                                                        animate={{ opacity: [0, 1, 0] }}
+                                                        transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                                                    >.</Motion.span>
+                                                    <Motion.span
+                                                        animate={{ opacity: [0, 1, 0] }}
+                                                        transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut", delay: 0.2 }}
+                                                    >.</Motion.span>
+                                                    <Motion.span
+                                                        animate={{ opacity: [0, 1, 0] }}
+                                                        transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut", delay: 0.4 }}
+                                                    >.</Motion.span>
+                                                </span>
+                                            )}
+                                        </p>
+                                    </div>
+                                    {/* Partner Avatar */}
+                                    <ProfilePicture
+                                        avatarUrl={partnerAvatarUrl}
+                                        name={partnerName}
+                                        size="sm"
+                                        className="rounded-full"
+                                    />
+                                </div>
                             </div>
-                            {/* Partner Avatar */}
-                            <div className={`w-8 h-8 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0 bg-neutral-200`}>
-                                {partnerAvatar ? (
-                                    <img src={partnerAvatar} alt="Partner" className="w-full h-full object-cover" />
-                                ) : (
-                                    <span className="text-xs font-bold text-neutral-500">{partnerName?.charAt(0)?.toUpperCase()}</span>
-                                )}
-                            </div>
-                        </div>
-                    </div>
+                        </>
+                    )}
                 </div>
             </Motion.div>
 
@@ -422,7 +448,7 @@ const DashboardPage = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={() => navigate('/daily-meow/history')}
+                onClick={() => navigate(hasPartner ? '/daily-meow/history' : '/connect')}
                 className="relative overflow-hidden rounded-2xl cursor-pointer shadow-md"
                 style={{ background: '#fdfcfa' }}
             >
@@ -434,7 +460,12 @@ const DashboardPage = () => {
                         <h3 className="font-bold text-neutral-800 text-sm">Question Archives</h3>
                         <p className="text-neutral-500 text-xs mt-0.5">Time travel to your past memories 💭</p>
                     </div>
-                    <ArrowRight className="w-5 h-5 text-neutral-400" />
+                    {!hasPartner && (
+                        <div className="w-7 h-7 rounded-full bg-neutral-100 border border-neutral-200 flex items-center justify-center">
+                            <Lock className="w-3.5 h-3.5 text-neutral-400" />
+                        </div>
+                    )}
+                    {hasPartner && <ArrowRight className="w-5 h-5 text-neutral-400" />}
                 </div>
             </Motion.div >
 
