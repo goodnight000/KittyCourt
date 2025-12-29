@@ -5,13 +5,19 @@ import { Heart, Coffee, TrendingUp, Sparkles, Star, Gift, X, Check, Scale, Histo
 import useAppStore from '../store/useAppStore';
 import useAuthStore from '../store/useAuthStore';
 import useCacheStore, { CACHE_TTL, CACHE_KEYS } from '../store/useCacheStore';
+import useLevelStore from '../store/useLevelStore';
 import api from '../services/api';
 import ProfilePicture from '../components/ProfilePicture';
+import LevelProgress from '../components/LevelProgress';
 
 const DashboardPage = () => {
     const navigate = useNavigate();
     const { currentUser, logGoodDeed } = useAppStore();
     const { hasPartner, profile, partner: connectedPartner, user: authUser } = useAuthStore();
+    const {
+        level, currentXP, xpForNextLevel, title,
+        fetchLevel, shouldShowLevelBanner
+    } = useLevelStore();
     const [showGoodDeedModal, setShowGoodDeedModal] = useState(false);
     const [questionStreak, setQuestionStreak] = useState(0);
     const [todaysQuestion, setTodaysQuestion] = useState(null);
@@ -26,6 +32,13 @@ const DashboardPage = () => {
     const [goodDeedText, setGoodDeedText] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
+
+    // Fetch level data on mount
+    useEffect(() => {
+        if (hasPartner) {
+            fetchLevel();
+        }
+    }, [hasPartner, fetchLevel]);
 
     // Fetch question streak with caching
     useEffect(() => {
@@ -217,6 +230,17 @@ const DashboardPage = () => {
                     <Flame className="absolute -bottom-4 -right-4 w-24 h-24 text-orange-100/50 rotate-12" />
                 </Motion.div>
             </Motion.div>
+
+            {/* Level Progress Banner - Shows after 3+ questions answered */}
+            {shouldShowLevelBanner() && (
+                <LevelProgress
+                    level={level}
+                    currentXP={currentXP}
+                    xpForNextLevel={xpForNextLevel}
+                    title={title}
+                    compact={true}
+                />
+            )}
 
             {/* Daily Question Card - Full Width, Dynamic States */}
             <Motion.div

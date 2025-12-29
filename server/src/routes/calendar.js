@@ -8,6 +8,8 @@ const express = require('express');
 const router = express.Router();
 const { requireSupabase, requireAuthUserId, getPartnerIdForUser } = require('../lib/auth');
 const { canUseFeature } = require('../lib/usageLimits');
+const { awardXP, ACTION_TYPES } = require('../lib/xpService');
+const { recordChallengeAction, CHALLENGE_ACTIONS } = require('../lib/challengeService');
 
 const isProd = process.env.NODE_ENV === 'production';
 const safeErrorMessage = (error) => (isProd ? 'Internal server error' : (error?.message || String(error)));
@@ -84,6 +86,31 @@ router.post('/events', async (req, res) => {
             .single();
 
         if (error) throw error;
+
+        const partnerId = await getPartnerIdForUser(supabase, viewerId);
+        if (partnerId) {
+            try {
+                await awardXP({
+                    userId: viewerId,
+                    partnerId,
+                    actionType: ACTION_TYPES.CALENDAR_EVENT,
+                    sourceId: event.id,
+                });
+            } catch (xpError) {
+                console.warn('[Calendar] XP award failed:', xpError?.message || xpError);
+            }
+
+            try {
+                await recordChallengeAction({
+                    userId: viewerId,
+                    partnerId,
+                    action: CHALLENGE_ACTIONS.CALENDAR_EVENT,
+                    sourceId: event.id,
+                });
+            } catch (challengeError) {
+                console.warn('[Calendar] Challenge progress failed:', challengeError?.message || challengeError);
+            }
+        }
 
         res.json({
             id: event.id,

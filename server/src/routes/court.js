@@ -10,6 +10,8 @@ const router = express.Router();
 const { courtSessionManager, VIEW_PHASE, PHASE } = require('../lib/courtSessionManager');
 const { requireAuthUserId, requireSupabase, getPartnerIdForUser } = require('../lib/auth');
 const { isSupabaseConfigured } = require('../lib/supabase');
+const { awardXP, ACTION_TYPES } = require('../lib/xpService');
+const { recordChallengeAction, CHALLENGE_ACTIONS } = require('../lib/challengeService');
 
 const requireUserId = async (req, fallbackUserId) => {
     if (isSupabaseConfigured()) {
@@ -158,6 +160,34 @@ router.post('/verdict/accept', async (req, res) => {
 
         await courtSessionManager.acceptVerdict(userId);
         const state = courtSessionManager.getStateForUser(userId);
+
+        try {
+            if (isSupabaseConfigured() && state?.phase === PHASE.CLOSED) {
+                const bothEvidenceSubmitted = !!(state.session?.creator?.evidenceSubmitted && state.session?.partner?.evidenceSubmitted);
+                if (bothEvidenceSubmitted) {
+                    const supabase = requireSupabase();
+                    const partnerId = await getPartnerIdForUser(supabase, userId);
+                    if (partnerId) {
+                        const sourceId = state.session?.caseId || state.session?.id || state.session?.coupleId || 'court_case';
+                        await awardXP({
+                            userId,
+                            partnerId,
+                            actionType: ACTION_TYPES.CASE_RESOLUTION,
+                            sourceId,
+                        });
+                        await recordChallengeAction({
+                            userId,
+                            partnerId,
+                            action: CHALLENGE_ACTIONS.CASE_RESOLVED,
+                            sourceId,
+                        });
+                    }
+                }
+            }
+        } catch (xpError) {
+            console.warn('[Court] XP award failed:', xpError?.message || xpError);
+        }
+
         res.json(state);
     } catch (error) {
         console.error('[API] /verdict/accept error:', error);

@@ -37,6 +37,10 @@ const casesRoutes = require('./routes/cases');
 const economyRoutes = require('./routes/economy');
 const appreciationsRoutes = require('./routes/appreciations');
 const calendarRoutes = require('./routes/calendar');
+const levelsRoutes = require('./routes/levels');
+const challengesRoutes = require('./routes/challenges');
+const memoriesRoutes = require('./routes/memories');
+const insightsRoutes = require('./routes/insights');
 
 // Court architecture
 const courtRoutes = require('./routes/court');
@@ -111,6 +115,18 @@ app.use('/api/appreciations', appreciationsRoutes);
 
 // Calendar Routes
 app.use('/api/calendar', calendarRoutes);
+
+// Levels Routes
+app.use('/api/levels', levelsRoutes);
+
+// Challenges Routes
+app.use('/api/challenges', challengesRoutes);
+
+// Memories Routes
+app.use('/api/memories', memoriesRoutes);
+
+// Insights Routes
+app.use('/api/insights', insightsRoutes);
 
 // Root endpoint - for easy verification
 app.get('/', (req, res) => {

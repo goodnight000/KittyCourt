@@ -24,6 +24,9 @@ import DashboardPage from './pages/DashboardPage';
 import DailyMeowPage from './pages/DailyMeowPage';
 import DailyMeowHistoryPage from './pages/DailyMeowHistoryPage';
 import EconomyPage from './pages/EconomyPage';
+import ChallengesPage from './pages/ChallengesPage';
+import MemoriesPage from './pages/MemoriesPage';
+import InsightsPage from './pages/InsightsPage';
 
 // Components
 import PartnerRequestModal from './components/PartnerRequestModal';
@@ -162,6 +165,9 @@ const AppRoutes = () => {
                     <Route path="daily-meow" element={<DailyMeowPage />} />
                     <Route path="daily-meow/history" element={<DailyMeowHistoryPage />} />
                     <Route path="economy" element={<EconomyPage />} />
+                    <Route path="challenges" element={<ChallengesPage />} />
+                    <Route path="memories" element={<MemoriesPage />} />
+                    <Route path="insights" element={<InsightsPage />} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Route>
             </Routes>

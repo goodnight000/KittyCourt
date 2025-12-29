@@ -11,6 +11,8 @@
 const express = require('express');
 const router = express.Router();
 const { requireSupabase, requireAuthUserId, getPartnerIdForUser } = require('../lib/auth');
+const { awardXP, ACTION_TYPES, isXPSystemEnabled } = require('../lib/xpService');
+const { recordChallengeAction, CHALLENGE_ACTIONS } = require('../lib/challengeService');
 
 const normalizeLimit = (limit) => {
     const parsed = parseInt(limit, 10);
@@ -169,6 +171,24 @@ router.post('/answer', async (req, res) => {
         if (!isUserA && !isUserB) {
             return res.status(403).json({ error: 'You do not have access to this assignment' });
         }
+        const partnerId = isUserA ? assignment.user_b_id : assignment.user_a_id;
+
+        let hasAwardedXP = false;
+        if (isXPSystemEnabled()) {
+            const { data: existingXP, error: xpCheckError } = await supabase
+                .from('xp_transactions')
+                .select('id')
+                .eq('user_id', authUserId)
+                .eq('action_type', ACTION_TYPES.DAILY_QUESTION)
+                .eq('source_id', assignmentId)
+                .maybeSingle();
+
+            if (xpCheckError) {
+                console.warn('[Daily Questions] XP check failed:', xpCheckError);
+            } else if (existingXP) {
+                hasAwardedXP = true;
+            }
+        }
 
         const upsertPayload = {
             user_id: authUserId,
@@ -211,6 +231,31 @@ router.post('/answer', async (req, res) => {
             } else {
                 throw saveError;
             }
+        }
+
+        if (!hasAwardedXP) {
+            try {
+                await awardXP({
+                    userId: authUserId,
+                    partnerId,
+                    actionType: ACTION_TYPES.DAILY_QUESTION,
+                    sourceId: assignmentId,
+                    content: trimmedAnswer,
+                });
+            } catch (xpError) {
+                console.warn('[Daily Questions] XP award failed:', xpError?.message || xpError);
+            }
+        }
+
+        try {
+            await recordChallengeAction({
+                userId: authUserId,
+                partnerId,
+                action: CHALLENGE_ACTIONS.DAILY_QUESTION,
+                sourceId: assignmentId,
+            });
+        } catch (challengeError) {
+            console.warn('[Daily Questions] Challenge progress failed:', challengeError?.message || challengeError);
         }
 
         const { data: allAnswers, error: answersError } = await supabase

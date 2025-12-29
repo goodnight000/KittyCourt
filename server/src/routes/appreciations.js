@@ -7,6 +7,8 @@
 const express = require('express');
 const router = express.Router();
 const { requireSupabase, requireAuthUserId, getPartnerIdForUser } = require('../lib/auth');
+const { awardXP, ACTION_TYPES } = require('../lib/xpService');
+const { recordChallengeAction, CHALLENGE_ACTIONS } = require('../lib/challengeService');
 
 const isProd = process.env.NODE_ENV === 'production';
 const safeErrorMessage = (error) => (isProd ? 'Internal server error' : (error?.message || String(error)));
@@ -48,6 +50,29 @@ router.post('/', async (req, res) => {
             .single();
 
         if (insertError) throw insertError;
+
+        try {
+            await awardXP({
+                userId: viewerId,
+                partnerId,
+                actionType: ACTION_TYPES.APPRECIATION,
+                sourceId: appreciation.id,
+                content: safeMessage,
+            });
+        } catch (xpError) {
+            console.warn('[Appreciations] XP award failed:', xpError?.message || xpError);
+        }
+
+        try {
+            await recordChallengeAction({
+                userId: viewerId,
+                partnerId,
+                action: CHALLENGE_ACTIONS.APPRECIATION,
+                sourceId: appreciation.id,
+            });
+        } catch (challengeError) {
+            console.warn('[Appreciations] Challenge progress failed:', challengeError?.message || challengeError);
+        }
 
         // Award kibble via transaction
         const { data: transaction } = await supabase

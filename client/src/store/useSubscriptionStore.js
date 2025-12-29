@@ -84,6 +84,7 @@ const useSubscriptionStore = create((set, get) => ({
 
     // Error state
     error: null,
+    backendStatusSupported: true,
 
     /**
      * Initialize subscription state for a user
@@ -147,7 +148,7 @@ const useSubscriptionStore = create((set, get) => ({
 
             // Fallback: check backend subscription_tier
             // This handles cases where webhook updated DB but client state is stale
-            if (!isGold) {
+            if (!isGold && get().backendStatusSupported) {
                 try {
                     const response = await api.get('/subscription/status');
                     if (response.data?.tier === 'pause_gold') {
@@ -155,8 +156,13 @@ const useSubscriptionStore = create((set, get) => ({
                         isGold = true;
                     }
                 } catch (e) {
-                    // Backend endpoint may not exist yet, ignore
-                    console.warn('[SubscriptionStore] Backend status check failed:', e.message);
+                    const status = e?.response?.status;
+                    if (status === 404) {
+                        set({ backendStatusSupported: false });
+                    } else {
+                        // Backend endpoint may not exist yet, ignore
+                        console.warn('[SubscriptionStore] Backend status check failed:', e.message);
+                    }
                 }
             }
 

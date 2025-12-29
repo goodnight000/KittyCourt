@@ -5,14 +5,19 @@ import {
     User, Heart, Calendar, Star, Settings, ChevronRight,
     Edit3, Check, X, Gift, Scale, Clock,
     Coffee, TrendingUp, Award, Link2, Copy, Users, LogOut, Lock, MessageSquare, AlertTriangle,
-    Crown, Sparkles, Zap, Gavel, Wand2
+    Crown, Sparkles, Zap, Gavel, Wand2, ImagePlus
 } from 'lucide-react';
 import useAppStore from '../store/useAppStore';
 import useAuthStore from '../store/useAuthStore';
 import useSubscriptionStore from '../store/useSubscriptionStore';
+import useLevelStore from '../store/useLevelStore';
+import useMemoryStore from '../store/useMemoryStore';
+import useInsightsStore from '../store/useInsightsStore';
 import { validateBirthdayDate } from '../utils/helpers';
 import Paywall from '../components/Paywall';
 import ProfilePicture from '../components/ProfilePicture';
+import LevelProgress from '../components/LevelProgress';
+import MemoryCard from '../components/MemoryCard';
 import { PRESET_AVATARS, processAvatarForSave } from '../services/avatarService';
 
 const LOVE_LANGUAGES = [
@@ -28,7 +33,20 @@ const ProfilesPage = () => {
     const { currentUser, users, caseHistory, appreciations, fetchAppreciations } = useAppStore();
     const { profile, partner: connectedPartner, hasPartner, signOut, refreshProfile, user: authUser } = useAuthStore();
     const { isGold, usage, limits, getUsageDisplay, purchaseGold, restorePurchases, isLoading: subLoading } = useSubscriptionStore();
+    const { level, currentXP, xpForNextLevel, title, fetchLevel, shouldShowChallenges, shouldShowMemories, shouldShowInsights, serverAvailable } = useLevelStore();
+    const { memories, deletedMemories, fetchMemories, serverAvailable: memoriesAvailable } = useMemoryStore();
+    const { insights, consent, fetchInsights, updateConsent, serverAvailable: insightsAvailable } = useInsightsStore();
+    const latestInsight = insights?.[0] || null;
+    const selfConsent = consent ? !!consent.selfConsent : true;
+    const partnerConsent = consent ? !!consent.partnerConsent : true;
+    const bothConsented = selfConsent && partnerConsent;
+    const insightsPaused = consent?.selfPaused || consent?.partnerPaused;
+    const showChallenges = shouldShowChallenges();
+    const showMemories = shouldShowMemories();
+    const showInsights = shouldShowInsights();
     const partnerFromUsers = users?.find(u => u.id !== currentUser?.id);
+    const isXPEnabled = import.meta.env.VITE_XP_SYSTEM_ENABLED === 'true';
+    const unlockHint = 'Earn XP together by answering Daily Meow, sending appreciations, and resolving cases.';
 
     const [showEditModal, setShowEditModal] = useState(false);
     const [activeTab, setActiveTab] = useState('me'); // 'me' or 'us'
@@ -46,7 +64,29 @@ const ProfilesPage = () => {
 
     useEffect(() => {
         fetchAppreciations();
-    }, [fetchAppreciations]);
+        if (hasPartner) {
+            fetchLevel();
+        }
+    }, [fetchAppreciations, hasPartner, fetchLevel]);
+
+    useEffect(() => {
+        if (!hasPartner || !isXPEnabled || !serverAvailable) return;
+        if (showMemories && memoriesAvailable) {
+            fetchMemories();
+        }
+        if (insightsAvailable) {
+            fetchInsights();
+        }
+    }, [
+        fetchInsights,
+        fetchMemories,
+        hasPartner,
+        insightsAvailable,
+        isXPEnabled,
+        memoriesAvailable,
+        serverAvailable,
+        showMemories,
+    ]);
 
     useEffect(() => {
         // Update profileData when profile changes (from Supabase only)
@@ -520,6 +560,17 @@ const ProfilesPage = () => {
                             )}
                         </motion.div>
 
+                        {/* Level Progress - Our Story */}
+                        {isXPEnabled && (
+                            <LevelProgress
+                                level={level}
+                                currentXP={currentXP}
+                                xpForNextLevel={xpForNextLevel}
+                                title={title}
+                                compact={false}
+                            />
+                        )}
+
                         {/* Relationship Stats */}
                         <div className="glass-card p-4 space-y-3">
                             <h3 className="font-bold text-neutral-700 flex items-center gap-2">
@@ -533,6 +584,248 @@ const ProfilesPage = () => {
                                 <StatBar label="Kibble Exchanged" value={Math.min(totalKibbleEarned, 500)} max={500} color="amber" />
                             </div>
                         </div>
+
+                        {/* Challenges Preview */}
+                        {isXPEnabled && (
+                            <div className="glass-card p-4 space-y-4 relative overflow-hidden border border-violet-100/70">
+                                <div className="absolute inset-0 pointer-events-none">
+                                    <div className="absolute -top-10 -right-8 h-28 w-28 rounded-full bg-violet-200/40 blur-2xl" />
+                                    <div className="absolute -bottom-12 -left-8 h-32 w-32 rounded-full bg-amber-200/40 blur-2xl" />
+                                    <div
+                                        className="absolute inset-0 opacity-30"
+                                        style={{ backgroundImage: 'linear-gradient(120deg, rgba(255,255,255,0.7) 0%, transparent 45%)' }}
+                                    />
+                                </div>
+                                <div className="relative space-y-4">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div className="flex items-center gap-3">
+                                            <div className="h-10 w-10 rounded-2xl bg-violet-100/80 border border-violet-200/60 flex items-center justify-center">
+                                                <Zap className="w-4 h-4 text-violet-600" />
+                                            </div>
+                                            <div>
+                                                <h3 className="font-display font-bold text-neutral-800">Challenges</h3>
+                                                <p className="text-xs text-neutral-500">Weekly invitations to grow together.</p>
+                                            </div>
+                                        </div>
+                                        {showChallenges && (
+                                            <motion.button
+                                                whileTap={{ scale: 0.96 }}
+                                                onClick={() => navigate('/challenges')}
+                                                className="text-xs font-bold text-violet-600"
+                                            >
+                                                View all
+                                            </motion.button>
+                                        )}
+                                    </div>
+
+                                    {showChallenges ? (
+                                        <div className="rounded-2xl border border-white/80 bg-white/70 px-3 py-3 flex items-center justify-between gap-3">
+                                            <div>
+                                                <div className="text-xs font-semibold text-neutral-700">Couple quests are live</div>
+                                                <div className="text-[11px] text-neutral-500">Start one and track progress together.</div>
+                                            </div>
+                                            <motion.button
+                                                whileTap={{ scale: 0.96 }}
+                                                onClick={() => navigate('/challenges')}
+                                                className="text-xs font-bold text-violet-600 bg-violet-100/70 px-3 py-1.5 rounded-full"
+                                            >
+                                                Open
+                                            </motion.button>
+                                        </div>
+                                    ) : (
+                                        <div className="rounded-2xl border border-dashed border-violet-200/70 bg-violet-50/70 px-3 py-3">
+                                            <div className="flex items-center justify-between gap-3">
+                                                <div>
+                                                    <div className="text-sm font-semibold text-violet-700">Locked until Level 5</div>
+                                                    <p className="text-xs text-violet-600 mt-1">{unlockHint}</p>
+                                                </div>
+                                                <div className="text-xs font-bold text-violet-700 bg-white/70 px-2.5 py-1 rounded-full">
+                                                    Lv {level}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Memories Preview */}
+                        {isXPEnabled && (
+                            <div className="glass-card p-4 space-y-4 relative overflow-hidden border border-rose-100/70">
+                                <div className="absolute inset-0 pointer-events-none">
+                                    <div className="absolute -top-10 -right-8 h-28 w-28 rounded-full bg-rose-200/45 blur-2xl" />
+                                    <div className="absolute -bottom-12 -left-8 h-32 w-32 rounded-full bg-amber-200/35 blur-2xl" />
+                                    <div
+                                        className="absolute inset-0 opacity-30"
+                                        style={{ backgroundImage: 'linear-gradient(140deg, rgba(255,255,255,0.7) 0%, transparent 50%)' }}
+                                    />
+                                </div>
+                                <div className="relative space-y-4">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div className="flex items-center gap-3">
+                                            <div className="h-10 w-10 rounded-2xl bg-rose-100/80 border border-rose-200/60 flex items-center justify-center">
+                                                <ImagePlus className="w-4 h-4 text-rose-600" />
+                                            </div>
+                                            <div>
+                                                <h3 className="font-display font-bold text-neutral-800">Memories</h3>
+                                                <p className="text-xs text-neutral-500">A shared gallery of your favorite days.</p>
+                                            </div>
+                                        </div>
+                                        {showMemories && (
+                                            <motion.button
+                                                whileTap={{ scale: 0.96 }}
+                                                onClick={() => navigate('/memories')}
+                                                className="text-xs font-bold text-rose-600"
+                                            >
+                                                View all
+                                            </motion.button>
+                                        )}
+                                    </div>
+
+                                    {showMemories ? (
+                                        <>
+                                            {deletedMemories?.length > 0 && (
+                                                <div className="text-xs text-rose-600 bg-rose-50 border border-rose-100 rounded-2xl px-3 py-2">
+                                                    {deletedMemories.length} memory{deletedMemories.length === 1 ? '' : 'ies'} can be restored
+                                                </div>
+                                            )}
+
+                                            {memories.length === 0 ? (
+                                                <motion.button
+                                                    whileTap={{ scale: 0.98 }}
+                                                    onClick={() => navigate('/memories')}
+                                                    className="w-full py-3 rounded-2xl border border-dashed border-rose-200 text-sm font-semibold text-rose-600 bg-white/60"
+                                                >
+                                                    Add your first memory
+                                                </motion.button>
+                                            ) : (
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    {memories.slice(0, 4).map((memory) => (
+                                                        <MemoryCard
+                                                            key={memory.id}
+                                                            memory={memory}
+                                                            showMeta={false}
+                                                            onClick={() => navigate('/memories')}
+                                                        />
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </>
+                                    ) : (
+                                        <div className="rounded-2xl border border-dashed border-rose-200/70 bg-rose-50/70 px-3 py-3">
+                                            <div className="flex items-center justify-between gap-3">
+                                                <div>
+                                                    <div className="text-sm font-semibold text-rose-700">Locked until Level 7</div>
+                                                    <p className="text-xs text-rose-600 mt-1">{unlockHint}</p>
+                                                </div>
+                                                <div className="text-xs font-bold text-rose-700 bg-white/70 px-2.5 py-1 rounded-full">
+                                                    Lv {level}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* AI Insights Preview */}
+                        {isXPEnabled && (
+                            <div className="glass-card p-4 space-y-4 relative overflow-hidden border border-indigo-100/70">
+                                <div className="absolute inset-0 pointer-events-none">
+                                    <div className="absolute -top-10 -right-8 h-28 w-28 rounded-full bg-indigo-200/40 blur-2xl" />
+                                    <div className="absolute -bottom-12 -left-8 h-32 w-32 rounded-full bg-sky-200/40 blur-2xl" />
+                                    <div
+                                        className="absolute inset-0 opacity-30"
+                                        style={{ backgroundImage: 'linear-gradient(150deg, rgba(255,255,255,0.7) 0%, transparent 55%)' }}
+                                    />
+                                </div>
+                                <div className="relative space-y-4">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div className="flex items-center gap-3">
+                                            <div className="h-10 w-10 rounded-2xl bg-indigo-100/80 border border-indigo-200/60 flex items-center justify-center">
+                                                <Sparkles className="w-4 h-4 text-indigo-600" />
+                                            </div>
+                                            <div>
+                                                <h3 className="font-display font-bold text-neutral-800">AI Insights</h3>
+                                                <p className="text-xs text-neutral-500">Gentle patterns, not advice.</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            {showInsights && (
+                                                <motion.button
+                                                    whileTap={{ scale: 0.96 }}
+                                                    onClick={() => navigate('/insights')}
+                                                    className="text-xs font-bold text-indigo-600"
+                                                >
+                                                    View all
+                                                </motion.button>
+                                            )}
+                                            <motion.button
+                                                whileTap={{ scale: 0.96 }}
+                                                onClick={() => updateConsent(!selfConsent)}
+                                                className="text-xs font-bold text-indigo-600 bg-indigo-100/70 px-2.5 py-1 rounded-full"
+                                            >
+                                                {selfConsent ? 'Opt out' : 'Turn on'}
+                                            </motion.button>
+                                        </div>
+                                    </div>
+
+                                    {!showInsights && (
+                                        <div className="rounded-2xl border border-dashed border-indigo-200/70 bg-indigo-50/70 px-3 py-3">
+                                            <div className="flex items-center justify-between gap-3">
+                                                <div>
+                                                    <div className="text-sm font-semibold text-indigo-700">Locked until Level 10</div>
+                                                    <p className="text-xs text-indigo-600 mt-1">{unlockHint}</p>
+                                                </div>
+                                                <div className="text-xs font-bold text-indigo-700 bg-white/70 px-2.5 py-1 rounded-full">
+                                                    Lv {level}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {showInsights && !selfConsent && (
+                                        <div className="rounded-2xl border border-indigo-100 bg-indigo-50/70 p-3 text-xs text-indigo-700">
+                                            AI insights are off. Turn them back on anytime.
+                                        </div>
+                                    )}
+
+                                    {showInsights && selfConsent && !partnerConsent && (
+                                        <div className="rounded-2xl border border-amber-100 bg-amber-50/70 p-3 text-xs text-amber-700">
+                                            Waiting for your partner to opt in.
+                                        </div>
+                                    )}
+
+                                    {showInsights && bothConsented && insightsPaused && (
+                                        <div className="rounded-2xl border border-indigo-100 bg-indigo-50/70 p-3 text-xs text-indigo-700">
+                                            Insights are paused. Resume anytime from the insights page.
+                                        </div>
+                                    )}
+
+                                    {showInsights && bothConsented && !insightsPaused && (
+                                        <div className="rounded-2xl border border-white/80 bg-white/70 p-3">
+                                            {latestInsight ? (
+                                                <>
+                                                    <div className="text-[11px] font-semibold text-indigo-500 uppercase tracking-[0.2em] mb-2">
+                                                        {latestInsight.category}
+                                                    </div>
+                                                    <p className="text-sm font-semibold text-neutral-700 mb-2">
+                                                        {latestInsight.text}
+                                                    </p>
+                                                    {latestInsight.evidenceSummary && (
+                                                        <p className="text-xs text-neutral-500">{latestInsight.evidenceSummary}</p>
+                                                    )}
+                                                </>
+                                            ) : (
+                                                <p className="text-xs text-neutral-500">
+                                                    No insights yet. Keep using the app together and check back soon.
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
 
                         {/* Achievements */}
                         <div className="glass-card p-4 space-y-3">

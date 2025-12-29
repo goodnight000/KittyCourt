@@ -1,0 +1,165 @@
+/**
+ * LevelProgress - Reusable level progress display component
+ * 
+ * Two modes:
+ * - compact: For dashboard banner
+ * - full: For Our Story section
+ */
+import React from 'react';
+import { motion } from 'framer-motion';
+
+const LevelProgress = ({
+    level = 1,
+    currentXP = 0,
+    xpForNextLevel = 100,
+    title = 'Curious Kittens',
+    compact = false,
+    className = '',
+}) => {
+    // Calculate progress percentage
+    const progress = xpForNextLevel > 0
+        ? Math.min((currentXP / xpForNextLevel) * 100, 100)
+        : 100;
+    const remainingXP = Math.max(xpForNextLevel - currentXP, 0);
+
+    // Get level emoji based on level tier
+    const getLevelEmoji = (lvl) => {
+        if (lvl >= 50) return '👑';
+        if (lvl >= 30) return '🔥';
+        if (lvl >= 20) return '💎';
+        if (lvl >= 15) return '💫';
+        if (lvl >= 10) return '🌟';
+        if (lvl >= 7) return '🏆';
+        if (lvl >= 5) return '💕';
+        if (lvl >= 3) return '🐱';
+        return '🐾';
+    };
+
+    // Compact mode (Dashboard banner)
+    if (compact) {
+        return (
+            <motion.div
+                className={`glass-card level-progress-compact relative overflow-hidden ${className}`}
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+            >
+                <div className="absolute inset-0 pointer-events-none">
+                    <div className="absolute -top-10 -right-6 h-24 w-24 rounded-full bg-amber-200/50 blur-2xl" />
+                    <div className="absolute -bottom-12 -left-6 h-24 w-24 rounded-full bg-rose-200/40 blur-2xl" />
+                    <div className="absolute inset-0 opacity-30" style={{
+                        backgroundImage: 'linear-gradient(120deg, rgba(255,255,255,0.6) 0%, transparent 40%), linear-gradient(0deg, rgba(255,255,255,0.3), transparent 60%)'
+                    }} />
+                </div>
+                <div className="relative flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-2xl bg-white/80 border border-amber-100/70 shadow-sm flex items-center justify-center text-xl">
+                            {getLevelEmoji(level)}
+                        </div>
+                        <div>
+                            <div className="text-sm font-display font-bold text-neutral-800">
+                                Level {level} - {title}
+                            </div>
+                            <div className="text-[11px] text-neutral-500">
+                                {currentXP.toLocaleString()} / {xpForNextLevel.toLocaleString()} XP
+                            </div>
+                        </div>
+                    </div>
+                    <div className="text-[11px] font-semibold text-amber-700 bg-amber-100/60 px-2.5 py-1 rounded-full">
+                        {remainingXP.toLocaleString()} to go
+                    </div>
+                </div>
+
+                {/* Progress bar */}
+                <div className="relative mt-3 h-2.5 rounded-full bg-white/70 border border-white/80 overflow-hidden">
+                    <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.4),transparent_40%)]" />
+                    <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${progress}%` }}
+                        transition={{ duration: 0.8, ease: 'easeOut' }}
+                        className="h-full rounded-full bg-[linear-gradient(90deg,#F59E0B_0%,#F97316_45%,#FB7185_100%)] shadow-[0_0_12px_rgba(251,146,60,0.35)]"
+                    />
+                </div>
+            </motion.div>
+        );
+    }
+
+    // Full mode (Our Story section)
+    return (
+        <motion.div
+            className={`level-progress-full glass-card relative overflow-hidden ${className}`}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3 }}
+        >
+            <div className="absolute inset-0 pointer-events-none">
+                <div className="absolute -top-16 -right-10 h-44 w-44 rounded-full bg-amber-200/50 blur-3xl" />
+                <div className="absolute -bottom-20 -left-12 h-48 w-48 rounded-full bg-rose-200/40 blur-3xl" />
+                <div className="absolute inset-0 opacity-40" style={{
+                    backgroundImage: 'radial-gradient(circle at 20% 0%, rgba(255,255,255,0.6), transparent 55%), radial-gradient(circle at 80% 100%, rgba(255,255,255,0.5), transparent 60%)'
+                }} />
+            </div>
+
+            <div className="relative">
+                <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                        <motion.div
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            transition={{ delay: 0.1, type: 'spring', stiffness: 200 }}
+                            className="h-14 w-14 rounded-2xl bg-white/90 border border-amber-100/70 shadow-md flex items-center justify-center text-2xl"
+                        >
+                            {getLevelEmoji(level)}
+                        </motion.div>
+                        <div>
+                            <div className="text-[11px] uppercase tracking-[0.2em] text-neutral-500 font-semibold">Our Story</div>
+                            <div className="text-xl font-display font-bold text-neutral-800">
+                                Level {level}
+                            </div>
+                            <div className="text-sm text-neutral-600">{title}</div>
+                        </div>
+                    </div>
+                    <div className="rounded-2xl bg-white/80 border border-amber-100/70 px-3 py-2 text-center shadow-sm">
+                        <div className="text-[10px] uppercase tracking-[0.16em] text-neutral-500">XP</div>
+                        <div className="text-base font-display font-bold text-neutral-800">
+                            {currentXP.toLocaleString()}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="mt-5">
+                    <div className="flex items-center justify-between text-xs text-neutral-500 mb-2">
+                        <span>Progress to next level</span>
+                        <span className="font-semibold text-amber-700">{remainingXP.toLocaleString()} XP to go</span>
+                    </div>
+                    <div className="relative h-3 rounded-full bg-white/80 border border-white/80 overflow-hidden">
+                        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.5),transparent_40%)]" />
+                        <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${progress}%` }}
+                            transition={{ duration: 1, ease: 'easeOut', delay: 0.15 }}
+                            className="h-full rounded-full bg-[linear-gradient(90deg,#FBBF24_0%,#F97316_45%,#FB7185_100%)] shadow-[0_0_18px_rgba(249,115,22,0.35)]"
+                        />
+                    </div>
+                </div>
+
+                <div className="mt-4 grid grid-cols-2 gap-3">
+                    <div className="rounded-2xl border border-white/80 bg-white/70 px-3 py-2 text-center">
+                        <div className="text-[10px] uppercase tracking-[0.16em] text-neutral-500">This Level</div>
+                        <div className="text-sm font-semibold text-neutral-800">
+                            {currentXP.toLocaleString()} / {xpForNextLevel.toLocaleString()}
+                        </div>
+                    </div>
+                    <div className="rounded-2xl border border-white/80 bg-white/70 px-3 py-2 text-center">
+                        <div className="text-[10px] uppercase tracking-[0.16em] text-neutral-500">Together</div>
+                        <div className="text-sm font-semibold text-neutral-800">
+                            {xpForNextLevel > 0 ? 'Keep the streak alive' : 'Legendary bond'}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </motion.div>
+    );
+};
+
+export default LevelProgress;

@@ -46,8 +46,12 @@ const useAppStore = create(
                     // Fetch kibble balances for each user
                     for (const user of users) {
                         try {
-                            const balanceRes = await api.get(`/economy/balance/${user.id}`);
-                            user.kibbleBalance = balanceRes.data.balance || 0;
+                            if (user.id === authUser.id) {
+                                const balanceRes = await api.get(`/economy/balance/${user.id}`);
+                                user.kibbleBalance = balanceRes.data.balance || 0;
+                            } else {
+                                user.kibbleBalance = user.kibbleBalance || 0;
+                            }
                         } catch {
                             user.kibbleBalance = 0;
                         }
