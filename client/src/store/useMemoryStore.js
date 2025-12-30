@@ -4,6 +4,8 @@
 import { create } from 'zustand'
 import api from '../services/api'
 
+const isDev = import.meta.env.DEV
+
 const useMemoryStore = create((set, get) => ({
   memories: [],
   deletedCount: 0,
@@ -33,6 +35,33 @@ const useMemoryStore = create((set, get) => ({
     } catch (error) {
       const status = error?.response?.status
       if (status === 404) {
+        const fallbackBase = isDev && typeof api.defaults.baseURL === 'string'
+          ? api.defaults.baseURL
+          : ''
+        const shouldTryLocal = isDev
+          && fallbackBase.startsWith('http')
+          && !fallbackBase.includes('localhost')
+          && !fallbackBase.includes('127.0.0.1')
+
+        if (shouldTryLocal) {
+          try {
+            const response = await api.get('/memories', { baseURL: '/api' })
+            const data = response?.data || {}
+
+            set({
+              memories: data.memories || [],
+              deletedCount: data.deletedCount || 0,
+              deletedMemories: data.deletedMemories || [],
+              isLoading: false,
+              serverAvailable: true,
+              error: null
+            })
+            return
+          } catch (fallbackError) {
+            console.error('[MemoryStore] Local API fallback failed:', fallbackError)
+          }
+        }
+
         set({ isLoading: false, serverAvailable: false, error: null })
         return
       }

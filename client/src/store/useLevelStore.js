@@ -74,13 +74,6 @@ const useLevelStore = create((set, get) => ({
         return level >= 5;
     },
 
-    shouldShowMemories: () => {
-        if (!isXPSystemEnabled()) return false;
-        const { level, serverAvailable } = get();
-        if (!serverAvailable) return false;
-        return level >= 7;
-    },
-
     shouldShowInsights: () => {
         if (!isXPSystemEnabled()) return false;
         const { level, serverAvailable } = get();

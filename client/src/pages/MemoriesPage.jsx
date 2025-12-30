@@ -6,7 +6,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowLeft, ImagePlus, Trash2, MessageCircle, Heart, X } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import useAuthStore from '../store/useAuthStore'
-import useLevelStore from '../store/useLevelStore'
 import useMemoryStore from '../store/useMemoryStore'
 import MemoryCard from '../components/MemoryCard'
 
@@ -33,7 +32,6 @@ const DeletedMemoryCard = ({ deletedAt, onRestore }) => (
 const MemoriesPage = () => {
   const navigate = useNavigate()
   const { hasPartner, user } = useAuthStore()
-  const { level, shouldShowMemories, fetchLevel, serverAvailable } = useLevelStore()
   const {
     memories,
     deletedMemories,
@@ -70,17 +68,10 @@ const MemoriesPage = () => {
     setFilePreview(null)
   }
 
-  const showMemories = shouldShowMemories()
-
   useEffect(() => {
-    if (!hasPartner) return
-    fetchLevel()
-  }, [hasPartner, fetchLevel])
-
-  useEffect(() => {
-    if (!hasPartner || !serverAvailable || !showMemories || !memoriesAvailable) return
+    if (!hasPartner || !memoriesAvailable) return
     fetchMemories()
-  }, [fetchMemories, hasPartner, memoriesAvailable, serverAvailable, showMemories])
+  }, [fetchMemories, hasPartner, memoriesAvailable])
 
   useEffect(() => {
     if (selectedMemory?.id) {
@@ -129,9 +120,7 @@ const MemoriesPage = () => {
     setCommentText('')
   }
 
-  const isXPEnabled = import.meta.env.VITE_XP_SYSTEM_ENABLED === 'true'
-
-  if (!isXPEnabled || !showMemories) {
+  if (!hasPartner) {
     return (
       <div className="p-4 min-h-screen bg-gradient-to-b from-neutral-50 to-neutral-100">
         <motion.button
@@ -152,17 +141,55 @@ const MemoriesPage = () => {
             <ImagePlus className="w-10 h-10 text-rose-400" />
           </div>
           <h2 className="text-xl font-bold text-neutral-800 mb-2">
-            Memories Unlock at Level 7
+            Connect with your partner
           </h2>
           <p className="text-neutral-500 mb-4">
-            You&apos;re currently Level {level}. Keep earning XP together!
+            Memories unlock once both of you are connected.
           </p>
           <motion.button
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate('/profile')}
             className="px-6 py-3 rounded-xl bg-gradient-to-r from-rose-500 to-amber-500 text-white font-bold"
           >
-            View Your Progress
+            Go to Profile
+          </motion.button>
+        </motion.div>
+      </div>
+    )
+  }
+
+  if (!memoriesAvailable) {
+    return (
+      <div className="p-4 min-h-screen bg-gradient-to-b from-neutral-50 to-neutral-100">
+        <motion.button
+          whileTap={{ scale: 0.95 }}
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-1 text-neutral-600 mb-6"
+        >
+          <ArrowLeft className="w-5 h-5" />
+          <span>Back</span>
+        </motion.button>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center py-16"
+        >
+          <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-rose-100 to-amber-100 flex items-center justify-center mb-4">
+            <ImagePlus className="w-10 h-10 text-rose-400" />
+          </div>
+          <h2 className="text-xl font-bold text-neutral-800 mb-2">
+            Memories are unavailable
+          </h2>
+          <p className="text-neutral-500 mb-4">
+            We&apos;re having trouble loading the gallery right now. Please try again soon.
+          </p>
+          <motion.button
+            whileTap={{ scale: 0.98 }}
+            onClick={() => navigate('/profile')}
+            className="px-6 py-3 rounded-xl bg-gradient-to-r from-rose-500 to-amber-500 text-white font-bold"
+          >
+            Back to Profile
           </motion.button>
         </motion.div>
       </div>

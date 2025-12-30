@@ -33,7 +33,7 @@ const ProfilesPage = () => {
     const { currentUser, users, caseHistory, appreciations, fetchAppreciations } = useAppStore();
     const { profile, partner: connectedPartner, hasPartner, signOut, refreshProfile, user: authUser } = useAuthStore();
     const { isGold, usage, limits, getUsageDisplay, purchaseGold, restorePurchases, isLoading: subLoading } = useSubscriptionStore();
-    const { level, currentXP, xpForNextLevel, title, fetchLevel, shouldShowChallenges, shouldShowMemories, shouldShowInsights, serverAvailable } = useLevelStore();
+    const { level, currentXP, xpForNextLevel, title, fetchLevel, shouldShowChallenges, shouldShowInsights, serverAvailable } = useLevelStore();
     const { memories, deletedMemories, fetchMemories, serverAvailable: memoriesAvailable } = useMemoryStore();
     const { insights, consent, fetchInsights, updateConsent, serverAvailable: insightsAvailable } = useInsightsStore();
     const latestInsight = insights?.[0] || null;
@@ -42,7 +42,6 @@ const ProfilesPage = () => {
     const bothConsented = selfConsent && partnerConsent;
     const insightsPaused = consent?.selfPaused || consent?.partnerPaused;
     const showChallenges = shouldShowChallenges();
-    const showMemories = shouldShowMemories();
     const showInsights = shouldShowInsights();
     const partnerFromUsers = users?.find(u => u.id !== currentUser?.id);
     const isXPEnabled = import.meta.env.VITE_XP_SYSTEM_ENABLED === 'true';
@@ -70,23 +69,14 @@ const ProfilesPage = () => {
     }, [fetchAppreciations, hasPartner, fetchLevel]);
 
     useEffect(() => {
-        if (!hasPartner || !isXPEnabled || !serverAvailable) return;
-        if (showMemories && memoriesAvailable) {
-            fetchMemories();
-        }
-        if (insightsAvailable) {
-            fetchInsights();
-        }
-    }, [
-        fetchInsights,
-        fetchMemories,
-        hasPartner,
-        insightsAvailable,
-        isXPEnabled,
-        memoriesAvailable,
-        serverAvailable,
-        showMemories,
-    ]);
+        if (!hasPartner || !memoriesAvailable) return;
+        fetchMemories();
+    }, [fetchMemories, hasPartner, memoriesAvailable]);
+
+    useEffect(() => {
+        if (!hasPartner || !isXPEnabled || !serverAvailable || !insightsAvailable) return;
+        fetchInsights();
+    }, [fetchInsights, hasPartner, insightsAvailable, isXPEnabled, serverAvailable]);
 
     useEffect(() => {
         // Update profileData when profile changes (from Supabase only)
@@ -585,6 +575,74 @@ const ProfilesPage = () => {
                             </div>
                         </div>
 
+                        {/* Memories Preview */}
+                        <div className="glass-card p-4 space-y-4 relative overflow-hidden border border-rose-100/70">
+                            <div className="absolute inset-0 pointer-events-none">
+                                <div className="absolute -top-10 -right-8 h-28 w-28 rounded-full bg-rose-200/45 blur-2xl" />
+                                <div className="absolute -bottom-12 -left-8 h-32 w-32 rounded-full bg-amber-200/35 blur-2xl" />
+                                <div
+                                    className="absolute inset-0 opacity-30"
+                                    style={{ backgroundImage: 'linear-gradient(140deg, rgba(255,255,255,0.7) 0%, transparent 50%)' }}
+                                />
+                            </div>
+                            <div className="relative space-y-4">
+                                <div className="flex items-start justify-between gap-3">
+                                    <div className="flex items-center gap-3">
+                                        <div className="h-10 w-10 rounded-2xl bg-rose-100/80 border border-rose-200/60 flex items-center justify-center">
+                                            <ImagePlus className="w-4 h-4 text-rose-600" />
+                                        </div>
+                                        <div>
+                                            <h3 className="font-display font-bold text-neutral-800">Memories</h3>
+                                            <p className="text-xs text-neutral-500">A shared gallery of your favorite days.</p>
+                                        </div>
+                                    </div>
+                                    <motion.button
+                                        whileTap={{ scale: 0.96 }}
+                                        onClick={() => navigate('/memories')}
+                                        className={`text-xs font-bold text-rose-600 ${memoriesAvailable ? '' : 'opacity-60 cursor-not-allowed'}`}
+                                        disabled={!memoriesAvailable}
+                                    >
+                                        View all
+                                    </motion.button>
+                                </div>
+
+                                {!memoriesAvailable ? (
+                                    <div className="rounded-2xl border border-dashed border-rose-200/70 bg-rose-50/70 px-3 py-3 text-xs text-rose-600">
+                                        Memories are unavailable right now. Please check back soon.
+                                    </div>
+                                ) : (
+                                    <>
+                                        {deletedMemories?.length > 0 && (
+                                            <div className="text-xs text-rose-600 bg-rose-50 border border-rose-100 rounded-2xl px-3 py-2">
+                                                {deletedMemories.length} memory{deletedMemories.length === 1 ? '' : 'ies'} can be restored
+                                            </div>
+                                        )}
+
+                                        {memories.length === 0 ? (
+                                            <motion.button
+                                                whileTap={{ scale: 0.98 }}
+                                                onClick={() => navigate('/memories')}
+                                                className="w-full py-3 rounded-2xl border border-dashed border-rose-200 text-sm font-semibold text-rose-600 bg-white/60"
+                                            >
+                                                Add your first memory
+                                            </motion.button>
+                                        ) : (
+                                            <div className="grid grid-cols-2 gap-3">
+                                                {memories.slice(0, 4).map((memory) => (
+                                                    <MemoryCard
+                                                        key={memory.id}
+                                                        memory={memory}
+                                                        showMeta={false}
+                                                        onClick={() => navigate('/memories')}
+                                                    />
+                                                ))}
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+                            </div>
+                        </div>
+
                         {/* Challenges Preview */}
                         {isXPEnabled && (
                             <div className="glass-card p-4 space-y-4 relative overflow-hidden border border-violet-100/70">
@@ -640,85 +698,6 @@ const ProfilesPage = () => {
                                                     <p className="text-xs text-violet-600 mt-1">{unlockHint}</p>
                                                 </div>
                                                 <div className="text-xs font-bold text-violet-700 bg-white/70 px-2.5 py-1 rounded-full">
-                                                    Lv {level}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Memories Preview */}
-                        {isXPEnabled && (
-                            <div className="glass-card p-4 space-y-4 relative overflow-hidden border border-rose-100/70">
-                                <div className="absolute inset-0 pointer-events-none">
-                                    <div className="absolute -top-10 -right-8 h-28 w-28 rounded-full bg-rose-200/45 blur-2xl" />
-                                    <div className="absolute -bottom-12 -left-8 h-32 w-32 rounded-full bg-amber-200/35 blur-2xl" />
-                                    <div
-                                        className="absolute inset-0 opacity-30"
-                                        style={{ backgroundImage: 'linear-gradient(140deg, rgba(255,255,255,0.7) 0%, transparent 50%)' }}
-                                    />
-                                </div>
-                                <div className="relative space-y-4">
-                                    <div className="flex items-start justify-between gap-3">
-                                        <div className="flex items-center gap-3">
-                                            <div className="h-10 w-10 rounded-2xl bg-rose-100/80 border border-rose-200/60 flex items-center justify-center">
-                                                <ImagePlus className="w-4 h-4 text-rose-600" />
-                                            </div>
-                                            <div>
-                                                <h3 className="font-display font-bold text-neutral-800">Memories</h3>
-                                                <p className="text-xs text-neutral-500">A shared gallery of your favorite days.</p>
-                                            </div>
-                                        </div>
-                                        {showMemories && (
-                                            <motion.button
-                                                whileTap={{ scale: 0.96 }}
-                                                onClick={() => navigate('/memories')}
-                                                className="text-xs font-bold text-rose-600"
-                                            >
-                                                View all
-                                            </motion.button>
-                                        )}
-                                    </div>
-
-                                    {showMemories ? (
-                                        <>
-                                            {deletedMemories?.length > 0 && (
-                                                <div className="text-xs text-rose-600 bg-rose-50 border border-rose-100 rounded-2xl px-3 py-2">
-                                                    {deletedMemories.length} memory{deletedMemories.length === 1 ? '' : 'ies'} can be restored
-                                                </div>
-                                            )}
-
-                                            {memories.length === 0 ? (
-                                                <motion.button
-                                                    whileTap={{ scale: 0.98 }}
-                                                    onClick={() => navigate('/memories')}
-                                                    className="w-full py-3 rounded-2xl border border-dashed border-rose-200 text-sm font-semibold text-rose-600 bg-white/60"
-                                                >
-                                                    Add your first memory
-                                                </motion.button>
-                                            ) : (
-                                                <div className="grid grid-cols-2 gap-3">
-                                                    {memories.slice(0, 4).map((memory) => (
-                                                        <MemoryCard
-                                                            key={memory.id}
-                                                            memory={memory}
-                                                            showMeta={false}
-                                                            onClick={() => navigate('/memories')}
-                                                        />
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </>
-                                    ) : (
-                                        <div className="rounded-2xl border border-dashed border-rose-200/70 bg-rose-50/70 px-3 py-3">
-                                            <div className="flex items-center justify-between gap-3">
-                                                <div>
-                                                    <div className="text-sm font-semibold text-rose-700">Locked until Level 7</div>
-                                                    <p className="text-xs text-rose-600 mt-1">{unlockHint}</p>
-                                                </div>
-                                                <div className="text-xs font-bold text-rose-700 bg-white/70 px-2.5 py-1 rounded-full">
                                                     Lv {level}
                                                 </div>
                                             </div>
