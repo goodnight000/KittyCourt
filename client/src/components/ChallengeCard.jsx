@@ -15,6 +15,7 @@ const ChallengeCard = ({
     status = 'active', // 'active', 'completed', 'expired'
     difficulty = 'medium', // 'easy', 'medium', 'hard'
     rewardXP = 100,
+    cadence = 'weekly',
     actionLabel,
     onAction,
     actionDisabled = false,
@@ -44,6 +45,10 @@ const ChallengeCard = ({
 
     const colors = difficultyStyles[difficulty] || difficultyStyles.medium;
     const statusLabel = status === 'expired' ? 'Expired' : null;
+    const cadenceLabel = cadence === 'daily' ? 'Daily' : 'Weekly';
+    const cadenceStyles = cadence === 'daily'
+        ? 'border-sky-200/70 bg-sky-100/80 text-sky-700'
+        : 'border-amber-200/70 bg-amber-100/80 text-amber-700';
 
     if (status === 'completed') {
         return (
@@ -64,6 +69,11 @@ const ChallengeCard = ({
                         <div className="mt-1 flex items-center gap-2">
                             <span className="text-lg">{emoji}</span>
                             <span className="font-display font-bold text-neutral-800">{title}</span>
+                        </div>
+                        <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.2em]">
+                            <span className={`rounded-full border px-2.5 py-1 ${cadenceStyles}`}>
+                                {cadenceLabel}
+                            </span>
                         </div>
                         <p className="mt-1 text-xs text-emerald-600 font-semibold">
                             Completed! +{rewardXP} XP earned together.
@@ -104,9 +114,14 @@ const ChallengeCard = ({
                                 )}
                                 <h3 className="text-base font-display font-bold text-neutral-800">{title}</h3>
                             </div>
-                            <span className={`rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.2em] ${colors.badge}`}>
-                                {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
-                            </span>
+                            <div className="flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.2em]">
+                                <span className={`rounded-full border px-2.5 py-1 ${cadenceStyles}`}>
+                                    {cadenceLabel}
+                                </span>
+                                <span className={`rounded-full border px-2.5 py-1 font-bold ${colors.badge}`}>
+                                    {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
+                                </span>
+                            </div>
                         </div>
                         <p className="mt-1 text-sm text-neutral-600">{description}</p>
                     </div>

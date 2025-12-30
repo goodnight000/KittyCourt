@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-    User, Heart, Calendar, Star, Settings, ChevronRight,
-    Edit3, Check, X, Gift, Scale, Clock,
+    User, Heart, Calendar, Star, Settings,
+    Edit3, Check, X, Scale,
     Coffee, TrendingUp, Award, Link2, Copy, Users, LogOut, Lock, MessageSquare, AlertTriangle,
     Crown, Sparkles, Zap, Gavel, Wand2, ImagePlus
 } from 'lucide-react';
@@ -52,7 +52,6 @@ const ProfilesPage = () => {
     const unlockHint = 'Earn XP together by answering Daily Meow, sending appreciations, and resolving cases.';
     const activeChallengeCount = activeChallenges?.length || 0;
     const availableChallengeCount = availableChallenges?.length || 0;
-    const featuredChallenge = activeChallenges?.[0];
 
     const [showEditModal, setShowEditModal] = useState(false);
     const [activeTab, setActiveTab] = useState('me'); // 'me' or 'us'
@@ -60,6 +59,9 @@ const ProfilesPage = () => {
     const [showPaywall, setShowPaywall] = useState(false);
     const [devXPLoading, setDevXPLoading] = useState(false);
     const [devXPMessage, setDevXPMessage] = useState('');
+    const [activeChallengeIndex, setActiveChallengeIndex] = useState(0);
+    const challengeTrackRef = useRef(null);
+    const challengeCardWidthRef = useRef(0);
 
     // Profile settings - ONLY from Supabase profile (no localStorage for avatars)
     const [profileData, setProfileData] = useState(() => ({
@@ -108,6 +110,31 @@ const ProfilesPage = () => {
         if (!hasPartner || !showChallenges) return;
         fetchChallenges();
     }, [fetchChallenges, hasPartner, showChallenges]);
+
+    useEffect(() => {
+        setActiveChallengeIndex(0);
+        if (challengeTrackRef.current) {
+            challengeTrackRef.current.scrollTo({ left: 0, behavior: 'auto' });
+        }
+    }, [activeChallengeCount]);
+
+    const handleChallengeScroll = () => {
+        if (!challengeTrackRef.current || activeChallengeCount === 0) return;
+        const container = challengeTrackRef.current;
+        if (!challengeCardWidthRef.current) {
+            const firstCard = container.querySelector('[data-challenge-card]');
+            if (firstCard) {
+                challengeCardWidthRef.current = firstCard.getBoundingClientRect().width;
+            }
+        }
+        const cardWidth = challengeCardWidthRef.current || 240;
+        const gap = 12;
+        const index = Math.round(container.scrollLeft / (cardWidth + gap));
+        const clampedIndex = Math.min(Math.max(index, 0), activeChallengeCount - 1);
+        if (clampedIndex !== activeChallengeIndex) {
+            setActiveChallengeIndex(clampedIndex);
+        }
+    };
 
     const saveProfile = async (newData) => {
         console.log('[ProfilesPage] saveProfile called with:', newData);
@@ -204,7 +231,7 @@ const ProfilesPage = () => {
     const selectedLoveLanguage = LOVE_LANGUAGES.find(l => l.id === profileData.loveLanguage);
 
     return (
-        <div className="relative min-h-screen pb-24 overflow-hidden">
+        <div className="relative min-h-screen pb-6 overflow-hidden">
             <ProfileBackdrop />
             <div className="relative space-y-6">
 
@@ -596,28 +623,6 @@ const ProfilesPage = () => {
                             </motion.div>
                         )}
 
-                        {/* Quick Links */}
-                        <div className="space-y-2">
-                            <h3 className="text-[11px] font-semibold uppercase tracking-[0.3em] text-neutral-400 px-1">Quick Links</h3>
-                            <QuickLink
-                                icon={<Heart className="w-5 h-5 text-rose-500" />}
-                                label="View Appreciations"
-                                sublabel="See what your partner loves"
-                                onClick={() => navigate('/appreciations')}
-                            />
-                            <QuickLink
-                                icon={<Calendar className="w-5 h-5 text-amber-600" />}
-                                label="Our Calendar"
-                                sublabel="Important dates & events"
-                                onClick={() => navigate('/calendar')}
-                            />
-                            <QuickLink
-                                icon={<Gift className="w-5 h-5 text-amber-500" />}
-                                label="Kibble Market"
-                                sublabel="Redeem rewards"
-                                onClick={() => navigate('/economy')}
-                            />
-                        </div>
                     </motion.div>
                 ) : (
                     <motion.div
@@ -823,23 +828,116 @@ const ProfilesPage = () => {
                                             )}
 
                                             {!challengesLoading && activeChallengeCount > 0 && (
-                                                <div className="rounded-2xl border border-white/80 bg-white/80 px-3 py-3">
+                                                <div className="space-y-3">
                                                     <div className="flex items-center justify-between gap-3">
-                                                        <div>
-                                                            <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-amber-600">
-                                                                Active now
-                                                            </div>
-                                                            <div className="text-sm font-semibold text-neutral-700">
-                                                                {featuredChallenge?.title || featuredChallenge?.name || 'Challenge in progress'}
-                                                            </div>
-                                                            <div className="text-[11px] text-neutral-500">
-                                                                {activeChallengeCount} active / {availableChallengeCount} ready
-                                                            </div>
+                                                        <div className="text-[11px] font-semibold uppercase tracking-[0.3em] text-neutral-400">
+                                                            Active now
                                                         </div>
-                                                        <div className="text-[11px] font-bold text-amber-700 bg-amber-100/70 px-2.5 py-1 rounded-full">
-                                                            In progress
+                                                        <div className="flex items-center gap-2">
+                                                            {activeChallengeCount > 1 && (
+                                                                <span className="text-[10px] font-semibold uppercase tracking-[0.3em] text-amber-500">
+                                                                    Swipe
+                                                                </span>
+                                                            )}
+                                                            <span className="text-[11px] font-bold text-amber-700 bg-amber-100/70 px-2.5 py-1 rounded-full">
+                                                                {activeChallengeCount} live
+                                                            </span>
                                                         </div>
                                                     </div>
+
+                                                    <div
+                                                        ref={challengeTrackRef}
+                                                        onScroll={handleChallengeScroll}
+                                                        className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-1 -mx-2 px-2"
+                                                    >
+                                                        {activeChallenges.map((challenge, index) => {
+                                                            const targetProgress = challenge.targetProgress || 3;
+                                                            const currentProgress = challenge.currentProgress || 0;
+                                                            const progress = targetProgress > 0
+                                                                ? Math.min((currentProgress / targetProgress) * 100, 100)
+                                                                : 0;
+                                                            const rewardXP = challenge.rewardXP || 0;
+                                                            const daysLeft = challenge.daysLeft ?? challenge.daysRemaining ?? 7;
+                                                            const emoji = challenge.emoji || '🎯';
+                                                            const isActive = index === activeChallengeIndex;
+
+                                                            return (
+                                                                <motion.button
+                                                                    key={challenge.id || `${challenge.title}-${index}`}
+                                                                    type="button"
+                                                                    data-challenge-card
+                                                                    onClick={() => navigate('/challenges')}
+                                                                    className="snap-center shrink-0 w-[250px] rounded-[28px] border border-white/80 bg-white/85 p-4 text-left shadow-soft relative overflow-hidden"
+                                                                    animate={{ scale: isActive ? 1.02 : 0.97, y: isActive ? -6 : 0 }}
+                                                                    transition={{ type: 'spring', stiffness: 320, damping: 18, bounce: 0.4 }}
+                                                                >
+                                                                    <div className="absolute inset-0 pointer-events-none">
+                                                                        <div className="absolute -top-8 -right-6 h-16 w-16 rounded-full bg-amber-200/35 blur-2xl" />
+                                                                        <div className="absolute -bottom-8 -left-6 h-20 w-20 rounded-full bg-rose-200/30 blur-2xl" />
+                                                                    </div>
+                                                                    <div className="relative space-y-3">
+                                                                        <div className="flex items-start gap-3">
+                                                                            <div className="h-10 w-10 rounded-2xl bg-amber-100/80 border border-amber-200/70 flex items-center justify-center text-lg">
+                                                                                {emoji}
+                                                                            </div>
+                                                                            <div className="flex-1 space-y-1">
+                                                                                <div className="text-[10px] font-semibold uppercase tracking-[0.25em] text-neutral-400">
+                                                                                    Active challenge {index + 1}
+                                                                                </div>
+                                                                                <div className="text-sm font-display font-bold text-neutral-800">
+                                                                                    {challenge.title || challenge.name || 'Challenge in progress'}
+                                                                                </div>
+                                                                                <p className="text-[11px] text-neutral-500 leading-snug">
+                                                                                    {challenge.description || 'A short quest to keep your story moving.'}
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        <div className="space-y-2">
+                                                                            <div className="flex items-center justify-between text-[11px] text-neutral-500">
+                                                                                <span>{currentProgress} / {targetProgress} steps</span>
+                                                                                <span className="font-semibold text-amber-700">+{rewardXP} XP</span>
+                                                                            </div>
+                                                                            <div className="h-2.5 rounded-full bg-white/80 shadow-inner-soft overflow-hidden">
+                                                                                <motion.div
+                                                                                    initial={{ width: 0 }}
+                                                                                    animate={{ width: `${progress}%` }}
+                                                                                    transition={{ duration: 0.6, ease: 'easeOut' }}
+                                                                                    className="h-full rounded-full bg-gradient-to-r from-[#C9A227] to-[#8B7019]"
+                                                                                />
+                                                                            </div>
+                                                                            <div className="flex items-center justify-between text-[10px] text-neutral-400">
+                                                                                <span>{daysLeft} days left</span>
+                                                                                <span className="font-semibold text-amber-600">
+                                                                                    {isActive ? 'Current' : 'Swipe'}
+                                                                                </span>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </motion.button>
+                                                            );
+                                                        })}
+                                                    </div>
+
+                                                    {activeChallengeCount > 1 && (
+                                                        <div className="flex items-center justify-center gap-1.5">
+                                                            {activeChallenges.map((_, index) => (
+                                                                <span
+                                                                    key={`challenge-dot-${index}`}
+                                                                    className={`h-1.5 w-1.5 rounded-full transition ${index === activeChallengeIndex
+                                                                        ? 'bg-amber-500 shadow-[0_0_10px_rgba(251,146,60,0.6)]'
+                                                                        : 'bg-amber-200/70'
+                                                                        }`}
+                                                                />
+                                                            ))}
+                                                        </div>
+                                                    )}
+
+                                                    {availableChallengeCount > 0 && (
+                                                        <div className="rounded-2xl border border-amber-200/70 bg-amber-50/70 px-3 py-2 text-[11px] text-amber-700 text-center">
+                                                            {availableChallengeCount} more waiting in the docket.
+                                                        </div>
+                                                    )}
                                                 </div>
                                             )}
 
@@ -1064,26 +1162,6 @@ const ProfileBackdrop = () => (
             }}
         />
     </div>
-);
-
-const QuickLink = ({ icon, label, sublabel, onClick }) => (
-    <motion.button
-        whileTap={{ scale: 0.98 }}
-        onClick={onClick}
-        className="w-full glass-card relative overflow-hidden p-4 flex items-center gap-3 text-left"
-    >
-        <div className="absolute -top-8 -right-6 h-16 w-16 rounded-full bg-amber-200/25 blur-2xl" />
-        <div className="relative w-11 h-11 rounded-2xl border border-white/80 bg-white/85 flex items-center justify-center shadow-inner-soft">
-            {icon}
-        </div>
-        <div className="relative flex-1">
-            <p className="font-bold text-neutral-800 text-sm">{label}</p>
-            <p className="text-xs text-neutral-500">{sublabel}</p>
-        </div>
-        <div className="relative flex h-9 w-9 items-center justify-center rounded-full border border-white/80 bg-white/80">
-            <ChevronRight className="w-4 h-4 text-neutral-400" />
-        </div>
-    </motion.button>
 );
 
 const StatBar = ({ label, value, max, color }) => {

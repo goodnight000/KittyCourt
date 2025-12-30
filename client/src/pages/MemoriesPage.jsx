@@ -159,7 +159,7 @@ const MemoriesPage = () => {
 
   if (!hasPartner) {
     return (
-      <div className="relative min-h-screen overflow-hidden px-4 pb-24 pt-6">
+      <div className="relative min-h-screen overflow-hidden px-4 pb-6 pt-6">
         <MemoryBackdrop />
         <div className="relative">
           <motion.button
@@ -200,7 +200,7 @@ const MemoriesPage = () => {
 
   if (!memoriesAvailable) {
     return (
-      <div className="relative min-h-screen overflow-hidden px-4 pb-24 pt-6">
+      <div className="relative min-h-screen overflow-hidden px-4 pb-6 pt-6">
         <MemoryBackdrop />
         <div className="relative">
           <motion.button
@@ -240,7 +240,7 @@ const MemoriesPage = () => {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden px-4 pb-28 pt-6">
+    <div className="relative min-h-screen overflow-hidden px-4 pb-6 pt-6">
       <MemoryBackdrop />
       <div className="relative space-y-6">
         <header className="flex items-start gap-3">

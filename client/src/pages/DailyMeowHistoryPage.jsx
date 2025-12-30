@@ -206,7 +206,7 @@ const DailyMeowHistoryPage = () => {
             feature="Question Archives"
             description="Connect with your partner to unlock your shared question history."
         >
-            <div className="relative min-h-screen overflow-hidden pb-24">
+            <div className="relative min-h-screen overflow-hidden pb-6">
             <QuestionBackdrop />
             <div className="relative space-y-6">
             {/* Header */}

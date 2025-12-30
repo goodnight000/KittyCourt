@@ -3,7 +3,7 @@
  */
 
 const { getSupabase, isSupabaseConfigured } = require('./supabase');
-const { getOrderedCoupleIds, isXPSystemEnabled, awardXP, ACTION_TYPES } = require('./xpService');
+const { getOrderedCoupleIds, isXPSystemEnabled, awardXP, ACTION_TYPES, getLevelStatus } = require('./xpService');
 
 const DEFAULT_DURATION_DAYS = 7;
 
@@ -16,12 +16,111 @@ const CHALLENGE_ACTIONS = {
     CALENDAR_EVENT: 'calendar_event',
 };
 
+const CADENCE = {
+    DAILY: 'daily',
+    WEEKLY: 'weekly',
+};
+
+const RECENT_REPEAT_LIMITS = {
+    [CADENCE.DAILY]: 10,
+    [CADENCE.WEEKLY]: 2,
+};
+
 const computeDaysLeft = (expiresAt) => {
     if (!expiresAt) return DEFAULT_DURATION_DAYS;
     const now = Date.now();
     const end = new Date(expiresAt).getTime();
     const diffDays = Math.ceil((end - now) / (1000 * 60 * 60 * 24));
     return Math.max(diffDays, 0);
+};
+
+const getEtDateString = (date = new Date()) => {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/New_York',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+    });
+    const parts = formatter.formatToParts(date);
+    const values = {};
+    for (const part of parts) {
+        if (part.type !== 'literal') {
+            values[part.type] = part.value;
+        }
+    }
+    return `${values.year}-${values.month}-${values.day}`;
+};
+
+const getEtWeekdayIndex = (date = new Date()) => {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/New_York',
+        weekday: 'short',
+    });
+    const label = formatter.format(date);
+    const map = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+    return map[label] ?? 0;
+};
+
+const addDaysToDateString = (dateString, days) => {
+    const [year, month, day] = String(dateString).split('-').map(Number);
+    const date = new Date(Date.UTC(year, month - 1, day));
+    date.setUTCDate(date.getUTCDate() + days);
+    return date.toISOString().slice(0, 10);
+};
+
+const getPeriodRange = (cadence, now = new Date()) => {
+    const today = getEtDateString(now);
+    if (cadence === CADENCE.DAILY) {
+        return {
+            startDate: today,
+            endDate: addDaysToDateString(today, 1),
+        };
+    }
+
+    const weekdayIndex = getEtWeekdayIndex(now);
+    const daysSinceMonday = (weekdayIndex + 6) % 7;
+    const startDate = addDaysToDateString(today, -daysSinceMonday);
+    return {
+        startDate,
+        endDate: addDaysToDateString(startDate, 7),
+    };
+};
+
+const getTimeZoneOffsetMinutes = (date, timeZone) => {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone,
+        hour12: false,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+    });
+    const parts = formatter.formatToParts(date);
+    const values = {};
+    for (const part of parts) {
+        if (part.type !== 'literal') {
+            values[part.type] = part.value;
+        }
+    }
+    const asUtc = Date.UTC(
+        Number(values.year),
+        Number(values.month) - 1,
+        Number(values.day),
+        Number(values.hour),
+        Number(values.minute),
+        Number(values.second)
+    );
+
+    return (asUtc - date.getTime()) / 60000;
+};
+
+const getEtMidnightIso = (dateString) => {
+    const [year, month, day] = String(dateString).split('-').map(Number);
+    const utcMidnight = new Date(Date.UTC(year, month - 1, day, 0, 0, 0));
+    const offsetMinutes = getTimeZoneOffsetMinutes(utcMidnight, 'America/New_York');
+    return new Date(utcMidnight.getTime() - offsetMinutes * 60000).toISOString();
 };
 
 const getEtParts = (date) => {
@@ -73,7 +172,7 @@ const getConfirmRequest = (log) => {
     return null;
 };
 
-const toChallengeDto = (definition, row) => {
+const toChallengeDto = (definition, row, fallbackExpiresAt) => {
     const targetProgress = definition?.target_value || 0;
     const currentProgress = row?.current_progress || 0;
     const log = parseLog(row?.verification_log);
@@ -90,11 +189,12 @@ const toChallengeDto = (definition, row) => {
         emoji: definition?.emoji || '🎯',
         currentProgress: row?.status === 'completed' ? targetProgress : currentProgress,
         targetProgress,
-        daysLeft: computeDaysLeft(row?.expires_at),
+        daysLeft: computeDaysLeft(row?.expires_at || fallbackExpiresAt),
         difficulty: definition?.difficulty || 'medium',
         rewardXP: definition?.reward_xp || 0,
         status: row?.status || 'available',
         requiresConfirmation: definition?.requires_partner_confirm || false,
+        cadence: definition?.cadence || CADENCE.WEEKLY,
         confirmationStatus,
         confirmRequestedBy: confirmRequest?.user_id || null,
         confirmRequestedAt: confirmRequest?.at || row?.partner_confirm_requested_at || null,
@@ -177,6 +277,191 @@ const computeStreakProgress = (log, action, coupleIds, requireBoth) => {
     return streak;
 };
 
+const getRecentAssignmentIds = async ({ supabase, coupleIds, cadence, cycleCount }) => {
+    const { data, error } = await supabase
+        .from('challenge_assignments')
+        .select('challenge_id, period_start')
+        .eq('user_a_id', coupleIds.user_a_id)
+        .eq('user_b_id', coupleIds.user_b_id)
+        .eq('cadence', cadence)
+        .order('period_start', { ascending: false })
+        .limit(cycleCount * 5);
+
+    if (error) {
+        console.warn('[Challenges] Failed to load recent assignments:', error);
+        return new Set();
+    }
+
+    const recentIds = new Set();
+    const seenPeriods = new Set();
+
+    for (const row of data || []) {
+        if (!seenPeriods.has(row.period_start)) {
+            if (seenPeriods.size >= cycleCount) break;
+            seenPeriods.add(row.period_start);
+        }
+        if (seenPeriods.has(row.period_start)) {
+            recentIds.add(row.challenge_id);
+        }
+    }
+
+    return recentIds;
+};
+
+const ensureAssignments = async ({ supabase, coupleIds, cadence, count }) => {
+    const { startDate, endDate } = getPeriodRange(cadence);
+
+    const { data: existing, error: existingError } = await supabase
+        .from('challenge_assignments')
+        .select('challenge_id, period_start, period_end')
+        .eq('user_a_id', coupleIds.user_a_id)
+        .eq('user_b_id', coupleIds.user_b_id)
+        .eq('cadence', cadence)
+        .eq('period_start', startDate);
+
+    if (existingError) {
+        return { assignments: existing || [], error: existingError.message };
+    }
+
+    const existingIds = new Set((existing || []).map((row) => row.challenge_id));
+    if (existingIds.size >= count) {
+        return { assignments: existing || [] };
+    }
+
+    const recentLimit = RECENT_REPEAT_LIMITS[cadence] || 0;
+    const recentIds = recentLimit > 0
+        ? await getRecentAssignmentIds({ supabase, coupleIds, cadence, cycleCount: recentLimit })
+        : new Set();
+
+    const { data: candidates, error: candidatesError } = await supabase
+        .from('challenges')
+        .select('*')
+        .eq('is_active', true)
+        .eq('cadence', cadence);
+
+    if (candidatesError) {
+        return { assignments: existing || [], error: candidatesError.message };
+    }
+
+    const needed = count - existingIds.size;
+    const filtered = (candidates || []).filter((challenge) => (
+        !existingIds.has(challenge.id) && !recentIds.has(challenge.id)
+    ));
+
+    let pool = filtered;
+    if (pool.length < needed) {
+        pool = (candidates || []).filter((challenge) => !existingIds.has(challenge.id));
+    }
+
+    const shuffled = pool.sort(() => Math.random() - 0.5);
+    const picks = shuffled.slice(0, needed);
+
+    if (picks.length === 0) {
+        return { assignments: existing || [] };
+    }
+
+    const payload = picks.map((challenge) => ({
+        user_a_id: coupleIds.user_a_id,
+        user_b_id: coupleIds.user_b_id,
+        challenge_id: challenge.id,
+        cadence,
+        period_start: startDate,
+        period_end: endDate,
+    }));
+
+    const { data: inserted, error: insertError } = await supabase
+        .from('challenge_assignments')
+        .insert(payload)
+        .select('challenge_id, period_start, period_end');
+
+    if (insertError) {
+        console.warn('[Challenges] Failed to insert assignments:', insertError);
+        return { assignments: existing || [] };
+    }
+
+    return { assignments: [...(existing || []), ...(inserted || [])] };
+};
+
+const isAssignedForPeriod = async ({ supabase, coupleIds, challengeId, cadence }) => {
+    const { startDate } = getPeriodRange(cadence);
+    const { data, error } = await supabase
+        .from('challenge_assignments')
+        .select('challenge_id, period_end')
+        .eq('user_a_id', coupleIds.user_a_id)
+        .eq('user_b_id', coupleIds.user_b_id)
+        .eq('cadence', cadence)
+        .eq('period_start', startDate)
+        .eq('challenge_id', challengeId)
+        .maybeSingle();
+
+    if (error) {
+        console.warn('[Challenges] Failed to verify assignment:', error);
+        return null;
+    }
+
+    return data;
+};
+
+const ensureActiveForAssignments = async ({ supabase, coupleIds, assignments }) => {
+    const grouped = new Map();
+
+    for (const assignment of assignments || []) {
+        const key = `${assignment.cadence}:${assignment.period_start}:${assignment.period_end}`;
+        if (!grouped.has(key)) {
+            grouped.set(key, {
+                cadence: assignment.cadence,
+                periodStart: assignment.period_start,
+                periodEnd: assignment.period_end,
+                challengeIds: [],
+            });
+        }
+        grouped.get(key).challengeIds.push(assignment.challenge_id);
+    }
+
+    for (const group of grouped.values()) {
+        const { challengeIds, periodStart, periodEnd } = group;
+        if (!challengeIds.length) continue;
+
+        const periodStartIso = getEtMidnightIso(periodStart);
+        const periodEndIso = getEtMidnightIso(periodEnd);
+
+        const { data: existing, error } = await supabase
+            .from('couple_challenges')
+            .select('challenge_id, expires_at')
+            .eq('user_a_id', coupleIds.user_a_id)
+            .eq('user_b_id', coupleIds.user_b_id)
+            .in('challenge_id', challengeIds)
+            .gt('expires_at', periodStartIso)
+            .lte('expires_at', periodEndIso);
+
+        if (error) {
+            console.warn('[Challenges] Failed to check active challenges:', error);
+            continue;
+        }
+
+        const existingIds = new Set((existing || []).map(row => row.challenge_id));
+        const missing = challengeIds.filter(id => !existingIds.has(id));
+        if (!missing.length) continue;
+
+        const payload = missing.map((challengeId) => ({
+            user_a_id: coupleIds.user_a_id,
+            user_b_id: coupleIds.user_b_id,
+            challenge_id: challengeId,
+            status: 'active',
+            current_progress: 0,
+            expires_at: periodEndIso,
+        }));
+
+        const { error: insertError } = await supabase
+            .from('couple_challenges')
+            .insert(payload);
+
+        if (insertError) {
+            console.warn('[Challenges] Failed to auto-start challenges:', insertError);
+        }
+    }
+};
+
 const fetchChallenges = async ({ userId, partnerId }) => {
     if (!isXPSystemEnabled()) {
         return { active: [], available: [], completed: [], enabled: false };
@@ -191,13 +476,48 @@ const fetchChallenges = async ({ userId, partnerId }) => {
         return { error: 'invalid_couple' };
     }
 
+    const levelResult = await getLevelStatus(userId, partnerId);
+    const currentLevel = levelResult?.data?.level || 1;
+    if (currentLevel < 5) {
+        return { active: [], available: [], completed: [], enabled: true };
+    }
+
     const supabase = getSupabase();
+
+    const dailyAssignments = await ensureAssignments({
+        supabase,
+        coupleIds,
+        cadence: CADENCE.DAILY,
+        count: 1,
+    });
+
+    const weeklyAssignments = await ensureAssignments({
+        supabase,
+        coupleIds,
+        cadence: CADENCE.WEEKLY,
+        count: 2,
+    });
+
+    const assignments = [
+        ...(dailyAssignments.assignments || []),
+        ...(weeklyAssignments.assignments || []),
+    ];
+
+    const assignedIds = assignments.map((row) => row.challenge_id);
+    if (assignedIds.length === 0) {
+        return { active: [], available: [], completed: [], enabled: true };
+    }
+
+    await ensureActiveForAssignments({
+        supabase,
+        coupleIds,
+        assignments,
+    });
 
     const { data: definitions, error: definitionsError } = await supabase
         .from('challenges')
         .select('*')
-        .eq('is_active', true)
-        .order('created_at', { ascending: true });
+        .in('id', assignedIds);
 
     if (definitionsError) {
         return { error: definitionsError.message };
@@ -207,7 +527,8 @@ const fetchChallenges = async ({ userId, partnerId }) => {
         .from('couple_challenges')
         .select('*')
         .eq('user_a_id', coupleIds.user_a_id)
-        .eq('user_b_id', coupleIds.user_b_id);
+        .eq('user_b_id', coupleIds.user_b_id)
+        .in('challenge_id', assignedIds);
 
     if (coupleError) {
         return { error: coupleError.message };
@@ -254,17 +575,9 @@ const fetchChallenges = async ({ userId, partnerId }) => {
             }
             return;
         }
-
-        if (row.status === 'expired') {
-            return;
-        }
     });
 
-    const available = (definitions || [])
-        .filter(def => !blockedIds.has(def.id))
-        .map(def => toChallengeDto(def, null));
-
-    return { active, available, completed, enabled: true };
+    return { active, available: [], completed, enabled: true };
 };
 
 const startChallenge = async ({ userId, partnerId, challengeId }) => {
@@ -294,6 +607,18 @@ const startChallenge = async ({ userId, partnerId, challengeId }) => {
         return { error: 'challenge_not_found' };
     }
 
+    const cadence = definition?.cadence || CADENCE.WEEKLY;
+    const assignment = await isAssignedForPeriod({
+        supabase,
+        coupleIds,
+        challengeId,
+        cadence,
+    });
+
+    if (!assignment) {
+        return { error: 'challenge_not_assigned' };
+    }
+
     const { data: existing, error: existingError } = await supabase
         .from('couple_challenges')
         .select('*')
@@ -311,7 +636,8 @@ const startChallenge = async ({ userId, partnerId, challengeId }) => {
         return { challenge: toChallengeDto(definition, existing) };
     }
 
-    const expiresAt = new Date(Date.now() + DEFAULT_DURATION_DAYS * 24 * 60 * 60 * 1000).toISOString();
+    const periodEnd = assignment.period_end || getPeriodRange(cadence).endDate;
+    const expiresAt = getEtMidnightIso(periodEnd);
 
     const { data: created, error: insertError } = await supabase
         .from('couple_challenges')
@@ -349,6 +675,29 @@ const skipChallenge = async ({ userId, partnerId, challengeId }) => {
 
     const supabase = getSupabase();
 
+    const { data: definition, error: definitionError } = await supabase
+        .from('challenges')
+        .select('*')
+        .eq('id', challengeId)
+        .eq('is_active', true)
+        .single();
+
+    if (definitionError || !definition) {
+        return { error: 'challenge_not_found' };
+    }
+
+    const cadence = definition?.cadence || CADENCE.WEEKLY;
+    const assignment = await isAssignedForPeriod({
+        supabase,
+        coupleIds,
+        challengeId,
+        cadence,
+    });
+
+    if (!assignment) {
+        return { error: 'challenge_not_assigned' };
+    }
+
     const { data: activeRow, error: activeError } = await supabase
         .from('couple_challenges')
         .select('*')
@@ -362,7 +711,8 @@ const skipChallenge = async ({ userId, partnerId, challengeId }) => {
         return { error: activeError.message };
     }
 
-    const expiresAt = new Date(Date.now() + DEFAULT_DURATION_DAYS * 24 * 60 * 60 * 1000).toISOString();
+    const periodEnd = assignment.period_end || getPeriodRange(cadence).endDate;
+    const expiresAt = getEtMidnightIso(periodEnd);
 
     if (activeRow) {
         const { error: updateError } = await supabase
@@ -404,8 +754,37 @@ const recordChallengeAction = async ({ userId, partnerId, action, sourceId }) =>
         return { error: 'invalid_couple' };
     }
 
+    const levelResult = await getLevelStatus(userId, partnerId);
+    const currentLevel = levelResult?.data?.level || 1;
+    if (currentLevel < 5) {
+        return { success: false, skipped: true, reason: 'level_locked' };
+    }
+
     const supabase = getSupabase();
     const now = new Date();
+
+    const dailyAssignments = await ensureAssignments({
+        supabase,
+        coupleIds,
+        cadence: CADENCE.DAILY,
+        count: 1,
+    });
+
+    const weeklyAssignments = await ensureAssignments({
+        supabase,
+        coupleIds,
+        cadence: CADENCE.WEEKLY,
+        count: 2,
+    });
+
+    await ensureActiveForAssignments({
+        supabase,
+        coupleIds,
+        assignments: [
+            ...(dailyAssignments.assignments || []),
+            ...(weeklyAssignments.assignments || []),
+        ],
+    });
 
     const { data: rows, error } = await supabase
         .from('couple_challenges')

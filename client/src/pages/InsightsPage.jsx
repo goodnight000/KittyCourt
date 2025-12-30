@@ -80,7 +80,7 @@ const InsightsPage = () => {
 
   if (!isXPEnabled || !showInsights) {
     return (
-      <div className="relative min-h-screen overflow-hidden px-4 pb-24 pt-6">
+      <div className="relative min-h-screen overflow-hidden px-4 pb-6 pt-6">
         <InsightBackdrop />
         <div className="relative">
           <motion.button
@@ -120,7 +120,7 @@ const InsightsPage = () => {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden px-4 pb-28 pt-6">
+    <div className="relative min-h-screen overflow-hidden px-4 pb-6 pt-6">
       <InsightBackdrop />
       <div className="relative space-y-6">
         <header className="flex items-start gap-3">

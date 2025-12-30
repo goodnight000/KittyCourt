@@ -330,7 +330,9 @@ const DailyMeowPage = () => {
     const partnerMoodIds = (todaysQuestion?.partner_answer?.moods || (todaysQuestion?.partner_answer?.mood ? [todaysQuestion.partner_answer.mood] : [])).slice(0, 3)
 
     return (
-        <div className="min-h-[calc(100dvh-120px)] flex flex-col">
+        <div className="relative min-h-[calc(100dvh-120px)] flex flex-col overflow-hidden">
+            <DailyMeowBackdrop />
+            <div className="relative flex-1 flex flex-col">
             {/* Success Toast */}
             <AnimatePresence>
                 {showSuccess && (
@@ -338,7 +340,7 @@ const DailyMeowPage = () => {
                         initial={{ opacity: 0, y: -20, scale: 0.95 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -20, scale: 0.95 }}
-                        className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-5 py-3 rounded-2xl shadow-lg flex items-center gap-2"
+                        className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 glass-card px-5 py-3 text-emerald-700 font-semibold flex items-center gap-2"
                     >
                         <Check className="w-5 h-5" />
                         <span className="font-medium">Answer saved!</span>
@@ -348,8 +350,8 @@ const DailyMeowPage = () => {
 
             {/* Loading State */}
             {loading && (
-                <div className="flex-1 flex items-center justify-center">
-                    <div className="text-center">
+                <div className="flex-1 flex items-center justify-center px-4">
+                    <div className="glass-card p-6 text-center max-w-sm">
                         <Motion.div
                             animate={{ rotate: 360 }}
                             transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
@@ -363,12 +365,12 @@ const DailyMeowPage = () => {
             {/* Error State */}
             {error && !loading && (
                 <div className="flex-1 flex items-center justify-center p-4">
-                    <div className="glass-card p-6 text-center max-w-sm">
-                        <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-3" />
+                    <div className="glass-card p-6 text-center max-w-sm border border-rose-200/60">
+                        <AlertCircle className="w-12 h-12 text-rose-400 mx-auto mb-3" />
                         <p className="text-neutral-600 font-medium mb-4">{error}</p>
                         <button
                             onClick={fetchTodaysQuestion}
-                            className="px-5 py-2.5 bg-neutral-100 text-neutral-600 rounded-xl font-medium flex items-center gap-2 mx-auto"
+                            className="px-5 py-2.5 bg-white/80 text-neutral-600 rounded-xl font-medium flex items-center gap-2 mx-auto border border-neutral-200/70"
                         >
                             <RefreshCw className="w-4 h-4" />
                             Try Again
@@ -380,7 +382,7 @@ const DailyMeowPage = () => {
             {/* No Question Available State */}
             {!loading && !error && !todaysQuestion && (
                 <div className="flex-1 flex items-center justify-center p-4">
-                    <div className="glass-card p-6 text-center max-w-sm">
+                    <div className="glass-card p-6 text-center max-w-sm border border-amber-200/60">
                         <Cat className="w-16 h-16 text-amber-400 mx-auto mb-3" />
                         <h3 className="text-lg font-bold text-neutral-800 mb-2">No Questions Available</h3>
                         <p className="text-neutral-500 text-sm mb-4">
@@ -388,7 +390,7 @@ const DailyMeowPage = () => {
                         </p>
                         <button
                             onClick={fetchTodaysQuestion}
-                            className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-medium flex items-center gap-2 mx-auto"
+                            className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-rose-400 text-white rounded-xl font-medium flex items-center gap-2 mx-auto shadow-soft"
                         >
                             <RefreshCw className="w-4 h-4" />
                             Refresh
@@ -404,14 +406,29 @@ const DailyMeowPage = () => {
                     <Motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="glass-card overflow-hidden flex-1 flex flex-col"
+                        className="glass-card relative overflow-hidden flex-1 flex flex-col"
                     >
+                        <div className="absolute inset-0 pointer-events-none">
+                            <div className="absolute -top-12 -right-8 h-28 w-28 rounded-full bg-amber-200/30 blur-3xl" />
+                            <div className="absolute -bottom-12 -left-8 h-32 w-32 rounded-full bg-rose-200/25 blur-3xl" />
+                            <div
+                                className="absolute inset-0 opacity-40"
+                                style={{
+                                    backgroundImage:
+                                        'radial-gradient(circle at 12% 10%, rgba(255,255,255,0.75) 0%, transparent 55%), radial-gradient(circle at 82% 12%, rgba(255,235,210,0.75) 0%, transparent 60%)'
+                                }}
+                            />
+                        </div>
+                        <div className="relative flex-1 flex flex-col">
                         {/* Question Header */}
-                        <div className="p-5 text-center border-b border-white/50">
-                            <h1 className="text-lg font-bold text-neutral-800 tracking-tight mb-2">
+                        <div className="p-6 text-center border-b border-white/60">
+                            <div className="text-[10px] uppercase tracking-[0.35em] text-neutral-400 font-semibold mb-2">
+                                Daily Meow
+                            </div>
+                            <h1 className="text-lg font-bold text-neutral-800 tracking-tight mb-3">
                                 Daily Question
                             </h1>
-                            <div className="flex items-center justify-center gap-2 mb-3">
+                            <div className="flex flex-wrap items-center justify-center gap-2 mb-4">
                                 <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/70 rounded-full text-xs font-bold text-amber-700 shadow-sm">
                                     <Heart className="w-3 h-3" />
                                     {isBacklog ? 'Catch-up' : 'Today'}
@@ -430,13 +447,13 @@ const DailyMeowPage = () => {
                                     {stepLabel}
                                 </span>
                             </div>
-                            <h2 className="text-xl font-bold text-neutral-800 leading-relaxed">
+                            <h2 className="text-xl font-display font-bold text-neutral-800 leading-relaxed">
                                 {todaysQuestion.question}
                             </h2>
                         </div>
 
                         {/* Step Content */}
-                        <div className="flex-1 p-5 flex flex-col">
+                        <div className="flex-1 p-6 flex flex-col">
                             <AnimatePresence mode="wait">
                                 {/* STEP 1: Mood Selection (MANDATORY) */}
                                 {step === 'mood' && !hasAnswered && (
@@ -447,26 +464,29 @@ const DailyMeowPage = () => {
                                         exit={{ opacity: 0, x: -20 }}
                                         className="flex-1 flex flex-col"
                                     >
-                                        <div className="text-center mb-4">
-                                            <h3 className="text-lg font-bold text-neutral-800">How are you feeling today?</h3>
-                                            <p className="text-sm text-neutral-500 mt-1">
-                                                Pick up to 3 ({selectedMoods.length}/3)
+                                        <div className="text-center mb-4 space-y-2">
+                                            <div className="inline-flex items-center gap-2 rounded-full border border-neutral-200/70 bg-white/70 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-neutral-400">
+                                                Step 1 • Mood
+                                            </div>
+                                            <h3 className="text-lg font-display font-bold text-neutral-800">How are you feeling today?</h3>
+                                            <p className="text-sm text-neutral-500">
+                                                Pick up to 3 moods ({selectedMoods.length}/3)
                                             </p>
-                                            <p className="text-xs text-amber-600 mt-2 flex items-center justify-center gap-1">
+                                            <div className="inline-flex items-center gap-1 rounded-full border border-amber-200/70 bg-amber-50/70 px-3 py-1 text-[11px] font-semibold text-amber-700">
                                                 <Lock className="w-3 h-3" />
                                                 Locked after you submit
-                                            </p>
+                                            </div>
                                         </div>
 
-                                        <div className="grid grid-cols-4 gap-2 flex-1 content-start">
+                                        <div className="grid grid-cols-4 gap-3 flex-1 content-start">
                                             {MOOD_OPTIONS.map((mood) => (
                                                 <Motion.button
                                                     key={mood.id}
                                                     whileTap={{ scale: 0.95 }}
                                                     onClick={() => handleMoodSelect(mood)}
-                                                    className={`aspect-square rounded-2xl flex flex-col items-center justify-center p-1 transition-all ${selectedMoods.includes(mood.id)
-                                                        ? `bg-gradient-to-br ${mood.color} ring-2 ring-amber-400 shadow-md`
-                                                        : 'bg-white/60 hover:bg-white/80'
+                                                    className={`aspect-square rounded-2xl border border-white/80 flex flex-col items-center justify-center p-1 transition-all ${selectedMoods.includes(mood.id)
+                                                        ? 'bg-amber-50 ring-2 ring-amber-300 shadow-soft'
+                                                        : 'bg-white/75 hover:bg-white'
                                                         }`}
                                                 >
                                                     {mood.image ? (
@@ -478,7 +498,7 @@ const DailyMeowPage = () => {
                                                     ) : (
                                                         <span className="text-2xl">{mood.emoji}</span>
                                                     )}
-                                                    <span className="text-[14px] text-neutral-600 font-medium mt-0.5">{mood.label}</span>
+                                                    <span className="text-[13px] text-neutral-600 font-semibold mt-0.5">{mood.label}</span>
                                                 </Motion.button>
                                             ))}
                                         </div>
@@ -487,7 +507,7 @@ const DailyMeowPage = () => {
                                             whileTap={{ scale: 0.98 }}
                                             onClick={confirmMood}
                                             disabled={selectedMoods.length === 0}
-                                            className="mt-4 w-full py-4 bg-gradient-to-r from-amber-500 via-orange-500 to-pink-500 text-white font-bold rounded-2xl shadow-lg disabled:opacity-40 disabled:saturate-50 flex items-center justify-center gap-2"
+                                            className="mt-4 w-full py-4 bg-gradient-to-r from-amber-500 via-rose-400 to-amber-400 text-white font-bold rounded-2xl shadow-soft disabled:opacity-40 disabled:saturate-50 flex items-center justify-center gap-2"
                                         >
                                             {selectedMoods.length > 0 ? (
                                                 <>
@@ -514,8 +534,13 @@ const DailyMeowPage = () => {
                                         exit={{ opacity: 0, x: -20 }}
                                         className="flex-1 flex flex-col"
                                     >
+                                        <div className="text-center mb-3">
+                                            <div className="inline-flex items-center gap-2 rounded-full border border-neutral-200/70 bg-white/70 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-neutral-400">
+                                                Step 2 • Answer
+                                            </div>
+                                        </div>
                                         {/* Selected Moods Display (can still change) */}
-                                        <div className="flex items-center justify-center gap-2 mb-4 px-4 py-2 bg-white/60 rounded-xl">
+                                        <div className="flex items-center justify-center gap-2 mb-4 px-4 py-2 bg-white/80 rounded-2xl border border-amber-100/70 shadow-inner-soft">
                                             <span className="flex items-center gap-1">
                                                 {selectedMoods.map(m => (
                                                     <MoodIcon key={m} moodId={m} className="w-5 h-5" />
@@ -526,7 +551,7 @@ const DailyMeowPage = () => {
                                             </span>
                                             <button
                                                 onClick={() => setStep('mood')}
-                                                className="text-xs text-amber-600 underline ml-2"
+                                                className="text-xs font-semibold text-amber-700 bg-amber-100/70 px-2 py-1 rounded-full ml-2"
                                             >
                                                 Change
                                             </button>
@@ -543,7 +568,7 @@ const DailyMeowPage = () => {
                                             value={answer}
                                             onChange={(e) => setAnswer(e.target.value)}
                                             placeholder="Say the first thing that comes to mind…"
-                                            className="flex-1 min-h-[150px] bg-white/70 rounded-2xl p-4 text-neutral-700 border border-white focus:border-amber-300 focus:ring-2 focus:ring-amber-100 outline-none resize-none text-base placeholder:text-neutral-400"
+                                            className="flex-1 min-h-[150px] bg-white/80 rounded-2xl p-4 text-neutral-700 border border-neutral-200/70 focus:border-amber-300 focus:ring-2 focus:ring-amber-100 outline-none resize-none text-base placeholder:text-neutral-400 shadow-inner-soft"
                                             maxLength={1000}
                                             autoFocus
                                         />
@@ -557,7 +582,7 @@ const DailyMeowPage = () => {
                                             whileTap={{ scale: 0.98 }}
                                             onClick={handleSubmit}
                                             disabled={!answer.trim() || submitting || selectedMoods.length === 0}
-                                            className="mt-4 w-full py-4 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold rounded-2xl shadow-lg disabled:opacity-40 disabled:saturate-50 flex items-center justify-center gap-2"
+                                            className="mt-4 w-full py-4 bg-gradient-to-r from-amber-500 to-rose-400 text-white font-bold rounded-2xl shadow-soft disabled:opacity-40 disabled:saturate-50 flex items-center justify-center gap-2"
                                         >
                                             {submitting ? (
                                                 <Motion.div
@@ -584,10 +609,16 @@ const DailyMeowPage = () => {
                                         exit={{ opacity: 0, x: -20 }}
                                         className="flex-1 flex flex-col gap-4"
                                     >
+                                        <div className="text-center">
+                                            <div className="inline-flex items-center gap-2 rounded-full border border-neutral-200/70 bg-white/70 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-neutral-400">
+                                                Step 3 • Shared
+                                            </div>
+                                        </div>
+
                                         {/* Emotions */}
                                         <div className="grid grid-cols-2 gap-3">
-                                            <div className="bg-white/70 rounded-2xl border border-white p-4 shadow-sm">
-                                                <div className="text-xs font-bold text-neutral-600 mb-3">You felt</div>
+                                            <div className="rounded-3xl border border-white/80 bg-white/80 p-4 shadow-soft">
+                                                <div className="text-[10px] uppercase tracking-[0.3em] text-neutral-400 font-semibold mb-3">You felt</div>
                                                 {selectedMoods.length > 0 ? (
                                                     <div className="flex items-start gap-3 flex-wrap">
                                                         {selectedMoods.map(m => {
@@ -604,8 +635,8 @@ const DailyMeowPage = () => {
                                                     <div className="text-xs text-neutral-400">—</div>
                                                 )}
                                             </div>
-                                            <div className="bg-white/70 rounded-2xl border border-white p-4 shadow-sm">
-                                                <div className="text-xs font-bold text-neutral-600 mb-3">{partnerDisplayName} felt</div>
+                                            <div className="rounded-3xl border border-white/80 bg-white/80 p-4 shadow-soft">
+                                                <div className="text-[10px] uppercase tracking-[0.3em] text-neutral-400 font-semibold mb-3">{partnerDisplayName} felt</div>
                                                 {partnerHasAnswered ? (
                                                     partnerMoodIds.length > 0 ? (
                                                         <div className="flex items-start gap-3 flex-wrap">
@@ -632,12 +663,12 @@ const DailyMeowPage = () => {
                                         </div>
 
                                         {/* My Answer */}
-                                        <div className="bg-white/70 rounded-2xl p-4 border border-white shadow-sm">
+                                        <div className="rounded-3xl p-4 border border-amber-200/60 bg-amber-50/60 shadow-soft">
                                             <div className="flex items-center justify-between mb-2">
                                                 <span className="text-sm font-bold text-amber-700">Your answer</span>
                                                 <button
                                                     onClick={startEditing}
-                                                    className="flex items-center gap-1 text-xs text-amber-600 font-medium hover:text-amber-700 px-2 py-1 rounded-lg hover:bg-amber-50"
+                                                    className="flex items-center gap-1 text-xs text-amber-700 font-semibold px-2 py-1 rounded-full border border-amber-200/60 bg-white/80"
                                                 >
                                                     <Edit3 className="w-3 h-3" />
                                                     Edit
@@ -657,7 +688,7 @@ const DailyMeowPage = () => {
                                             <Motion.div
                                                 initial={{ opacity: 0, y: 10 }}
                                                 animate={{ opacity: 1, y: 0 }}
-                                                className="bg-white/70 rounded-2xl p-4 border border-pink-200 shadow-sm"
+                                                className="rounded-3xl p-4 border border-rose-200/60 bg-rose-50/60 shadow-soft"
                                             >
                                                 <span className="text-sm font-bold text-pink-700">{partnerDisplayName}'s answer</span>
                                                 <p className="text-neutral-700 leading-relaxed">
@@ -665,7 +696,7 @@ const DailyMeowPage = () => {
                                                 </p>
                                             </Motion.div>
                                         ) : (
-                                            <div className="bg-white/50 rounded-2xl p-6 border border-dashed border-neutral-300 text-center">
+                                            <div className="bg-white/60 rounded-3xl p-6 border border-dashed border-neutral-200 text-center">
                                                 <Lock className="w-6 h-6 text-neutral-400 mx-auto mb-2" />
                                                 <p className="text-sm text-neutral-500">
                                                     {partnerDisplayName}'s answer will appear once they respond
@@ -681,7 +712,7 @@ const DailyMeowPage = () => {
                                                 transition={{ type: "spring", delay: 0.2 }}
                                                 className="flex flex-col items-center gap-3"
                                             >
-                                                <span className="px-5 py-2.5 bg-gradient-to-r from-emerald-100 to-teal-100 rounded-full text-sm font-bold text-emerald-700 flex items-center gap-2 shadow-sm">
+                                                <span className="px-5 py-2.5 bg-emerald-100/80 border border-emerald-200/70 rounded-full text-sm font-bold text-emerald-700 flex items-center gap-2 shadow-soft">
                                                     ✨ You both answered! +5 Kibbles each
                                                 </span>
 
@@ -701,7 +732,7 @@ const DailyMeowPage = () => {
                                                             setStep('mood');
                                                             fetchTodaysQuestion();
                                                         }}
-                                                        className="px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold rounded-2xl shadow-lg flex items-center gap-2"
+                                                        className="px-6 py-3 bg-gradient-to-r from-amber-500 to-rose-400 text-white font-bold rounded-2xl shadow-soft flex items-center gap-2"
                                                     >
                                                         <ChevronRight className="w-5 h-5" />
                                                         Continue to Next Question
@@ -722,7 +753,7 @@ const DailyMeowPage = () => {
                                         className="flex-1 flex flex-col"
                                     >
                                         {/* Locked Mood Display - Cannot edit */}
-                                        <div className="flex items-center justify-center gap-2 mb-4 px-4 py-2 bg-white/60 rounded-xl">
+                                        <div className="flex items-center justify-center gap-2 mb-4 px-4 py-2 bg-white/80 rounded-2xl border border-neutral-200/70 shadow-inner-soft">
                                             <span className="flex items-center gap-1">
                                                 {(todaysQuestion.my_answer?.moods || (todaysQuestion.my_answer?.mood ? [todaysQuestion.my_answer.mood] : [])).slice(0, 3).map(m => (
                                                     <MoodIcon key={m} moodId={m} className="w-5 h-5" />
@@ -735,7 +766,7 @@ const DailyMeowPage = () => {
                                         <textarea
                                             value={editingAnswer}
                                             onChange={(e) => setEditingAnswer(e.target.value)}
-                                            className="flex-1 min-h-[150px] bg-white/70 rounded-2xl p-4 text-neutral-700 border border-amber-300 focus:ring-2 focus:ring-amber-100 outline-none resize-none text-base"
+                                            className="flex-1 min-h-[150px] bg-white/80 rounded-2xl p-4 text-neutral-700 border border-amber-200/70 focus:ring-2 focus:ring-amber-100 outline-none resize-none text-base shadow-inner-soft"
                                             maxLength={1000}
                                             autoFocus
                                         />
@@ -747,7 +778,7 @@ const DailyMeowPage = () => {
                                         <div className="flex gap-3 mt-4">
                                             <button
                                                 onClick={() => setIsEditing(false)}
-                                                className="flex-1 py-3.5 bg-white/70 text-neutral-600 font-bold rounded-2xl border border-neutral-200"
+                                                className="flex-1 py-3.5 bg-white/80 text-neutral-600 font-bold rounded-2xl border border-neutral-200/70 shadow-soft"
                                             >
                                                 Cancel
                                             </button>
@@ -755,7 +786,7 @@ const DailyMeowPage = () => {
                                                 whileTap={{ scale: 0.98 }}
                                                 onClick={handleEdit}
                                                 disabled={!editingAnswer.trim() || submitting}
-                                                className="flex-1 py-3.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold rounded-2xl shadow-lg disabled:opacity-40 flex items-center justify-center gap-2"
+                                                className="flex-1 py-3.5 bg-gradient-to-r from-amber-500 to-rose-400 text-white font-bold rounded-2xl shadow-soft disabled:opacity-40 flex items-center justify-center gap-2"
                                             >
                                                 {submitting ? (
                                                     <Motion.div
@@ -775,12 +806,12 @@ const DailyMeowPage = () => {
                                 )}
                             </AnimatePresence>
                         </div>
-                        <div className="p-5 pt-0">
+                        <div className="p-6 pt-0">
                             <div className="h-px bg-gradient-to-r from-transparent via-neutral-200 to-transparent my-4" />
                             <Motion.button
                                 whileTap={{ scale: 0.98 }}
                                 onClick={() => navigate('/daily-meow/history')}
-                                className="w-full py-3.5 bg-white/80 text-neutral-700 font-bold rounded-2xl shadow-sm border border-neutral-200 flex items-center justify-center gap-2"
+                                className="w-full py-3.5 bg-white/80 text-neutral-700 font-bold rounded-2xl shadow-soft border border-neutral-200/70 flex items-center justify-center gap-2"
                             >
                                 <BookOpen className="w-5 h-5 text-court-gold" />
                                 Question Archives
@@ -790,11 +821,28 @@ const DailyMeowPage = () => {
                                 New question every day at midnight ET
                             </p>
                         </div>
+                        </div>
                     </Motion.div>
                 </div>
             )}
+            </div>
         </div>
     );
 };
+
+const DailyMeowBackdrop = () => (
+    <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute -top-24 -right-16 h-56 w-56 rounded-full bg-amber-200/25 blur-3xl" />
+        <div className="absolute top-24 -left-20 h-60 w-60 rounded-full bg-rose-200/25 blur-3xl" />
+        <div className="absolute bottom-10 right-8 h-64 w-64 rounded-full bg-amber-100/35 blur-3xl" />
+        <div
+            className="absolute inset-0 opacity-45"
+            style={{
+                backgroundImage:
+                    'radial-gradient(circle at 18% 20%, rgba(255,255,255,0.75) 0%, transparent 55%), radial-gradient(circle at 80% 10%, rgba(255,235,210,0.8) 0%, transparent 60%)'
+            }}
+        />
+    </div>
+);
 
 export default DailyMeowPage;

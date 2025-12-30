@@ -48,13 +48,11 @@ const ChallengesPage = () => {
     const { level, shouldShowChallenges, fetchLevel } = useLevelStore();
     const {
         active,
-        available,
         completed,
         isLoading,
         error,
         fetchChallenges,
         skipChallenge,
-        startChallenge,
         completeChallenge,
         confirmChallenge,
         clearError
@@ -63,13 +61,17 @@ const ChallengesPage = () => {
     const currentUserId = user?.id || null;
     const challengeStats = useMemo(() => {
         const sumXP = (list) => list.reduce((total, challenge) => total + (challenge.rewardXP || 0), 0);
+        const dailyActive = active.filter((challenge) => challenge.cadence === 'daily');
+        const weeklyActive = active.filter((challenge) => challenge.cadence === 'weekly');
         return {
             active: active.length,
-            available: available.length,
             completed: completed.length,
-            xpOnDeck: sumXP(active) + sumXP(available),
+            dailyActive: dailyActive.length,
+            weeklyActive: weeklyActive.length,
+            dailyXP: sumXP(dailyActive),
+            weeklyXP: sumXP(weeklyActive),
         };
-    }, [active, available, completed]);
+    }, [active, completed]);
 
     useEffect(() => {
         if (hasPartner) {
@@ -80,10 +82,6 @@ const ChallengesPage = () => {
 
     const handleSkip = async (id) => {
         await skipChallenge(id);
-    };
-
-    const handleStart = async (id) => {
-        await startChallenge(id);
     };
 
     const handleComplete = async (id) => {
@@ -102,7 +100,7 @@ const ChallengesPage = () => {
     // Progressive disclosure: Level 5+ required
     if (!shouldShowChallenges()) {
         return (
-            <div className="relative min-h-screen overflow-hidden px-4 pb-24 pt-6">
+            <div className="relative min-h-screen overflow-hidden px-4 pb-6 pt-6">
                 <ChallengeBackdrop />
                 <div className="relative">
                     <motion.button
@@ -142,7 +140,7 @@ const ChallengesPage = () => {
     }
 
     return (
-        <div className="relative min-h-screen overflow-hidden px-4 pb-28 pt-6">
+        <div className="relative min-h-screen overflow-hidden px-4 pb-6 pt-6">
             <ChallengeBackdrop />
             <div className="relative space-y-6">
                 <header className="flex items-start gap-3">
@@ -179,35 +177,55 @@ const ChallengesPage = () => {
                         <div className="flex flex-wrap items-center justify-between gap-4">
                             <div>
                                 <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-neutral-400">
-                                    Weekly docket
+                                    Challenge drops
                                 </p>
                                 <h2 className="mt-1 text-lg font-display font-bold text-neutral-800">
-                                    Pick a challenge, earn XP together
+                                    Daily & weekly quests auto-start
                                 </h2>
                                 <p className="mt-1 text-xs text-neutral-500">
-                                    Short quests that keep your story moving.
+                                    A fresh docket lands at midnight ET.
                                 </p>
                             </div>
                             <div className="rounded-2xl border border-white/80 bg-white/80 px-3 py-2 text-xs font-semibold text-amber-700 shadow-inner-soft">
-                                {challengeStats.xpOnDeck} XP on deck
+                                {challengeStats.active} active quests
                             </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-3 text-xs">
-                            <div className="rounded-2xl border border-white/80 bg-white/80 px-3 py-2">
-                                <div className="text-[10px] font-semibold uppercase tracking-[0.3em] text-neutral-400">Active</div>
-                                <div className="text-lg font-display font-bold text-neutral-800">{challengeStats.active}</div>
+                        <div className="grid gap-3 md:grid-cols-2">
+                            <div className="rounded-[22px] border border-white/80 bg-gradient-to-br from-sky-50 via-white to-sky-100/70 px-4 py-3 shadow-inner-soft">
+                                <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.28em] text-sky-500">
+                                    Daily docket
+                                    <span className="rounded-full border border-sky-200/70 bg-sky-100/70 px-2 py-0.5 text-[10px] font-bold text-sky-700">
+                                        Refreshes nightly
+                                    </span>
+                                </div>
+                                <div className="mt-3 flex items-center justify-between">
+                                    <div>
+                                        <div className="text-2xl font-display font-bold text-neutral-800">{challengeStats.dailyActive}</div>
+                                        <div className="text-xs text-neutral-500">Daily challenges live</div>
+                                    </div>
+                                    <div className="text-right">
+                                        <div className="text-lg font-display font-bold text-sky-600">+{challengeStats.dailyXP} XP</div>
+                                        <div className="text-[11px] text-sky-500">On the line today</div>
+                                    </div>
+                                </div>
                             </div>
-                            <div className="rounded-2xl border border-white/80 bg-white/80 px-3 py-2">
-                                <div className="text-[10px] font-semibold uppercase tracking-[0.3em] text-neutral-400">Open</div>
-                                <div className="text-lg font-display font-bold text-neutral-800">{challengeStats.available}</div>
-                            </div>
-                            <div className="rounded-2xl border border-white/80 bg-white/80 px-3 py-2">
-                                <div className="text-[10px] font-semibold uppercase tracking-[0.3em] text-neutral-400">Completed</div>
-                                <div className="text-lg font-display font-bold text-neutral-800">{challengeStats.completed}</div>
-                            </div>
-                            <div className="rounded-2xl border border-white/80 bg-white/80 px-3 py-2">
-                                <div className="text-[10px] font-semibold uppercase tracking-[0.3em] text-neutral-400">Level</div>
-                                <div className="text-lg font-display font-bold text-neutral-800">{level}</div>
+                            <div className="rounded-[22px] border border-white/80 bg-gradient-to-br from-amber-50 via-white to-rose-100/70 px-4 py-3 shadow-inner-soft">
+                                <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.28em] text-amber-600">
+                                    Weekly docket
+                                    <span className="rounded-full border border-amber-200/70 bg-amber-100/70 px-2 py-0.5 text-[10px] font-bold text-amber-700">
+                                        Resets Monday
+                                    </span>
+                                </div>
+                                <div className="mt-3 flex items-center justify-between">
+                                    <div>
+                                        <div className="text-2xl font-display font-bold text-neutral-800">{challengeStats.weeklyActive}</div>
+                                        <div className="text-xs text-neutral-500">Weekly challenges live</div>
+                                    </div>
+                                    <div className="text-right">
+                                        <div className="text-lg font-display font-bold text-amber-600">+{challengeStats.weeklyXP} XP</div>
+                                        <div className="text-[11px] text-amber-500">This week’s stakes</div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -291,33 +309,6 @@ const ChallengesPage = () => {
                     </section>
                 )}
 
-                {!isLoading && available.length > 0 && (
-                    <section className="space-y-3">
-                        <div className="flex items-center justify-between gap-3">
-                            <div>
-                                <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-neutral-400">
-                                    Ready to start
-                                </p>
-                                <h2 className="text-base font-display font-bold text-neutral-800">Available to start</h2>
-                            </div>
-                            <div className="rounded-full border border-white/80 bg-white/80 px-3 py-1 text-[11px] font-semibold text-neutral-500">
-                                {available.length} new
-                            </div>
-                        </div>
-                        <div className="space-y-3">
-                            {available.map((challenge) => (
-                                <ChallengeCard
-                                    key={challenge.id}
-                                    {...challenge}
-                                    actionLabel="Start"
-                                    onAction={() => handleStart(challenge.id)}
-                                    onClick={() => handleStart(challenge.id)}
-                                />
-                            ))}
-                        </div>
-                    </section>
-                )}
-
                 {!isLoading && completed.length > 0 && (
                     <section className="glass-card space-y-3">
                         <motion.button
@@ -361,7 +352,7 @@ const ChallengesPage = () => {
                     </section>
                 )}
 
-                {!isLoading && !error && active.length === 0 && available.length === 0 && (
+                {!isLoading && !error && active.length === 0 && (
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}

@@ -1,23 +1,33 @@
-name,description,emoji,type,target_value,verification_config,requires_partner_confirm,reward_xp,difficulty,cooldown_days,is_active
-"Two-Day Spark","Answer the daily question together for 2 days in a row.","","streak",2,"{""type"":""streak"",""action"":""daily_question_answer"",""require_both"":true,""days"":2}",false,80,"easy",0,true
-"Curiosity Chain","Keep a 4-day streak of daily question answers together.","","streak",4,"{""type"":""streak"",""action"":""daily_question_answer"",""require_both"":true,""days"":4}",false,150,"medium",0,true
-"Deep Dive Trio","Each of you answers 3 daily questions.","","count",3,"{""type"":""count"",""action"":""daily_question_answer"",""per_partner"":true}",false,180,"medium",0,true
-"Compliment Relay","Each of you sends 2 appreciations.","","count",2,"{""type"":""count"",""action"":""appreciation_given"",""per_partner"":true}",false,100,"easy",0,true
-"Gratitude Streak","Send appreciations together for 3 days in a row.","","streak",3,"{""type"":""streak"",""action"":""appreciation_given"",""require_both"":true,""days"":3}",false,160,"medium",0,true
-"Seven Nice Things","Send 7 appreciations total.","","count",7,"{""type"":""count"",""action"":""appreciation_given""}",false,170,"medium",0,true
-"Mood Mirror","Check in with moods together for 2 days.","","streak",2,"{""type"":""streak"",""action"":""mood_checkin"",""require_both"":true,""days"":2}",false,70,"easy",0,true
-"Mood Week","Keep a 5-day shared mood check-in streak.","","streak",5,"{""type"":""streak"",""action"":""mood_checkin"",""require_both"":true,""days"":5}",false,220,"hard",0,true
-"Memory Snapshots","Each of you uploads 1 memory.","","count",1,"{""type"":""count"",""action"":""memory_upload"",""per_partner"":true}",false,120,"easy",0,true
-"Then and Now","Upload 3 shared memories.","","count",3,"{""type"":""count"",""action"":""memory_upload""}",false,170,"medium",0,true
-"Memory Marathon","Upload 5 shared memories.","","milestone",5,"{""type"":""milestone"",""action"":""memory_upload""}",false,260,"hard",0,true
-"Calendar Spark","Add one shared calendar event.","","count",1,"{""type"":""count"",""action"":""calendar_event""}",false,90,"easy",0,true
-"Plan Ahead","Each of you adds 1 calendar event.","","count",1,"{""type"":""count"",""action"":""calendar_event"",""per_partner"":true}",false,140,"medium",0,true
-"Courtroom Duo","Resolve 1 case together.","","count",1,"{""type"":""count"",""action"":""case_resolved""}",false,120,"easy",0,true
-"Peace Treaty","Resolve 2 cases together.","","count",2,"{""type"":""count"",""action"":""case_resolved""}",false,200,"medium",0,true
-"Tiny Surprise","Do a small surprise for your partner and confirm it together.","","behavioral",1,"{""type"":""behavioral""}",true,150,"medium",0,true
-"Gratitude Letter","Write a short gratitude note and confirm it together.","","behavioral",1,"{""type"":""behavioral""}",true,180,"medium",0,true
-"Favorite Thing Share","Tell your partner one favorite thing about them and confirm it.","","behavioral",1,"{""type"":""behavioral""}",true,140,"easy",0,true
-"Cook Together","Prepare a simple snack or meal together and confirm it.","","behavioral",1,"{""type"":""behavioral""}",true,200,"medium",0,true
-"Walk and Talk","Take a 15-minute walk together and confirm it.","","behavioral",1,"{""type"":""behavioral""}",true,170,"medium",0,true
-"Screen-Free 20","Spend 20 minutes together with phones away and confirm it.","","behavioral",1,"{""type"":""behavioral""}",true,170,"medium",0,true
-"Mini Celebration","Celebrate a tiny win together and confirm it.","","behavioral",1,"{""type"":""behavioral""}",true,130,"easy",0,true
+name,description,emoji,type,target_value,verification_config,requires_partner_confirm,reward_xp,difficulty,cooldown_days,is_active,cadence
+"Daily Question Duo","Both of you answer today's Daily Meow.","","count",1,"{""type"":""count"",""action"":""daily_question_answer"",""per_partner"":true}",false,40,"easy",0,true,"daily"
+"Curiosity Pair","Answer 2 Daily Meow questions total today.","","count",2,"{""type"":""count"",""action"":""daily_question_answer""}",false,45,"easy",0,true,"daily"
+"Gratitude Ping","Each of you sends 1 appreciation.","","count",1,"{""type"":""count"",""action"":""appreciation_given"",""per_partner"":true}",false,35,"easy",0,true,"daily"
+"Appreciation Burst","Send 3 appreciations total today.","","count",3,"{""type"":""count"",""action"":""appreciation_given""}",false,45,"easy",0,true,"daily"
+"Mood Mirror","Both of you log a mood check-in today.","","count",1,"{""type"":""count"",""action"":""mood_checkin"",""per_partner"":true}",false,30,"easy",0,true,"daily"
+"Mood Notes","Log 2 mood check-ins total today.","","count",2,"{""type"":""count"",""action"":""mood_checkin""}",false,35,"easy",0,true,"daily"
+"Memory Snapshot","Upload 1 shared memory today.","","count",1,"{""type"":""count"",""action"":""memory_upload""}",false,60,"medium",0,true,"daily"
+"Calendar Spark","Add 1 shared calendar event today.","","count",1,"{""type"":""count"",""action"":""calendar_event""}",false,35,"easy",0,true,"daily"
+"Tiny Case","Resolve 1 case together today.","","count",1,"{""type"":""count"",""action"":""case_resolved""}",false,60,"medium",0,true,"daily"
+"Quick Plan","Add 2 calendar events total today.","","count",2,"{""type"":""count"",""action"":""calendar_event""}",false,50,"medium",0,true,"daily"
+"Double Check-In","Each of you logs 2 mood check-ins today.","","count",2,"{""type"":""count"",""action"":""mood_checkin"",""per_partner"":true}",false,55,"medium",0,true,"daily"
+"Kind Word","Send 1 appreciation total today.","","count",1,"{""type"":""count"",""action"":""appreciation_given""}",false,25,"easy",0,true,"daily"
+"Memory Tag","Each of you uploads 1 memory today.","","count",1,"{""type"":""count"",""action"":""memory_upload"",""per_partner"":true}",false,80,"medium",0,true,"daily"
+"Daily Double","Both of you answer 2 Daily Meow questions today.","","count",2,"{""type"":""count"",""action"":""daily_question_answer"",""per_partner"":true}",false,70,"medium",0,true,"daily"
+"Question Streak","Answer Daily Meow together for 3 days in a row.","","streak",3,"{""type"":""streak"",""action"":""daily_question_answer"",""require_both"":true,""days"":3}",false,140,"medium",0,true,"weekly"
+"Deep Talk Week","Answer 5 Daily Meow questions total this week.","","count",5,"{""type"":""count"",""action"":""daily_question_answer""}",false,160,"medium",0,true,"weekly"
+"Curiosity Marathon","Both of you answer 4 Daily Meow questions each this week.","","count",4,"{""type"":""count"",""action"":""daily_question_answer"",""per_partner"":true}",false,220,"hard",0,true,"weekly"
+"Gratitude Streak","Send appreciations together for 3 days in a row.","","streak",3,"{""type"":""streak"",""action"":""appreciation_given"",""require_both"":true,""days"":3}",false,150,"medium",0,true,"weekly"
+"Appreciation Exchange","Each of you sends 3 appreciations this week.","","count",3,"{""type"":""count"",""action"":""appreciation_given"",""per_partner"":true}",false,170,"medium",0,true,"weekly"
+"Seven Nice Things","Send 7 appreciations total this week.","","count",7,"{""type"":""count"",""action"":""appreciation_given""}",false,180,"medium",0,true,"weekly"
+"Mood Week","Both of you log moods for 4 days this week.","","streak",4,"{""type"":""streak"",""action"":""mood_checkin"",""require_both"":true,""days"":4}",false,160,"medium",0,true,"weekly"
+"Memory Pair","Each of you uploads 1 shared memory this week.","","count",1,"{""type"":""count"",""action"":""memory_upload"",""per_partner"":true}",false,180,"medium",0,true,"weekly"
+"Memory Trail","Upload 3 shared memories this week.","","count",3,"{""type"":""count"",""action"":""memory_upload""}",false,200,"medium",0,true,"weekly"
+"Memory Marathon","Upload 5 shared memories this week.","","milestone",5,"{""type"":""milestone"",""action"":""memory_upload""}",false,260,"hard",0,true,"weekly"
+"Calendar Together","Each of you adds 1 shared calendar event this week.","","count",1,"{""type"":""count"",""action"":""calendar_event"",""per_partner"":true}",false,140,"medium",0,true,"weekly"
+"Courtroom Duo","Resolve 2 cases together this week.","","count",2,"{""type"":""count"",""action"":""case_resolved""}",false,220,"hard",0,true,"weekly"
+"Tiny Surprise","Do a small surprise for your partner and confirm it.","","behavioral",1,"{""type"":""behavioral""}",true,180,"medium",0,true,"weekly"
+"Gratitude Letter","Write a short gratitude note and confirm it together.","","behavioral",1,"{""type"":""behavioral""}",true,200,"medium",0,true,"weekly"
+"Walk and Talk","Take a 15-minute walk together and confirm it.","","behavioral",1,"{""type"":""behavioral""}",true,190,"medium",0,true,"weekly"
+"Screen-Free 30","Spend 30 minutes together with phones away and confirm it.","","behavioral",1,"{""type"":""behavioral""}",true,190,"medium",0,true,"weekly"
+"Cook Together","Prepare a simple snack or meal together and confirm it.","","behavioral",1,"{""type"":""behavioral""}",true,210,"medium",0,true,"weekly"
+"Mini Celebration","Celebrate a tiny win together and confirm it.","","behavioral",1,"{""type"":""behavioral""}",true,160,"easy",0,true,"weekly"

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Coins, Gift, Star, Plus, X, Check, Edit3, Trash2, Settings, ShoppingBag, Bell, CheckCircle2 } from 'lucide-react';
+import { Star, Plus, X, Check, Edit3, Trash2, ShoppingBag, Bell, CheckCircle2 } from 'lucide-react';
 import useAppStore from '../store/useAppStore';
 import useAuthStore from '../store/useAuthStore';
 import RequirePartner from '../components/RequirePartner';
@@ -155,165 +155,308 @@ export default function EconomyPage() {
     };
 
     return (
-        <div className="space-y-5">
-            <AnimatePresence>
-                {showSuccess && (
-                    <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
-                        className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[60] bg-green-500 text-white px-4 py-2 rounded-xl shadow-lg flex items-center gap-2">
-                        <Check className="w-4 h-4" />{successMessage}
-                    </motion.div>
-                )}
-            </AnimatePresence>
+        <div className="relative min-h-screen overflow-hidden pb-24">
+            <MarketBackdrop />
+            <div className="relative space-y-6">
+                <AnimatePresence>
+                    {showSuccess && (
+                        <motion.div
+                            initial={{ opacity: 0, y: -20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[60] glass-card px-4 py-2 text-xs font-semibold text-emerald-700 flex items-center gap-2"
+                        >
+                            <Check className="w-4 h-4" />
+                            {successMessage}
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
-            <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="text-center">
-                <motion.span animate={{ rotate: [0, 10, -10, 0] }} transition={{ duration: 2, repeat: Infinity }} className="text-3xl inline-block mb-2">🏪</motion.span>
-                <h1 className="text-xl font-bold text-gradient">Kibble Market</h1>
-                <p className="text-neutral-500 text-sm">Spend your treats wisely 🐱</p>
-            </motion.div>
-
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="glass-card p-5 bg-gradient-to-br from-amber-50/80 to-white/60">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <p className="text-xs font-bold uppercase tracking-wider text-neutral-500 mb-1">Your Kibble Balance</p>
-                        <div className="flex items-baseline gap-2">
-                            <span className="text-4xl font-bold text-neutral-800">{myKibbleBalance}</span>
-                            <span className="text-neutral-500 text-lg">🪙</span>
+                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="glass-card relative overflow-hidden p-5">
+                    <div className="absolute inset-0 pointer-events-none">
+                        <div className="absolute -top-12 -right-10 h-28 w-28 rounded-full bg-amber-200/35 blur-3xl" />
+                        <div className="absolute -bottom-10 -left-10 h-32 w-32 rounded-full bg-rose-200/30 blur-3xl" />
+                        <div
+                            className="absolute inset-0 opacity-40"
+                            style={{
+                                backgroundImage:
+                                    'radial-gradient(circle at 15% 20%, rgba(255,255,255,0.7) 0%, transparent 55%), radial-gradient(circle at 80% 10%, rgba(255,235,210,0.7) 0%, transparent 60%)'
+                            }}
+                        />
+                    </div>
+                    <div className="relative flex items-start justify-between gap-4">
+                        <div>
+                            <div className="text-[10px] uppercase tracking-[0.4em] text-neutral-400 font-semibold">Kibble Market</div>
+                            <h1 className="text-2xl font-display font-bold text-neutral-800 mt-2">Reward Boutique</h1>
+                            <p className="text-xs text-neutral-500 mt-1">Spend kibble on little rituals and sweet surprises.</p>
+                        </div>
+                        <motion.div
+                            animate={{ rotate: [0, 8, -8, 0] }}
+                            transition={{ duration: 2.2, repeat: Infinity }}
+                            className="text-4xl"
+                        >
+                            🏪
+                        </motion.div>
+                    </div>
+                    <div className="relative mt-4 grid grid-cols-2 gap-3">
+                        <div className="rounded-2xl border border-amber-200/70 bg-white/85 px-3 py-3 text-left shadow-inner-soft">
+                            <div className="text-[10px] uppercase tracking-[0.3em] text-neutral-400 font-semibold">Balance</div>
+                            <div className="text-3xl font-display font-bold text-neutral-800 mt-2">{myKibbleBalance}</div>
+                            <div className="text-[11px] text-neutral-500">Kibble coins</div>
+                        </div>
+                        <div className="rounded-2xl border border-rose-200/70 bg-white/85 px-3 py-3 text-left shadow-inner-soft">
+                            <div className="text-[10px] uppercase tracking-[0.3em] text-neutral-400 font-semibold">Partner</div>
+                            <div className="text-sm font-semibold text-neutral-800 mt-2">{partnerDisplayName}</div>
+                            <div className="text-[11px] text-neutral-500">Redeem their rewards</div>
                         </div>
                     </div>
-                    <motion.div 
-                        animate={{ rotate: [0, 10, -10, 0] }}
-                        transition={{ duration: 2, repeat: Infinity }}
-                        className="text-5xl"
-                    >
-                        🐱
-                    </motion.div>
-                </div>
-            </motion.div>
+                </motion.div>
 
-            {/* Pending Redemptions Notification */}
-            {pendingRedemptions.length > 0 && (
-                <motion.div 
-                    initial={{ opacity: 0, y: 10 }} 
-                    animate={{ opacity: 1, y: 0 }} 
-                    transition={{ delay: 0.15 }}
-                    className="space-y-3"
-                >
-                    <div className="flex items-center gap-2">
-                        <motion.div
-                            animate={{ scale: [1, 1.2, 1] }}
-                            transition={{ duration: 1, repeat: Infinity }}
-                        >
-                            <Bell className="w-4 h-4 text-amber-500" />
-                        </motion.div>
-                        <h2 className="text-sm font-bold text-neutral-600">
-                            {partnerDisplayName} Redeemed Rewards!
-                        </h2>
-                        <span className="bg-amber-100 text-amber-700 text-xs font-bold px-2 py-0.5 rounded-full">
-                            {pendingRedemptions.length}
+                {/* Pending Redemptions Notification */}
+                {pendingRedemptions.length > 0 && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.15 }}
+                        className="space-y-3"
+                    >
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <motion.div
+                                    animate={{ scale: [1, 1.2, 1] }}
+                                    transition={{ duration: 1.4, repeat: Infinity }}
+                                >
+                                    <Bell className="w-4 h-4 text-amber-500" />
+                                </motion.div>
+                                <h2 className="text-sm font-bold text-neutral-700">
+                                    {partnerDisplayName} redeemed rewards
+                                </h2>
+                            </div>
+                            <span className="bg-amber-100 text-amber-700 text-xs font-bold px-2 py-0.5 rounded-full">
+                                {pendingRedemptions.length}
+                            </span>
+                        </div>
+                        <div className="space-y-2">
+                            {pendingRedemptions.map((redemption) => (
+                                <motion.div
+                                    key={redemption.id}
+                                    initial={{ opacity: 0, x: -10 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    className="glass-card p-4 border border-amber-200/60 relative overflow-hidden"
+                                >
+                                    <div className="absolute -top-8 -right-6 h-20 w-20 rounded-full bg-amber-200/35 blur-2xl" />
+                                    <div className="relative flex items-center justify-between gap-3">
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-lg">🎁</span>
+                                                <h3 className="font-bold text-neutral-800 text-sm">{redemption.reward_name}</h3>
+                                            </div>
+                                            {redemption.reward_description && (
+                                                <p className="text-neutral-500 text-xs mt-1 ml-7">{redemption.reward_description}</p>
+                                            )}
+                                            <p className="text-neutral-400 text-xs mt-1 ml-7">
+                                                Redeemed {new Date(redemption.redeemed_at).toLocaleDateString()}
+                                            </p>
+                                        </div>
+                                        <motion.button
+                                            whileTap={{ scale: 0.96 }}
+                                            onClick={() => handleFulfillRedemption(redemption)}
+                                            disabled={fulfillingId === redemption.id}
+                                            className="flex items-center gap-1.5 px-3 py-2 bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-soft disabled:opacity-50"
+                                        >
+                                            {fulfillingId === redemption.id ? (
+                                                <motion.div
+                                                    animate={{ rotate: 360 }}
+                                                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                                    className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
+                                                />
+                                            ) : (
+                                                <>
+                                                    <CheckCircle2 className="w-4 h-4" />
+                                                    Done
+                                                </>
+                                            )}
+                                        </motion.button>
+                                    </div>
+                                </motion.div>
+                            ))}
+                        </div>
+                    </motion.div>
+                )}
+
+                <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <div className="text-[10px] uppercase tracking-[0.35em] text-neutral-400 font-semibold">Redeem</div>
+                            <h2 className="text-base font-display font-bold text-neutral-800">Rewards from {partnerDisplayName}</h2>
+                        </div>
+                        <span className="text-[11px] font-semibold text-amber-700 bg-amber-100/70 px-3 py-1 rounded-full">
+                            {partnerRewards.length} offers
                         </span>
                     </div>
-                    <div className="space-y-2">
-                        {pendingRedemptions.map((redemption) => (
-                            <motion.div 
-                                key={redemption.id}
-                                initial={{ opacity: 0, x: -10 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                className="glass-card p-4 bg-gradient-to-r from-amber-50/80 to-orange-50/50 border-2 border-amber-200/50"
-                            >
-                                <div className="flex items-center justify-between">
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-lg">🎁</span>
-                                            <h3 className="font-bold text-neutral-800 text-sm">{redemption.reward_name}</h3>
-                                        </div>
-                                        {redemption.reward_description && (
-                                            <p className="text-neutral-500 text-xs mt-1 ml-7">{redemption.reward_description}</p>
-                                        )}
-                                        <p className="text-neutral-400 text-xs mt-1 ml-7">
-                                            Redeemed {new Date(redemption.redeemed_at).toLocaleDateString()}
-                                        </p>
-                                    </div>
-                                    <motion.button
-                                        whileTap={{ scale: 0.95 }}
-                                        onClick={() => handleFulfillRedemption(redemption)}
-                                        disabled={fulfillingId === redemption.id}
-                                        className="flex items-center gap-1.5 px-3 py-2 bg-green-500 text-white rounded-xl text-xs font-bold shadow-md disabled:opacity-50"
-                                    >
-                                        {fulfillingId === redemption.id ? (
-                                            <motion.div 
-                                                animate={{ rotate: 360 }} 
-                                                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                                                className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
-                                            />
-                                        ) : (
-                                            <>
-                                                <CheckCircle2 className="w-4 h-4" />
-                                                Done!
-                                            </>
-                                        )}
-                                    </motion.button>
-                                </div>
-                            </motion.div>
-                        ))}
-                    </div>
-                </motion.div>
-            )}
-
-            <div className="space-y-3">
-                <h2 className="text-sm font-bold text-neutral-600 flex items-center gap-2"><Gift className="w-4 h-4 text-pink-400" />Redeem from {partnerDisplayName}</h2>
-                {partnerRewards.length === 0 ? (
-                    <div className="glass-card p-6 text-center"><span className="text-2xl mb-2 block">😿</span><p className="text-neutral-600 text-sm font-medium">{partnerDisplayName} hasn't set up any rewards yet</p></div>
-                ) : (
-                    <div className="grid grid-cols-2 gap-3">
-                        {partnerRewards.map((c, i) => <CouponCard key={c.id} coupon={c} delay={i * 0.05} onRedeem={handleRedeem} isRedeeming={redeemingId === c.id} canAfford={myKibbleBalance >= c.cost} />)}
-                    </div>
-                )}
-            </div>
-
-            <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                    <h2 className="text-sm font-bold text-neutral-600 flex items-center gap-2"><Settings className="w-4 h-4 text-violet-400" />Rewards You Offer to {partnerDisplayName}</h2>
-                    <button onClick={() => { setEditingReward(null); setShowAddModal(true); }} className="flex items-center gap-1 px-3 py-1.5 bg-violet-100 text-violet-600 rounded-full text-xs font-bold"><Plus className="w-3 h-3" />Add</button>
+                    {partnerRewards.length === 0 ? (
+                        <div className="glass-card p-6 text-center border border-amber-200/60">
+                            <span className="text-2xl mb-2 block">😿</span>
+                            <p className="text-neutral-600 text-sm font-medium">{partnerDisplayName} has not set up rewards yet</p>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-2 gap-3">
+                            {partnerRewards.map((c, i) => (
+                                <CouponCard
+                                    key={c.id}
+                                    coupon={c}
+                                    delay={i * 0.05}
+                                    onRedeem={handleRedeem}
+                                    isRedeeming={redeemingId === c.id}
+                                    canAfford={myKibbleBalance >= c.cost}
+                                />
+                            ))}
+                        </div>
+                    )}
                 </div>
-                {myRewards.length === 0 ? (
-                    <div className="glass-card p-6 text-center"><span className="text-2xl mb-2 block">🎁</span><p className="text-neutral-600 text-sm font-medium">Add rewards for {partnerDisplayName} to redeem!</p></div>
-                ) : (
-                    <div className="space-y-2">
-                        {myRewards.map((r) => (
-                            <motion.div key={r.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="glass-card p-3 flex items-center gap-3">
-                                <span className="text-2xl">{r.icon}</span>
-                                <div className="flex-1"><h3 className="font-bold text-neutral-800 text-sm">{r.title}</h3><p className="text-neutral-500 text-xs">{r.subtitle} • {r.cost} 🪙</p></div>
-                                <button onClick={() => { setEditingReward(r); setShowAddModal(true); }} className="p-2 text-neutral-400 hover:text-violet-500"><Edit3 className="w-4 h-4" /></button>
-                                <button onClick={() => handleDeleteReward(r.id)} className="p-2 text-neutral-400 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
-                            </motion.div>
-                        ))}
-                    </div>
-                )}
-            </div>
 
-            <AnimatePresence>{showAddModal && <RewardModal reward={editingReward} onSave={handleSaveReward} onClose={() => { setShowAddModal(false); setEditingReward(null); }} />}</AnimatePresence>
+                <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <div className="text-[10px] uppercase tracking-[0.35em] text-neutral-400 font-semibold">Your menu</div>
+                            <h2 className="text-base font-display font-bold text-neutral-800">
+                                Rewards you offer {partnerDisplayName}
+                            </h2>
+                        </div>
+                        <button
+                            onClick={() => { setEditingReward(null); setShowAddModal(true); }}
+                            className="flex items-center gap-1 px-3 py-1.5 bg-violet-100 text-violet-600 rounded-full text-xs font-bold border border-violet-200/70"
+                        >
+                            <Plus className="w-3 h-3" />
+                            Add
+                        </button>
+                    </div>
+                    {myRewards.length === 0 ? (
+                        <div className="glass-card p-6 text-center border border-violet-200/60">
+                            <span className="text-2xl mb-2 block">🎁</span>
+                            <p className="text-neutral-600 text-sm font-medium">Add rewards for {partnerDisplayName} to redeem!</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-2">
+                            {myRewards.map((r) => (
+                                <motion.div
+                                    key={r.id}
+                                    initial={{ opacity: 0, x: -10 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    className="glass-card p-4 flex items-center gap-3 border border-white/80"
+                                >
+                                    <span className="text-2xl">{r.icon}</span>
+                                    <div className="flex-1">
+                                        <h3 className="font-bold text-neutral-800 text-sm">{r.title}</h3>
+                                        <p className="text-neutral-500 text-xs">{r.subtitle} • {r.cost} 🪙</p>
+                                    </div>
+                                    <button onClick={() => { setEditingReward(r); setShowAddModal(true); }} className="p-2 text-neutral-400 hover:text-violet-500">
+                                        <Edit3 className="w-4 h-4" />
+                                    </button>
+                                    <button onClick={() => handleDeleteReward(r.id)} className="p-2 text-neutral-400 hover:text-rose-500">
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </motion.div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                <AnimatePresence>
+                    {showAddModal && (
+                        <RewardModal
+                            reward={editingReward}
+                            onSave={handleSaveReward}
+                            onClose={() => { setShowAddModal(false); setEditingReward(null); }}
+                        />
+                    )}
+                </AnimatePresence>
+            </div>
         </div>
     );
 }
 
 function CouponCard({ coupon, delay, onRedeem, isRedeeming, canAfford }) {
     const colorMap = {
-        pink: { bg: 'from-pink-50 to-white', border: 'border-pink-200/50', text: 'text-pink-500' },
-        violet: { bg: 'from-violet-50 to-white', border: 'border-violet-200/50', text: 'text-violet-500' },
-        amber: { bg: 'from-amber-50 to-white', border: 'border-amber-200/50', text: 'text-amber-500' },
-        green: { bg: 'from-green-50 to-white', border: 'border-green-200/50', text: 'text-green-500' },
-        orange: { bg: 'from-orange-50 to-white', border: 'border-orange-200/50', text: 'text-orange-500' },
+        pink: {
+            bg: 'from-rose-50 via-white to-amber-50/60',
+            border: 'border-rose-200/60',
+            text: 'text-rose-600',
+            glow: 'bg-rose-200/40',
+            chip: 'bg-rose-100/80 text-rose-600',
+        },
+        violet: {
+            bg: 'from-violet-50 via-white to-fuchsia-50/60',
+            border: 'border-violet-200/60',
+            text: 'text-violet-600',
+            glow: 'bg-violet-200/40',
+            chip: 'bg-violet-100/80 text-violet-600',
+        },
+        amber: {
+            bg: 'from-amber-50 via-white to-orange-50/60',
+            border: 'border-amber-200/60',
+            text: 'text-amber-600',
+            glow: 'bg-amber-200/40',
+            chip: 'bg-amber-100/80 text-amber-700',
+        },
+        green: {
+            bg: 'from-emerald-50 via-white to-lime-50/60',
+            border: 'border-emerald-200/60',
+            text: 'text-emerald-600',
+            glow: 'bg-emerald-200/40',
+            chip: 'bg-emerald-100/80 text-emerald-700',
+        },
+        orange: {
+            bg: 'from-orange-50 via-white to-amber-50/60',
+            border: 'border-orange-200/60',
+            text: 'text-orange-600',
+            glow: 'bg-orange-200/40',
+            chip: 'bg-orange-100/80 text-orange-700',
+        },
     };
     const colors = colorMap[coupon.color] || colorMap.pink;
     return (
-        <motion.button initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay }} whileTap={{ scale: canAfford ? 0.97 : 1 }}
-            onClick={() => canAfford && onRedeem(coupon)} disabled={!canAfford || isRedeeming}
-            className={`glass-card p-4 text-left bg-gradient-to-br ${colors.bg} ${colors.border} transition-colors relative overflow-hidden ${!canAfford ? 'opacity-50' : 'active:bg-white/90'}`}>
-            {isRedeeming && <div className="absolute inset-0 bg-white/80 flex items-center justify-center"><motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }} className="w-6 h-6 border-2 border-violet-400 border-t-transparent rounded-full" /></div>}
-            <span className="text-2xl mb-2 block">{coupon.icon}</span>
-            <h3 className="font-bold text-neutral-800 text-sm leading-tight">{coupon.title}</h3>
-            <p className="text-neutral-500 text-xs mt-0.5">{coupon.subtitle}</p>
-            <div className={`flex items-center gap-1 mt-2 ${colors.text}`}><Star className="w-3 h-3 fill-current" /><span className="text-xs font-bold">{coupon.cost}</span></div>
+        <motion.button
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay }}
+            whileTap={{ scale: canAfford ? 0.97 : 1 }}
+            onClick={() => canAfford && onRedeem(coupon)}
+            disabled={!canAfford || isRedeeming}
+            className={`relative overflow-hidden rounded-[28px] border ${colors.border} bg-gradient-to-br ${colors.bg} p-4 text-left shadow-soft transition ${!canAfford ? 'opacity-60' : 'active:bg-white/90'}`}
+        >
+            <div className={`absolute -top-10 -right-6 h-20 w-20 rounded-full blur-2xl ${colors.glow}`} />
+            <div className="absolute -bottom-10 -left-6 h-24 w-24 rounded-full bg-white/60 blur-2xl" />
+            {isRedeeming && (
+                <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
+                    <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                        className="w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full"
+                    />
+                </div>
+            )}
+            <div className="relative space-y-3">
+                <div className="flex items-center justify-between">
+                    <span className="text-2xl">{coupon.icon}</span>
+                    <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${colors.chip}`}>
+                        {coupon.cost} kibble
+                    </span>
+                </div>
+                <div>
+                    <h3 className="font-bold text-neutral-800 text-sm leading-tight">{coupon.title}</h3>
+                    <p className="text-neutral-500 text-xs mt-1">{coupon.subtitle}</p>
+                </div>
+                <div className="flex items-center justify-between text-[11px] text-neutral-500">
+                    <div className={`flex items-center gap-1 ${colors.text}`}>
+                        <Star className="w-3 h-3 fill-current" />
+                        <span className="font-semibold">Treat</span>
+                    </div>
+                    <span className={`text-xs font-semibold ${canAfford ? colors.text : 'text-neutral-400'}`}>
+                        {canAfford ? 'Redeem' : 'Need more'}
+                    </span>
+                </div>
+            </div>
         </motion.button>
     );
 }
@@ -324,6 +467,13 @@ function RewardModal({ reward, onSave, onClose }) {
     const [cost, setCost] = useState(reward?.cost || 50);
     const [icon, setIcon] = useState(reward?.icon || '🎁');
     const [color, setColor] = useState(reward?.color || 'pink');
+    const colorStyles = {
+        pink: 'bg-rose-400',
+        violet: 'bg-violet-400',
+        amber: 'bg-amber-400',
+        green: 'bg-emerald-400',
+        orange: 'bg-orange-400',
+    };
 
     const handleSubmit = () => {
         if (!title.trim()) return;
@@ -331,23 +481,117 @@ function RewardModal({ reward, onSave, onClose }) {
     };
 
     return (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] flex items-end justify-center p-4 pb-20" onClick={onClose}>
-            <motion.div initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 100, opacity: 0 }}
-                onClick={(e) => e.stopPropagation()} className="bg-white rounded-3xl w-full max-w-md p-5 space-y-4 shadow-xl">
-                <div className="flex items-center justify-between">
-                    <h3 className="font-bold text-neutral-800 text-lg">{reward ? 'Edit Reward' : 'Add Reward'} 🎁</h3>
-                    <button onClick={onClose} className="w-8 h-8 bg-neutral-100 rounded-full flex items-center justify-center"><X className="w-4 h-4 text-neutral-500" /></button>
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] flex items-end justify-center p-4 pb-20"
+            onClick={onClose}
+        >
+            <motion.div
+                initial={{ y: 100, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: 100, opacity: 0 }}
+                onClick={(e) => e.stopPropagation()}
+                className="relative overflow-hidden bg-white/95 rounded-[32px] w-full max-w-md p-5 space-y-4 shadow-soft-lg border border-white/80"
+            >
+                <div className="absolute inset-0 pointer-events-none">
+                    <div className="absolute -top-12 -right-6 h-24 w-24 rounded-full bg-violet-200/35 blur-2xl" />
+                    <div className="absolute -bottom-10 -left-6 h-24 w-24 rounded-full bg-amber-200/30 blur-2xl" />
                 </div>
-                <div className="space-y-3">
-                    <div><label className="text-xs font-bold text-neutral-500 mb-1 block">Title</label><input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g., Foot Massage" className="w-full bg-neutral-50 border-2 border-neutral-100 rounded-xl p-3 text-neutral-700 focus:ring-2 focus:ring-violet-200 focus:border-violet-300 focus:outline-none text-sm" /></div>
-                    <div><label className="text-xs font-bold text-neutral-500 mb-1 block">Description</label><input value={subtitle} onChange={(e) => setSubtitle(e.target.value)} placeholder="e.g., 10 minutes" className="w-full bg-neutral-50 border-2 border-neutral-100 rounded-xl p-3 text-neutral-700 focus:ring-2 focus:ring-violet-200 focus:border-violet-300 focus:outline-none text-sm" /></div>
-                    <div><label className="text-xs font-bold text-neutral-500 mb-1 block">Kibble Cost</label><input type="number" value={cost} onChange={(e) => setCost(e.target.value)} min="1" className="w-full bg-neutral-50 border-2 border-neutral-100 rounded-xl p-3 text-neutral-700 focus:ring-2 focus:ring-violet-200 focus:border-violet-300 focus:outline-none text-sm" /></div>
-                    <div><label className="text-xs font-bold text-neutral-500 mb-1 block">Icon</label><div className="flex flex-wrap gap-2">{EMOJI_OPTIONS.map((e) => <button key={e} onClick={() => setIcon(e)} className={`w-10 h-10 rounded-xl text-xl flex items-center justify-center transition-all ${icon === e ? 'bg-violet-100 ring-2 ring-violet-400' : 'bg-neutral-50'}`}>{e}</button>)}</div></div>
-                    <div><label className="text-xs font-bold text-neutral-500 mb-1 block">Color</label><div className="flex gap-2">{COLOR_OPTIONS.map((c) => <button key={c} onClick={() => setColor(c)} className={`w-8 h-8 rounded-full bg-${c}-400 ${color === c ? 'ring-2 ring-offset-2 ring-neutral-400' : ''}`} />)}</div></div>
+                <div className="relative flex items-center justify-between">
+                    <div>
+                        <div className="text-[10px] uppercase tracking-[0.35em] text-neutral-400 font-semibold">
+                            Reward Builder
+                        </div>
+                        <h3 className="font-display font-bold text-neutral-800 text-lg">
+                            {reward ? 'Edit Reward' : 'Add Reward'} 🎁
+                        </h3>
+                    </div>
+                    <button onClick={onClose} className="w-8 h-8 bg-white/80 border border-neutral-200/70 rounded-full flex items-center justify-center shadow-soft">
+                        <X className="w-4 h-4 text-neutral-500" />
+                    </button>
                 </div>
-                <button onClick={handleSubmit} disabled={!title.trim()} className="btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-50"><Check className="w-4 h-4" />{reward ? 'Save Changes' : 'Add Reward'}</button>
+                <div className="relative space-y-3">
+                    <div>
+                        <label className="text-xs font-bold text-neutral-500 mb-1 block">Title</label>
+                        <input
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                            placeholder="e.g., Foot Massage"
+                            className="w-full bg-white/80 border border-neutral-200/70 rounded-2xl p-3 text-neutral-700 focus:ring-2 focus:ring-violet-200 focus:border-violet-300 focus:outline-none text-sm shadow-inner-soft"
+                        />
+                    </div>
+                    <div>
+                        <label className="text-xs font-bold text-neutral-500 mb-1 block">Description</label>
+                        <input
+                            value={subtitle}
+                            onChange={(e) => setSubtitle(e.target.value)}
+                            placeholder="e.g., 10 minutes"
+                            className="w-full bg-white/80 border border-neutral-200/70 rounded-2xl p-3 text-neutral-700 focus:ring-2 focus:ring-violet-200 focus:border-violet-300 focus:outline-none text-sm shadow-inner-soft"
+                        />
+                    </div>
+                    <div>
+                        <label className="text-xs font-bold text-neutral-500 mb-1 block">Kibble Cost</label>
+                        <input
+                            type="number"
+                            value={cost}
+                            onChange={(e) => setCost(e.target.value)}
+                            min="1"
+                            className="w-full bg-white/80 border border-neutral-200/70 rounded-2xl p-3 text-neutral-700 focus:ring-2 focus:ring-violet-200 focus:border-violet-300 focus:outline-none text-sm shadow-inner-soft"
+                        />
+                    </div>
+                    <div>
+                        <label className="text-xs font-bold text-neutral-500 mb-1 block">Icon</label>
+                        <div className="flex flex-wrap gap-2">
+                            {EMOJI_OPTIONS.map((e) => (
+                                <button
+                                    key={e}
+                                    onClick={() => setIcon(e)}
+                                    className={`w-10 h-10 rounded-xl text-xl flex items-center justify-center transition-all ${icon === e ? 'bg-violet-100 ring-2 ring-violet-400' : 'bg-white/70 border border-neutral-200/70'}`}
+                                >
+                                    {e}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    <div>
+                        <label className="text-xs font-bold text-neutral-500 mb-1 block">Color</label>
+                        <div className="flex gap-2">
+                            {COLOR_OPTIONS.map((c) => (
+                                <button
+                                    key={c}
+                                    onClick={() => setColor(c)}
+                                    className={`w-8 h-8 rounded-full ${colorStyles[c]} ${color === c ? 'ring-2 ring-offset-2 ring-neutral-400' : ''}`}
+                                />
+                            ))}
+                        </div>
+                    </div>
+                </div>
+                <button
+                    onClick={handleSubmit}
+                    disabled={!title.trim()}
+                    className="w-full rounded-2xl bg-gradient-to-r from-violet-500 to-amber-400 py-3 text-sm font-bold text-white shadow-soft flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                    <Check className="w-4 h-4" />
+                    {reward ? 'Save Changes' : 'Add Reward'}
+                </button>
             </motion.div>
         </motion.div>
     );
 }
+
+const MarketBackdrop = () => (
+    <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute -top-24 -right-16 h-56 w-56 rounded-full bg-amber-200/25 blur-3xl" />
+        <div className="absolute top-24 -left-20 h-60 w-60 rounded-full bg-rose-200/30 blur-3xl" />
+        <div className="absolute bottom-10 right-8 h-64 w-64 rounded-full bg-amber-100/35 blur-3xl" />
+        <div
+            className="absolute inset-0 opacity-45"
+            style={{
+                backgroundImage:
+                    'radial-gradient(circle at 18% 20%, rgba(255,255,255,0.75) 0%, transparent 55%), radial-gradient(circle at 80% 10%, rgba(255,235,210,0.8) 0%, transparent 60%)'
+            }}
+        />
+    </div>
+);

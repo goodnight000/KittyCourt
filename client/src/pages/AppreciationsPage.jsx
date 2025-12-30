@@ -96,7 +96,7 @@ const AppreciationsPage = () => {
     };
 
     return (
-        <div className="relative min-h-screen overflow-hidden pb-24">
+        <div className="relative min-h-screen overflow-hidden pb-6">
             <AppreciationBackdrop />
             <div className="relative space-y-6">
             {/* Header */}
