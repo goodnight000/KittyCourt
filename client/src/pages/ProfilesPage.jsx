@@ -19,6 +19,7 @@ import ProfilePicture from '../components/ProfilePicture';
 import LevelProgress from '../components/LevelProgress';
 import MemoryCard from '../components/MemoryCard';
 import { PRESET_AVATARS, processAvatarForSave } from '../services/avatarService';
+import api from '../services/api';
 
 const LOVE_LANGUAGES = [
     { id: 'words', label: 'Words of Affirmation', emoji: '💬' },
@@ -51,6 +52,8 @@ const ProfilesPage = () => {
     const [activeTab, setActiveTab] = useState('me'); // 'me' or 'us'
     const [copied, setCopied] = useState(false);
     const [showPaywall, setShowPaywall] = useState(false);
+    const [devXPLoading, setDevXPLoading] = useState(false);
+    const [devXPMessage, setDevXPMessage] = useState('');
 
     // Profile settings - ONLY from Supabase profile (no localStorage for avatars)
     const [profileData, setProfileData] = useState(() => ({
@@ -146,6 +149,28 @@ const ProfilesPage = () => {
             }
         } else {
             console.warn('[ProfilesPage] No authUser?.id, skipping Supabase save');
+        }
+    };
+
+    const awardDevXP = async (amount) => {
+        if (!import.meta.env.DEV) return;
+        if (!hasPartner) return;
+        if (!isXPEnabled) return;
+        if (devXPLoading) return;
+
+        try {
+            setDevXPLoading(true);
+            setDevXPMessage('');
+            await api.post('/levels/dev/award-xp', { amount });
+            await fetchLevel();
+            setDevXPMessage(`+${amount} XP added`);
+            setTimeout(() => setDevXPMessage(''), 2000);
+        } catch (error) {
+            console.error('[ProfilesPage] Dev XP award failed:', error);
+            setDevXPMessage('Dev XP failed (check server)');
+            setTimeout(() => setDevXPMessage(''), 3000);
+        } finally {
+            setDevXPLoading(false);
         }
     };
 
@@ -559,6 +584,33 @@ const ProfilesPage = () => {
                                 title={title}
                                 compact={false}
                             />
+                        )}
+
+                        {import.meta.env.DEV && isXPEnabled && hasPartner && (
+                            <div className="glass-card p-3 border border-neutral-200/60">
+                                <div className="flex items-center justify-between gap-3">
+                                    <div>
+                                        <div className="text-xs font-bold text-neutral-700">Dev tools</div>
+                                        <div className="text-[11px] text-neutral-500">Temporary XP boost for testing.</div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        {devXPMessage && (
+                                            <div className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-1 rounded-full">
+                                                {devXPMessage}
+                                            </div>
+                                        )}
+                                        <motion.button
+                                            whileTap={{ scale: 0.97 }}
+                                            onClick={() => awardDevXP(250)}
+                                            disabled={devXPLoading}
+                                            className={`text-xs font-bold text-white px-3 py-2 rounded-xl shadow-soft ${devXPLoading ? 'opacity-70' : ''}`}
+                                            style={{ background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)' }}
+                                        >
+                                            {devXPLoading ? 'Adding…' : '+250 XP'}
+                                        </motion.button>
+                                    </div>
+                                </div>
+                            </div>
                         )}
 
                         {/* Relationship Stats */}

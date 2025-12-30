@@ -22,6 +22,7 @@ const ACTION_TYPES = {
     MOOD_CHECKIN: 'mood_checkin',
     CALENDAR_EVENT: 'calendar_event',
     CHALLENGE_COMPLETION: 'challenge_completion',
+    DEBUG_GRANT: 'debug_grant',
 };
 
 const XP_VALUES = {
@@ -32,6 +33,7 @@ const XP_VALUES = {
     [ACTION_TYPES.MOOD_CHECKIN]: 20,
     [ACTION_TYPES.CALENDAR_EVENT]: 15,
     [ACTION_TYPES.CHALLENGE_COMPLETION]: { easy: 50, medium: 100, hard: 200 },
+    [ACTION_TYPES.DEBUG_GRANT]: 1,
 };
 
 const DAILY_CAPS = {
