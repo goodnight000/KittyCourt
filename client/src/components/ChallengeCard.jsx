@@ -24,35 +24,49 @@ const ChallengeCard = ({
 }) => {
     const progress = Math.min((currentProgress / targetProgress) * 100, 100);
     const isComplete = currentProgress >= targetProgress;
+    const isExpired = status === 'expired';
+    const isClickable = !!onClick;
 
-    // Difficulty colors
-    const difficultyColors = {
-        easy: { bg: 'from-green-100 to-emerald-50', text: 'text-green-600', badge: 'bg-green-100' },
-        medium: { bg: 'from-amber-100 to-yellow-50', text: 'text-amber-600', badge: 'bg-amber-100' },
-        hard: { bg: 'from-purple-100 to-violet-50', text: 'text-purple-600', badge: 'bg-purple-100' },
+    const difficultyStyles = {
+        easy: {
+            badge: 'border-emerald-200/70 bg-emerald-100/70 text-emerald-700',
+            accent: 'bg-emerald-200/35',
+        },
+        medium: {
+            badge: 'border-amber-200/70 bg-amber-100/80 text-amber-700',
+            accent: 'bg-amber-200/40',
+        },
+        hard: {
+            badge: 'border-rose-200/70 bg-rose-100/80 text-rose-700',
+            accent: 'bg-rose-200/40',
+        },
     };
 
-    const colors = difficultyColors[difficulty] || difficultyColors.medium;
+    const colors = difficultyStyles[difficulty] || difficultyStyles.medium;
+    const statusLabel = status === 'expired' ? 'Expired' : null;
 
-    // Completed state
     if (status === 'completed') {
         return (
             <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
+                initial={{ opacity: 0, scale: 0.96 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className={`rounded-2xl p-4 bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 ${className}`}
+                className={`relative overflow-hidden rounded-[28px] border border-emerald-200/70 bg-gradient-to-br from-emerald-50 via-white to-emerald-100/70 p-4 shadow-soft ${className}`}
             >
-                <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-xl bg-green-500 flex items-center justify-center text-white">
+                <div className="absolute -top-12 -right-8 h-24 w-24 rounded-full bg-emerald-200/40 blur-3xl" />
+                <div className="relative flex items-start gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500 text-white shadow-soft">
                         <Check className="w-6 h-6" />
                     </div>
                     <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                            <span className="text-lg">{emoji}</span>
-                            <span className="font-bold text-neutral-800">{title}</span>
+                        <div className="text-[10px] font-semibold uppercase tracking-[0.3em] text-emerald-500">
+                            Completed
                         </div>
-                        <p className="text-sm text-green-600 font-medium">
-                            Completed! +{rewardXP} XP earned together 🎉
+                        <div className="mt-1 flex items-center gap-2">
+                            <span className="text-lg">{emoji}</span>
+                            <span className="font-display font-bold text-neutral-800">{title}</span>
+                        </div>
+                        <p className="mt-1 text-xs text-emerald-600 font-semibold">
+                            Completed! +{rewardXP} XP earned together.
                         </p>
                     </div>
                 </div>
@@ -66,77 +80,94 @@ const ChallengeCard = ({
             animate={{ opacity: 1, y: 0 }}
             whileTap={{ scale: 0.98 }}
             onClick={onClick}
-            className={`rounded-2xl p-4 bg-gradient-to-br ${colors.bg} border border-neutral-200/50 cursor-pointer ${className}`}
+            className={`relative overflow-hidden rounded-[28px] border border-white/80 bg-white/85 p-4 shadow-soft transition ${
+                isClickable ? 'cursor-pointer' : ''
+            } ${isExpired ? 'opacity-80' : ''} ${className}`}
         >
-            {/* Header */}
-            <div className="flex items-start gap-3 mb-3">
-                <div className="w-12 h-12 rounded-xl bg-white shadow-sm flex items-center justify-center text-2xl">
-                    {emoji}
-                </div>
-                <div className="flex-1">
-                    <div className="flex items-center justify-between">
-                        <h3 className="font-bold text-neutral-800">{title}</h3>
-                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${colors.badge} ${colors.text}`}>
-                            {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
-                        </span>
+            <div className="absolute inset-0 pointer-events-none">
+                <div className={`absolute -top-10 -right-6 h-20 w-20 rounded-full blur-2xl ${colors.accent}`} />
+                <div className="absolute -bottom-12 -left-10 h-24 w-24 rounded-full bg-amber-100/45 blur-3xl" />
+            </div>
+
+            <div className="relative space-y-4">
+                <div className="flex items-start gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/80 bg-white/90 text-2xl shadow-inner-soft">
+                        {emoji}
                     </div>
-                    <p className="text-sm text-neutral-600 mt-0.5">{description}</p>
-                </div>
-            </div>
-
-            {/* Progress bar */}
-            <div className="mb-3">
-                <div className="flex justify-between text-xs text-neutral-500 mb-1">
-                    <span>{currentProgress} / {targetProgress}</span>
-                    <span>+{rewardXP} XP</span>
-                </div>
-                <div className="h-2 bg-white/60 rounded-full overflow-hidden">
-                    <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${progress}%` }}
-                        transition={{ duration: 0.6, ease: 'easeOut' }}
-                        className={`h-full rounded-full ${isComplete ? 'bg-green-500' : 'bg-gradient-to-r from-violet-500 to-pink-500'}`}
-                    />
-                </div>
-            </div>
-
-            {/* Footer */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1 text-xs text-neutral-500">
-                    <Clock className="w-3.5 h-3.5" />
-                    <span>{daysLeft} days left</span>
+                    <div className="flex-1">
+                        <div className="flex items-start justify-between gap-2">
+                            <div>
+                                {statusLabel && (
+                                    <div className="text-[10px] font-semibold uppercase tracking-[0.3em] text-neutral-400">
+                                        {statusLabel}
+                                    </div>
+                                )}
+                                <h3 className="text-base font-display font-bold text-neutral-800">{title}</h3>
+                            </div>
+                            <span className={`rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.2em] ${colors.badge}`}>
+                                {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
+                            </span>
+                        </div>
+                        <p className="mt-1 text-sm text-neutral-600">{description}</p>
+                    </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                    {actionLabel && (
-                        <motion.button
-                            whileTap={{ scale: actionDisabled ? 1 : 0.95 }}
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                if (actionDisabled || !onAction) return;
-                                onAction();
-                            }}
-                            disabled={actionDisabled || !onAction}
-                            className={`text-xs font-bold px-3 py-1 rounded-full ${
-                                actionDisabled ? 'bg-neutral-200 text-neutral-400' : 'bg-white text-neutral-700'
-                            }`}
-                        >
-                            {actionLabel}
-                        </motion.button>
-                    )}
-                    {onSkip && (
-                        <motion.button
-                            whileTap={{ scale: 0.9 }}
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onSkip();
-                            }}
-                            className="text-xs text-neutral-400 hover:text-neutral-600 px-2 py-1"
-                        >
-                            Not interested
-                        </motion.button>
-                    )}
-                    <ChevronRight className="w-4 h-4 text-neutral-400" />
+                <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs text-neutral-500">
+                        <span>{currentProgress} / {targetProgress} steps</span>
+                        <span className="font-semibold text-amber-700">+{rewardXP} XP</span>
+                    </div>
+                    <div className="h-2.5 rounded-full bg-white/80 shadow-inner-soft overflow-hidden">
+                        <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${progress}%` }}
+                            transition={{ duration: 0.6, ease: 'easeOut' }}
+                            className={`h-full rounded-full ${isComplete ? 'bg-emerald-500' : 'bg-gradient-to-r from-[#C9A227] to-[#8B7019]'}`}
+                        />
+                    </div>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 text-xs text-neutral-500">
+                        <div className="flex items-center gap-1 rounded-full border border-white/80 bg-white/80 px-2.5 py-1">
+                            <Clock className="w-3.5 h-3.5" />
+                            <span>{daysLeft} days left</span>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        {actionLabel && (
+                            <motion.button
+                                whileTap={{ scale: actionDisabled ? 1 : 0.95 }}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (actionDisabled || !onAction) return;
+                                    onAction();
+                                }}
+                                disabled={actionDisabled || !onAction}
+                                className={`rounded-full px-3 py-1 text-xs font-bold ${
+                                    actionDisabled
+                                        ? 'bg-neutral-200/70 text-neutral-400'
+                                        : 'bg-gradient-to-r from-[#C9A227] to-[#8B7019] text-white shadow-soft'
+                                }`}
+                            >
+                                {actionLabel}
+                            </motion.button>
+                        )}
+                        {onSkip && (
+                            <motion.button
+                                whileTap={{ scale: 0.9 }}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onSkip();
+                                }}
+                                className="px-2 py-1 text-[11px] font-semibold text-neutral-400 hover:text-neutral-600"
+                            >
+                                Skip
+                            </motion.button>
+                        )}
+                        {isClickable && <ChevronRight className="w-4 h-4 text-neutral-400" />}
+                    </div>
                 </div>
             </div>
         </motion.div>

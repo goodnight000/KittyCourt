@@ -1,0 +1,11 @@
+name,description,emoji,type,target_value,verification_config,requires_partner_confirm,reward_xp,difficulty,cooldown_days,is_active
+"Daily Meow Streak","Answer the daily question together for 3 days in a row.","","streak",3,"{""type"":""streak"",""action"":""daily_question_answer"",""require_both"":true,""days"":3}",false,150,"easy",0,true
+"Appreciation Exchange","Send 3 appreciations each.","","count",3,"{""type"":""count"",""action"":""appreciation_given"",""per_partner"":true}",false,120,"medium",0,true
+"Memory Snapshots","Upload 2 shared memories.","","count",2,"{""type"":""count"",""action"":""memory_upload""}",false,100,"easy",0,true
+"Mood Sync","Both check in with moods for 4 days.","","streak",4,"{""type"":""streak"",""action"":""mood_checkin"",""require_both"":true,""days"":4}",false,150,"medium",0,true
+"Court Resolvers","Resolve 2 cases together.","","count",2,"{""type"":""count"",""action"":""case_resolved""}",false,200,"medium",0,true
+"Plan a Date Night","Plan a date together and confirm it with your partner.","","behavioral",1,"{""type"":""behavioral""}",true,200,"medium",0,true
+"Calendar Hero","Add one shared calendar event.","","count",1,"{""type"":""count"",""action"":""calendar_event""}",false,75,"easy",0,true
+"Deep Talk Week","Answer 5 daily questions total.","","count",5,"{""type"":""count"",""action"":""daily_question_answer""}",false,175,"medium",0,true
+"Gratitude Streak","Each of you sends an appreciation on 3 different days.","","streak",3,"{""type"":""streak"",""action"":""appreciation_given"",""require_both"":true,""days"":3}",false,180,"hard",0,true
+"Memory Marathon","Upload 5 shared memories.","","milestone",5,"{""type"":""milestone"",""action"":""memory_upload""}",false,250,"hard",0,true

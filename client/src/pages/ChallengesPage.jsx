@@ -3,7 +3,7 @@
  * 
  * Phase 2B: Uses useChallengeStore for API data.
  */
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Trophy, Sparkles, ChevronDown, ChevronUp, RefreshCw, AlertCircle } from 'lucide-react';
@@ -14,15 +14,30 @@ import useAuthStore from '../store/useAuthStore';
 
 // Loading skeleton component
 const ChallengeSkeleton = () => (
-    <div className="rounded-2xl p-4 bg-neutral-100 animate-pulse">
-        <div className="flex items-start gap-3 mb-3">
-            <div className="w-12 h-12 rounded-xl bg-neutral-200" />
+    <div className="rounded-[28px] border border-white/80 bg-white/70 p-4 shadow-soft animate-pulse">
+        <div className="flex items-start gap-3 mb-4">
+            <div className="w-12 h-12 rounded-2xl bg-neutral-200" />
             <div className="flex-1 space-y-2">
                 <div className="h-4 bg-neutral-200 rounded w-3/4" />
                 <div className="h-3 bg-neutral-200 rounded w-1/2" />
             </div>
         </div>
-        <div className="h-2 bg-neutral-200 rounded w-full" />
+        <div className="h-2.5 bg-neutral-200 rounded-full w-full" />
+    </div>
+);
+
+const ChallengeBackdrop = () => (
+    <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute -top-24 -right-20 h-56 w-56 rounded-full bg-amber-200/35 blur-3xl" />
+        <div className="absolute top-24 -left-20 h-60 w-60 rounded-full bg-rose-200/30 blur-3xl" />
+        <div className="absolute bottom-8 right-8 h-64 w-64 rounded-full bg-amber-100/45 blur-3xl" />
+        <div
+            className="absolute inset-0 opacity-45"
+            style={{
+                backgroundImage:
+                    'radial-gradient(circle at 18% 20%, rgba(255,255,255,0.75) 0%, transparent 55%), radial-gradient(circle at 80% 10%, rgba(255,235,210,0.8) 0%, transparent 60%)'
+            }}
+        />
     </div>
 );
 
@@ -45,6 +60,15 @@ const ChallengesPage = () => {
     } = useChallengeStore();
     const [showCompleted, setShowCompleted] = useState(false);
     const currentUserId = user?.id || null;
+    const challengeStats = useMemo(() => {
+        const sumXP = (list) => list.reduce((total, challenge) => total + (challenge.rewardXP || 0), 0);
+        return {
+            active: active.length,
+            available: available.length,
+            completed: completed.length,
+            xpOnDeck: sumXP(active) + sumXP(available),
+        };
+    }, [active, available, completed]);
 
     useEffect(() => {
         if (hasPartner) {
@@ -77,209 +101,281 @@ const ChallengesPage = () => {
     // Progressive disclosure: Level 5+ required
     if (!shouldShowChallenges()) {
         return (
-            <div className="p-4 min-h-screen bg-gradient-to-b from-neutral-50 to-neutral-100">
-                <motion.button
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => navigate(-1)}
-                    className="flex items-center gap-1 text-neutral-600 mb-6"
-                >
-                    <ArrowLeft className="w-5 h-5" />
-                    <span>Back</span>
-                </motion.button>
-
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="text-center py-16"
-                >
-                    <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-violet-100 to-pink-100 flex items-center justify-center mb-4">
-                        <Trophy className="w-10 h-10 text-violet-400" />
-                    </div>
-                    <h2 className="text-xl font-bold text-neutral-800 mb-2">
-                        Challenges Unlock at Level 5
-                    </h2>
-                    <p className="text-neutral-500 mb-4">
-                        You're currently Level {level}. Keep earning XP together!
-                    </p>
+            <div className="relative min-h-screen overflow-hidden px-4 pb-24 pt-6">
+                <ChallengeBackdrop />
+                <div className="relative">
                     <motion.button
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => navigate('/profile')}
-                        className="px-6 py-3 rounded-xl bg-gradient-to-r from-violet-500 to-pink-500 text-white font-bold"
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => navigate(-1)}
+                        className="flex items-center gap-2 text-sm font-semibold text-neutral-600"
                     >
-                        View Your Progress
+                        <ArrowLeft className="w-5 h-5" />
+                        <span>Back</span>
                     </motion.button>
-                </motion.div>
+
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mt-10 glass-card text-center px-6 py-8"
+                    >
+                        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-amber-200/70 bg-amber-100/80">
+                            <Trophy className="w-8 h-8 text-amber-600" />
+                        </div>
+                        <h2 className="mt-4 text-xl font-display font-bold text-neutral-800">
+                            Challenges unlock at Level 5
+                        </h2>
+                        <p className="mt-2 text-sm text-neutral-500">
+                            You are currently Level {level}. Keep earning XP together.
+                        </p>
+                        <motion.button
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => navigate('/profile')}
+                            className="mt-5 w-full rounded-2xl bg-gradient-to-r from-[#C9A227] to-[#8B7019] py-3 text-sm font-bold text-white shadow-soft"
+                        >
+                            View your progress
+                        </motion.button>
+                    </motion.div>
+                </div>
             </div>
         );
     }
 
     return (
-        <div className="p-4 min-h-screen bg-gradient-to-b from-neutral-50 to-neutral-100">
-            {/* Header */}
-            <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex items-center gap-3 mb-6"
-            >
-                <motion.button
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => navigate(-1)}
-                    className="p-2 rounded-xl bg-white shadow-sm"
-                >
-                    <ArrowLeft className="w-5 h-5 text-neutral-600" />
-                </motion.button>
-                <div className="flex-1">
-                    <h1 className="text-xl font-bold text-neutral-800">Challenges</h1>
-                    <p className="text-sm text-neutral-500">Earn XP together as a couple</p>
-                </div>
-                <div className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-gradient-to-r from-violet-100 to-pink-100">
-                    <Sparkles className="w-4 h-4 text-violet-500" />
-                    <span className="text-sm font-bold text-violet-600">Level {level}</span>
-                </div>
-            </motion.div>
-
-            {/* Error State */}
-            {error && (
-                <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mb-6 p-4 rounded-xl bg-red-50 border border-red-100 flex items-center gap-3"
-                >
-                    <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
-                    <div className="flex-1">
-                        <p className="text-sm text-red-700">{error}</p>
-                    </div>
+        <div className="relative min-h-screen overflow-hidden px-4 pb-28 pt-6">
+            <ChallengeBackdrop />
+            <div className="relative space-y-6">
+                <header className="flex items-start gap-3">
                     <motion.button
                         whileTap={{ scale: 0.95 }}
-                        onClick={handleRetry}
-                        className="p-2 rounded-lg bg-red-100 text-red-600"
+                        onClick={() => navigate(-1)}
+                        className="rounded-2xl border border-white/80 bg-white/80 p-2 shadow-soft"
                     >
-                        <RefreshCw className="w-4 h-4" />
+                        <ArrowLeft className="w-5 h-5 text-neutral-600" />
                     </motion.button>
-                </motion.div>
-            )}
-
-            {/* Loading State */}
-            {isLoading && (
-                <div className="space-y-3 mb-6">
-                    <ChallengeSkeleton />
-                    <ChallengeSkeleton />
-                </div>
-            )}
-
-            {/* Active Challenges */}
-            {!isLoading && active.length > 0 && (
-                <section className="mb-6">
-                    <h2 className="font-bold text-neutral-700 mb-3 flex items-center gap-2">
-                        <Trophy className="w-4 h-4 text-amber-500" />
-                        Active Challenges
-                    </h2>
-                    <div className="space-y-3">
-                        {active.map((challenge) => (
-                            <ChallengeCard
-                                key={challenge.id}
-                                {...challenge}
-                                actionLabel={
-                                    challenge.requiresConfirmation
-                                        ? challenge.confirmationStatus === 'none'
-                                            ? 'Mark done'
-                                            : challenge.confirmationStatus === 'pending'
-                                                ? (challenge.confirmRequestedBy && challenge.confirmRequestedBy !== currentUserId
-                                                    ? 'Confirm'
-                                                    : 'Waiting')
-                                                : null
-                                        : null
-                                }
-                                actionDisabled={
-                                    challenge.requiresConfirmation
-                                        && challenge.confirmationStatus === 'pending'
-                                        && (!challenge.confirmRequestedBy || challenge.confirmRequestedBy === currentUserId)
-                                }
-                                onAction={() => {
-                                    if (!challenge.requiresConfirmation) return;
-                                    if (challenge.confirmationStatus === 'none') {
-                                        handleComplete(challenge.id);
-                                    } else if (challenge.confirmationStatus === 'pending'
-                                        && challenge.confirmRequestedBy
-                                        && challenge.confirmRequestedBy !== currentUserId) {
-                                        handleConfirm(challenge.id);
-                                    }
-                                }}
-                                onSkip={() => handleSkip(challenge.id)}
-                            />
-                        ))}
+                    <div className="flex-1">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-amber-600">
+                            Court docket
+                        </p>
+                        <h1 className="text-2xl font-display font-bold text-neutral-800">Challenges</h1>
+                        <p className="text-sm text-neutral-500">Earn XP together as a couple</p>
                     </div>
-                </section>
-            )}
-
-            {/* Available Challenges */}
-            {!isLoading && available.length > 0 && (
-                <section className="mb-6">
-                    <h2 className="font-bold text-neutral-700 mb-3">Available to Start</h2>
-                    <div className="space-y-3">
-                        {available.map((challenge) => (
-                            <ChallengeCard
-                                key={challenge.id}
-                                {...challenge}
-                                onClick={() => handleStart(challenge.id)}
-                            />
-                        ))}
+                    <div className="flex items-center gap-1 rounded-full border border-amber-200/70 bg-amber-100/70 px-3 py-2 text-xs font-bold text-amber-700">
+                        <Sparkles className="w-4 h-4 text-amber-600" />
+                        Level {level}
                     </div>
-                </section>
-            )}
+                </header>
 
-            {/* Completed Challenges (Collapsible) */}
-            {!isLoading && completed.length > 0 && (
-                <section>
-                    <motion.button
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => setShowCompleted(!showCompleted)}
-                        className="w-full flex items-center justify-between py-3 text-neutral-600"
-                    >
-                        <span className="font-bold">
-                            Completed ({completed.length})
-                        </span>
-                        {showCompleted ? (
-                            <ChevronUp className="w-5 h-5" />
-                        ) : (
-                            <ChevronDown className="w-5 h-5" />
-                        )}
-                    </motion.button>
-
-                    <AnimatePresence>
-                        {showCompleted && (
-                            <motion.div
-                                initial={{ height: 0, opacity: 0 }}
-                                animate={{ height: 'auto', opacity: 1 }}
-                                exit={{ height: 0, opacity: 0 }}
-                                className="space-y-3 overflow-hidden"
-                            >
-                                {completed.map((challenge) => (
-                                    <ChallengeCard
-                                        key={challenge.id}
-                                        {...challenge}
-                                    />
-                                ))}
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-                </section>
-            )}
-
-            {/* Empty state */}
-            {!isLoading && !error && active.length === 0 && available.length === 0 && (
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="text-center py-12"
+                <motion.section
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="glass-card relative overflow-hidden"
                 >
-                    <div className="w-16 h-16 mx-auto rounded-full bg-neutral-100 flex items-center justify-center mb-4">
-                        <Trophy className="w-8 h-8 text-neutral-300" />
+                    <div className="absolute inset-0 pointer-events-none">
+                        <div className="absolute -top-10 -right-8 h-20 w-20 rounded-full bg-amber-200/35 blur-2xl" />
+                        <div className="absolute -bottom-12 -left-10 h-24 w-24 rounded-full bg-rose-200/30 blur-3xl" />
                     </div>
-                    <p className="text-neutral-500">No active challenges right now</p>
-                    <p className="text-sm text-neutral-400 mt-1">Check back tomorrow for new ones!</p>
-                </motion.div>
-            )}
+                    <div className="relative space-y-4">
+                        <div className="flex flex-wrap items-center justify-between gap-4">
+                            <div>
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-neutral-400">
+                                    Weekly docket
+                                </p>
+                                <h2 className="mt-1 text-lg font-display font-bold text-neutral-800">
+                                    Pick a challenge, earn XP together
+                                </h2>
+                                <p className="mt-1 text-xs text-neutral-500">
+                                    Short quests that keep your story moving.
+                                </p>
+                            </div>
+                            <div className="rounded-2xl border border-white/80 bg-white/80 px-3 py-2 text-xs font-semibold text-amber-700 shadow-inner-soft">
+                                {challengeStats.xpOnDeck} XP on deck
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3 text-xs">
+                            <div className="rounded-2xl border border-white/80 bg-white/80 px-3 py-2">
+                                <div className="text-[10px] font-semibold uppercase tracking-[0.3em] text-neutral-400">Active</div>
+                                <div className="text-lg font-display font-bold text-neutral-800">{challengeStats.active}</div>
+                            </div>
+                            <div className="rounded-2xl border border-white/80 bg-white/80 px-3 py-2">
+                                <div className="text-[10px] font-semibold uppercase tracking-[0.3em] text-neutral-400">Open</div>
+                                <div className="text-lg font-display font-bold text-neutral-800">{challengeStats.available}</div>
+                            </div>
+                            <div className="rounded-2xl border border-white/80 bg-white/80 px-3 py-2">
+                                <div className="text-[10px] font-semibold uppercase tracking-[0.3em] text-neutral-400">Completed</div>
+                                <div className="text-lg font-display font-bold text-neutral-800">{challengeStats.completed}</div>
+                            </div>
+                            <div className="rounded-2xl border border-white/80 bg-white/80 px-3 py-2">
+                                <div className="text-[10px] font-semibold uppercase tracking-[0.3em] text-neutral-400">Level</div>
+                                <div className="text-lg font-display font-bold text-neutral-800">{level}</div>
+                            </div>
+                        </div>
+                    </div>
+                </motion.section>
+
+                {error && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="flex items-start gap-3 rounded-2xl border border-rose-200/70 bg-rose-50/70 p-4"
+                    >
+                        <AlertCircle className="w-5 h-5 text-rose-500 flex-shrink-0" />
+                        <div className="flex-1">
+                            <p className="text-sm text-rose-700">{error}</p>
+                        </div>
+                        <motion.button
+                            whileTap={{ scale: 0.95 }}
+                            onClick={handleRetry}
+                            className="rounded-xl border border-rose-200/70 bg-white/80 p-2 text-rose-600"
+                        >
+                            <RefreshCw className="w-4 h-4" />
+                        </motion.button>
+                    </motion.div>
+                )}
+
+                {isLoading && (
+                    <div className="space-y-3">
+                        <ChallengeSkeleton />
+                        <ChallengeSkeleton />
+                    </div>
+                )}
+
+                {!isLoading && active.length > 0 && (
+                    <section className="space-y-3">
+                        <div className="flex items-center justify-between gap-3">
+                            <div>
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-neutral-400">
+                                    In progress
+                                </p>
+                                <h2 className="text-base font-display font-bold text-neutral-800">Active challenges</h2>
+                            </div>
+                            <div className="rounded-full border border-amber-200/70 bg-amber-100/70 px-3 py-1 text-[11px] font-bold text-amber-700">
+                                {active.length} live
+                            </div>
+                        </div>
+                        <div className="space-y-3">
+                            {active.map((challenge) => (
+                                <ChallengeCard
+                                    key={challenge.id}
+                                    {...challenge}
+                                    actionLabel={
+                                        challenge.requiresConfirmation
+                                            ? challenge.confirmationStatus === 'none'
+                                                ? 'Mark done'
+                                                : challenge.confirmationStatus === 'pending'
+                                                    ? (challenge.confirmRequestedBy && challenge.confirmRequestedBy !== currentUserId
+                                                        ? 'Confirm'
+                                                        : 'Waiting')
+                                                    : null
+                                            : null
+                                    }
+                                    actionDisabled={
+                                        challenge.requiresConfirmation
+                                            && challenge.confirmationStatus === 'pending'
+                                            && (!challenge.confirmRequestedBy || challenge.confirmRequestedBy === currentUserId)
+                                    }
+                                    onAction={() => {
+                                        if (!challenge.requiresConfirmation) return;
+                                        if (challenge.confirmationStatus === 'none') {
+                                            handleComplete(challenge.id);
+                                        } else if (challenge.confirmationStatus === 'pending'
+                                            && challenge.confirmRequestedBy
+                                            && challenge.confirmRequestedBy !== currentUserId) {
+                                            handleConfirm(challenge.id);
+                                        }
+                                    }}
+                                    onSkip={() => handleSkip(challenge.id)}
+                                />
+                            ))}
+                        </div>
+                    </section>
+                )}
+
+                {!isLoading && available.length > 0 && (
+                    <section className="space-y-3">
+                        <div className="flex items-center justify-between gap-3">
+                            <div>
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-neutral-400">
+                                    Ready to start
+                                </p>
+                                <h2 className="text-base font-display font-bold text-neutral-800">Available to start</h2>
+                            </div>
+                            <div className="rounded-full border border-white/80 bg-white/80 px-3 py-1 text-[11px] font-semibold text-neutral-500">
+                                {available.length} new
+                            </div>
+                        </div>
+                        <div className="space-y-3">
+                            {available.map((challenge) => (
+                                <ChallengeCard
+                                    key={challenge.id}
+                                    {...challenge}
+                                    actionLabel="Start"
+                                    onAction={() => handleStart(challenge.id)}
+                                    onClick={() => handleStart(challenge.id)}
+                                />
+                            ))}
+                        </div>
+                    </section>
+                )}
+
+                {!isLoading && completed.length > 0 && (
+                    <section className="glass-card space-y-3">
+                        <motion.button
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => setShowCompleted(!showCompleted)}
+                            className="flex w-full items-center justify-between text-neutral-600"
+                        >
+                            <div>
+                                <div className="text-[11px] font-semibold uppercase tracking-[0.3em] text-neutral-400">
+                                    Completed archive
+                                </div>
+                                <div className="text-sm font-bold text-neutral-700">
+                                    Completed ({completed.length})
+                                </div>
+                            </div>
+                            {showCompleted ? (
+                                <ChevronUp className="w-5 h-5" />
+                            ) : (
+                                <ChevronDown className="w-5 h-5" />
+                            )}
+                        </motion.button>
+
+                        <AnimatePresence>
+                            {showCompleted && (
+                                <motion.div
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: 'auto', opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    className="space-y-3 overflow-hidden"
+                                >
+                                    {completed.map((challenge) => (
+                                        <ChallengeCard
+                                            key={challenge.id}
+                                            {...challenge}
+                                            status="completed"
+                                        />
+                                    ))}
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </section>
+                )}
+
+                {!isLoading && !error && active.length === 0 && available.length === 0 && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="glass-card text-center px-6 py-10"
+                    >
+                        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-amber-200/70 bg-amber-100/80">
+                            <Trophy className="w-8 h-8 text-amber-500" />
+                        </div>
+                        <h3 className="mt-4 text-lg font-display font-bold text-neutral-800">
+                            No challenges right now
+                        </h3>
+                        <p className="mt-2 text-sm text-neutral-500">Check back tomorrow for a fresh docket.</p>
+                    </motion.div>
+                )}
+            </div>
         </div>
     );
 };

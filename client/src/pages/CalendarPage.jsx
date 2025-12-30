@@ -8,7 +8,6 @@ import {
 import useAppStore from '../store/useAppStore';
 import useAuthStore from '../store/useAuthStore';
 import useSubscriptionStore from '../store/useSubscriptionStore';
-import useCacheStore, { CACHE_TTL, CACHE_KEYS } from '../store/useCacheStore';
 import api from '../services/api';
 import { validateDate } from '../utils/helpers';
 import Paywall from '../components/Paywall';
@@ -63,16 +62,6 @@ const CalendarPage = () => {
     const [showPaywall, setShowPaywall] = useState(false);
 
     const fetchEvents = useCallback(async () => {
-        const cacheKey = CACHE_KEYS.CALENDAR_EVENTS;
-
-        // Check cache first
-        const cached = useCacheStore.getState().getCached(cacheKey);
-        if (cached !== null) {
-            setEvents(cached);
-            setIsLoading(false);
-            return;
-        }
-
         try {
             setIsLoading(true);
             const response = await api.get('/calendar/events');
@@ -89,15 +78,11 @@ const CalendarPage = () => {
             const existingTitles = dbEvents.map(e => e.title);
             const newDefaults = defaultEvents.filter(d => !existingTitles.includes(d.title));
 
-            const allEvents = [
+            setEvents([
                 ...dbEvents,
                 ...newDefaults.map(d => ({ ...d, id: `default_${d.title}` })),
                 ...personalEvents
-            ];
-
-            // Cache the events
-            useCacheStore.getState().setCache(cacheKey, allEvents, CACHE_TTL.CALENDAR_EVENTS);
-            setEvents(allEvents);
+            ]);
         } catch (error) {
             console.error('Failed to fetch events:', error);
             const currentYear = new Date().getFullYear();
@@ -197,8 +182,6 @@ const CalendarPage = () => {
             const response = await api.post('/calendar/events', {
                 ...eventData
             });
-            // Invalidate calendar cache on add
-            useCacheStore.getState().invalidate(CACHE_KEYS.CALENDAR_EVENTS);
             setEvents([...events, response.data]);
             setShowAddModal(false);
         } catch (error) {
@@ -209,8 +192,6 @@ const CalendarPage = () => {
     const deleteEvent = async (eventId) => {
         try {
             await api.delete(`/calendar/events/${eventId}`);
-            // Invalidate calendar cache on delete
-            useCacheStore.getState().invalidate(CACHE_KEYS.CALENDAR_EVENTS);
             setEvents(events.filter(e => e.id !== eventId));
             setShowEventDetails(null);
         } catch (error) {
@@ -251,12 +232,9 @@ const CalendarPage = () => {
 
     const getEventsForDate = (date) => {
         return events.filter(event => {
-            // Guard against events with no date
-            const dateStr = event?.date;
-            if (!dateStr) return false;
-
             // Parse date string as local date by appending T00:00:00
             // This prevents timezone shift when parsing "YYYY-MM-DD" strings
+            const dateStr = event.date;
             const eventDate = dateStr.includes('T')
                 ? new Date(dateStr)
                 : new Date(dateStr + 'T00:00:00');
@@ -317,28 +295,13 @@ const CalendarPage = () => {
             return;
         }
 
-        // Create a cache key based on the event keys
-        const keysHash = eventKeys.sort().join('|');
-        const cacheKey = `${CACHE_KEYS.EVENT_PLANS}:${keysHash}`;
-
-        // Check cache first
-        const cached = useCacheStore.getState().getCached(cacheKey);
-        if (cached !== null) {
-            // Cache stores arrays (Sets don't serialize to JSON), convert back to Set
-            setPlannedEventKeys(new Set(Array.isArray(cached) ? cached : []));
-            return;
-        }
-
         let cancelled = false;
         (async () => {
             try {
                 const response = await api.post('/calendar/event-plans/exists', { eventKeys });
                 const exists = response.data?.exists || {};
                 if (cancelled) return;
-                const plannedArray = Object.keys(exists).filter((k) => exists[k]);
-                // Cache as array (Sets don't serialize properly to JSON)
-                useCacheStore.getState().setCache(cacheKey, plannedArray, CACHE_TTL.EVENT_PLANS);
-                setPlannedEventKeys(new Set(plannedArray));
+                setPlannedEventKeys(new Set(Object.keys(exists).filter((k) => exists[k])));
             } catch {
                 if (cancelled) return;
                 setPlannedEventKeys(new Set());
@@ -352,11 +315,12 @@ const CalendarPage = () => {
         <div className="space-y-5">
             {/* Header */}
             <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-violet-100 to-pink-100 rounded-2xl flex items-center justify-center shadow-soft">
-                    <img
-                        src="/assets/icons/calendar.png"
-                    />
-                </div>
+                <img
+                    src="/assets/icons/calendar.png"
+                    alt="Calendar"
+                    className="w-12 h-12 object-contain drop-shadow-sm"
+                    draggable={false}
+                />
                 <div className="flex-1">
                     <h1 className="text-xl font-bold text-gradient">Our Calendar</h1>
                     <p className="text-neutral-500 text-sm">Important dates & memories 💕</p>
@@ -368,14 +332,19 @@ const CalendarPage = () => {
                         setShowAddModal(true);
                     }}
                     disabled={isLoading}
-                    className="w-10 h-10"
+                    className="w-12 h-12 relative"
+                    aria-label="Add event"
                 >
-                    {isLoading ? (
-                        <Loader2 className="w-5 h-5 text-white animate-spin" />
-                    ) : (
-                        <img
-                            src="/assets/icons/plus.png"
-                        />
+                    <img
+                        src="/assets/icons/plus.png"
+                        alt=""
+                        className={`w-12 h-12 object-contain drop-shadow-sm transition-opacity ${isLoading ? 'opacity-60' : 'opacity-100'}`}
+                        draggable={false}
+                    />
+                    {isLoading && (
+                        <div className="absolute inset-0 grid place-items-center">
+                            <Loader2 className="w-5 h-5 text-court-brown animate-spin" />
+                        </div>
                     )}
                 </Motion.button>
             </div>
@@ -384,82 +353,147 @@ const CalendarPage = () => {
             <Motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="glass-card p-4"
+                className="glass-card p-4 relative overflow-hidden"
             >
-                <div className="flex items-center justify-between mb-4">
-                    <Motion.button
-                        whileTap={{ scale: 0.9 }}
-                        onClick={() => navigateMonth(-1)}
-                        className="w-10 h-10 bg-white/80 rounded-xl flex items-center justify-center"
-                    >
-                        <ChevronLeft className="w-5 h-5 text-neutral-600" />
-                    </Motion.button>
-                    <div className="text-center">
-                        <h2 className="font-bold text-neutral-800 text-lg">
-                            {MONTHS[currentDate.getMonth()]}
-                        </h2>
-                        <p className="text-neutral-500 text-sm">{currentDate.getFullYear()}</p>
-                    </div>
-                    <Motion.button
-                        whileTap={{ scale: 0.9 }}
-                        onClick={() => navigateMonth(1)}
-                        className="w-10 h-10 bg-white/80 rounded-xl flex items-center justify-center"
-                    >
-                        <ChevronRight className="w-5 h-5 text-neutral-600" />
-                    </Motion.button>
+                <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+                    <div className="absolute -top-16 -left-14 w-56 h-56 rounded-full bg-gradient-to-br from-pink-200/60 via-white/30 to-amber-100/30 blur-3xl" />
+                    <div className="absolute -bottom-20 -right-16 w-64 h-64 rounded-full bg-gradient-to-br from-violet-200/40 via-white/20 to-sky-100/30 blur-3xl" />
+                    <div
+                        className="absolute inset-0 opacity-[0.06] mix-blend-multiply"
+                        style={{
+                            backgroundImage:
+                                'repeating-linear-gradient(0deg, rgba(74, 55, 40, 0.22), rgba(74, 55, 40, 0.22) 1px, transparent 1px, transparent 7px), repeating-linear-gradient(90deg, rgba(201, 162, 39, 0.18), rgba(201, 162, 39, 0.18) 1px, transparent 1px, transparent 9px)'
+                        }}
+                    />
                 </div>
 
-                {/* Day Headers */}
-                <div className="grid grid-cols-7 gap-1 mb-2">
-                    {DAYS.map(day => (
-                        <div key={day} className="text-center text-xs font-bold text-neutral-400 py-2">
-                            {day}
+                <div className="relative z-10">
+                    <div className="flex items-center justify-between mb-4">
+                        <Motion.button
+                            whileTap={{ scale: 0.9 }}
+                            onClick={() => navigateMonth(-1)}
+                            className="w-10 h-10 rounded-2xl bg-white/70 border border-white/70 backdrop-blur-xl shadow-soft flex items-center justify-center hover:bg-white/85 transition-colors"
+                        >
+                            <ChevronLeft className="w-5 h-5 text-neutral-600" />
+                        </Motion.button>
+                        <div className="text-center">
+                            <h2 className="font-extrabold text-neutral-800 text-lg tracking-tight">
+                                {MONTHS[currentDate.getMonth()]}
+                            </h2>
+                            <p className="text-neutral-500 text-sm">{currentDate.getFullYear()}</p>
                         </div>
-                    ))}
-                </div>
+                        <Motion.button
+                            whileTap={{ scale: 0.9 }}
+                            onClick={() => navigateMonth(1)}
+                            className="w-10 h-10 rounded-2xl bg-white/70 border border-white/70 backdrop-blur-xl shadow-soft flex items-center justify-center hover:bg-white/85 transition-colors"
+                        >
+                            <ChevronRight className="w-5 h-5 text-neutral-600" />
+                        </Motion.button>
+                    </div>
 
-                {/* Calendar Grid */}
-                <div className="grid grid-cols-7 gap-1">
-                    {days.map((dayInfo, index) => {
-                        const dayEvents = getEventsForDate(dayInfo.date);
-                        const hasEvents = dayEvents.length > 0;
-                        const hasSecretEvents = dayEvents.some(e => e.isSecret);
-                        const today = isToday(dayInfo.date);
-
-                        return (
-                            <Motion.button
-                                key={index}
-                                whileTap={{ scale: 0.9 }}
-                                onClick={() => {
-                                    setSelectedDate(dayInfo.date);
-                                    if (hasEvents) {
-                                        setShowEventDetails(dayEvents);
-                                    } else {
-                                        setShowAddModal(true);
-                                    }
-                                }}
-                                className={`
-                                    aspect-square rounded-xl flex flex-col items-center justify-center relative
-                                    transition-all duration-200
-                                    ${dayInfo.currentMonth ? 'text-neutral-700' : 'text-neutral-300'}
-                                    ${today ? 'text-white shadow-md' : ''}
-                                    ${hasEvents && !today ? (hasSecretEvents ? 'bg-[#1c1c84]/15' : 'bg-pink-50') : ''}
-                                    ${!today && !hasEvents ? 'hover:bg-neutral-50' : ''}
-                                `}
-                                style={today ? { background: 'linear-gradient(135deg, #B85C6B 0%, #8B4049 100%)', opacity: 1 } : {}}
+                    {/* Day Headers */}
+                    <div className="grid grid-cols-7 gap-2 mb-2 px-0.5">
+                        {DAYS.map(day => (
+                            <div
+                                key={day}
+                                className="text-center text-[11px] font-extrabold text-neutral-500 py-1.5 rounded-xl bg-white/45 border border-white/50 shadow-inner-soft"
                             >
-                                <span className={`text-sm font-bold ${today ? 'text-white' : ''}`}>
-                                    {dayInfo.day}
-                                </span>
-                                {hasEvents && (
-                                    <div className="flex gap-0.5 mt-1 items-center justify-center">
-                                        <span className={`w-1.5 h-1.5 rounded-full ${hasSecretEvents ? 'bg-[#1c1c84]' : 'bg-pink-400'}`} />
-                                        <span className="text-[8px] text-neutral-400 font-semibold">{dayEvents.length}</span>
+                                {day}
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Calendar Grid */}
+                    <div className="grid grid-cols-7 gap-2">
+                        {days.map((dayInfo, index) => {
+                            const dayEvents = getEventsForDate(dayInfo.date);
+                            const sharedCount = dayEvents.filter(e => !e.isSecret).length;
+                            const secretCount = dayEvents.filter(e => e.isSecret).length;
+                            const hasEvents = dayEvents.length > 0;
+                            const hasSharedEvents = sharedCount > 0;
+                            const hasSecretEvents = secretCount > 0;
+                            const today = isToday(dayInfo.date);
+                            const isOutsideMonth = !dayInfo.currentMonth;
+
+                            const frameClass = today
+                                ? 'bg-gradient-to-br from-court-gold/60 via-rose-200/40 to-court-goldLight/50 shadow-glow-cream'
+                                : hasSharedEvents && hasSecretEvents
+                                    ? 'bg-gradient-to-br from-rose-200/70 via-white/30 to-indigo-200/55 shadow-soft'
+                                    : hasSharedEvents
+                                        ? 'bg-gradient-to-br from-rose-200/75 via-white/30 to-amber-100/40 shadow-soft'
+                                        : hasSecretEvents
+                                            ? 'bg-gradient-to-br from-indigo-200/65 via-white/30 to-violet-200/50 shadow-soft'
+                                            : 'bg-white/35 shadow-inner-soft';
+
+                            const innerClass = today
+                                ? 'bg-gradient-to-br from-[#B85C6B] via-[#8B4049] to-[#722F37]'
+                                : hasSharedEvents && hasSecretEvents
+                                    ? 'bg-gradient-to-br from-white/80 via-pink-50/50 to-violet-50/50'
+                                    : hasSharedEvents
+                                        ? 'bg-gradient-to-br from-white/85 via-pink-50/60 to-amber-50/50'
+                                        : hasSecretEvents
+                                            ? 'bg-gradient-to-br from-white/85 via-indigo-50/55 to-violet-50/45'
+                                            : 'bg-white/75';
+
+                            return (
+                                <Motion.button
+                                    key={index}
+                                    whileTap={{ scale: 0.9 }}
+                                    onClick={() => {
+                                        setSelectedDate(dayInfo.date);
+                                        if (hasEvents) {
+                                            setShowEventDetails(dayEvents);
+                                        } else {
+                                            setShowAddModal(true);
+                                        }
+                                    }}
+                                    className={`group relative aspect-square rounded-2xl p-[2px] transition-all duration-200 active:scale-[0.98] ${frameClass} ${isOutsideMonth ? 'opacity-55' : ''}`}
+                                    aria-label={`${dayInfo.date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}${hasEvents ? `, ${dayEvents.length} event${dayEvents.length === 1 ? '' : 's'}` : ''}`}
+                                >
+                                    {today && (
+                                        <div aria-hidden="true" className="absolute -inset-1 rounded-3xl bg-gradient-to-br from-court-gold/25 via-transparent to-rose-200/20 blur-md animate-pulse-soft" />
+                                    )}
+
+                                    <div
+                                        className={`relative w-full h-full rounded-[18px] border border-white/70 backdrop-blur-xl flex flex-col items-center justify-center transition-all duration-200 ${innerClass} ${today ? 'shadow-soft-lg' : 'shadow-inner-soft'} ${!today && !hasEvents ? 'group-hover:bg-white/85' : ''}`}
+                                    >
+                                        {hasSecretEvents && !today && (
+                                            <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-white/70 border border-white/60 flex items-center justify-center shadow-soft">
+                                                <Lock className="w-3 h-3 text-indigo-700" />
+                                            </div>
+                                        )}
+
+                                        <span
+                                            className={`text-sm font-black tabular-nums ${today
+                                                ? 'text-white'
+                                                : isOutsideMonth
+                                                    ? 'text-neutral-500'
+                                                    : 'text-neutral-800'
+                                                }`}
+                                        >
+                                            {dayInfo.day}
+                                        </span>
+
+                                        {(hasSharedEvents || hasSecretEvents) && (
+                                            <div className="mt-1 flex items-center justify-center gap-1.5">
+                                                {hasSharedEvents && (
+                                                    <span className={`w-1.5 h-1.5 rounded-full shadow-sm ${today ? 'bg-white/90' : 'bg-gradient-to-br from-pink-500 to-rose-600'}`} />
+                                                )}
+                                                {hasSecretEvents && (
+                                                    <span className={`w-1.5 h-1.5 rounded-full shadow-sm ${today ? 'bg-white/70' : 'bg-gradient-to-br from-indigo-600 to-violet-700'}`} />
+                                                )}
+                                                {dayEvents.length > 1 && (
+                                                    <span className={`text-[10px] font-extrabold tabular-nums ${today ? 'text-white/85' : 'text-neutral-500'}`}>
+                                                        {dayEvents.length}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
-                                )}
-                            </Motion.button>
-                        );
-                    })}
+                                </Motion.button>
+                            );
+                        })}
+                    </div>
                 </div>
             </Motion.div>
 
@@ -467,58 +501,71 @@ const CalendarPage = () => {
             <Motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="glass-card p-4 overflow-hidden"
+                className="glass-card p-4 overflow-hidden relative"
             >
-                <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-3">
-
-                        <div>
-                            <h3 className="text-lg font-extrabold text-neutral-700">Upcoming</h3>
-                            <p className="text-sm text-neutral-500">Next 7 days</p>
-                        </div>
-                    </div>
-                    <div className="text-sm text-neutral-400 font-medium">
-                        {upcomingEvents.length} {upcomingEvents.length === 1 ? 'event' : 'events'}
-                    </div>
+                <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+                    <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-gradient-to-br from-amber-200/35 via-white/20 to-pink-200/30 blur-3xl" />
+                    <div className="absolute -bottom-16 -left-14 w-56 h-56 rounded-full bg-gradient-to-br from-sky-100/35 via-white/20 to-violet-200/30 blur-3xl" />
                 </div>
 
-                {upcomingEvents.length === 0 ? (
-                    <div className="rounded-2xl bg-white/60 border border-white/50 p-4 text-center">
-                        <div className="text-3xl mb-2">📅</div>
-                        <p className="text-neutral-600 text-sm font-medium">No upcoming events</p>
-                        <p className="text-neutral-400 text-xs mt-1">Tap + to add a special date.</p>
+                <div className="relative z-10">
+                    <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-rose-100/80 via-white/70 to-amber-50/60 border border-white/70 shadow-soft flex items-center justify-center">
+                                <Calendar className="w-5 h-5 text-[#B85C6B]" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-extrabold text-neutral-700">Upcoming</h3>
+                                <p className="text-sm text-neutral-500">Next 7 days</p>
+                            </div>
+                        </div>
+                        <div className="px-2.5 py-1 rounded-full bg-white/70 border border-white/60 shadow-soft text-[11px] font-extrabold text-neutral-600 tabular-nums">
+                            {upcomingEvents.length} {upcomingEvents.length === 1 ? 'event' : 'events'}
+                        </div>
                     </div>
-                ) : (
-                    <div className="space-y-2">
-                        {upcomingEvents.map((event, index) => (
-                            (() => {
-                                const eventKey = getEventKey(event);
-                                const hasSavedPlan = plannedEventKeys.has(eventKey);
-                                return (
-                                    <EventCard
-                                        key={event.id}
-                                        event={event}
-                                        delay={index * 0.05}
-                                        onClick={() => setShowEventDetails([event])}
-                                        onPlanClick={(e) => {
-                                            e.stopPropagation();
-                                            // Check subscription before showing planning modal
-                                            const { allowed } = canUsePlanFeature();
-                                            if (!allowed) {
-                                                setShowPaywall(true);
-                                                return;
-                                            }
-                                            setShowPlanningModal({ event, eventKey });
-                                        }}
-                                        showPlanButton={!!partnerId}
-                                        hasSavedPlan={hasSavedPlan}
-                                        isGold={isGold}
-                                    />
-                                );
-                            })()
-                        ))}
-                    </div>
-                )}
+
+                    {upcomingEvents.length === 0 ? (
+                        <div className="rounded-3xl p-[1px] bg-gradient-to-br from-white/80 via-amber-100/40 to-rose-100/50">
+                            <div className="rounded-[23px] bg-white/65 border border-white/60 p-5 text-center">
+                                <div className="w-16 h-16 mx-auto rounded-3xl bg-gradient-to-br from-violet-100/70 to-pink-100/70 border border-white/70 shadow-soft flex items-center justify-center text-3xl">
+                                    📅
+                                </div>
+                                <p className="text-neutral-700 text-sm font-extrabold mt-3">No upcoming events</p>
+                                <p className="text-neutral-500 text-xs mt-1">Tap + to add a special date.</p>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="space-y-3">
+                            {upcomingEvents.map((event, index) => (
+                                (() => {
+                                    const eventKey = getEventKey(event);
+                                    const hasSavedPlan = plannedEventKeys.has(eventKey);
+                                    return (
+                                        <EventCard
+                                            key={event.id}
+                                            event={event}
+                                            delay={index * 0.05}
+                                            onClick={() => setShowEventDetails([event])}
+                                            onPlanClick={(e) => {
+                                                e.stopPropagation();
+                                                // Check subscription before showing planning modal
+                                                const { allowed } = canUsePlanFeature();
+                                                if (!allowed) {
+                                                    setShowPaywall(true);
+                                                    return;
+                                                }
+                                                setShowPlanningModal({ event, eventKey });
+                                            }}
+                                            showPlanButton={!!partnerId}
+                                            hasSavedPlan={hasSavedPlan}
+                                            isGold={isGold}
+                                        />
+                                    );
+                                })()
+                            ))}
+                        </div>
+                    )}
+                </div>
             </Motion.div>
 
             {/* Add Event Modal */}
@@ -609,13 +656,36 @@ const EventCard = ({ event, delay, onClick, onPlanClick, showPlanButton, hasSave
     const isToday = daysAway === 0;
     const isSoon = daysAway >= 0 && daysAway <= 7;
 
-    const accent = {
-        pink: 'from-pink-300/70 to-rose-300/30',
-        red: 'from-red-300/70 to-orange-300/30',
-        amber: 'from-amber-300/70 to-yellow-300/30',
-        violet: 'from-violet-300/70 to-purple-300/30',
-        blue: 'from-blue-300/70 to-cyan-300/30',
-    };
+    const monthLabel = eventDate.toLocaleDateString('en-US', { month: 'short' });
+    const weekdayLabel = eventDate.toLocaleDateString('en-US', { weekday: 'short' });
+    const dayNumber = eventDate.getDate();
+
+    const cardFrame = event.isSecret
+        ? 'from-indigo-200/65 via-white/35 to-violet-200/55'
+        : 'from-rose-200/70 via-white/40 to-amber-200/55';
+
+    const dateFrame = isToday
+        ? 'from-court-gold/70 via-rose-200/45 to-court-goldLight/55'
+        : event.isSecret
+            ? 'from-indigo-200/70 via-white/40 to-violet-200/60'
+            : 'from-rose-200/70 via-white/40 to-amber-200/60';
+
+    const planLabel = hasSavedPlan ? 'View my plan' : 'Help me plan';
+    const planBorder = isSoon
+        ? event.isSecret
+            ? 'from-indigo-300/55 via-court-goldLight/35 to-violet-300/55'
+            : 'from-rose-300/60 via-amber-300/45 to-pink-300/55'
+        : event.isSecret
+            ? 'from-indigo-200/55 via-white/40 to-violet-200/55'
+            : 'from-rose-200/60 via-white/40 to-amber-200/55';
+    const planGlow = isSoon
+        ? event.isSecret
+            ? 'from-indigo-200/35 via-amber-100/25 to-violet-200/35'
+            : 'from-rose-200/35 via-amber-100/25 to-pink-200/35'
+        : 'from-transparent via-transparent to-transparent';
+    const planFill = hasSavedPlan
+        ? 'from-white/80 via-amber-50/65 to-white/75'
+        : 'from-white/80 via-rose-50/55 to-amber-50/55';
 
     return (
         <Motion.div
@@ -624,68 +694,108 @@ const EventCard = ({ event, delay, onClick, onPlanClick, showPlanButton, hasSave
             transition={{ delay }}
             whileTap={{ scale: 0.995 }}
             onClick={onClick}
-            className="group relative w-full rounded-2xl border border-white/50 bg-white/70 backdrop-blur-xl shadow-soft hover:shadow-md transition-shadow cursor-pointer overflow-hidden"
+            className={`group relative w-full rounded-3xl p-[1px] bg-gradient-to-br ${cardFrame} shadow-soft hover:shadow-soft-lg transition-all duration-300 cursor-pointer overflow-hidden`}
         >
-            <div className={`absolute inset-y-0 left-0 w-1.5 bg-gradient-to-b ${accent[eventType.color] || accent.blue}`} />
-            <div className="absolute top-0 right-0 w-24 h-24 bg-white/30 rounded-full -translate-y-1/2 translate-x-1/2 blur-xl" />
+            <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-shimmer-gradient bg-[length:900px_100%] animate-shimmer"
+            />
 
-            <div className="relative z-10 p-3 pl-4">
-                <div className="flex items-start gap-3">
-                    <div className="w-11 h-11 rounded-2xl bg-white/70 border border-white/60 shadow-sm flex items-center justify-center text-2xl">
-                        {event.emoji}
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                            <h4 className="font-bold text-neutral-800 text-sm truncate">{event.title}</h4>
-                            {timingLabel && (
-                                <span
-                                    className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-extrabold ${isToday
-                                        ? 'bg-gradient-to-r from-amber-400 to-orange-400 text-white shadow-sm'
-                                        : 'bg-neutral-100 text-neutral-600'
-                                        }`}
-                                >
-                                    {timingLabel}
-                                </span>
-                            )}
+            <div className="relative rounded-[23px] bg-white/75 backdrop-blur-xl border border-white/60">
+                <div className="p-3">
+                    <div className="flex items-start gap-3">
+                        <div className={`relative w-14 shrink-0 rounded-2xl p-[1px] bg-gradient-to-br ${dateFrame} ${isToday ? 'shadow-glow-cream' : 'shadow-soft'}`}>
+                            <div className={`rounded-[15px] px-2.5 py-2 text-center ${isToday ? 'bg-gradient-to-br from-[#B85C6B] via-[#8B4049] to-[#722F37]' : 'bg-white/85'}`}>
+                                <div className={`text-[10px] font-extrabold tracking-wide uppercase ${isToday ? 'text-white/90' : 'text-neutral-500'}`}>
+                                    {monthLabel}
+                                </div>
+                                <div className={`text-xl font-black leading-none tabular-nums ${isToday ? 'text-white' : 'text-neutral-800'}`}>
+                                    {dayNumber}
+                                </div>
+                                <div className={`text-[10px] font-bold ${isToday ? 'text-white/80' : 'text-neutral-400'}`}>
+                                    {weekdayLabel}
+                                </div>
+                            </div>
                         </div>
 
-                        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-neutral-500">
-                            <span className="truncate">
-                                {eventDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                            </span>
-                            <span className="text-neutral-300">•</span>
-                            <span className="px-2 py-0.5 rounded-full bg-white/70 border border-white/50 text-[10px] font-bold text-neutral-600">
-                                {eventType.label}
-                            </span>
-                            <span className="text-neutral-300">•</span>
-                            {event.isSecret ? (
-                                <span className="px-2 py-0.5 rounded-full bg-[#1c1c84]/10 text-[#1c1c84] text-[10px] font-extrabold inline-flex items-center gap-1">
-                                    <Lock className="w-3 h-3" />
-                                    Secret
-                                </span>
-                            ) : (
-                                <span className="px-2 py-0.5 rounded-full bg-pink-100 text-pink-700 text-[10px] font-extrabold">
-                                    Shared
-                                </span>
-                            )}
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-start gap-3">
+                                <div className="w-11 h-11 rounded-2xl bg-white/80 border border-white/70 shadow-soft flex items-center justify-center text-2xl shrink-0">
+                                    {event.emoji}
+                                </div>
+
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        <h4 className="font-extrabold text-neutral-800 text-sm truncate">{event.title}</h4>
+                                        {timingLabel && (
+                                            <span
+                                                className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-extrabold ${isToday
+                                                    ? 'bg-white/20 text-white border border-white/30'
+                                                    : 'bg-white/70 border border-white/60 text-neutral-600'
+                                                    }`}
+                                            >
+                                                {timingLabel}
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-neutral-600">
+                                        <span className="px-2 py-0.5 rounded-full bg-white/70 border border-white/60 text-[10px] font-extrabold text-neutral-700">
+                                            {eventType.label}
+                                        </span>
+                                        {event.isSecret ? (
+                                            <span className="px-2 py-0.5 rounded-full bg-indigo-100/70 text-indigo-800 border border-indigo-200/50 text-[10px] font-extrabold inline-flex items-center gap-1">
+                                                <Lock className="w-3 h-3" />
+                                                Secret
+                                            </span>
+                                        ) : (
+                                            <span className="px-2 py-0.5 rounded-full bg-rose-100/80 text-rose-800 border border-rose-200/50 text-[10px] font-extrabold">
+                                                Shared
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="shrink-0 pt-1 text-neutral-300 group-hover:text-neutral-500 transition-colors">
+                            <ChevronRight className="w-5 h-5" />
                         </div>
                     </div>
                 </div>
 
                 {showPlanButton && (
-                    <div className="mt-3 flex">
+                    <div className="px-3 pb-3">
                         <Motion.button
-                            whileTap={{ scale: 0.97 }}
+                            whileHover={{ y: -1 }}
+                            whileTap={{ scale: 0.98 }}
                             onClick={onPlanClick}
-                            className={`w-full h-10 px-4 rounded-full text-xs font-bold flex items-center justify-center gap-2 transition-all ${isSoon
-                                ? 'text-white shadow-lg'
-                                : 'bg-white/70 text-court-brown border border-court-tan/50 shadow-soft hover:bg-white'
-                                }`}
-                            style={isSoon ? { background: 'linear-gradient(135deg, #B85C6B 0%, #8B4049 100%)' } : {}}
+                            aria-label={planLabel}
+                            className={`group/plan relative w-full rounded-full p-[1px] shadow-soft hover:shadow-soft-lg transition-all duration-300 ${hasSavedPlan ? 'ring-1 ring-amber-200/30' : ''}`}
                         >
-                            <Wand2 className="w-4 h-4" />
-                            <span>{hasSavedPlan ? 'View my plan' : 'Help me plan'}</span>
+                            <span aria-hidden="true" className={`absolute inset-0 rounded-full bg-gradient-to-r ${planBorder}`} />
+                            <span aria-hidden="true" className={`absolute -inset-2 rounded-full bg-gradient-to-r ${planGlow} blur-xl opacity-60 transition-opacity duration-300 ${isSoon ? 'group-hover/plan:opacity-85' : 'opacity-0'}`} />
+
+                            <span className={`relative z-10 flex items-center justify-between gap-3 w-full h-10 rounded-full px-3.5 bg-gradient-to-r ${planFill} border border-white/70 backdrop-blur-xl`}>
+                                <span className="flex items-center gap-2.5 min-w-0">
+                                    <span className={`grid place-items-center w-7 h-7 rounded-full border shadow-inner-soft ${hasSavedPlan
+                                        ? 'bg-amber-50/70 border-amber-200/60 text-amber-800'
+                                        : 'bg-rose-50/70 border-rose-200/60 text-rose-800'
+                                        }`}>
+                                        {hasSavedPlan ? <Check className="w-4 h-4" /> : <Wand2 className="w-4 h-4" />}
+                                    </span>
+                                    <span className="text-[12px] font-extrabold tracking-tight text-neutral-800 truncate">
+                                        {planLabel}
+                                    </span>
+                                </span>
+
+                                <span className={`text-[10px] font-extrabold px-2 py-1 rounded-full border shadow-soft tabular-nums ${event.isSecret
+                                    ? 'bg-indigo-50/60 text-indigo-800 border-indigo-200/50'
+                                    : 'bg-white/60 text-neutral-700 border-white/60'
+                                    }`}>
+                                    AI
+                                </span>
+                            </span>
                         </Motion.button>
                     </div>
                 )}
@@ -860,7 +970,7 @@ const AddEventModal = ({ selectedDate, onAdd, onClose }) => {
                         type="date"
                         value={date}
                         onChange={(e) => handleDateChange(e.target.value)}
-                        className={`w-102 max-w-102 bg-neutral-50 border-2 rounded-xl p-3 text-neutral-700 focus:ring-2 focus:outline-none text-sm ${dateError
+                        className={`w-full bg-neutral-50 border-2 rounded-xl p-3 text-neutral-700 focus:ring-2 focus:outline-none text-sm ${dateError
                             ? 'border-red-300 focus:ring-red-200 focus:border-red-300'
                             : 'border-neutral-100 focus:ring-violet-200 focus:border-violet-300'
                             }`}

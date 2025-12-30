@@ -697,33 +697,33 @@ const ProfilesPage = () => {
 
                         {/* Challenges Preview */}
                         {isXPEnabled && (
-                            <div className="glass-card p-4 space-y-4 relative overflow-hidden border border-violet-100/70">
+                            <div className="glass-card p-4 space-y-4 relative overflow-hidden border border-amber-100/70">
                                 <div className="absolute inset-0 pointer-events-none">
-                                    <div className="absolute -top-10 -right-8 h-28 w-28 rounded-full bg-violet-200/40 blur-2xl" />
-                                    <div className="absolute -bottom-12 -left-8 h-32 w-32 rounded-full bg-amber-200/40 blur-2xl" />
+                                    <div className="absolute -top-10 -right-8 h-28 w-28 rounded-full bg-amber-200/40 blur-2xl" />
+                                    <div className="absolute -bottom-12 -left-8 h-32 w-32 rounded-full bg-rose-200/30 blur-2xl" />
                                     <div
                                         className="absolute inset-0 opacity-30"
-                                        style={{ backgroundImage: 'linear-gradient(120deg, rgba(255,255,255,0.7) 0%, transparent 45%)' }}
+                                        style={{ backgroundImage: 'linear-gradient(130deg, rgba(255,255,255,0.7) 0%, transparent 55%)' }}
                                     />
                                 </div>
                                 <div className="relative space-y-4">
                                     <div className="flex items-start justify-between gap-3">
                                         <div className="flex items-center gap-3">
-                                            <div className="h-10 w-10 rounded-2xl bg-violet-100/80 border border-violet-200/60 flex items-center justify-center">
-                                                <Zap className="w-4 h-4 text-violet-600" />
+                                            <div className="h-10 w-10 rounded-2xl bg-amber-100/80 border border-amber-200/60 flex items-center justify-center">
+                                                <Gavel className="w-4 h-4 text-amber-700" />
                                             </div>
                                             <div>
                                                 <h3 className="font-display font-bold text-neutral-800">Challenges</h3>
-                                                <p className="text-xs text-neutral-500">Weekly invitations to grow together.</p>
+                                                <p className="text-xs text-neutral-500">Weekly quests to earn XP together.</p>
                                             </div>
                                         </div>
                                         {showChallenges && (
                                             <motion.button
                                                 whileTap={{ scale: 0.96 }}
                                                 onClick={() => navigate('/challenges')}
-                                                className="text-xs font-bold text-violet-600"
+                                                className="text-xs font-bold text-amber-700"
                                             >
-                                                View all
+                                                Open docket
                                             </motion.button>
                                         )}
                                     </div>
@@ -731,25 +731,25 @@ const ProfilesPage = () => {
                                     {showChallenges ? (
                                         <div className="rounded-2xl border border-white/80 bg-white/70 px-3 py-3 flex items-center justify-between gap-3">
                                             <div>
-                                                <div className="text-xs font-semibold text-neutral-700">Couple quests are live</div>
-                                                <div className="text-[11px] text-neutral-500">Start one and track progress together.</div>
+                                                <div className="text-xs font-semibold text-neutral-700">Challenges are live</div>
+                                                <div className="text-[11px] text-neutral-500">Pick a quest to start earning XP.</div>
                                             </div>
                                             <motion.button
                                                 whileTap={{ scale: 0.96 }}
                                                 onClick={() => navigate('/challenges')}
-                                                className="text-xs font-bold text-violet-600 bg-violet-100/70 px-3 py-1.5 rounded-full"
+                                                className="text-xs font-bold text-amber-700 bg-amber-100/70 px-3 py-1.5 rounded-full"
                                             >
-                                                Open
+                                                View
                                             </motion.button>
                                         </div>
                                     ) : (
-                                        <div className="rounded-2xl border border-dashed border-violet-200/70 bg-violet-50/70 px-3 py-3">
+                                        <div className="rounded-2xl border border-dashed border-amber-200/70 bg-amber-50/70 px-3 py-3">
                                             <div className="flex items-center justify-between gap-3">
                                                 <div>
-                                                    <div className="text-sm font-semibold text-violet-700">Locked until Level 5</div>
-                                                    <p className="text-xs text-violet-600 mt-1">{unlockHint}</p>
+                                                    <div className="text-sm font-semibold text-amber-700">Locked until Level 5</div>
+                                                    <p className="text-xs text-amber-600 mt-1">{unlockHint}</p>
                                                 </div>
-                                                <div className="text-xs font-bold text-violet-700 bg-white/70 px-2.5 py-1 rounded-full">
+                                                <div className="text-xs font-bold text-amber-700 bg-white/70 px-2.5 py-1 rounded-full">
                                                     Lv {level}
                                                 </div>
                                             </div>
