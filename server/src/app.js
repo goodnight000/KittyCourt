@@ -65,7 +65,7 @@ const casesRateLimiter = createRateLimiter({
 const app = express();
 const server = http.createServer(app);
 const PORT = process.env.PORT || 3000;
-const HOST = process.env.HOST || (process.env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1');
+const HOST = process.env.HOST || '0.0.0.0';
 
 app.set('trust proxy', 1);
 app.disable('x-powered-by');
