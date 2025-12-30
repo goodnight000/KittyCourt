@@ -26,6 +26,7 @@ const InsightBackdrop = () => (
 
 const InsightsPage = () => {
   const navigate = useNavigate()
+  const handleBack = () => navigate('/profile', { state: { tab: 'us' } })
   const { hasPartner } = useAuthStore()
   const { level, shouldShowInsights, fetchLevel, serverAvailable } = useLevelStore()
   const {
@@ -84,7 +85,7 @@ const InsightsPage = () => {
         <div className="relative">
           <motion.button
             whileTap={{ scale: 0.95 }}
-            onClick={() => navigate(-1)}
+            onClick={handleBack}
             className="flex items-center gap-2 text-sm font-semibold text-neutral-600"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -107,7 +108,7 @@ const InsightsPage = () => {
             </p>
             <motion.button
               whileTap={{ scale: 0.98 }}
-              onClick={() => navigate('/profile')}
+              onClick={handleBack}
               className="mt-5 w-full rounded-2xl bg-gradient-to-r from-[#C9A227] to-[#8B7019] py-3 text-sm font-bold text-white shadow-soft"
             >
               View your progress
@@ -125,7 +126,7 @@ const InsightsPage = () => {
         <header className="flex items-start gap-3">
           <motion.button
             whileTap={{ scale: 0.95 }}
-            onClick={() => navigate(-1)}
+            onClick={handleBack}
             className="rounded-2xl border border-white/80 bg-white/80 p-2 shadow-soft"
           >
             <ArrowLeft className="w-5 h-5 text-neutral-600" />

@@ -457,11 +457,6 @@ const CalendarPage = () => {
                                     <div
                                         className={`relative w-full h-full rounded-[18px] border border-white/70 backdrop-blur-xl flex flex-col items-center justify-center transition-all duration-200 ${innerClass} ${today ? 'shadow-soft-lg' : 'shadow-inner-soft'} ${!today && !hasEvents ? 'group-hover:bg-white/85' : ''}`}
                                     >
-                                        {hasSecretEvents && !today && (
-                                            <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-white/70 border border-white/60 flex items-center justify-center shadow-soft">
-                                                <Lock className="w-3 h-3 text-indigo-700" />
-                                            </div>
-                                        )}
 
                                         <span
                                             className={`text-sm font-black tabular-nums ${today

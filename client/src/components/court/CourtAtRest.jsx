@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Moon, History, Gavel } from 'lucide-react';
+import { Moon, History, Gavel, ChevronRight } from 'lucide-react';
 import JudgeSelection from './JudgeSelection';
 
 /**
@@ -64,7 +64,7 @@ const CourtAtRest = ({ onServe, navigate }) => {
     ];
 
     return (
-        <div className="relative h-[calc(100dvh-100px)] flex flex-col items-center justify-start px-4 py-20 overflow-hidden">
+        <div className="relative min-h-[calc(100dvh-100px)] flex flex-col items-center justify-start px-4 pt-20 pb-32 overflow-hidden">
             {/* Judge Selection Modal */}
             <JudgeSelection
                 isOpen={showJudgeSelection}
@@ -206,38 +206,57 @@ const CourtAtRest = ({ onServe, navigate }) => {
                     </p>
                 </motion.div>
 
-                {/* Action Buttons - Side by Side, tighter spacing */}
-                <div className="w-full mt-20">
-                    <div className="flex gap-3">
-                        {/* Primary CTA - Gold */}
+                {/* Action Buttons - Premium stack */}
+                <div className="w-full mt-16">
+                    <div className="space-y-3">
+                        {/* Primary CTA - New Case */}
                         <motion.button
-                            whileHover={{ scale: 1.02 }}
+                            whileHover={{ scale: 1.01 }}
                             whileTap={{ scale: 0.98 }}
                             onClick={() => setShowJudgeSelection(true)}
-                            style={{ background: 'linear-gradient(135deg, #B85C6B 0%, #8B4049 100%)' }}
-                            className="group relative flex-1 py-3 rounded-2xl font-bold text-white shadow-lg overflow-hidden
-                                bg-gradient-to-r from-court-gold via-court-goldLight to-court-gold"
+                            className="group relative w-full overflow-hidden rounded-[28px] border border-amber-200/70 bg-white/85 px-4 py-4 text-left shadow-soft-lg"
                         >
-                            <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/25 to-transparent
-                                group-hover:translate-x-full transition-transform duration-700" />
-                            <span className="relative flex items-center justify-center gap-2">
-                                <Gavel className="w-4 h-4" />
-                                New Case
-                            </span>
+                            <span className="absolute inset-x-6 top-0 h-0.5 bg-gradient-to-r from-transparent via-amber-200/80 to-transparent" />
+                            <span className="absolute -top-8 -right-6 h-16 w-16 rounded-full bg-amber-200/35 blur-2xl" />
+                            <div className="relative flex items-center gap-3">
+                                <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-amber-200/70 bg-amber-100/80">
+                                    <Gavel className="w-5 h-5 text-amber-700" />
+                                </div>
+                                <div className="flex-1">
+                                    <div className="text-[10px] font-semibold uppercase tracking-[0.3em] text-amber-500">
+                                        Summon the court
+                                    </div>
+                                    <div className="text-base font-bold text-court-brown">New Case</div>
+                                    <div className="text-xs text-court-brownLight">Pick a judge and tell us the story.</div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <div className="rounded-full border border-amber-200/70 bg-amber-100/70 px-3 py-1 text-xs font-bold text-amber-700">
+                                        Start
+                                    </div>
+                                    <ChevronRight className="w-5 h-5 text-amber-600" />
+                                </div>
+                            </div>
                         </motion.button>
 
-                        {/* Secondary - Blush tint */}
+                        {/* Secondary - Past Cases */}
                         <motion.button
                             whileHover={{ scale: 1.01 }}
                             whileTap={{ scale: 0.98 }}
                             onClick={() => navigate('/history')}
-                            className="flex-1 py-3 rounded-2xl font-medium text-court-brown
-                                bg-gradient-to-r from-blush-50 to-blush-100 border border-blush-200
-                                hover:from-blush-100 hover:to-blush-200 transition-all
-                                flex items-center justify-center gap-2 shadow-sm"
+                            className="w-full rounded-[24px] border border-white/80 bg-white/75 px-4 py-3 text-left shadow-soft"
                         >
-                            <History className="w-4 h-4 text-blush-500" />
-                            Past Cases
+                            <div className="flex items-center justify-between gap-3">
+                                <div className="flex items-center gap-2">
+                                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-rose-200/70 bg-rose-100/70">
+                                        <History className="w-4 h-4 text-rose-600" />
+                                    </div>
+                                    <div>
+                                        <div className="text-sm font-semibold text-court-brown">Past Cases</div>
+                                        <div className="text-xs text-court-brownLight">Review your verdict history</div>
+                                    </div>
+                                </div>
+                                <ChevronRight className="w-4 h-4 text-neutral-400" />
+                            </div>
                         </motion.button>
                     </div>
                 </div>

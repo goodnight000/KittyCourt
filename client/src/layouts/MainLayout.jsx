@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useLayoutEffect, useRef } from 'react';
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { Gavel, Home, Calendar, User, Cat } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -13,6 +13,7 @@ const MainLayout = () => {
     const { fetchState, myViewPhase, hasUnreadVerdict } = useCourtStore();
     const { user: authUser } = useAuthStore();
     const location = useLocation();
+    const mainRef = useRef(null);
 
     // Keep the court WebSocket alive across navigation so verdict/settlement updates
     // (and dock indicators) work even when the user isn't on the courtroom page.
@@ -39,6 +40,13 @@ const MainLayout = () => {
         return () => clearInterval(interval);
     }, [authUser?.id]);
 
+    useLayoutEffect(() => {
+        if (mainRef.current) {
+            mainRef.current.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+        }
+        window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    }, [location.key]);
+
     if (!currentUser) return (
         <div className="min-h-screen flex items-center justify-center px-6">
             <motion.div
@@ -59,7 +67,7 @@ const MainLayout = () => {
     return (
         <div className="min-h-screen min-h-[100dvh] flex flex-col font-sans">
             {/* Main Scrollable Content - with safe area for Dynamic Island/notch */}
-            <main className="flex-1 overflow-y-auto overscroll-contain safe-top">
+            <main ref={mainRef} className="flex-1 overflow-y-auto overscroll-contain safe-top">
                 <div className="px-4 py-5 pb-20 max-w-lg mx-auto">
                     <AnimatePresence mode="wait">
                         <motion.div

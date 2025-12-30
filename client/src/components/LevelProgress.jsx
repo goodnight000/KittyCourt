@@ -120,9 +120,9 @@ const LevelProgress = ({
                         </div>
                     </div>
                     <div className="rounded-2xl bg-white/80 border border-amber-100/70 px-3 py-2 text-center shadow-sm">
-                        <div className="text-[10px] uppercase tracking-[0.16em] text-neutral-500">XP</div>
+                        <div className="text-[10px] uppercase tracking-[0.16em] text-neutral-500">Next Level</div>
                         <div className="text-base font-display font-bold text-neutral-800">
-                            {currentXP.toLocaleString()}
+                            Level {level + 1}
                         </div>
                     </div>
                 </div>
@@ -145,15 +145,13 @@ const LevelProgress = ({
 
                 <div className="mt-4 grid grid-cols-2 gap-3">
                     <div className="rounded-2xl border border-white/80 bg-white/70 px-3 py-2 text-center">
-                        <div className="text-[10px] uppercase tracking-[0.16em] text-neutral-500">This Level</div>
-                        <div className="text-sm font-semibold text-neutral-800">
-                            {currentXP.toLocaleString()} / {xpForNextLevel.toLocaleString()}
-                        </div>
+                        <div className="text-[10px] uppercase tracking-[0.16em] text-neutral-500">Story Focus</div>
+                        <div className="text-sm font-semibold text-neutral-800">Small wins, daily</div>
                     </div>
                     <div className="rounded-2xl border border-white/80 bg-white/70 px-3 py-2 text-center">
                         <div className="text-[10px] uppercase tracking-[0.16em] text-neutral-500">Together</div>
                         <div className="text-sm font-semibold text-neutral-800">
-                            {xpForNextLevel > 0 ? 'Keep the streak alive' : 'Legendary bond'}
+                            {title}
                         </div>
                     </div>
                 </div>

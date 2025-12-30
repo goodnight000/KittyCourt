@@ -64,7 +64,7 @@ const HistoryPage = () => {
                 {/* Preview content */}
                 <div className="space-y-4">
                     <div className="glass-card p-8 text-center">
-                        <Scale className="w-12 h-12 mx-auto text-violet-400 mb-3" />
+                        <Scale className="w-12 h-12 mx-auto text-amber-500 mb-3" />
                         <h2 className="text-lg font-bold text-neutral-800">Trial History</h2>
                         <p className="text-sm text-neutral-500">Past verdicts from Judge Whiskers</p>
                     </div>
@@ -99,18 +99,23 @@ const HistoryPage = () => {
     };
 
     return (
-        <div className="space-y-5">
+        <div className="relative min-h-screen overflow-hidden pb-24">
+            <HistoryBackdrop />
+            <div className="relative space-y-6">
             {/* Header */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-start gap-3">
                 <motion.button
                     whileTap={{ scale: 0.95 }}
                     onClick={() => navigate(-1)}
-                    className="w-10 h-10 bg-white/80 rounded-xl flex items-center justify-center shadow-soft"
+                    className="rounded-2xl border border-white/80 bg-white/80 p-2 shadow-soft"
                 >
                     <ChevronLeft className="w-5 h-5 text-neutral-600" />
                 </motion.button>
                 <div>
-                    <h1 className="text-xl font-bold text-gradient">Trial History</h1>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-amber-600">
+                        Trial ledger
+                    </p>
+                    <h1 className="text-2xl font-display font-bold text-neutral-800">Trial History</h1>
                     <p className="text-neutral-500 text-sm">Past verdicts from Judge Whiskers</p>
                 </div>
             </div>
@@ -126,16 +131,16 @@ const HistoryPage = () => {
                         <motion.div
                             animate={{ y: [0, -5, 0] }}
                             transition={{ duration: 2, repeat: Infinity }}
-                            className="w-20 h-20 bg-gradient-to-br from-violet-100 to-pink-100 rounded-3xl flex items-center justify-center mx-auto mb-4"
+                            className="w-20 h-20 bg-gradient-to-br from-amber-100 to-rose-100 rounded-3xl flex items-center justify-center mx-auto mb-4"
                         >
-                            <Scale className="w-10 h-10 text-violet-400" />
+                            <Scale className="w-10 h-10 text-amber-600" />
                         </motion.div>
                         <h3 className="font-bold text-neutral-700 mb-2">No Cases Yet</h3>
                         <p className="text-neutral-500 text-sm mb-4">Your trial history will appear here once you file your first case.</p>
                         <motion.button
                             whileTap={{ scale: 0.98 }}
                             onClick={() => navigate('/courtroom')}
-                            className="btn-primary"
+                            className="rounded-2xl border border-amber-200/70 bg-white/90 px-5 py-3 text-sm font-bold text-amber-700 shadow-soft"
                         >
                             File First Case
                         </motion.button>
@@ -164,8 +169,12 @@ const HistoryPage = () => {
                                 transition={{ delay: index * 0.05 }}
                                 whileTap={{ scale: 0.98 }}
                                 onClick={() => navigate(`/history/${caseItem.id}`)}
-                                className="w-full glass-card overflow-hidden text-left p-4 space-y-3"
+                                className="w-full glass-card relative overflow-hidden text-left p-4 space-y-3"
                             >
+                                <div className="absolute inset-0 pointer-events-none">
+                                    <div className="absolute -top-8 -right-6 h-16 w-16 rounded-full bg-amber-200/30 blur-2xl" />
+                                </div>
+                                <div className="absolute inset-x-6 top-0 h-0.5 bg-gradient-to-r from-transparent via-amber-200/70 to-transparent" />
                                 <div className="flex items-start justify-between gap-3">
                                     <div className="flex-1 min-w-0">
                                         <h3 className="font-bold text-neutral-800 text-sm leading-snug line-clamp-2">
@@ -190,7 +199,7 @@ const HistoryPage = () => {
                                         </span>
                                     )}
                                     {hasAddendums && (
-                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-violet-100 text-violet-700">
+                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 text-amber-700 border border-amber-200/70">
                                             <FileText className="w-3 h-3" />
                                             {verdictCount - 1} Addendum{verdictCount > 2 ? 's' : ''}
                                         </span>
@@ -198,7 +207,7 @@ const HistoryPage = () => {
                                 </div>
 
                                 <div className="rounded-2xl border border-green-200/70 bg-green-50/70 p-3 space-y-1">
-                                    <div className="text-[10px] uppercase font-bold text-green-700 tracking-wide">
+                                    <div className="text-[10px] uppercase font-bold text-green-700 tracking-[0.2em]">
                                         Resolution chosen
                                     </div>
                                     <div className="text-sm font-bold text-court-brown">
@@ -225,8 +234,24 @@ const HistoryPage = () => {
                     })
                 )}
             </div>
+            </div>
         </div>
     );
 };
+
+const HistoryBackdrop = () => (
+    <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute -top-24 -right-16 h-56 w-56 rounded-full bg-amber-200/30 blur-3xl" />
+        <div className="absolute top-16 -left-20 h-60 w-60 rounded-full bg-rose-200/25 blur-3xl" />
+        <div className="absolute bottom-6 right-8 h-64 w-64 rounded-full bg-amber-100/40 blur-3xl" />
+        <div
+            className="absolute inset-0 opacity-45"
+            style={{
+                backgroundImage:
+                    'radial-gradient(circle at 18% 20%, rgba(255,255,255,0.75) 0%, transparent 55%), radial-gradient(circle at 80% 10%, rgba(255,235,210,0.8) 0%, transparent 60%)'
+            }}
+        />
+    </div>
+);
 
 export default HistoryPage;

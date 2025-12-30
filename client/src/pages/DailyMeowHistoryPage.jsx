@@ -206,24 +206,29 @@ const DailyMeowHistoryPage = () => {
             feature="Question Archives"
             description="Connect with your partner to unlock your shared question history."
         >
-            <div className="space-y-5">
+            <div className="relative min-h-screen overflow-hidden pb-24">
+            <QuestionBackdrop />
+            <div className="relative space-y-6">
             {/* Header */}
             <Motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
 
             >
-                <div className="flex items-center gap-3">
+                <div className="flex items-start gap-3">
                     <Motion.button
                         whileTap={{ scale: 0.95 }}
                         onClick={() => navigate(-1)}
-                        className="w-10 h-10 bg-white/80 rounded-xl flex items-center justify-center shadow-soft"
+                        className="rounded-2xl border border-white/80 bg-white/80 p-2 shadow-soft"
                     >
                         <ChevronLeft className="w-5 h-5 text-neutral-600" />
                     </Motion.button>
                     <div>
-                        <h1 className="text-xl font-bold text-gradient">Question Archives</h1>
-                        <p className="text-neutral-500 text-sm">The Deepest of memories and secrets shared together</p>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-amber-600">
+                            Question archives
+                        </p>
+                        <h1 className="text-2xl font-display font-bold text-neutral-800">Shared Question Library</h1>
+                        <p className="text-neutral-500 text-sm">The deepest memories and secrets shared together</p>
                     </div>
                 </div>
             </Motion.div>
@@ -233,9 +238,12 @@ const DailyMeowHistoryPage = () => {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className=""
             >
-                <div className="glass-card p-4 flex items-center justify-between gap-3">
+                <div className="glass-card relative overflow-hidden p-4 flex items-center justify-between gap-3">
+                    <div className="absolute inset-0 pointer-events-none">
+                        <div className="absolute -top-8 -right-6 h-20 w-20 rounded-full bg-amber-200/30 blur-2xl" />
+                        <div className="absolute -bottom-10 -left-8 h-24 w-24 rounded-full bg-rose-200/25 blur-2xl" />
+                    </div>
                     <div className="min-w-0">
                         <div className="flex items-center gap-2">
                             <BookOpen className="w-4 h-4 text-amber-600" />
@@ -244,10 +252,10 @@ const DailyMeowHistoryPage = () => {
                         <p className="text-xs text-neutral-500 mt-0.5">A tiny ritual you share together</p>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
-                        <div className="px-3 py-1.5 rounded-full bg-white/70 border border-neutral-200 text-[11px] font-bold text-neutral-700">
+                        <div className="px-3 py-1.5 rounded-full bg-white/80 border border-white/80 text-[11px] font-bold text-neutral-700">
                             {totalAnswered} answered
                         </div>
-                        <div className="px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-50 to-pink-50 border border-amber-200/50 text-[11px] font-bold text-amber-700">
+                        <div className="px-3 py-1.5 rounded-full bg-amber-100/70 border border-amber-200/70 text-[11px] font-bold text-amber-700">
                             {streak} day streak
                         </div>
                     </div>
@@ -268,7 +276,7 @@ const DailyMeowHistoryPage = () => {
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         placeholder="Search questions or answers..."
-                        className="w-full pl-11 pr-4 py-3 bg-white rounded-2xl border border-neutral-200 text-sm focus:border-court-gold focus:ring-2 focus:ring-court-gold/20 outline-none"
+                        className="w-full pl-11 pr-4 py-3 bg-white/85 rounded-2xl border border-white/80 text-sm focus:border-amber-300 focus:ring-2 focus:ring-amber-200/40 outline-none shadow-inner-soft"
                     />
                 </div>
             </Motion.div>
@@ -280,30 +288,34 @@ const DailyMeowHistoryPage = () => {
                         <Motion.button
                             whileTap={{ scale: 0.98 }}
                             onClick={() => setSelectedEntry(null)}
-                            className="w-full py-3 bg-white/80 text-neutral-700 font-bold rounded-2xl shadow-sm border border-neutral-200"
+                            className="w-full py-3 bg-white/85 text-neutral-700 font-bold rounded-2xl shadow-soft border border-white/80"
                         >
                             Back to Archives
                         </Motion.button>
 
-                        <div className="glass-card overflow-hidden">
-                            <div className="p-5 text-center border-b border-white/50">
-                                <h1 className="text-lg font-bold text-neutral-800 tracking-tight mb-2">Daily Question</h1>
+                        <div className="glass-card relative overflow-hidden">
+                            <div className="absolute inset-0 pointer-events-none">
+                                <div className="absolute -top-10 -right-8 h-24 w-24 rounded-full bg-amber-200/30 blur-2xl" />
+                                <div className="absolute -bottom-12 -left-10 h-28 w-28 rounded-full bg-rose-200/25 blur-3xl" />
+                            </div>
+                            <div className="relative p-5 text-center border-b border-white/50">
+                                <h1 className="text-lg font-display font-bold text-neutral-800 tracking-tight mb-2">Daily Question</h1>
                                 <div className="flex items-center justify-center gap-2 mb-3">
                                     {selectedEntry.category && (
-                                        <span className="inline-flex items-center px-3 py-1 bg-white/70 rounded-full text-xs font-bold text-neutral-700 shadow-sm">
+                                        <span className="inline-flex items-center px-3 py-1 bg-white/80 rounded-full text-xs font-bold text-neutral-700 shadow-sm">
                                             {selectedEntry.category}
                                         </span>
                                     )}
-                                    <span className="inline-flex items-center px-3 py-1 bg-white/70 rounded-full text-xs font-bold text-neutral-700 shadow-sm">
+                                    <span className="inline-flex items-center px-3 py-1 bg-white/80 rounded-full text-xs font-bold text-neutral-700 shadow-sm">
                                         {formatFullDate(selectedEntry.assigned_date)}
                                     </span>
                                 </div>
                                 <h2 className="text-xl font-bold text-neutral-800 leading-relaxed">{selectedEntry.question}</h2>
                             </div>
 
-                            <div className="p-5 space-y-4">
+                            <div className="relative p-5 space-y-4">
                                 <div className="grid grid-cols-2 gap-3">
-                                    <div className="bg-white/70 rounded-2xl border border-white p-3 shadow-sm">
+                                    <div className="bg-white/80 rounded-2xl border border-white/80 p-3 shadow-sm">
                                         <div className="text-[11px] font-bold text-neutral-600 mb-2">{myDisplayName} felt</div>
                                         <div className="flex items-center gap-1.5 flex-wrap">
                                             {getMoodList(selectedEntry.my_answer).map(id => (
@@ -311,7 +323,7 @@ const DailyMeowHistoryPage = () => {
                                             ))}
                                         </div>
                                     </div>
-                                    <div className="bg-white/70 rounded-2xl border border-white p-3 shadow-sm">
+                                    <div className="bg-white/80 rounded-2xl border border-white/80 p-3 shadow-sm">
                                         <div className="text-[11px] font-bold text-neutral-600 mb-2">{partnerDisplayName} felt</div>
                                         <div className="flex items-center gap-1.5 flex-wrap">
                                             {getMoodList(selectedEntry.partner_answer).map(id => (
@@ -321,16 +333,16 @@ const DailyMeowHistoryPage = () => {
                                     </div>
                                 </div>
 
-                                <div className="bg-white/70 rounded-2xl p-4 border border-white shadow-sm">
+                                <div className="bg-white/80 rounded-2xl p-4 border border-white/80 shadow-sm">
                                     <div className="flex items-center justify-between mb-2">
                                         <span className="text-sm font-bold text-amber-700">{myDisplayName}'s answer</span>
                                     </div>
                                     <p className="text-neutral-700 leading-relaxed">{selectedEntry.my_answer?.answer}</p>
                                 </div>
 
-                                <div className="bg-white/70 rounded-2xl p-4 border border-pink-200 shadow-sm">
+                                <div className="bg-white/80 rounded-2xl p-4 border border-rose-200/70 shadow-sm">
                                     <div className="flex items-center justify-between mb-2">
-                                        <span className="text-sm font-bold text-pink-700">{partnerDisplayName}'s answer</span>
+                                        <span className="text-sm font-bold text-rose-700">{partnerDisplayName}'s answer</span>
                                     </div>
                                     <p className="text-neutral-700 leading-relaxed">{selectedEntry.partner_answer?.answer}</p>
                                 </div>
@@ -342,7 +354,7 @@ const DailyMeowHistoryPage = () => {
                         <Motion.div
                             animate={{ rotate: 360 }}
                             transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                            className="w-8 h-8 border-2 border-violet-400 border-t-transparent rounded-full"
+                            className="w-8 h-8 border-2 border-amber-400 border-t-transparent rounded-full"
                         />
                     </div>
                 ) : filteredHistory.length === 0 ? (
@@ -370,11 +382,11 @@ const DailyMeowHistoryPage = () => {
                                 transition={{ delay: groupIndex * 0.08 }}
                             >
                                 <div className="flex items-center gap-3 mb-3">
-                                    <div className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-full shadow-sm border border-neutral-100">
-                                        <Calendar className="w-4 h-4 text-violet-500" />
+                                    <div className="flex items-center gap-2 px-3 py-1.5 bg-white/80 rounded-full shadow-soft border border-white/80">
+                                        <Calendar className="w-4 h-4 text-amber-600" />
                                         <span className="text-sm font-bold text-neutral-700">{monthYear}</span>
                                     </div>
-                                    <div className="flex-1 h-px bg-gradient-to-r from-neutral-200 to-transparent" />
+                                    <div className="flex-1 h-px bg-gradient-to-r from-amber-100/80 to-transparent" />
                                 </div>
 
                                 <div className="space-y-2">
@@ -386,15 +398,19 @@ const DailyMeowHistoryPage = () => {
                                             transition={{ delay: index * 0.02 }}
                                             whileTap={{ scale: 0.98 }}
                                             onClick={() => setSelectedEntry(item)}
-                                            className="w-full glass-card p-4 text-left"
+                                            className="w-full glass-card relative overflow-hidden p-4 text-left"
                                         >
+                                            <div className="absolute inset-0 pointer-events-none">
+                                                <div className="absolute -top-8 -right-6 h-16 w-16 rounded-full bg-amber-200/30 blur-2xl" />
+                                            </div>
+                                            <div className="absolute inset-x-6 top-0 h-0.5 bg-gradient-to-r from-transparent via-amber-200/70 to-transparent" />
                                             <p className="text-sm font-bold text-neutral-800 line-clamp-2 leading-snug">
                                                 {item.question}
                                             </p>
                                             <div className="flex items-center justify-between gap-3 mt-2">
                                                 <div className="flex flex-wrap items-center gap-1.5">
                                                     {item.category && (
-                                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-neutral-100 text-neutral-600">
+                                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-100/70 text-amber-700 border border-amber-200/70">
                                                             {item.category}
                                                         </span>
                                                     )}
@@ -412,8 +428,24 @@ const DailyMeowHistoryPage = () => {
                 )}
             </div>
             </div>
+            </div>
         </RequirePartner>
     );
 };
+
+const QuestionBackdrop = () => (
+    <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute -top-24 -right-16 h-56 w-56 rounded-full bg-amber-200/30 blur-3xl" />
+        <div className="absolute top-16 -left-20 h-60 w-60 rounded-full bg-rose-200/25 blur-3xl" />
+        <div className="absolute bottom-6 right-8 h-64 w-64 rounded-full bg-amber-100/40 blur-3xl" />
+        <div
+            className="absolute inset-0 opacity-45"
+            style={{
+                backgroundImage:
+                    'radial-gradient(circle at 18% 20%, rgba(255,255,255,0.75) 0%, transparent 55%), radial-gradient(circle at 80% 10%, rgba(255,235,210,0.8) 0%, transparent 60%)'
+            }}
+        />
+    </div>
+);
 
 export default DailyMeowHistoryPage;

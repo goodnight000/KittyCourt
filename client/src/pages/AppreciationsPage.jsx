@@ -28,7 +28,7 @@ const AppreciationsPage = () => {
                 {/* Preview content */}
                 <div className="space-y-4">
                     <div className="glass-card p-5 text-center">
-                        <Heart className="w-12 h-12 mx-auto text-pink-500 mb-3" />
+                        <Heart className="w-12 h-12 mx-auto text-rose-500 mb-3" />
                         <h2 className="text-lg font-bold text-neutral-800">Appreciations</h2>
                         <p className="text-sm text-neutral-500">Send love to your partner</p>
                     </div>
@@ -96,18 +96,23 @@ const AppreciationsPage = () => {
     };
 
     return (
-        <div className="space-y-5">
+        <div className="relative min-h-screen overflow-hidden pb-24">
+            <AppreciationBackdrop />
+            <div className="relative space-y-6">
             {/* Header */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-start gap-3">
                 <motion.button
                     whileTap={{ scale: 0.95 }}
                     onClick={() => navigate(-1)}
-                    className="w-10 h-10 bg-white/80 rounded-xl flex items-center justify-center shadow-soft"
+                    className="rounded-2xl border border-white/80 bg-white/80 p-2 shadow-soft"
                 >
                     <ChevronLeft className="w-5 h-5 text-neutral-600" />
                 </motion.button>
                 <div>
-                    <h1 className="text-xl font-bold text-gradient">Appreciation Log</h1>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-amber-600">
+                        Appreciation log
+                    </p>
+                    <h1 className="text-2xl font-display font-bold text-neutral-800">Your Love Ledger</h1>
                     <p className="text-neutral-500 text-sm">Things {partnerName} appreciates about you 💕</p>
                 </div>
             </div>
@@ -116,15 +121,19 @@ const AppreciationsPage = () => {
             <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="glass-card p-5 bg-gradient-to-br from-violet-50/80 to-pink-50/60"
+                className="glass-card relative overflow-hidden p-5"
             >
+                <div className="absolute inset-0 pointer-events-none">
+                    <div className="absolute -top-10 -right-8 h-24 w-24 rounded-full bg-rose-200/35 blur-2xl" />
+                    <div className="absolute -bottom-12 -left-8 h-28 w-28 rounded-full bg-amber-200/35 blur-3xl" />
+                </div>
                 <div className="flex items-center justify-between">
                     <div>
-                        <p className="text-xs font-bold uppercase tracking-wider text-neutral-500 mb-1">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-neutral-400 mb-1">
                             Total Appreciations
                         </p>
                         <div className="flex items-baseline gap-2">
-                            <span className="text-4xl font-bold text-neutral-800">{appreciations.length}</span>
+                            <span className="text-4xl font-display font-bold text-neutral-800">{appreciations.length}</span>
                             <span className="text-neutral-500 text-lg">💕</span>
                         </div>
                         <p className="text-xs text-neutral-500 mt-1">from {partnerName}</p>
@@ -150,9 +159,9 @@ const AppreciationsPage = () => {
                         <motion.div
                             animate={{ y: [0, -5, 0] }}
                             transition={{ duration: 2, repeat: Infinity }}
-                            className="w-20 h-20 bg-gradient-to-br from-violet-100 to-pink-100 rounded-3xl flex items-center justify-center mx-auto mb-4"
+                            className="w-20 h-20 bg-gradient-to-br from-rose-100 to-amber-100 rounded-3xl flex items-center justify-center mx-auto mb-4"
                         >
-                            <Heart className="w-10 h-10 text-pink-400" />
+                            <Heart className="w-10 h-10 text-rose-400" />
                         </motion.div>
                         <h3 className="font-bold text-neutral-700 mb-2">No Appreciations Yet</h3>
                         <p className="text-neutral-500 text-sm mb-1">
@@ -172,11 +181,11 @@ const AppreciationsPage = () => {
                                 transition={{ delay: groupIndex * 0.05 }}
                                 className="flex items-center gap-2 px-1"
                             >
-                                <Calendar className="w-3.5 h-3.5 text-violet-400" />
-                                <span className="text-xs font-bold text-violet-600 uppercase tracking-wider">
+                                <Calendar className="w-3.5 h-3.5 text-amber-500" />
+                                <span className="text-[11px] font-semibold text-amber-700 uppercase tracking-[0.3em]">
                                     {formatGroupDate(dateKey)}
                                 </span>
-                                <div className="flex-1 h-px bg-violet-100" />
+                                <div className="flex-1 h-px bg-amber-100/80" />
                             </motion.div>
 
                             {/* Appreciations for this date */}
@@ -187,12 +196,15 @@ const AppreciationsPage = () => {
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: (groupIndex * 0.05) + (index * 0.03) }}
-                                        className="glass-card p-4 overflow-hidden"
+                                        className="glass-card relative overflow-hidden p-4"
                                     >
+                                        <div className="absolute inset-0 pointer-events-none">
+                                            <div className="absolute -top-8 -right-6 h-16 w-16 rounded-full bg-rose-200/30 blur-2xl" />
+                                        </div>
                                         <div className="flex items-start gap-3">
                                             {/* Heart Icon */}
-                                            <div className="w-10 h-10 bg-gradient-to-br from-violet-100 to-pink-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                                                <Heart className="w-5 h-5 text-pink-500 fill-pink-500" />
+                                            <div className="w-10 h-10 bg-rose-100/80 border border-rose-200/70 rounded-2xl flex items-center justify-center flex-shrink-0">
+                                                <Heart className="w-5 h-5 text-rose-500 fill-rose-500" />
                                             </div>
                                             
                                             <div className="flex-1 min-w-0">
@@ -206,7 +218,7 @@ const AppreciationsPage = () => {
                                                     <span className="text-xs text-neutral-400">
                                                         {formatDate(appreciation.createdAt)}
                                                     </span>
-                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50 text-amber-600 rounded-full text-[10px] font-bold">
+                                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-amber-100/70 text-amber-700 rounded-full text-[10px] font-bold border border-amber-200/70">
                                                         <Sparkles className="w-3 h-3" />
                                                         +{appreciation.kibbleAmount} kibble
                                                     </span>
@@ -220,8 +232,24 @@ const AppreciationsPage = () => {
                     ))
                 )}
             </div>
+            </div>
         </div>
     );
 };
+
+const AppreciationBackdrop = () => (
+    <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute -top-24 -right-16 h-56 w-56 rounded-full bg-amber-200/30 blur-3xl" />
+        <div className="absolute top-16 -left-20 h-60 w-60 rounded-full bg-rose-200/25 blur-3xl" />
+        <div className="absolute bottom-6 right-8 h-64 w-64 rounded-full bg-amber-100/40 blur-3xl" />
+        <div
+            className="absolute inset-0 opacity-45"
+            style={{
+                backgroundImage:
+                    'radial-gradient(circle at 18% 20%, rgba(255,255,255,0.75) 0%, transparent 55%), radial-gradient(circle at 80% 10%, rgba(255,235,210,0.8) 0%, transparent 60%)'
+            }}
+        />
+    </div>
+);
 
 export default AppreciationsPage;

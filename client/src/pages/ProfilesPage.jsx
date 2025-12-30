@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
     User, Heart, Calendar, Star, Settings, ChevronRight,
     Edit3, Check, X, Gift, Scale, Clock,
@@ -13,6 +13,7 @@ import useSubscriptionStore from '../store/useSubscriptionStore';
 import useLevelStore from '../store/useLevelStore';
 import useMemoryStore from '../store/useMemoryStore';
 import useInsightsStore from '../store/useInsightsStore';
+import useChallengeStore from '../store/useChallengeStore';
 import { validateBirthdayDate } from '../utils/helpers';
 import Paywall from '../components/Paywall';
 import ProfilePicture from '../components/ProfilePicture';
@@ -31,12 +32,14 @@ const LOVE_LANGUAGES = [
 
 const ProfilesPage = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const { currentUser, users, caseHistory, appreciations, fetchAppreciations } = useAppStore();
     const { profile, partner: connectedPartner, hasPartner, signOut, refreshProfile, user: authUser } = useAuthStore();
     const { isGold, usage, limits, getUsageDisplay, purchaseGold, restorePurchases, isLoading: subLoading } = useSubscriptionStore();
     const { level, currentXP, xpForNextLevel, title, fetchLevel, shouldShowChallenges, shouldShowInsights, serverAvailable } = useLevelStore();
     const { memories, deletedMemories, fetchMemories, serverAvailable: memoriesAvailable } = useMemoryStore();
     const { insights, consent, fetchInsights, updateConsent, serverAvailable: insightsAvailable } = useInsightsStore();
+    const { active: activeChallenges, available: availableChallenges, isLoading: challengesLoading, fetchChallenges } = useChallengeStore();
     const latestInsight = insights?.[0] || null;
     const selfConsent = consent ? !!consent.selfConsent : true;
     const partnerConsent = consent ? !!consent.partnerConsent : true;
@@ -47,6 +50,9 @@ const ProfilesPage = () => {
     const partnerFromUsers = users?.find(u => u.id !== currentUser?.id);
     const isXPEnabled = import.meta.env.VITE_XP_SYSTEM_ENABLED === 'true';
     const unlockHint = 'Earn XP together by answering Daily Meow, sending appreciations, and resolving cases.';
+    const activeChallengeCount = activeChallenges?.length || 0;
+    const availableChallengeCount = availableChallenges?.length || 0;
+    const featuredChallenge = activeChallenges?.[0];
 
     const [showEditModal, setShowEditModal] = useState(false);
     const [activeTab, setActiveTab] = useState('me'); // 'me' or 'us'
@@ -91,6 +97,17 @@ const ProfilesPage = () => {
             anniversaryDate: profile?.anniversary_date || '',
         });
     }, [profile]);
+
+    useEffect(() => {
+        if (location.state?.tab === 'us' || location.state?.tab === 'me') {
+            setActiveTab(location.state.tab);
+        }
+    }, [location.state?.tab]);
+
+    useEffect(() => {
+        if (!hasPartner || !showChallenges) return;
+        fetchChallenges();
+    }, [fetchChallenges, hasPartner, showChallenges]);
 
     const saveProfile = async (newData) => {
         console.log('[ProfilesPage] saveProfile called with:', newData);
@@ -463,7 +480,7 @@ const ProfilesPage = () => {
                                         </div>
                                         <div className="flex flex-col items-end gap-1">
                                             <div className="rounded-full border border-amber-200/70 bg-amber-100/70 px-3 py-1 text-xs font-bold text-amber-700">
-                                                $8.88/mo
+                                                $7.50/mo
                                             </div>
                                             <div className="text-[10px] text-neutral-400">Tap to view</div>
                                         </div>
@@ -792,25 +809,55 @@ const ProfilesPage = () => {
                                                 onClick={() => navigate('/challenges')}
                                                 className="text-xs font-bold text-amber-700 rounded-full border border-amber-200/70 bg-amber-100/70 px-3 py-1"
                                             >
-                                                Open docket
+                                                View docket
                                             </motion.button>
                                         )}
                                     </div>
 
                                     {showChallenges ? (
-                                        <div className="rounded-2xl border border-white/80 bg-white/80 px-3 py-3 flex items-center justify-between gap-3">
-                                            <div>
-                                                <div className="text-xs font-semibold text-neutral-700">Challenges are live</div>
-                                                <div className="text-[11px] text-neutral-500">Pick a quest to start earning XP.</div>
-                                            </div>
-                                            <motion.button
-                                                whileTap={{ scale: 0.96 }}
-                                                onClick={() => navigate('/challenges')}
-                                                className="text-xs font-bold text-amber-700 bg-amber-100/70 px-3 py-1.5 rounded-full"
-                                            >
-                                                View
-                                            </motion.button>
-                                        </div>
+                                        <>
+                                            {challengesLoading && (
+                                                <div className="rounded-2xl border border-white/80 bg-white/80 px-3 py-3 text-xs text-neutral-500">
+                                                    Loading the docket...
+                                                </div>
+                                            )}
+
+                                            {!challengesLoading && activeChallengeCount > 0 && (
+                                                <div className="rounded-2xl border border-white/80 bg-white/80 px-3 py-3">
+                                                    <div className="flex items-center justify-between gap-3">
+                                                        <div>
+                                                            <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-amber-600">
+                                                                Active now
+                                                            </div>
+                                                            <div className="text-sm font-semibold text-neutral-700">
+                                                                {featuredChallenge?.title || featuredChallenge?.name || 'Challenge in progress'}
+                                                            </div>
+                                                            <div className="text-[11px] text-neutral-500">
+                                                                {activeChallengeCount} active / {availableChallengeCount} ready
+                                                            </div>
+                                                        </div>
+                                                        <div className="text-[11px] font-bold text-amber-700 bg-amber-100/70 px-2.5 py-1 rounded-full">
+                                                            In progress
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {!challengesLoading && activeChallengeCount === 0 && availableChallengeCount > 0 && (
+                                                <div className="rounded-2xl border border-white/80 bg-white/80 px-3 py-3 space-y-2">
+                                                    <div className="text-xs font-semibold text-neutral-700">No active challenges yet</div>
+                                                    <div className="text-[11px] text-neutral-500">
+                                                        {availableChallengeCount} quest{availableChallengeCount === 1 ? '' : 's'} ready to start.
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {!challengesLoading && activeChallengeCount === 0 && availableChallengeCount === 0 && (
+                                                <div className="rounded-2xl border border-white/80 bg-white/80 px-3 py-3 text-xs text-neutral-500">
+                                                    No challenges active right now. Check back soon.
+                                                </div>
+                                            )}
+                                        </>
                                     ) : (
                                         <div className="rounded-2xl border border-dashed border-amber-200/70 bg-amber-50/70 px-3 py-3">
                                             <div className="flex items-center justify-between gap-3">
@@ -830,10 +877,10 @@ const ProfilesPage = () => {
 
                         {/* AI Insights Preview */}
                         {isXPEnabled && (
-                            <div className="glass-card p-4 space-y-4 relative overflow-hidden border border-amber-200/70">
+                            <div className="glass-card p-4 space-y-4 relative overflow-hidden border border-sky-200/70">
                                 <div className="absolute inset-0 pointer-events-none">
-                                    <div className="absolute -top-10 -right-8 h-28 w-28 rounded-full bg-amber-200/35 blur-2xl" />
-                                    <div className="absolute -bottom-12 -left-8 h-32 w-32 rounded-full bg-rose-200/30 blur-2xl" />
+                                    <div className="absolute -top-10 -right-8 h-28 w-28 rounded-full bg-sky-200/35 blur-2xl" />
+                                    <div className="absolute -bottom-12 -left-8 h-32 w-32 rounded-full bg-teal-200/30 blur-2xl" />
                                     <div
                                         className="absolute inset-0 opacity-30"
                                         style={{ backgroundImage: 'linear-gradient(150deg, rgba(255,255,255,0.7) 0%, transparent 55%)' }}
@@ -842,8 +889,8 @@ const ProfilesPage = () => {
                                 <div className="relative space-y-4">
                                     <div className="flex items-start justify-between gap-3">
                                         <div className="flex items-center gap-3">
-                                            <div className="h-10 w-10 rounded-2xl bg-amber-100/80 border border-amber-200/60 flex items-center justify-center">
-                                                <Sparkles className="w-4 h-4 text-amber-600" />
+                                            <div className="h-10 w-10 rounded-2xl bg-sky-100/80 border border-sky-200/60 flex items-center justify-center">
+                                                <Sparkles className="w-4 h-4 text-sky-600" />
                                             </div>
                                             <div>
                                                 <h3 className="font-display font-bold text-neutral-800">AI Insights</h3>
@@ -855,7 +902,7 @@ const ProfilesPage = () => {
                                                 <motion.button
                                                     whileTap={{ scale: 0.96 }}
                                                     onClick={() => navigate('/insights')}
-                                                    className="text-xs font-bold text-amber-700 rounded-full border border-amber-200/70 bg-amber-100/70 px-3 py-1"
+                                                    className="text-xs font-bold text-sky-700 rounded-full border border-sky-200/70 bg-sky-100/70 px-3 py-1"
                                                 >
                                                     View all
                                                 </motion.button>
@@ -863,7 +910,7 @@ const ProfilesPage = () => {
                                             <motion.button
                                                 whileTap={{ scale: 0.96 }}
                                                 onClick={() => updateConsent(!selfConsent)}
-                                                className="text-xs font-bold text-amber-700 bg-amber-100/70 px-2.5 py-1 rounded-full"
+                                                className="text-xs font-bold text-sky-700 bg-sky-100/70 px-2.5 py-1 rounded-full"
                                             >
                                                 {selfConsent ? 'Opt out' : 'Turn on'}
                                             </motion.button>
@@ -871,13 +918,13 @@ const ProfilesPage = () => {
                                     </div>
 
                                     {!showInsights && (
-                                        <div className="rounded-2xl border border-dashed border-amber-200/70 bg-amber-50/70 px-3 py-3">
+                                        <div className="rounded-2xl border border-dashed border-sky-200/70 bg-sky-50/70 px-3 py-3">
                                             <div className="flex items-center justify-between gap-3">
                                                 <div>
-                                                    <div className="text-sm font-semibold text-amber-700">Locked until Level 10</div>
-                                                    <p className="text-xs text-amber-600 mt-1">{unlockHint}</p>
+                                                    <div className="text-sm font-semibold text-sky-700">Locked until Level 10</div>
+                                                    <p className="text-xs text-sky-600 mt-1">{unlockHint}</p>
                                                 </div>
-                                                <div className="text-xs font-bold text-amber-700 bg-white/70 px-2.5 py-1 rounded-full">
+                                                <div className="text-xs font-bold text-sky-700 bg-white/70 px-2.5 py-1 rounded-full">
                                                     Lv {level}
                                                 </div>
                                             </div>
@@ -885,19 +932,19 @@ const ProfilesPage = () => {
                                     )}
 
                                     {showInsights && !selfConsent && (
-                                        <div className="rounded-2xl border border-amber-200/70 bg-amber-50/70 p-3 text-xs text-amber-700">
+                                        <div className="rounded-2xl border border-sky-200/70 bg-sky-50/70 p-3 text-xs text-sky-700">
                                             AI insights are off. Turn them back on anytime.
                                         </div>
                                     )}
 
                                     {showInsights && selfConsent && !partnerConsent && (
-                                        <div className="rounded-2xl border border-amber-200/70 bg-amber-50/70 p-3 text-xs text-amber-700">
+                                        <div className="rounded-2xl border border-sky-200/70 bg-sky-50/70 p-3 text-xs text-sky-700">
                                             Waiting for your partner to opt in.
                                         </div>
                                     )}
 
                                     {showInsights && bothConsented && insightsPaused && (
-                                        <div className="rounded-2xl border border-amber-200/70 bg-amber-50/70 p-3 text-xs text-amber-700">
+                                        <div className="rounded-2xl border border-sky-200/70 bg-sky-50/70 p-3 text-xs text-sky-700">
                                             Insights are paused. Resume anytime from the insights page.
                                         </div>
                                     )}
@@ -906,7 +953,7 @@ const ProfilesPage = () => {
                                         <div className="rounded-2xl border border-white/80 bg-white/80 p-3">
                                             {latestInsight ? (
                                                 <>
-                                                    <div className="text-[11px] font-semibold text-amber-600 uppercase tracking-[0.2em] mb-2">
+                                                    <div className="text-[11px] font-semibold text-sky-600 uppercase tracking-[0.2em] mb-2">
                                                         {latestInsight.category}
                                                     </div>
                                                     <p className="text-sm font-semibold text-neutral-700 mb-2">

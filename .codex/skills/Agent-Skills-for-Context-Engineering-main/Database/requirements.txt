@@ -1,0 +1,16 @@
+# Database
+psycopg2-binary>=2.9.9
+pgvector>=0.2.4
+
+# Embeddings
+openai>=1.0.0
+
+# Utilities
+python-dotenv>=1.0.0
+pyyaml>=6.0.1
+tiktoken>=0.5.0
+
+# Optional: Alternative embedding providers
+# sentence-transformers>=2.2.0  # Local embeddings
+# cohere>=4.0.0                 # Cohere embeddings
+

@@ -55,29 +55,29 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
             icon: Zap,
             title: 'Resolve Arguments Efficiently',
             description: 'Quick and effective resolutions before tensions escalate',
-            color: '#FF6B6B', // Coral
-            bgColor: 'rgba(255, 107, 107, 0.12)',
+            color: '#C9921A',
+            bgColor: 'rgba(201, 146, 26, 0.14)',
         },
         {
             icon: Gavel,
             title: 'Meet Judge Whiskers',
             description: 'Your wisest advisor trained for the tricky disagreements',
-            color: '#9B59B6', // Purple
-            bgColor: 'rgba(155, 89, 182, 0.12)',
+            color: '#B86B5E',
+            bgColor: 'rgba(184, 107, 94, 0.14)',
         },
         {
             icon: Wand2,
             title: 'Effortless Quality Time',
             description: 'AI plans perfect date nights you\'ll actually love',
-            color: '#3498DB', // Blue
-            bgColor: 'rgba(52, 152, 219, 0.12)',
+            color: '#8B7019',
+            bgColor: 'rgba(139, 112, 25, 0.14)',
         },
         {
             icon: BookHeart,
             title: 'Never Lose The Plot',
             description: 'Personlized daily questions to keep the spark alive',
-            color: '#27AE60', // Green
-            bgColor: 'rgba(39, 174, 96, 0.12)',
+            color: '#5B8B6E',
+            bgColor: 'rgba(91, 139, 110, 0.14)',
         },
     ];
 
@@ -114,12 +114,23 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                         ease: 'easeOut',
                     }}
                 >
-                    <Sparkles
-                        className="text-court-gold/40"
-                        style={{ width: 12 + Math.random() * 12, height: 12 + Math.random() * 12 }}
-                    />
                 </motion.div>
             ))}
+        </div>
+    );
+
+    const PaywallBackdrop = () => (
+        <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute -top-32 -right-20 h-64 w-64 rounded-full bg-amber-200/30 blur-3xl" />
+            <div className="absolute top-20 -left-24 h-72 w-72 rounded-full bg-rose-200/25 blur-3xl" />
+            <div className="absolute bottom-0 right-0 h-72 w-72 rounded-full bg-amber-100/40 blur-3xl" />
+            <div
+                className="absolute inset-0 opacity-50"
+                style={{
+                    backgroundImage:
+                        'radial-gradient(circle at 18% 20%, rgba(255,255,255,0.8) 0%, transparent 55%), radial-gradient(circle at 80% 12%, rgba(255,235,210,0.9) 0%, transparent 60%)'
+                }}
+            />
         </div>
     );
 
@@ -131,11 +142,13 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-50 flex flex-col"
+                    className="fixed inset-0 z-50 flex flex-col overflow-hidden"
                     style={{
-                        background: 'linear-gradient(180deg, #FFFBF5 0%, #F5EDE0 50%, #E6D5C3 100%)',
+                        background: 'linear-gradient(180deg, #FFF9F0 0%, #F5EDE0 50%, #E8DCCB 100%)',
                     }}
                 >
+                    <PaywallBackdrop />
+                    <SparkleParticles />
 
                     {/* Scrollable content - with bottom padding for sticky CTA */}
                     <div className="flex-1 overflow-y-auto px-6 pb-48 relative z-10">
@@ -144,52 +157,49 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.1 }}
-
-                            className="text-center mt-20 mb-6"
+                            className="mt-14 mb-6"
                         >
-                            {/* Glowing Animated Crown */}
-                            <motion.div
-                                initial={{ scale: 0, rotate: -180 }}
-                                animate={{ scale: 1, rotate: 0 }}
-                                transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
-                                className="inline-flex items-center justify-center w-24 h-24 rounded-full mb-4 relative"
-                                style={{
-                                    background: 'linear-gradient(135deg, #D4AF37 0%, #B8972E 100%)',
-                                    boxShadow: '0 0 60px rgba(212, 175, 55, 0.5), 0 0 100px rgba(212, 175, 55, 0.3), 0 12px 40px rgba(212, 175, 55, 0.4)',
-                                }}
-                            >
-                                {/* Pulsing ring */}
+                            <div className="relative overflow-hidden rounded-[32px] border border-white/80 bg-white/85 px-6 py-8 text-center shadow-soft-lg">
+                                <div className="absolute -top-10 -right-10 h-24 w-24 rounded-full bg-amber-200/35 blur-2xl" />
+                                <div className="absolute -bottom-12 -left-10 h-28 w-28 rounded-full bg-rose-200/30 blur-3xl" />
                                 <motion.div
-                                    className="absolute inset-0 rounded-full border-2 border-court-gold"
-                                    animate={{
-                                        scale: [1, 1.3, 1.3],
-                                        opacity: [0.6, 0, 0],
-                                    }}
-                                    transition={{
-                                        duration: 2,
-                                        repeat: Infinity,
-                                        ease: 'easeOut',
-                                    }}
-                                />
-                                <Crown className="w-12 h-12 text-white" />
-                            </motion.div>
+                                    initial={{ scale: 0, rotate: -180 }}
+                                    animate={{ scale: 1, rotate: 0 }}
+                                    transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
+                                    className="inline-flex items-center justify-center w-20 h-20 rounded-3xl mb-4 relative border border-amber-200/80 bg-amber-100/80 shadow-soft"
+                                >
+                                    <motion.div
+                                        className="absolute inset-0 rounded-3xl border border-amber-300/70"
+                                        animate={{
+                                            scale: [1, 1.2, 1.2],
+                                            opacity: [0.6, 0, 0],
+                                        }}
+                                        transition={{
+                                            duration: 2,
+                                            repeat: Infinity,
+                                            ease: 'easeOut',
+                                        }}
+                                    />
+                                    <Crown className="w-10 h-10 text-amber-700" />
+                                </motion.div>
 
-                            <motion.h1
-                                className="text-4xl font-bold text-court-brown mb-2 font-display"
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.3 }}
-                            >
-                                Pause Gold
-                            </motion.h1>
-                            <motion.p
-                                className="text-court-brownLight text-base max-w-xs mx-auto"
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                transition={{ delay: 0.4 }}
-                            >
-                                For couples serious about staying close through every argument
-                            </motion.p>
+                                <motion.h1
+                                    className="text-3xl font-bold text-court-brown mb-2 font-display"
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.3 }}
+                                >
+                                    Pause Gold
+                                </motion.h1>
+                                <motion.p
+                                    className="text-court-brownLight text-sm max-w-xs mx-auto"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    transition={{ delay: 0.4 }}
+                                >
+                                    For couples serious about staying close through every argument
+                                </motion.p>
+                            </div>
                         </motion.div>
 
                         {/* Free Trial Badge - Only show if eligible */}
@@ -203,12 +213,12 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                                 <div
                                     className="flex items-center justify-center gap-2 py-3 px-4 rounded-2xl"
                                     style={{
-                                        background: 'linear-gradient(135deg, rgba(39, 174, 96, 0.15) 0%, rgba(46, 204, 113, 0.1) 100%)',
-                                        border: '1.5px solid rgba(39, 174, 96, 0.4)',
+                                        background: 'linear-gradient(135deg, rgba(91, 139, 110, 0.15) 0%, rgba(233, 248, 238, 0.6) 100%)',
+                                        border: '1.5px solid rgba(91, 139, 110, 0.4)',
                                     }}
                                 >
-                                    <Clock className="w-5 h-5 text-green-600" />
-                                    <span className="text-sm font-bold text-green-700 font-display">
+                                    <Clock className="w-5 h-5 text-emerald-600" />
+                                    <span className="text-sm font-bold text-emerald-700 font-display">
                                         Try FREE for 7 days — cancel anytime
                                     </span>
                                 </div>
@@ -225,19 +235,19 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                             <div
                                 className="flex items-center justify-center gap-3 py-3 px-4 rounded-2xl"
                                 style={{
-                                    background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.15) 0%, rgba(184, 151, 46, 0.1) 100%)',
-                                    border: '1px solid rgba(212, 175, 55, 0.3)',
+                                    background: 'linear-gradient(135deg, rgba(201, 162, 39, 0.16) 0%, rgba(255, 245, 226, 0.7) 100%)',
+                                    border: '1px solid rgba(201, 162, 39, 0.3)',
                                 }}
                             >
-                                <Users className="w-5 h-5 text-court-gold" />
+                                <Users className="w-5 h-5 text-amber-600" />
                                 <span className="text-sm font-semibold text-court-brown font-display">
-                                    One subscription = Gold status for <span className="text-court-gold">both</span> of you
+                                    One subscription = Gold status for <span className="text-amber-600">both</span> of you
                                 </span>
                                 <motion.div
                                     animate={{ scale: [1, 1.2, 1] }}
                                     transition={{ duration: 1.5, repeat: Infinity }}
                                 >
-                                    <Heart className="w-4 h-4 text-court-gold" />
+                                    <Heart className="w-4 h-4 text-amber-600" />
                                 </motion.div>
                             </div>
                         </motion.div>
@@ -247,7 +257,7 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                             <motion.p
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
-                                className="text-xs text-court-maroon text-center mb-4 bg-court-tan/30 rounded-lg px-3 py-2"
+                                className="text-xs text-court-maroon text-center mb-4 bg-white/70 border border-amber-200/60 rounded-2xl px-3 py-2"
                             >
                                 {triggerReason}
                             </motion.p>
@@ -260,19 +270,20 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                             transition={{ delay: 0.35 }}
                             className="mb-6"
                         >
-                            <h3 className="text-sm font-bold text-court-brownLight uppercase tracking-wider mb-3 font-display">
+                            <h3 className="text-[11px] font-semibold text-court-brownLight uppercase tracking-[0.3em] mb-3 font-display">
                                 Transform Your Relationship
                             </h3>
-                            <div className="space-y-2.5">
+                            <div className="space-y-3">
                                 {benefits.map((benefit, index) => (
                                     <motion.div
                                         key={benefit.title}
                                         initial={{ opacity: 0, x: -10 }}
                                         animate={{ opacity: 1, x: 0 }}
                                         transition={{ delay: 0.4 + index * 0.05 }}
-                                        className="flex items-start gap-3 p-3 rounded-xl bg-white/70 border border-white/80 mt-2"
-                                        style={{ boxShadow: '0 2px 8px rgba(74, 55, 40, 0.04)' }}
+                                        className="relative flex items-start gap-3 p-4 rounded-2xl bg-white/80 border border-white/80"
+                                        style={{ boxShadow: '0 6px 18px rgba(74, 55, 40, 0.06)' }}
                                     >
+                                        <div className="absolute inset-x-6 top-0 h-0.5 bg-gradient-to-r from-transparent via-amber-200/80 to-transparent" />
                                         {/* Colored Icon */}
                                         <div
                                             className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
@@ -301,15 +312,15 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.5 }}
-                            className="mb-6 p-4 rounded-2xl bg-court-tan/20 border border-court-tan/30"
+                            className="mb-6 p-4 rounded-3xl bg-rose-50/60 border border-rose-200/70"
                         >
-                            <h4 className="text-xs font-bold text-court-brownLight uppercase tracking-wider mb-3 font-display">
+                            <h4 className="text-[11px] font-semibold text-rose-600 uppercase tracking-[0.3em] mb-3 font-display">
                                 Without Gold...
                             </h4>
                             <ul className="space-y-1.5">
                                 {withoutGold.map((item, index) => (
                                     <li key={index} className="flex items-center gap-2 text-sm text-court-brown/70">
-                                        <X className="w-3.5 h-3.5 text-court-maroon/70 flex-shrink-0" />
+                                        <X className="w-3.5 h-3.5 text-rose-500/70 flex-shrink-0" />
                                         {item}
                                     </li>
                                 ))}
@@ -324,7 +335,7 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                             className="mb-6 relative"
                         >
 
-                            <h3 className="text-sm font-bold text-court-brownLight uppercase tracking-wider mb-3 font-display">
+                            <h3 className="text-[11px] font-semibold text-court-brownLight uppercase tracking-[0.3em] mb-3 font-display">
                                 Choose Your Plan
                             </h3>
                             <div className="space-y-3">
@@ -336,28 +347,28 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                                 >
                                     {/* Best Value Badge - Outside the button */}
                                     <div
-                                        className="absolute -top-3 left-4 px-3 py-1 rounded-full text-xs font-bold text-white font-display z-20"
+                                        className="absolute -top-3 left-4 px-3 py-1 rounded-full text-[10px] font-bold text-amber-700 font-display z-20 border border-amber-200/70 bg-amber-100/80"
                                         style={{
-                                            background: 'linear-gradient(135deg, #D4AF37 0%, #B8972E 100%)',
-                                            boxShadow: '0 2px 8px rgba(212, 175, 55, 0.4)',
+                                            boxShadow: '0 2px 8px rgba(212, 175, 55, 0.25)',
                                         }}
                                     >
                                         ✨ BEST VALUE
                                     </div>
                                     <button
                                         onClick={() => setSelectedPlan('yearly')}
-                                        className={`w-full p-4 pt-5 rounded-2xl text-left transition-all duration-200 ease-out border-2 relative overflow-hidden ${selectedPlan === 'yearly'
-                                            ? 'border-court-gold bg-white shadow-lg'
-                                            : 'border-court-tan/50 bg-white/50 hover:border-court-tan'
+                                        className={`w-full p-4 pt-5 rounded-[28px] text-left transition-all duration-200 ease-out border relative overflow-hidden ${selectedPlan === 'yearly'
+                                            ? 'border-amber-300/80 bg-white shadow-soft-lg'
+                                            : 'border-white/80 bg-white/70 hover:border-amber-200/70'
                                             }`}
                                     >
+                                        <div className="absolute inset-x-6 top-0 h-0.5 bg-gradient-to-r from-transparent via-amber-200/70 to-transparent" />
                                         <div className="flex items-center gap-3 relative z-10">
                                             {/* Selection Circle */}
                                             <div
                                                 className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center border-2 transition-all duration-200"
                                                 style={{
-                                                    borderColor: selectedPlan === 'yearly' ? '#D4AF37' : '#D4C4A8',
-                                                    backgroundColor: selectedPlan === 'yearly' ? '#D4AF37' : 'white',
+                                                    borderColor: selectedPlan === 'yearly' ? '#C9A227' : '#D4C4A8',
+                                                    backgroundColor: selectedPlan === 'yearly' ? '#C9A227' : 'white',
                                                 }}
                                             >
                                                 {selectedPlan === 'yearly' && (
@@ -393,18 +404,19 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                                 >
                                     <button
                                         onClick={() => setSelectedPlan('monthly')}
-                                        className={`w-full p-4 rounded-2xl text-left transition-all duration-200 ease-out border-2 relative overflow-hidden ${selectedPlan === 'monthly'
-                                            ? 'border-court-gold bg-white shadow-lg'
-                                            : 'border-court-tan/50 bg-white/50 hover:border-court-tan'
+                                        className={`w-full p-4 rounded-[28px] text-left transition-all duration-200 ease-out border relative overflow-hidden ${selectedPlan === 'monthly'
+                                            ? 'border-amber-300/80 bg-white shadow-soft-lg'
+                                            : 'border-white/80 bg-white/70 hover:border-amber-200/70'
                                             }`}
                                     >
+                                        <div className="absolute inset-x-6 top-0 h-0.5 bg-gradient-to-r from-transparent via-amber-200/70 to-transparent" />
                                         <div className="flex items-center gap-3 relative z-10">
                                             {/* Selection Circle */}
                                             <div
                                                 className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center border-2 transition-all duration-200"
                                                 style={{
-                                                    borderColor: selectedPlan === 'monthly' ? '#D4AF37' : '#D4C4A8',
-                                                    backgroundColor: selectedPlan === 'monthly' ? '#D4AF37' : 'white',
+                                                    borderColor: selectedPlan === 'monthly' ? '#C9A227' : '#D4C4A8',
+                                                    backgroundColor: selectedPlan === 'monthly' ? '#C9A227' : 'white',
                                                 }}
                                             >
                                                 {selectedPlan === 'monthly' && (
@@ -454,7 +466,8 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                             transition={{ delay: 0.6 }}
                             className="mb-6"
                         >
-                            <div className="p-4 rounded-2xl bg-white/60 border border-white/80">
+                            <div className="relative p-4 rounded-3xl bg-white/80 border border-white/80 shadow-soft">
+                                <div className="absolute inset-x-6 top-0 h-0.5 bg-gradient-to-r from-transparent via-amber-200/70 to-transparent" />
                                 <div className="flex items-center justify-center gap-0.5 mb-2">
                                     {[1, 2, 3, 4, 5].map((star) => (
                                         <Star key={star} className="w-4 h-4 text-court-gold fill-court-gold" />
@@ -479,7 +492,7 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                             <motion.div
                                 initial={{ opacity: 0, y: -10 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                className="bg-red-50 text-red-600 text-sm rounded-xl p-3 mb-4 text-center border border-red-100"
+                                className="bg-rose-50 text-rose-600 text-sm rounded-2xl p-3 mb-4 text-center border border-rose-200/70"
                             >
                                 {error}
                             </motion.div>
@@ -489,7 +502,7 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                         <button
                             onClick={handleRestore}
                             disabled={isLoading || restoring}
-                            className="w-full py-2 text-sm text-court-brownLight hover:text-court-brown transition-colors disabled:opacity-50 mb-2"
+                            className="w-full py-2 text-xs font-semibold text-court-brownLight hover:text-court-brown transition-colors disabled:opacity-50 mb-2"
                         >
                             {restoring ? 'Restoring...' : 'Restore Purchases'}
                         </button>
@@ -511,7 +524,7 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                         transition={{ delay: 0.5 }}
                         className="fixed bottom-0 left-0 right-0 z-50 px-6 pb-6 pt-4"
                         style={{
-                            background: 'linear-gradient(to top, rgba(230, 213, 195, 1) 0%, rgba(230, 213, 195, 0.95) 70%, transparent 100%)',
+                            background: 'linear-gradient(to top, rgba(248, 238, 223, 1) 0%, rgba(248, 238, 223, 0.95) 70%, transparent 100%)',
                         }}
                     >
                         {/* Safe area padding for iOS */}
@@ -519,40 +532,42 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                             <motion.button
                                 onClick={handlePurchase}
                                 disabled={isLoading}
-                                whileHover={{ scale: 1.02 }}
+                                whileHover={{ scale: 1.01 }}
                                 whileTap={{ scale: 0.98 }}
-                                className="w-full py-4 rounded-2xl font-bold text-white flex items-center justify-center gap-2 disabled:opacity-50 transition-all font-display text-lg relative overflow-hidden"
-                                style={{
-                                    background: 'linear-gradient(135deg, #27AE60 0%, #219A52 100%)',
-                                    boxShadow: '0 8px 32px rgba(39, 174, 96, 0.4), 0 4px 12px rgba(39, 174, 96, 0.3)',
-                                }}
+                                className="w-full rounded-[28px] border border-amber-200/80 bg-white/90 px-4 py-4 text-left disabled:opacity-50 transition-all font-display relative overflow-hidden shadow-soft-lg"
                             >
-                                {/* Shimmer effect */}
-                                <motion.div
-                                    className="absolute inset-0 opacity-20"
-                                    style={{
-                                        background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)',
-                                    }}
-                                    animate={{
-                                        x: ['-100%', '100%'],
-                                    }}
-                                    transition={{
-                                        duration: 2,
-                                        repeat: Infinity,
-                                        repeatDelay: 1,
-                                    }}
-                                />
+                                <div className="absolute inset-x-6 top-0 h-0.5 bg-gradient-to-r from-transparent via-amber-200/80 to-transparent" />
+                                <div className="absolute -top-8 -right-6 h-16 w-16 rounded-full bg-amber-200/35 blur-2xl" />
                                 {isLoading ? (
-                                    <>
-                                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                        Processing...
-                                    </>
+                                    <div className="relative flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-2xl border border-amber-200/70 bg-amber-100/70 flex items-center justify-center">
+                                            <div className="w-5 h-5 border-2 border-amber-300/60 border-t-amber-700 rounded-full animate-spin" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <div className="text-sm font-bold text-neutral-800">Processing...</div>
+                                            <div className="text-xs text-neutral-500">Hang tight while we unlock Gold.</div>
+                                        </div>
+                                    </div>
                                 ) : (
-                                    <>
-                                        <Sparkles className="w-5 h-5" />
-                                        {trialEligible ? 'Start 7-Day Free Trial' : 'Subscribe Now'}
-                                        <ChevronRight className="w-5 h-5" />
-                                    </>
+                                    <div className="relative flex items-center gap-3">
+                                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-amber-200/70 bg-amber-100/70">
+                                            <Sparkles className="w-5 h-5 text-amber-600" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <div className="text-sm font-bold text-neutral-800">
+                                                {trialEligible ? 'Start 7-Day Free Trial' : 'Subscribe Now'}
+                                            </div>
+                                            <div className="text-xs text-neutral-500">
+                                                Cancel anytime · Gold for both of you
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <div className="rounded-full border border-amber-200/70 bg-amber-100/70 px-3 py-1 text-xs font-bold text-amber-700">
+                                                {selectedPlan === 'yearly' ? '$7.50/mo' : '$9.99/mo'}
+                                            </div>
+                                            <ChevronRight className="w-5 h-5 text-amber-600" />
+                                        </div>
+                                    </div>
                                 )}
                             </motion.button>
                             {trialEligible && (

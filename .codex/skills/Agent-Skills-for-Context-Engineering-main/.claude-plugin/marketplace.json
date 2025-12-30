@@ -1,0 +1,60 @@
+{
+  "name": "context-engineering-marketplace",
+  "owner": {
+    "name": "Muratcan Koylan"
+  },
+  "metadata": {
+    "description": "Marketplace for Context Engineering skills library",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "context-engineering",
+      "description": "Production-grade Agent Skills for context engineering. Includes strategies for context window management, multi-agent orchestration, memory systems, and advanced LLM-as-a-Judge evaluation frameworks.",
+      "version": "1.1.0",
+      "source": "./skills",
+      "category": "development",
+      "strict": false,
+      "author": {
+        "name": "Muratcan Koylan"
+      },
+      "homepage": "https://github.com/muratcankoylan/Agent-Skills-for-Context-Engineering",
+      "repository": "https://github.com/muratcankoylan/Agent-Skills-for-Context-Engineering",
+      "license": "MIT",
+      "keywords": [
+        "context-engineering",
+        "agent-skills",
+        "multi-agent",
+        "memory-systems",
+        "llm-as-a-judge",
+        "context-optimization",
+        "harness-engineering",
+        "agent-engineering"
+      ]
+    },
+    {
+      "name": "book-sft-pipeline",
+      "description": "Standalone skill for training models to write in any author's style. Complete pipeline from ePub to trained adapter with Gertrude Stein case study.",
+      "version": "2.0.0",
+      "source": "./examples/book-sft-pipeline",
+      "category": "development",
+      "strict": false,
+      "author": {
+        "name": "Muratcan Koylan"
+      },
+      "homepage": "https://github.com/muratcankoylan/Agent-Skills-for-Context-Engineering/tree/main/examples/book-sft-pipeline",
+      "repository": "https://github.com/muratcankoylan/Agent-Skills-for-Context-Engineering",
+      "license": "MIT",
+      "keywords": [
+        "fine-tuning",
+        "style-transfer",
+        "book-sft",
+        "author-voice",
+        "literary-style",
+        "sft-pipeline",
+        "tinker-training",
+        "lora-adapters"
+      ]
+    }
+  ]
+}
