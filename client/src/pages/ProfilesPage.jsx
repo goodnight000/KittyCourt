@@ -187,35 +187,52 @@ const ProfilesPage = () => {
     const selectedLoveLanguage = LOVE_LANGUAGES.find(l => l.id === profileData.loveLanguage);
 
     return (
-        <div className="space-y-5">
+        <div className="relative min-h-screen pb-24 overflow-hidden">
+            <ProfileBackdrop />
+            <div className="relative space-y-6">
 
-            {/* Tab Switcher */}
-            <div className="flex bg-white/60 rounded-2xl p-1.5 gap-1">
-                <button
-                    onClick={() => setActiveTab('me')}
-                    className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'me'
-                        ? 'text-white shadow-md'
-                        : 'text-neutral-500'
+                {/* Tab Switcher */}
+                <div className="relative flex rounded-full border border-white/80 bg-white/75 p-1.5 shadow-inner-soft">
+                    <button
+                        onClick={() => setActiveTab('me')}
+                        className={`relative flex-1 rounded-full px-3 py-2.5 text-sm font-bold transition-colors ${
+                            activeTab === 'me' ? 'text-white' : 'text-neutral-500'
                         }`}
-                    style={activeTab === 'me' ? { background: 'linear-gradient(135deg, #B85C6B 0%, #8B4049 100%)' } : {}}
-                >
-                    My Profile
-                </button>
-                <button
-                    onClick={() => hasPartner && setActiveTab('us')}
-                    disabled={!hasPartner}
-                    className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-1.5 ${activeTab === 'us'
-                        ? 'text-white shadow-md'
-                        : hasPartner ? 'text-neutral-500' : 'text-neutral-400 opacity-60 cursor-not-allowed'
+                    >
+                        {activeTab === 'me' && (
+                            <motion.span
+                                layoutId="profileTab"
+                                className="absolute inset-0 rounded-full bg-gradient-to-r from-[#C9A227] to-[#8B7019] shadow-soft"
+                            />
+                        )}
+                        <span className="relative z-10 flex items-center justify-center gap-2">
+                            <User className="w-4 h-4" />
+                            My Profile
+                        </span>
+                    </button>
+                    <button
+                        onClick={() => hasPartner && setActiveTab('us')}
+                        disabled={!hasPartner}
+                        className={`relative flex-1 rounded-full px-3 py-2.5 text-sm font-bold transition-colors ${
+                            activeTab === 'us'
+                                ? 'text-white'
+                                : hasPartner ? 'text-neutral-500' : 'text-neutral-400 opacity-60 cursor-not-allowed'
                         }`}
-                    style={activeTab === 'us' ? { background: 'linear-gradient(135deg, #B85C6B 0%, #8B4049 100%)' } : {}}
-                >
-                    {!hasPartner && <Lock className="w-3.5 h-3.5" />}
-                    Our Story
-                </button>
-            </div>
+                    >
+                        {activeTab === 'us' && (
+                            <motion.span
+                                layoutId="profileTab"
+                                className="absolute inset-0 rounded-full bg-gradient-to-r from-[#C9A227] to-[#8B7019] shadow-soft"
+                            />
+                        )}
+                        <span className="relative z-10 flex items-center justify-center gap-2">
+                            {!hasPartner && <Lock className="w-3.5 h-3.5" />}
+                            Our Story
+                        </span>
+                    </button>
+                </div>
 
-            <AnimatePresence mode="wait">
+                <AnimatePresence mode="wait">
                 {activeTab === 'me' ? (
                     <motion.div
                         key="me"
@@ -225,8 +242,12 @@ const ProfilesPage = () => {
                         className="space-y-4"
                     >
                         {/* Profile Card */}
-                        <motion.div className="glass-card p-5 bg-gradient-to-br from-violet-50/80 to-pink-50/60">
-                            <div className="flex items-center gap-4">
+                        <motion.div className="glass-card relative overflow-hidden p-5">
+                            <div className="absolute inset-0 pointer-events-none">
+                                <div className="absolute -top-8 -right-8 h-20 w-20 rounded-full bg-amber-200/35 blur-2xl" />
+                                <div className="absolute -bottom-10 -left-8 h-24 w-24 rounded-full bg-rose-200/30 blur-2xl" />
+                            </div>
+                            <div className="relative flex items-start gap-4">
                                 <motion.div
                                     whileTap={{ scale: 0.95 }}
                                     onClick={() => setShowEditModal(true)}
@@ -237,55 +258,62 @@ const ProfilesPage = () => {
                                         name={profileData.nickname || currentUser?.name}
                                         size="xl"
                                     />
-                                    <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-sm">
-                                        <Edit3 className="w-3 h-3 text-violet-500" />
+                                    <div className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full border border-white/80 bg-white/90 shadow-soft">
+                                        <Edit3 className="w-3.5 h-3.5 text-amber-600" />
                                     </div>
                                 </motion.div>
-                                <div className="flex-1">
-                                    <h2 className="font-bold text-neutral-800 text-lg">
+                                <div className="flex-1 space-y-2">
+                                    <div className="text-[11px] font-semibold uppercase tracking-[0.3em] text-neutral-400">
+                                        My profile
+                                    </div>
+                                    <h2 className="text-lg font-display font-bold text-neutral-800">
                                         {profileData.nickname || currentUser?.name}
                                     </h2>
-                                    {profileData.birthday && (
-                                        <p className="text-neutral-500 text-sm flex items-center gap-1">
-                                            <Calendar className="w-3.5 h-3.5" />
-                                            {new Date(profileData.birthday).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                                        </p>
-                                    )}
-                                    {profileData.anniversaryDate && (
-                                        <p className="text-pink-500 text-sm flex items-center gap-1 mt-0.5">
-                                            <Heart className="w-3.5 h-3.5 fill-pink-500" />
-                                            Anniversary: {new Date(profileData.anniversaryDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                                        </p>
-                                    )}
-                                    {selectedLoveLanguage && (
-                                        <p className="text-pink-500 text-sm flex items-center gap-1 mt-1">
-                                            <span>{selectedLoveLanguage.emoji}</span>
-                                            {selectedLoveLanguage.label}
-                                        </p>
-                                    )}
+                                    <div className="flex flex-wrap gap-2">
+                                        {profileData.birthday && (
+                                            <span className="inline-flex items-center gap-1 rounded-full border border-white/80 bg-white/80 px-3 py-1 text-[11px] font-semibold text-neutral-600">
+                                                <Calendar className="w-3.5 h-3.5" />
+                                                {new Date(profileData.birthday).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                            </span>
+                                        )}
+                                        {profileData.anniversaryDate && (
+                                            <span className="inline-flex items-center gap-1 rounded-full border border-rose-200/70 bg-rose-100/70 px-3 py-1 text-[11px] font-semibold text-rose-700">
+                                                <Heart className="w-3.5 h-3.5 fill-rose-500 text-rose-500" />
+                                                Anniversary {new Date(profileData.anniversaryDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                            </span>
+                                        )}
+                                        {selectedLoveLanguage && (
+                                            <span className="inline-flex items-center gap-1 rounded-full border border-amber-200/70 bg-amber-100/70 px-3 py-1 text-[11px] font-semibold text-amber-700">
+                                                <span>{selectedLoveLanguage.emoji}</span>
+                                                {selectedLoveLanguage.label}
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 
-                            <motion.button
-                                whileTap={{ scale: 0.98 }}
-                                onClick={() => setShowEditModal(true)}
-                                className="w-full mt-4 py-2.5 bg-white/80 rounded-xl text-sm font-bold text-violet-600 flex items-center justify-center gap-2"
-                            >
-                                <Settings className="w-4 h-4" />
-                                Edit Profile
-                            </motion.button>
+                            <div className="mt-5 grid grid-cols-2 gap-3">
+                                <motion.button
+                                    whileTap={{ scale: 0.98 }}
+                                    onClick={() => setShowEditModal(true)}
+                                    className="flex items-center justify-center gap-2 rounded-2xl border border-white/80 bg-white/90 py-2.5 text-sm font-bold text-amber-700 shadow-inner-soft"
+                                >
+                                    <Settings className="w-4 h-4" />
+                                    Edit
+                                </motion.button>
 
-                            <motion.button
-                                whileTap={{ scale: 0.98 }}
-                                onClick={async () => {
-                                    await signOut();
-                                    navigate('/signin');
-                                }}
-                                className="w-full py-2.5 bg-red-50 rounded-xl text-sm font-bold text-red-500 flex items-center justify-center gap-2 border border-red-100"
-                            >
-                                <LogOut className="w-4 h-4" />
-                                Sign Out
-                            </motion.button>
+                                <motion.button
+                                    whileTap={{ scale: 0.98 }}
+                                    onClick={async () => {
+                                        await signOut();
+                                        navigate('/signin');
+                                    }}
+                                    className="flex items-center justify-center gap-2 rounded-2xl border border-rose-200/70 bg-rose-50/70 py-2.5 text-sm font-bold text-rose-600"
+                                >
+                                    <LogOut className="w-4 h-4" />
+                                    Sign out
+                                </motion.button>
+                            </div>
                         </motion.div>
 
                         {/* Stats Grid */}
@@ -294,41 +322,53 @@ const ProfilesPage = () => {
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.1 }}
-                                className="glass-card p-4 text-center"
+                                className="glass-card relative overflow-hidden p-4 text-center"
                             >
-                                <Coffee className="w-6 h-6 text-amber-500 mx-auto mb-2" />
-                                <p className="text-2xl font-bold text-neutral-800">{currentUser?.kibbleBalance || 0}</p>
-                                <p className="text-xs text-neutral-500">Kibble Balance</p>
+                                <div className="absolute -top-8 -right-6 h-16 w-16 rounded-full bg-amber-200/35 blur-2xl" />
+                                <div className="relative space-y-2">
+                                    <Coffee className="w-6 h-6 text-amber-600 mx-auto" />
+                                    <p className="text-2xl font-display font-bold text-neutral-800">{currentUser?.kibbleBalance || 0}</p>
+                                    <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-neutral-500">Kibble</p>
+                                </div>
                             </motion.div>
                             <motion.div
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.15 }}
-                                className="glass-card p-4 text-center"
+                                className="glass-card relative overflow-hidden p-4 text-center"
                             >
-                                <Heart className="w-6 h-6 text-pink-500 mx-auto mb-2" />
-                                <p className="text-2xl font-bold text-neutral-800">{totalAppreciations}</p>
-                                <p className="text-xs text-neutral-500">Appreciations</p>
+                                <div className="absolute -top-8 -right-6 h-16 w-16 rounded-full bg-rose-200/35 blur-2xl" />
+                                <div className="relative space-y-2">
+                                    <Heart className="w-6 h-6 text-rose-500 mx-auto" />
+                                    <p className="text-2xl font-display font-bold text-neutral-800">{totalAppreciations}</p>
+                                    <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-neutral-500">Appreciations</p>
+                                </div>
                             </motion.div>
                             <motion.div
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.2 }}
-                                className="glass-card p-4 text-center"
+                                className="glass-card relative overflow-hidden p-4 text-center"
                             >
-                                <Scale className="w-6 h-6 text-violet-500 mx-auto mb-2" />
-                                <p className="text-2xl font-bold text-neutral-800">{totalCases}</p>
-                                <p className="text-xs text-neutral-500">Cases Resolved</p>
+                                <div className="absolute -top-8 -right-6 h-16 w-16 rounded-full bg-amber-200/35 blur-2xl" />
+                                <div className="relative space-y-2">
+                                    <Scale className="w-6 h-6 text-amber-700 mx-auto" />
+                                    <p className="text-2xl font-display font-bold text-neutral-800">{totalCases}</p>
+                                    <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-neutral-500">Cases</p>
+                                </div>
                             </motion.div>
                             <motion.div
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.25 }}
-                                className="glass-card p-4 text-center bg-gradient-to-r from-indigo-50/80 to-violet-50/60"
+                                className="glass-card relative overflow-hidden p-4 text-center"
                             >
-                                <MessageSquare className="w-6 h-6 text-indigo-500 mx-auto mb-2" />
-                                <p className="text-2xl font-bold text-neutral-800">{questionsAnswered}</p>
-                                <p className="text-xs text-neutral-500">Questions Answered</p>
+                                <div className="absolute -top-8 -right-6 h-16 w-16 rounded-full bg-amber-100/45 blur-2xl" />
+                                <div className="relative space-y-2">
+                                    <MessageSquare className="w-6 h-6 text-amber-600 mx-auto" />
+                                    <p className="text-2xl font-display font-bold text-neutral-800">{questionsAnswered}</p>
+                                    <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-neutral-500">Questions</p>
+                                </div>
                             </motion.div>
                         </div>
 
@@ -337,24 +377,28 @@ const ProfilesPage = () => {
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.28 }}
-                            className={`glass-card p-5 ${isGold
-                                ? 'bg-gradient-to-br from-amber-50/80 to-court-gold/20 border border-court-gold/30'
-                                : 'bg-gradient-to-br from-neutral-50/80 to-neutral-100/60'
+                            className={`glass-card relative overflow-hidden p-5 ${isGold
+                                ? 'border border-amber-200/70'
+                                : 'border border-white/80'
                                 }`}
                         >
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${isGold
-                                    ? 'bg-gradient-to-br from-court-gold to-amber-600'
+                            <div className="absolute inset-0 pointer-events-none">
+                                <div className="absolute -top-8 -right-6 h-20 w-20 rounded-full bg-amber-200/35 blur-2xl" />
+                                <div className="absolute -bottom-10 -left-8 h-24 w-24 rounded-full bg-rose-200/30 blur-2xl" />
+                            </div>
+                            <div className="relative flex items-center gap-3 mb-4">
+                                <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${isGold
+                                    ? 'bg-gradient-to-br from-[#C9A227] to-[#8B7019]'
                                     : 'bg-gradient-to-br from-neutral-300 to-neutral-400'
                                     }`}>
                                     <Crown className="w-6 h-6 text-white" />
                                 </div>
                                 <div className="flex-1">
                                     <div className="flex items-center gap-2">
-                                        <h3 className="font-bold text-neutral-800">
+                                        <h3 className="font-display font-bold text-neutral-800">
                                             {isGold ? 'Pause Gold' : 'Free Plan'}
                                         </h3>
-                                        {isGold && <Sparkles className="w-4 h-4 text-court-gold" />}
+                                        {isGold && <Sparkles className="w-4 h-4 text-amber-500" />}
                                     </div>
                                     <p className="text-xs text-neutral-500">
                                         {isGold ? 'Premium features unlocked' : 'Upgrade to unlock more'}
@@ -366,21 +410,21 @@ const ProfilesPage = () => {
                             <div className="space-y-2 mb-4">
                                 <div className="flex items-center justify-between text-sm">
                                     <span className="flex items-center gap-2 text-neutral-600">
-                                        <Zap className="w-4 h-4 text-blue-500" />
+                                        <Zap className="w-4 h-4 text-amber-600" />
                                         Judge Lightning
                                     </span>
                                     <span className="font-medium text-neutral-700">{getUsageDisplay('fast')}</span>
                                 </div>
                                 <div className="flex items-center justify-between text-sm">
                                     <span className="flex items-center gap-2 text-neutral-600">
-                                        <Scale className="w-4 h-4 text-emerald-500" />
+                                        <Scale className="w-4 h-4 text-amber-600" />
                                         Judge Mittens
                                     </span>
                                     <span className="font-medium text-neutral-700">{getUsageDisplay('logical')}</span>
                                 </div>
                                 <div className="flex items-center justify-between text-sm">
                                     <span className="flex items-center gap-2 text-neutral-600">
-                                        <Gavel className="w-4 h-4 text-amber-500" />
+                                        <Gavel className="w-4 h-4 text-amber-600" />
                                         Judge Whiskers
                                     </span>
                                     <span className={`font-medium ${isGold ? 'text-neutral-700' : 'text-neutral-400'}`}>
@@ -389,7 +433,7 @@ const ProfilesPage = () => {
                                 </div>
                                 <div className="flex items-center justify-between text-sm">
                                     <span className="flex items-center gap-2 text-neutral-600">
-                                        <Wand2 className="w-4 h-4 text-purple-500" />
+                                        <Wand2 className="w-4 h-4 text-amber-600" />
                                         Help Me Plan
                                     </span>
                                     <span className={`font-medium ${isGold ? 'text-neutral-700' : 'text-neutral-400'}`}>
@@ -402,11 +446,28 @@ const ProfilesPage = () => {
                                 <motion.button
                                     whileTap={{ scale: 0.98 }}
                                     onClick={() => setShowPaywall(true)}
-                                    className="w-full py-3 rounded-xl font-bold text-white flex items-center justify-center gap-2 shadow-md"
-                                    style={{ background: 'linear-gradient(135deg, #B85C6B 0%, #8B4049 100%)' }}
+                                    className="relative w-full overflow-hidden rounded-3xl border border-amber-200/70 bg-white/85 px-4 py-3 text-left shadow-soft"
                                 >
-                                    <Crown className="w-5 h-5" />
-                                    Upgrade to Gold – $8.88/mo
+                                    <div className="absolute inset-x-6 top-0 h-1 bg-gradient-to-r from-transparent via-amber-300/70 to-transparent" />
+                                    <div className="absolute -top-6 -right-4 h-16 w-16 rounded-full bg-amber-200/35 blur-2xl" />
+                                    <div className="relative flex items-center gap-3">
+                                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-amber-200/70 bg-amber-100/70">
+                                            <Crown className="w-5 h-5 text-amber-700" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <div className="text-[10px] font-semibold uppercase tracking-[0.3em] text-amber-500">
+                                                Gold
+                                            </div>
+                                            <div className="text-sm font-bold text-neutral-800">Upgrade to Gold</div>
+                                            <div className="text-xs text-neutral-500">Unlimited Judge Whiskers + Help Me Plan</div>
+                                        </div>
+                                        <div className="flex flex-col items-end gap-1">
+                                            <div className="rounded-full border border-amber-200/70 bg-amber-100/70 px-3 py-1 text-xs font-bold text-amber-700">
+                                                $8.88/mo
+                                            </div>
+                                            <div className="text-[10px] text-neutral-400">Tap to view</div>
+                                        </div>
+                                    </div>
                                 </motion.button>
                             )}
 
@@ -423,54 +484,61 @@ const ProfilesPage = () => {
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.3 }}
-                                className="glass-card p-5 bg-gradient-to-br from-pink-50/80 to-violet-50/60 border border-pink-200/50"
+                                className="glass-card relative overflow-hidden p-5 border border-rose-200/60"
                             >
-                                <div className="flex items-center gap-3 mb-4">
-                                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-400 to-pink-500 flex items-center justify-center">
-                                        <Users className="w-6 h-6 text-white" />
-                                    </div>
-                                    <div className="flex-1">
-                                        <h3 className="font-bold text-neutral-800">Connect with Partner</h3>
-                                        <p className="text-xs text-neutral-500">Unlock all features together! 💕</p>
-                                    </div>
+                                <div className="absolute inset-0 pointer-events-none">
+                                    <div className="absolute -top-10 -right-8 h-24 w-24 rounded-full bg-rose-200/30 blur-2xl" />
+                                    <div className="absolute -bottom-10 -left-10 h-28 w-28 rounded-full bg-amber-200/35 blur-3xl" />
                                 </div>
+                                <div className="relative space-y-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-100/80 border border-rose-200/70">
+                                            <Users className="w-5 h-5 text-rose-600" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <h3 className="font-display font-bold text-neutral-800">Connect with Partner</h3>
+                                            <p className="text-xs text-neutral-500">Unlock all features together.</p>
+                                        </div>
+                                    </div>
 
-                                {/* Partner Code */}
-                                <div className="bg-white/60 rounded-xl p-3 border border-pink-100 mb-3">
-                                    <p className="text-xs text-neutral-500 text-center mb-1">Your Partner Code</p>
-                                    <div className="flex items-center justify-center gap-2">
-                                        <p className="font-mono font-bold text-lg text-neutral-800 tracking-wider">
-                                            {profile?.partner_code || '------------'}
+                                    {/* Partner Code */}
+                                    <div className="rounded-2xl border border-white/80 bg-white/80 p-3">
+                                        <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-neutral-400 text-center mb-2">
+                                            Partner Code
                                         </p>
-                                        <motion.button
-                                            whileTap={{ scale: 0.9 }}
-                                            onClick={() => {
-                                                if (profile?.partner_code) {
-                                                    navigator.clipboard.writeText(profile.partner_code);
-                                                    setCopied(true);
-                                                    setTimeout(() => setCopied(false), 2000);
-                                                }
-                                            }}
-                                            className="p-1.5 rounded-lg bg-white shadow-sm hover:shadow-md transition-all"
-                                        >
-                                            {copied ? (
-                                                <Check className="w-4 h-4 text-green-500" />
-                                            ) : (
-                                                <Copy className="w-4 h-4 text-pink-500" />
-                                            )}
-                                        </motion.button>
+                                        <div className="flex items-center justify-center gap-2">
+                                            <p className="font-mono font-bold text-lg text-neutral-800 tracking-wider">
+                                                {profile?.partner_code || '------------'}
+                                            </p>
+                                            <motion.button
+                                                whileTap={{ scale: 0.9 }}
+                                                onClick={() => {
+                                                    if (profile?.partner_code) {
+                                                        navigator.clipboard.writeText(profile.partner_code);
+                                                        setCopied(true);
+                                                        setTimeout(() => setCopied(false), 2000);
+                                                    }
+                                                }}
+                                                className="p-2 rounded-xl border border-white/80 bg-white/90 shadow-soft"
+                                            >
+                                                {copied ? (
+                                                    <Check className="w-4 h-4 text-emerald-500" />
+                                                ) : (
+                                                    <Copy className="w-4 h-4 text-rose-500" />
+                                                )}
+                                            </motion.button>
+                                        </div>
                                     </div>
-                                </div>
 
-                                <motion.button
-                                    whileTap={{ scale: 0.98 }}
-                                    onClick={() => navigate('/connect')}
-                                    className="w-full py-3 rounded-xl font-bold text-white flex items-center justify-center gap-2 shadow-md"
-                                    style={{ background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' }}
-                                >
-                                    <Link2 className="w-5 h-5" />
-                                    Connect Now
-                                </motion.button>
+                                    <motion.button
+                                        whileTap={{ scale: 0.98 }}
+                                        onClick={() => navigate('/connect')}
+                                        className="w-full rounded-2xl bg-gradient-to-r from-[#C9A227] to-[#8B7019] py-3 text-sm font-bold text-white shadow-soft flex items-center justify-center gap-2"
+                                    >
+                                        <Link2 className="w-5 h-5" />
+                                        Connect Now
+                                    </motion.button>
+                                </div>
                             </motion.div>
                         )}
 
@@ -480,9 +548,13 @@ const ProfilesPage = () => {
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.3 }}
-                                className="glass-card p-5 bg-gradient-to-br from-green-50/80 to-emerald-50/60 border border-green-200/50"
+                                className="glass-card relative overflow-hidden p-5 border border-emerald-200/60"
                             >
-                                <div className="flex items-center gap-3">
+                                <div className="absolute inset-0 pointer-events-none">
+                                    <div className="absolute -top-10 -right-8 h-24 w-24 rounded-full bg-emerald-200/30 blur-2xl" />
+                                    <div className="absolute -bottom-10 -left-10 h-28 w-28 rounded-full bg-amber-200/30 blur-3xl" />
+                                </div>
+                                <div className="relative flex items-center gap-3">
                                     <ProfilePicture
                                         avatarUrl={connectedPartner.avatar_url}
                                         name={connectedPartner.display_name}
@@ -490,10 +562,10 @@ const ProfilesPage = () => {
                                         className="rounded-full"
                                     />
                                     <div className="flex-1">
-                                        <p className="text-xs text-green-600 font-medium flex items-center gap-1">
+                                        <p className="text-xs text-emerald-600 font-semibold flex items-center gap-1">
                                             <Check className="w-3 h-3" /> Connected
                                         </p>
-                                        <h3 className="font-bold text-neutral-800">
+                                        <h3 className="font-display font-bold text-neutral-800">
                                             {connectedPartner.display_name || 'Your Partner'}
                                         </h3>
                                         {connectedPartner.love_language && (
@@ -509,15 +581,15 @@ const ProfilesPage = () => {
 
                         {/* Quick Links */}
                         <div className="space-y-2">
-                            <h3 className="text-sm font-bold text-neutral-600 px-1">Quick Links</h3>
+                            <h3 className="text-[11px] font-semibold uppercase tracking-[0.3em] text-neutral-400 px-1">Quick Links</h3>
                             <QuickLink
-                                icon={<Heart className="w-5 h-5 text-pink-500" />}
+                                icon={<Heart className="w-5 h-5 text-rose-500" />}
                                 label="View Appreciations"
                                 sublabel="See what your partner loves"
                                 onClick={() => navigate('/appreciations')}
                             />
                             <QuickLink
-                                icon={<Calendar className="w-5 h-5 text-violet-500" />}
+                                icon={<Calendar className="w-5 h-5 text-amber-600" />}
                                 label="Our Calendar"
                                 sublabel="Important dates & events"
                                 onClick={() => navigate('/calendar')}
@@ -539,40 +611,51 @@ const ProfilesPage = () => {
                         className="space-y-4"
                     >
                         {/* Relationship Card */}
-                        <motion.div className="glass-card p-5 bg-gradient-to-br from-court-cream/80 to-court-tan/60 text-center">
-                            <div className="flex items-center justify-center gap-4 mb-4">
-                                <ProfilePicture
-                                    avatarUrl={profileData.avatarUrl}
-                                    name={profileData.nickname || currentUser?.name}
-                                    size="lg"
-                                />
-                                <motion.div
-                                    animate={{ scale: [1, 1.2, 1] }}
-                                    transition={{ duration: 1.5, repeat: Infinity }}
-                                    className="text-2xl"
-                                >
-                                    💕
-                                </motion.div>
-                                <ProfilePicture
-                                    avatarUrl={connectedPartner?.avatar_url}
-                                    name={connectedPartner?.display_name}
-                                    size="lg"
-                                />
+                        <motion.div className="glass-card relative overflow-hidden p-5 text-center">
+                            <div className="absolute inset-0 pointer-events-none">
+                                <div className="absolute -top-10 -right-8 h-24 w-24 rounded-full bg-amber-200/35 blur-2xl" />
+                                <div className="absolute -bottom-12 -left-10 h-28 w-28 rounded-full bg-rose-200/30 blur-3xl" />
                             </div>
-                            <h2 className="font-bold text-neutral-800 text-lg">
-                                {profileData.nickname || profile?.display_name || currentUser?.name} & {connectedPartner?.display_name || 'Partner'}
-                            </h2>
-                            {profileData.anniversaryDate && (
-                                <p className="text-pink-500 text-sm mt-1 flex items-center justify-center gap-1">
-                                    <Heart className="w-3.5 h-3.5 fill-pink-500" />
-                                    Together since {new Date(profileData.anniversaryDate).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                                </p>
-                            )}
-                            {!profileData.anniversaryDate && hasPartner && (
-                                <p className="text-neutral-400 text-sm mt-1 italic">
-                                    Anniversary not set
-                                </p>
-                            )}
+                            <div className="relative space-y-4">
+                                <div className="flex items-center justify-center gap-4">
+                                    <ProfilePicture
+                                        avatarUrl={profileData.avatarUrl}
+                                        name={profileData.nickname || currentUser?.name}
+                                        size="lg"
+                                    />
+                                    <motion.div
+                                        animate={{ scale: [1, 1.2, 1] }}
+                                        transition={{ duration: 1.5, repeat: Infinity }}
+                                        className="rounded-full border border-rose-200/70 bg-rose-100/70 px-3 py-1 text-lg"
+                                    >
+                                        💕
+                                    </motion.div>
+                                    <ProfilePicture
+                                        avatarUrl={connectedPartner?.avatar_url}
+                                        name={connectedPartner?.display_name}
+                                        size="lg"
+                                    />
+                                </div>
+                                <div>
+                                    <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-neutral-400">
+                                        Our story
+                                    </p>
+                                    <h2 className="text-lg font-display font-bold text-neutral-800">
+                                        {profileData.nickname || profile?.display_name || currentUser?.name} & {connectedPartner?.display_name || 'Partner'}
+                                    </h2>
+                                </div>
+                                {profileData.anniversaryDate && (
+                                    <p className="text-rose-600 text-sm flex items-center justify-center gap-1">
+                                        <Heart className="w-3.5 h-3.5 fill-rose-500 text-rose-500" />
+                                        Together since {new Date(profileData.anniversaryDate).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                                    </p>
+                                )}
+                                {!profileData.anniversaryDate && hasPartner && (
+                                    <p className="text-neutral-400 text-sm italic">
+                                        Anniversary not set
+                                    </p>
+                                )}
+                            </div>
                         </motion.div>
 
                         {/* Level Progress - Our Story */}
@@ -613,22 +696,8 @@ const ProfilesPage = () => {
                             </div>
                         )}
 
-                        {/* Relationship Stats */}
-                        <div className="glass-card p-4 space-y-3">
-                            <h3 className="font-bold text-neutral-700 flex items-center gap-2">
-                                <TrendingUp className="w-4 h-4 text-violet-500" />
-                                Relationship Stats
-                            </h3>
-                            <div className="space-y-2">
-                                <StatBar label="Cases Resolved Together" value={totalCases} max={20} color="violet" />
-                                <StatBar label="Appreciations Shared" value={totalAppreciations * 2} max={50} color="pink" />
-                                <StatBar label="Daily Questions Answered" value={questionsAnswered + partnerQuestionsAnswered} max={60} color="indigo" />
-                                <StatBar label="Kibble Exchanged" value={Math.min(totalKibbleEarned, 500)} max={500} color="amber" />
-                            </div>
-                        </div>
-
                         {/* Memories Preview */}
-                        <div className="glass-card p-4 space-y-4 relative overflow-hidden border border-rose-100/70">
+                        <div className="glass-card p-4 space-y-4 relative overflow-hidden border border-rose-200/70">
                             <div className="absolute inset-0 pointer-events-none">
                                 <div className="absolute -top-10 -right-8 h-28 w-28 rounded-full bg-rose-200/45 blur-2xl" />
                                 <div className="absolute -bottom-12 -left-8 h-32 w-32 rounded-full bg-amber-200/35 blur-2xl" />
@@ -644,14 +713,14 @@ const ProfilesPage = () => {
                                             <ImagePlus className="w-4 h-4 text-rose-600" />
                                         </div>
                                         <div>
-                                            <h3 className="font-display font-bold text-neutral-800">Memories</h3>
+                                            <h3 className="font-display font-bold text-neutral-800">Memory Album</h3>
                                             <p className="text-xs text-neutral-500">A shared gallery of your favorite days.</p>
                                         </div>
                                     </div>
                                     <motion.button
                                         whileTap={{ scale: 0.96 }}
                                         onClick={() => navigate('/memories')}
-                                        className={`text-xs font-bold text-rose-600 ${memoriesAvailable ? '' : 'opacity-60 cursor-not-allowed'}`}
+                                        className={`text-xs font-bold text-rose-600 rounded-full border border-rose-200/70 bg-rose-50/70 px-3 py-1 ${memoriesAvailable ? '' : 'opacity-60 cursor-not-allowed'}`}
                                         disabled={!memoriesAvailable}
                                     >
                                         View all
@@ -674,7 +743,7 @@ const ProfilesPage = () => {
                                             <motion.button
                                                 whileTap={{ scale: 0.98 }}
                                                 onClick={() => navigate('/memories')}
-                                                className="w-full py-3 rounded-2xl border border-dashed border-rose-200 text-sm font-semibold text-rose-600 bg-white/60"
+                                                className="w-full py-3 rounded-2xl border border-rose-200/70 bg-white/80 text-sm font-semibold text-rose-600"
                                             >
                                                 Add your first memory
                                             </motion.button>
@@ -697,7 +766,7 @@ const ProfilesPage = () => {
 
                         {/* Challenges Preview */}
                         {isXPEnabled && (
-                            <div className="glass-card p-4 space-y-4 relative overflow-hidden border border-amber-100/70">
+                            <div className="glass-card p-4 space-y-4 relative overflow-hidden border border-amber-200/70">
                                 <div className="absolute inset-0 pointer-events-none">
                                     <div className="absolute -top-10 -right-8 h-28 w-28 rounded-full bg-amber-200/40 blur-2xl" />
                                     <div className="absolute -bottom-12 -left-8 h-32 w-32 rounded-full bg-rose-200/30 blur-2xl" />
@@ -721,7 +790,7 @@ const ProfilesPage = () => {
                                             <motion.button
                                                 whileTap={{ scale: 0.96 }}
                                                 onClick={() => navigate('/challenges')}
-                                                className="text-xs font-bold text-amber-700"
+                                                className="text-xs font-bold text-amber-700 rounded-full border border-amber-200/70 bg-amber-100/70 px-3 py-1"
                                             >
                                                 Open docket
                                             </motion.button>
@@ -729,7 +798,7 @@ const ProfilesPage = () => {
                                     </div>
 
                                     {showChallenges ? (
-                                        <div className="rounded-2xl border border-white/80 bg-white/70 px-3 py-3 flex items-center justify-between gap-3">
+                                        <div className="rounded-2xl border border-white/80 bg-white/80 px-3 py-3 flex items-center justify-between gap-3">
                                             <div>
                                                 <div className="text-xs font-semibold text-neutral-700">Challenges are live</div>
                                                 <div className="text-[11px] text-neutral-500">Pick a quest to start earning XP.</div>
@@ -761,10 +830,10 @@ const ProfilesPage = () => {
 
                         {/* AI Insights Preview */}
                         {isXPEnabled && (
-                            <div className="glass-card p-4 space-y-4 relative overflow-hidden border border-indigo-100/70">
+                            <div className="glass-card p-4 space-y-4 relative overflow-hidden border border-amber-200/70">
                                 <div className="absolute inset-0 pointer-events-none">
-                                    <div className="absolute -top-10 -right-8 h-28 w-28 rounded-full bg-indigo-200/40 blur-2xl" />
-                                    <div className="absolute -bottom-12 -left-8 h-32 w-32 rounded-full bg-sky-200/40 blur-2xl" />
+                                    <div className="absolute -top-10 -right-8 h-28 w-28 rounded-full bg-amber-200/35 blur-2xl" />
+                                    <div className="absolute -bottom-12 -left-8 h-32 w-32 rounded-full bg-rose-200/30 blur-2xl" />
                                     <div
                                         className="absolute inset-0 opacity-30"
                                         style={{ backgroundImage: 'linear-gradient(150deg, rgba(255,255,255,0.7) 0%, transparent 55%)' }}
@@ -773,8 +842,8 @@ const ProfilesPage = () => {
                                 <div className="relative space-y-4">
                                     <div className="flex items-start justify-between gap-3">
                                         <div className="flex items-center gap-3">
-                                            <div className="h-10 w-10 rounded-2xl bg-indigo-100/80 border border-indigo-200/60 flex items-center justify-center">
-                                                <Sparkles className="w-4 h-4 text-indigo-600" />
+                                            <div className="h-10 w-10 rounded-2xl bg-amber-100/80 border border-amber-200/60 flex items-center justify-center">
+                                                <Sparkles className="w-4 h-4 text-amber-600" />
                                             </div>
                                             <div>
                                                 <h3 className="font-display font-bold text-neutral-800">AI Insights</h3>
@@ -786,7 +855,7 @@ const ProfilesPage = () => {
                                                 <motion.button
                                                     whileTap={{ scale: 0.96 }}
                                                     onClick={() => navigate('/insights')}
-                                                    className="text-xs font-bold text-indigo-600"
+                                                    className="text-xs font-bold text-amber-700 rounded-full border border-amber-200/70 bg-amber-100/70 px-3 py-1"
                                                 >
                                                     View all
                                                 </motion.button>
@@ -794,7 +863,7 @@ const ProfilesPage = () => {
                                             <motion.button
                                                 whileTap={{ scale: 0.96 }}
                                                 onClick={() => updateConsent(!selfConsent)}
-                                                className="text-xs font-bold text-indigo-600 bg-indigo-100/70 px-2.5 py-1 rounded-full"
+                                                className="text-xs font-bold text-amber-700 bg-amber-100/70 px-2.5 py-1 rounded-full"
                                             >
                                                 {selfConsent ? 'Opt out' : 'Turn on'}
                                             </motion.button>
@@ -802,13 +871,13 @@ const ProfilesPage = () => {
                                     </div>
 
                                     {!showInsights && (
-                                        <div className="rounded-2xl border border-dashed border-indigo-200/70 bg-indigo-50/70 px-3 py-3">
+                                        <div className="rounded-2xl border border-dashed border-amber-200/70 bg-amber-50/70 px-3 py-3">
                                             <div className="flex items-center justify-between gap-3">
                                                 <div>
-                                                    <div className="text-sm font-semibold text-indigo-700">Locked until Level 10</div>
-                                                    <p className="text-xs text-indigo-600 mt-1">{unlockHint}</p>
+                                                    <div className="text-sm font-semibold text-amber-700">Locked until Level 10</div>
+                                                    <p className="text-xs text-amber-600 mt-1">{unlockHint}</p>
                                                 </div>
-                                                <div className="text-xs font-bold text-indigo-700 bg-white/70 px-2.5 py-1 rounded-full">
+                                                <div className="text-xs font-bold text-amber-700 bg-white/70 px-2.5 py-1 rounded-full">
                                                     Lv {level}
                                                 </div>
                                             </div>
@@ -816,28 +885,28 @@ const ProfilesPage = () => {
                                     )}
 
                                     {showInsights && !selfConsent && (
-                                        <div className="rounded-2xl border border-indigo-100 bg-indigo-50/70 p-3 text-xs text-indigo-700">
+                                        <div className="rounded-2xl border border-amber-200/70 bg-amber-50/70 p-3 text-xs text-amber-700">
                                             AI insights are off. Turn them back on anytime.
                                         </div>
                                     )}
 
                                     {showInsights && selfConsent && !partnerConsent && (
-                                        <div className="rounded-2xl border border-amber-100 bg-amber-50/70 p-3 text-xs text-amber-700">
+                                        <div className="rounded-2xl border border-amber-200/70 bg-amber-50/70 p-3 text-xs text-amber-700">
                                             Waiting for your partner to opt in.
                                         </div>
                                     )}
 
                                     {showInsights && bothConsented && insightsPaused && (
-                                        <div className="rounded-2xl border border-indigo-100 bg-indigo-50/70 p-3 text-xs text-indigo-700">
+                                        <div className="rounded-2xl border border-amber-200/70 bg-amber-50/70 p-3 text-xs text-amber-700">
                                             Insights are paused. Resume anytime from the insights page.
                                         </div>
                                     )}
 
                                     {showInsights && bothConsented && !insightsPaused && (
-                                        <div className="rounded-2xl border border-white/80 bg-white/70 p-3">
+                                        <div className="rounded-2xl border border-white/80 bg-white/80 p-3">
                                             {latestInsight ? (
                                                 <>
-                                                    <div className="text-[11px] font-semibold text-indigo-500 uppercase tracking-[0.2em] mb-2">
+                                                    <div className="text-[11px] font-semibold text-amber-600 uppercase tracking-[0.2em] mb-2">
                                                         {latestInsight.category}
                                                     </div>
                                                     <p className="text-sm font-semibold text-neutral-700 mb-2">
@@ -860,9 +929,9 @@ const ProfilesPage = () => {
 
                         {/* Achievements */}
                         <div className="glass-card p-4 space-y-3">
-                            <h3 className="font-bold text-neutral-700 flex items-center gap-2">
-                                <Award className="w-4 h-4 text-amber-500" />
-                                Achievements
+                            <h3 className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
+                                <Award className="w-4 h-4 text-amber-600" />
+                                Milestones
                             </h3>
                             <div className="grid grid-cols-3 gap-2">
                                 <AchievementBadge
@@ -910,6 +979,7 @@ const ProfilesPage = () => {
                     </motion.div>
                 )}
             </AnimatePresence>
+            </div>
 
             {/* Edit Profile Modal */}
             <AnimatePresence>
@@ -934,28 +1004,47 @@ const ProfilesPage = () => {
     );
 };
 
+const ProfileBackdrop = () => (
+    <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute -top-24 -right-16 h-56 w-56 rounded-full bg-amber-200/30 blur-3xl" />
+        <div className="absolute top-16 -left-20 h-60 w-60 rounded-full bg-rose-200/25 blur-3xl" />
+        <div className="absolute bottom-6 right-8 h-64 w-64 rounded-full bg-amber-100/40 blur-3xl" />
+        <div
+            className="absolute inset-0 opacity-45"
+            style={{
+                backgroundImage:
+                    'radial-gradient(circle at 18% 20%, rgba(255,255,255,0.75) 0%, transparent 55%), radial-gradient(circle at 80% 10%, rgba(255,235,210,0.8) 0%, transparent 60%)'
+            }}
+        />
+    </div>
+);
+
 const QuickLink = ({ icon, label, sublabel, onClick }) => (
     <motion.button
         whileTap={{ scale: 0.98 }}
         onClick={onClick}
-        className="w-full glass-card p-4 flex items-center gap-3 text-left"
+        className="w-full glass-card relative overflow-hidden p-4 flex items-center gap-3 text-left"
     >
-        <div className="w-10 h-10 bg-white/80 rounded-xl flex items-center justify-center shadow-soft">
+        <div className="absolute -top-8 -right-6 h-16 w-16 rounded-full bg-amber-200/25 blur-2xl" />
+        <div className="relative w-11 h-11 rounded-2xl border border-white/80 bg-white/85 flex items-center justify-center shadow-inner-soft">
             {icon}
         </div>
-        <div className="flex-1">
+        <div className="relative flex-1">
             <p className="font-bold text-neutral-800 text-sm">{label}</p>
             <p className="text-xs text-neutral-500">{sublabel}</p>
         </div>
-        <ChevronRight className="w-5 h-5 text-neutral-400" />
+        <div className="relative flex h-9 w-9 items-center justify-center rounded-full border border-white/80 bg-white/80">
+            <ChevronRight className="w-4 h-4 text-neutral-400" />
+        </div>
     </motion.button>
 );
 
 const StatBar = ({ label, value, max, color }) => {
     const percentage = Math.min((value / max) * 100, 100);
     const colorClasses = {
-        violet: 'from-violet-400 to-violet-500',
-        pink: 'from-pink-400 to-pink-500',
+        violet: 'from-amber-400 to-amber-500',
+        pink: 'from-rose-400 to-rose-500',
+        indigo: 'from-amber-300 to-amber-500',
         amber: 'from-amber-400 to-amber-500',
     };
 
@@ -965,7 +1054,7 @@ const StatBar = ({ label, value, max, color }) => {
                 <span className="text-neutral-600">{label}</span>
                 <span className="font-bold text-neutral-700">{value}</span>
             </div>
-            <div className="h-2 bg-neutral-100 rounded-full overflow-hidden">
+            <div className="h-2 bg-white/80 rounded-full overflow-hidden shadow-inner-soft">
                 <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${percentage}%` }}
@@ -978,9 +1067,9 @@ const StatBar = ({ label, value, max, color }) => {
 };
 
 const AchievementBadge = ({ emoji, label, unlocked }) => (
-    <div className={`p-3 rounded-xl text-center transition-all ${unlocked
-        ? 'bg-gradient-to-br from-amber-50 to-amber-100 shadow-soft'
-        : 'bg-neutral-100 opacity-40'
+    <div className={`rounded-2xl px-2.5 py-3 text-center transition-all ${unlocked
+        ? 'border border-white/80 bg-white/85 shadow-soft'
+        : 'border border-neutral-200/70 bg-neutral-100/70 opacity-50'
         }`}>
         <span className="text-2xl block mb-1">{unlocked ? emoji : '🔒'}</span>
         <span className="text-[10px] font-bold text-neutral-600">{label}</span>
@@ -1066,13 +1155,13 @@ const EditProfileModal = ({ profileData, onSave, onClose }) => {
                 animate={{ y: 0, opacity: 1 }}
                 exit={{ y: 100, opacity: 0 }}
                 onClick={(e) => e.stopPropagation()}
-                className="bg-white rounded-3xl w-full max-w-md p-5 space-y-4 shadow-xl max-h-[70vh] overflow-y-auto"
+                className="bg-white/95 rounded-[32px] w-full max-w-md p-5 space-y-4 shadow-soft-lg border border-white/80 max-h-[70vh] overflow-y-auto"
             >
                 <div className="flex items-center justify-between">
                     <h3 className="font-bold text-neutral-800 text-lg">Edit Profile ✨</h3>
                     <button
                         onClick={onClose}
-                        className="w-8 h-8 bg-neutral-100 rounded-full flex items-center justify-center"
+                        className="w-8 h-8 bg-white/80 border border-neutral-200/70 rounded-full flex items-center justify-center"
                     >
                         <X className="w-4 h-4 text-neutral-500" />
                     </button>
@@ -1082,7 +1171,7 @@ const EditProfileModal = ({ profileData, onSave, onClose }) => {
                 <div>
                     <label className="text-xs font-bold text-neutral-500 mb-2 block">Profile Picture 📸</label>
                     <div className="flex items-center gap-4">
-                        <div className="w-20 h-24 rounded-2xl bg-gradient-to-br from-violet-100 to-pink-100 flex items-center justify-center overflow-hidden shadow-soft">
+                        <div className="w-20 h-24 rounded-2xl bg-gradient-to-br from-amber-100 to-rose-100 flex items-center justify-center overflow-hidden shadow-soft">
                             {formData.avatarUrl ? (
                                 <img
                                     src={formData.avatarUrl}
@@ -1100,7 +1189,7 @@ const EditProfileModal = ({ profileData, onSave, onClose }) => {
                                 whileTap={{ scale: 0.95 }}
                                 onClick={handleCameraCapture}
                                 disabled={uploading}
-                                className="w-full py-2.5 bg-violet-50 text-violet-600 rounded-xl text-sm font-bold flex items-center justify-center gap-2 border border-violet-200"
+                                className="w-full py-2.5 bg-amber-50 text-amber-700 rounded-xl text-sm font-bold flex items-center justify-center gap-2 border border-amber-200"
                             >
                                 📷 Take Photo
                             </motion.button>
@@ -1108,7 +1197,7 @@ const EditProfileModal = ({ profileData, onSave, onClose }) => {
                                 whileTap={{ scale: 0.95 }}
                                 onClick={() => fileInputRef.current?.click()}
                                 disabled={uploading}
-                                className="w-full py-2.5 bg-pink-50 text-pink-600 rounded-xl text-sm font-bold flex items-center justify-center gap-2 border border-pink-200"
+                                className="w-full py-2.5 bg-rose-50 text-rose-600 rounded-xl text-sm font-bold flex items-center justify-center gap-2 border border-rose-200"
                             >
                                 {uploading ? 'Uploading...' : '🖼️ Upload Photo'}
                             </motion.button>
@@ -1132,7 +1221,7 @@ const EditProfileModal = ({ profileData, onSave, onClose }) => {
                                 key={avatar.id}
                                 onClick={() => setFormData({ ...formData, avatarUrl: avatar.path })}
                                 className={`p-1 rounded-xl transition-all ${formData.avatarUrl === avatar.path
-                                    ? 'bg-violet-100 ring-2 ring-violet-400'
+                                    ? 'bg-amber-100 ring-2 ring-amber-400'
                                     : 'bg-neutral-50 hover:bg-neutral-100'
                                     }`}
                             >
@@ -1150,7 +1239,7 @@ const EditProfileModal = ({ profileData, onSave, onClose }) => {
                         value={formData.nickname}
                         onChange={(e) => setFormData({ ...formData, nickname: e.target.value })}
                         placeholder="Your cute nickname"
-                        className="w-full bg-neutral-50 border-2 border-neutral-100 rounded-xl p-3 text-neutral-700 focus:ring-2 focus:ring-violet-200 focus:border-violet-300 focus:outline-none text-sm"
+                        className="w-full bg-neutral-50 border-2 border-neutral-100 rounded-xl p-3 text-neutral-700 focus:ring-2 focus:ring-amber-200 focus:border-amber-300 focus:outline-none text-sm"
                     />
                 </div>
 
@@ -1163,7 +1252,7 @@ const EditProfileModal = ({ profileData, onSave, onClose }) => {
                         onChange={(e) => handleBirthdayChange(e.target.value)}
                         className={`w-full bg-neutral-50 border-2 rounded-xl p-3 text-neutral-700 focus:ring-2 focus:outline-none text-sm ${birthdayError
                             ? 'border-red-300 focus:ring-red-200 focus:border-red-300'
-                            : 'border-neutral-100 focus:ring-violet-200 focus:border-violet-300'
+                            : 'border-neutral-100 focus:ring-amber-200 focus:border-amber-300'
                             }`}
                     />
                     {birthdayError && (
@@ -1183,14 +1272,14 @@ const EditProfileModal = ({ profileData, onSave, onClose }) => {
                                 key={lang.id}
                                 onClick={() => setFormData({ ...formData, loveLanguage: lang.id })}
                                 className={`w-full p-3 rounded-xl text-left flex items-center gap-3 transition-all ${formData.loveLanguage === lang.id
-                                    ? 'bg-pink-50 ring-2 ring-pink-300'
+                                    ? 'bg-amber-50 ring-2 ring-amber-300'
                                     : 'bg-neutral-50 hover:bg-neutral-100'
                                     }`}
                             >
                                 <span className="text-xl">{lang.emoji}</span>
                                 <span className="text-sm font-medium text-neutral-700">{lang.label}</span>
                                 {formData.loveLanguage === lang.id && (
-                                    <Check className="w-4 h-4 text-pink-500 ml-auto" />
+                                    <Check className="w-4 h-4 text-amber-500 ml-auto" />
                                 )}
                             </button>
                         ))}
