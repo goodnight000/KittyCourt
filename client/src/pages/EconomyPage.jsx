@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Star, Plus, X, Check, Edit3, Trash2, ShoppingBag, Bell, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Star, Plus, X, Check, Edit3, Trash2, ShoppingBag, Bell, CheckCircle2 } from 'lucide-react';
 import useAppStore from '../store/useAppStore';
 import useAuthStore from '../store/useAuthStore';
 import RequirePartner from '../components/RequirePartner';
 import { supabase } from '../services/supabase';
+import { useNavigate } from 'react-router-dom';
 
 const DEFAULT_REWARDS = [
     { id: 1, title: "Foot Massage", subtitle: "10 minutes", cost: 50, icon: "🦶", color: "pink" },
@@ -30,6 +31,7 @@ const storeRewards = (userId, rewards) => {
 };
 
 export default function EconomyPage() {
+    const navigate = useNavigate();
     const { currentUser, redeemCoupon } = useAppStore();
     const { hasPartner, user: authUser, profile, partner: connectedPartner } = useAuthStore();
     
@@ -155,9 +157,26 @@ export default function EconomyPage() {
     };
 
     return (
-        <div className="relative min-h-screen overflow-hidden pb-24">
+        <div className="relative min-h-screen overflow-hidden pb-6">
             <MarketBackdrop />
             <div className="relative space-y-6">
+                <header className="flex items-center gap-3">
+                    <motion.button
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => navigate(-1)}
+                        className="rounded-2xl border border-white/80 bg-white/80 p-2 shadow-soft"
+                        aria-label="Back"
+                    >
+                        <ArrowLeft className="w-5 h-5 text-neutral-600" />
+                    </motion.button>
+                    <div className="flex-1">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-amber-600">
+                            Kibble Market
+                        </p>
+                        <h1 className="text-2xl font-display font-bold text-neutral-800">Reward Boutique</h1>
+                        <p className="text-sm text-neutral-500">Spend kibble on sweet little rituals</p>
+                    </div>
+                </header>
                 <AnimatePresence>
                     {showSuccess && (
                         <motion.div
@@ -186,9 +205,9 @@ export default function EconomyPage() {
                     </div>
                     <div className="relative flex items-start justify-between gap-4">
                         <div>
-                            <div className="text-[10px] uppercase tracking-[0.4em] text-neutral-400 font-semibold">Kibble Market</div>
-                            <h1 className="text-2xl font-display font-bold text-neutral-800 mt-2">Reward Boutique</h1>
-                            <p className="text-xs text-neutral-500 mt-1">Spend kibble on little rituals and sweet surprises.</p>
+                            <div className="text-[10px] uppercase tracking-[0.4em] text-neutral-400 font-semibold">Balance</div>
+                            <h2 className="text-xl font-display font-bold text-neutral-800 mt-2">Your Kibble</h2>
+                            <p className="text-xs text-neutral-500 mt-1">Ready to spend on sweet surprises.</p>
                         </div>
                         <motion.div
                             animate={{ rotate: [0, 8, -8, 0] }}

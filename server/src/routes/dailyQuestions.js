@@ -13,6 +13,8 @@ const router = express.Router();
 const { requireSupabase, requireAuthUserId, getPartnerIdForUser } = require('../lib/auth');
 const { awardXP, ACTION_TYPES, isXPSystemEnabled } = require('../lib/xpService');
 const { recordChallengeAction, CHALLENGE_ACTIONS } = require('../lib/challengeService');
+const { checkMemoriesBySource } = require('../lib/supabase');
+const { triggerDailyQuestionExtraction } = require('../lib/stenographer');
 
 const normalizeLimit = (limit) => {
     const parsed = parseInt(limit, 10);
@@ -301,6 +303,70 @@ router.post('/answer', async (req, res) => {
                 .eq('user_id', partnerId)
                 .single();
             partnerAnswer = partnerData || null;
+        }
+
+        if (bothAnswered && partnerAnswer) {
+            try {
+                const existingCount = await checkMemoriesBySource('daily_question', assignmentId);
+                if (existingCount === 0) {
+                    const { data: gateRow, error: gateError } = await supabase
+                        .from('couple_question_assignments')
+                        .update({ memory_extracted_at: new Date().toISOString() })
+                        .eq('id', assignmentId)
+                        .is('memory_extracted_at', null)
+                        .select('id')
+                        .maybeSingle();
+
+                    if (gateError) {
+                        throw gateError;
+                    }
+
+                    if (!gateRow) {
+                        console.log('[Daily Questions] Extraction already claimed for assignment:', assignmentId);
+                    } else {
+                        const { data: questionRow, error: questionError } = await supabase
+                            .from('question_bank')
+                            .select('question, emoji, category')
+                            .eq('id', assignment.question_id)
+                            .single();
+
+                        if (questionError || !questionRow?.question) {
+                            throw new Error('Daily question text unavailable for extraction');
+                        }
+
+                        const { data: profiles, error: profileError } = await supabase
+                            .from('profiles')
+                            .select('id, display_name')
+                            .in('id', [assignment.user_a_id, assignment.user_b_id]);
+
+                        if (profileError) {
+                            throw profileError;
+                        }
+
+                        const nameById = new Map((profiles || []).map(profile => [profile.id, profile.display_name || 'Partner']));
+                        const userAName = nameById.get(assignment.user_a_id) || 'User A';
+                        const userBName = nameById.get(assignment.user_b_id) || 'User B';
+                        const userAAnswer = isUserA ? savedAnswer.answer : partnerAnswer.answer;
+                        const userBAnswer = isUserA ? partnerAnswer.answer : savedAnswer.answer;
+
+                        triggerDailyQuestionExtraction({
+                            assignmentId,
+                            question: questionRow?.question || '',
+                            emoji: questionRow?.emoji || null,
+                            category: questionRow?.category || null,
+                            userAId: assignment.user_a_id,
+                            userBId: assignment.user_b_id,
+                            userAName,
+                            userBName,
+                            userAAnswer,
+                            userBAnswer,
+                            observedAt: new Date().toISOString(),
+                        });
+                    }
+                }
+            } catch (extractionError) {
+                console.warn('[Daily Questions] Memory extraction skipped:', extractionError?.message || extractionError);
+            }
         }
 
         res.json({

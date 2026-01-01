@@ -48,6 +48,33 @@ router.get('/status', async (req, res) => {
             return res.status(500).json({ error: levelResult?.error || 'Failed to fetch level status' });
         }
 
+        let lastSeenLevel = levelResult.data.level;
+        let shouldUpdateSeen = false;
+
+        const { data: profileRow, error: profileError } = await supabase
+            .from('profiles')
+            .select('last_seen_level, last_seen_level_partner_id')
+            .eq('id', userId)
+            .maybeSingle();
+
+        if (profileError) {
+            console.warn('[Levels] Failed to load last seen level:', profileError);
+        } else if (profileRow) {
+            const storedLevel = Number(profileRow.last_seen_level);
+            const storedPartner = profileRow.last_seen_level_partner_id;
+            const isPartnerMatch = storedPartner && String(storedPartner) === String(partnerId);
+
+            if (!isPartnerMatch || !Number.isFinite(storedLevel)) {
+                lastSeenLevel = levelResult.data.level;
+                shouldUpdateSeen = true;
+            } else if (storedLevel > levelResult.data.level) {
+                lastSeenLevel = levelResult.data.level;
+                shouldUpdateSeen = true;
+            } else {
+                lastSeenLevel = storedLevel;
+            }
+        }
+
         const { count: questionsCount, error: countError } = await supabase
             .from('daily_answers')
             .select('id, couple_question_assignments!inner(user_a_id,user_b_id)', { count: 'exact', head: true })
@@ -58,9 +85,24 @@ router.get('/status', async (req, res) => {
             console.warn('[Levels] Failed to count daily answers:', countError);
         }
 
+        if (shouldUpdateSeen) {
+            const { error: updateError } = await supabase
+                .from('profiles')
+                .update({
+                    last_seen_level: lastSeenLevel,
+                    last_seen_level_partner_id: partnerId,
+                })
+                .eq('id', userId);
+
+            if (updateError) {
+                console.warn('[Levels] Failed to update last seen level:', updateError);
+            }
+        }
+
         return res.json({
             ...levelResult.data,
-            questionsAnswered: countError ? 0 : (questionsCount || 0)
+            questionsAnswered: countError ? 0 : (questionsCount || 0),
+            lastSeenLevel,
         });
     } catch (error) {
         console.error('[Levels] Error fetching status:', error);
@@ -116,6 +158,58 @@ router.post('/dev/award-xp', async (req, res) => {
         return res.json(result);
     } catch (error) {
         console.error('[Levels] Error awarding debug XP:', error);
+        return res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
+    }
+});
+
+/**
+ * POST /api/levels/seen
+ *
+ * Update last seen level for the current user.
+ */
+router.post('/seen', async (req, res) => {
+    try {
+        if (!isXPSystemEnabled()) {
+            return res.status(400).json({ error: 'XP system disabled' });
+        }
+
+        if (!isSupabaseConfigured()) {
+            return res.status(503).json({ error: 'Supabase not configured' });
+        }
+
+        const supabase = requireSupabase();
+        const userId = await requireAuthUserId(req);
+        const partnerId = await getPartnerIdForUser(supabase, userId);
+
+        if (!partnerId) {
+            return res.status(400).json({ error: 'No partner connected' });
+        }
+
+        const levelResult = await getLevelStatus(userId, partnerId);
+        if (!levelResult?.success || !levelResult?.data) {
+            return res.status(500).json({ error: levelResult?.error || 'Failed to fetch level status' });
+        }
+
+        const requested = Number(req.body?.level);
+        const safeLevel = Number.isFinite(requested)
+            ? Math.min(requested, levelResult.data.level)
+            : levelResult.data.level;
+
+        const { error: updateError } = await supabase
+            .from('profiles')
+            .update({
+                last_seen_level: safeLevel,
+                last_seen_level_partner_id: partnerId,
+            })
+            .eq('id', userId);
+
+        if (updateError) {
+            return res.status(500).json({ error: updateError.message });
+        }
+
+        return res.json({ success: true, lastSeenLevel: safeLevel });
+    } catch (error) {
+        console.error('[Levels] Error updating seen level:', error);
         return res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
     }
 });

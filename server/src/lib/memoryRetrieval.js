@@ -5,9 +5,10 @@
  * before verdict generation to provide historical context.
  */
 
-const { generateCaseQueryEmbedding } = require('./embeddings');
+const { generateCaseQueryEmbedding, generateUserQueryEmbedding } = require('./embeddings');
 const {
     retrieveRelevantMemories,
+    retrieveRelevantMemoriesV2,
     getUserProfile,
     isSupabaseConfigured,
     checkUserHasMemories
@@ -15,8 +16,34 @@ const {
 
 // Configuration
 const CONFIG = {
-    maxMemoriesToRetrieve: 4, // Top-k for RAG
-    minSimilarityScore: 0.5, // Minimum relevance threshold
+    maxMemoriesToRetrieve: 4, // Total memories to include
+    maxMemoriesPerUser: 3, // Per-user cap for v2 retrieval
+    maxMemoriesPerType: 2, // Per-type cap for diversity
+    candidateMultiplier: 5, // Over-fetch multiplier for v2 rerank
+    minSimilarityScore: 0.5, // Minimum similarity threshold
+    minScore: 0.0, // Minimum composite score (v2)
+};
+
+const USE_V2 = process.env.MEMORY_ENGINE_V2_ENABLED === 'true';
+
+const buildUserQueryInputs = (submissions, addendumHistory, userKey) => {
+    const addendumForUser = Array.isArray(addendumHistory)
+        ? addendumHistory.filter(entry => entry?.fromUser === userKey)
+        : [];
+
+    return {
+        userFacts: submissions?.[userKey]?.cameraFacts || '',
+        userFeelings: submissions?.[userKey]?.theStoryIamTellingMyself || '',
+        addendumHistory: addendumForUser,
+    };
+};
+
+const hasQueryInputs = (inputs) => {
+    if (!inputs) return false;
+    const addendumTexts = Array.isArray(inputs.addendumHistory)
+        ? inputs.addendumHistory.map(entry => entry?.text).filter(Boolean)
+        : [];
+    return [inputs.userFacts, inputs.userFeelings, ...addendumTexts].some(Boolean);
 };
 
 /**
@@ -64,42 +91,107 @@ async function retrieveHistoricalContext(caseData) {
             };
         }
 
-        // Step 2: Generate query embedding from case inputs (only if memories exist)
-        console.log(`[Memory Retrieval] Generating query embedding (found ${userAMemoryCount + userBMemoryCount} total memories)...`);
-        const queryEmbedding = await generateCaseQueryEmbedding({
-            userAFacts: submissions.userA.cameraFacts,
-            userAFeelings: submissions.userA.theStoryIamTellingMyself,
-            userBFacts: submissions.userB.cameraFacts,
-            userBFeelings: submissions.userB.theStoryIamTellingMyself,
-            addendumHistory: caseData.addendumHistory || []
-        });
+        const retrieveMemoriesV1 = async () => {
+            console.log(`[Memory Retrieval] Generating query embedding (found ${userAMemoryCount + userBMemoryCount} total memories)...`);
+            const queryEmbedding = await generateCaseQueryEmbedding({
+                userAFacts: submissions.userA.cameraFacts,
+                userAFeelings: submissions.userA.theStoryIamTellingMyself,
+                userBFacts: submissions.userB.cameraFacts,
+                userBFeelings: submissions.userB.theStoryIamTellingMyself,
+                addendumHistory: caseData.addendumHistory || []
+            });
 
-        // Step 3: Retrieve relevant episodic memories via vector search
-        console.log('[Memory Retrieval] Searching for relevant memories...');
-        const relevantMemories = await retrieveRelevantMemories(
-            queryEmbedding,
-            [userAId, userBId],
-            CONFIG.maxMemoriesToRetrieve
-        );
+            console.log('[Memory Retrieval] Searching for relevant memories...');
+            const relevantMemories = await retrieveRelevantMemories(
+                queryEmbedding,
+                [userAId, userBId],
+                CONFIG.maxMemoriesToRetrieve
+            );
 
+            const filteredMemories = relevantMemories.filter(
+                m => m.similarity >= CONFIG.minSimilarityScore
+            );
 
-        // Filter by minimum similarity
-        const filteredMemories = relevantMemories.filter(
-            m => m.similarity >= CONFIG.minSimilarityScore
-        );
+            console.log(`[Memory Retrieval] Found ${filteredMemories.length} relevant memories`);
 
-        console.log(`[Memory Retrieval] Found ${filteredMemories.length} relevant memories`);
+            return filteredMemories.map(memory => ({
+                userId: memory.user_id,
+                userName: memory.user_id === userAId
+                    ? participants.userA.name
+                    : participants.userB.name,
+                text: memory.memory_text,
+                type: memory.memory_type,
+                relevance: Math.round(memory.similarity * 100),
+            }));
+        };
 
-        // Step 4: Format memories with user attribution
-        const formattedMemories = filteredMemories.map(memory => ({
-            userId: memory.user_id,
-            userName: memory.user_id === userAId
-                ? participants.userA.name
-                : participants.userB.name,
-            text: memory.memory_text,
-            type: memory.memory_type,
-            relevance: Math.round(memory.similarity * 100),
-        }));
+        let formattedMemories = [];
+
+        if (USE_V2) {
+            console.log('[Memory Retrieval] Using v2 retrieval pipeline...');
+            try {
+                const addendumHistory = caseData.addendumHistory || [];
+                const userAInputs = buildUserQueryInputs(submissions, addendumHistory, 'userA');
+                const userBInputs = buildUserQueryInputs(submissions, addendumHistory, 'userB');
+
+                const userAEmbedding = (userAMemoryCount > 0 && hasQueryInputs(userAInputs))
+                    ? await generateUserQueryEmbedding(userAInputs)
+                    : null;
+                const userBEmbedding = (userBMemoryCount > 0 && hasQueryInputs(userBInputs))
+                    ? await generateUserQueryEmbedding(userBInputs)
+                    : null;
+
+                console.log('[Memory Retrieval] Searching for relevant memories (v2)...');
+                const [memoriesA, memoriesB] = await Promise.all([
+                    userAEmbedding
+                        ? retrieveRelevantMemoriesV2(userAEmbedding, [userAId], CONFIG.maxMemoriesPerUser, CONFIG.candidateMultiplier)
+                        : [],
+                    userBEmbedding
+                        ? retrieveRelevantMemoriesV2(userBEmbedding, [userBId], CONFIG.maxMemoriesPerUser, CONFIG.candidateMultiplier)
+                        : [],
+                ]);
+
+                const combined = [...memoriesA, ...memoriesB];
+                const filtered = combined.filter(memory => (
+                    memory.similarity >= CONFIG.minSimilarityScore
+                    && (memory.score || 0) >= CONFIG.minScore
+                ));
+
+                filtered.sort((a, b) => (b.score - a.score) || (b.similarity - a.similarity));
+
+                const perTypeCounts = new Map();
+                const selected = [];
+                for (const memory of filtered) {
+                    const type = memory.memory_type || 'unknown';
+                    const currentCount = perTypeCounts.get(type) || 0;
+                    if (currentCount >= CONFIG.maxMemoriesPerType) continue;
+                    selected.push(memory);
+                    perTypeCounts.set(type, currentCount + 1);
+                    if (selected.length >= CONFIG.maxMemoriesToRetrieve) break;
+                }
+
+                console.log(`[Memory Retrieval] Found ${selected.length} relevant memories (v2)`);
+
+                formattedMemories = selected.map(memory => ({
+                    userId: memory.user_id,
+                    userName: memory.user_id === userAId
+                        ? participants.userA.name
+                        : participants.userB.name,
+                    text: memory.memory_text,
+                    type: memory.memory_type,
+                    relevance: Math.round(memory.similarity * 100),
+                    confidenceScore: memory.confidence_score,
+                    lastObservedAt: memory.last_observed_at,
+                    sourceType: memory.source_type,
+                    memorySubtype: memory.memory_subtype,
+                }));
+            } catch (error) {
+                console.warn('[Memory Retrieval] v2 retrieval failed, falling back to v1:', error.message);
+                formattedMemories = await retrieveMemoriesV1();
+            }
+        } else {
+            formattedMemories = await retrieveMemoriesV1();
+        }
 
         return {
             enabled: true,
@@ -192,9 +284,28 @@ function formatContextForPrompt(context, participants) {
                 'trigger': '⚡',
                 'core_value': '💎',
                 'pattern': '🔄',
+                'preference': '🎯',
             }[memory.type] || '📝';
 
-            sections.push(`${typeEmoji} **${memory.userName}** (${memory.type}): ${memory.text}`);
+            const metaParts = [];
+            if (typeof memory.confidenceScore === 'number') {
+                metaParts.push(`confidence ${Math.round(memory.confidenceScore * 100)}%`);
+            }
+            if (memory.lastObservedAt) {
+                const observedDate = new Date(memory.lastObservedAt);
+                if (!Number.isNaN(observedDate.getTime())) {
+                    metaParts.push(`last observed ${observedDate.toISOString().slice(0, 10)}`);
+                }
+            }
+            if (memory.sourceType) {
+                metaParts.push(`source ${memory.sourceType}`);
+            }
+            if (memory.memorySubtype) {
+                metaParts.push(`subtype ${memory.memorySubtype}`);
+            }
+
+            const metaSuffix = metaParts.length ? ` (${metaParts.join(', ')})` : '';
+            sections.push(`${typeEmoji} **${memory.userName}** (${memory.type}): ${memory.text}${metaSuffix}`);
         }
     }
 

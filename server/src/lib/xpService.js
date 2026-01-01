@@ -46,7 +46,6 @@ const DAILY_CAPS = {
 };
 
 const QUALITY_REQUIREMENTS = {
-    [ACTION_TYPES.DAILY_QUESTION]: { minLength: 20 },
     [ACTION_TYPES.APPRECIATION]: { minLength: 10, maxPerDay: 3 },
 };
 

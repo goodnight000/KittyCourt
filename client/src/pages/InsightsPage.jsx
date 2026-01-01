@@ -1,13 +1,15 @@
 /**
  * InsightsPage - AI relationship insights.
  */
-import React, { useEffect, useMemo } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowLeft, Sparkles, PauseCircle, ThumbsUp, ThumbsDown, AlertCircle } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import useLevelStore from '../store/useLevelStore'
 import useAuthStore from '../store/useAuthStore'
 import useInsightsStore from '../store/useInsightsStore'
+import useSubscriptionStore from '../store/useSubscriptionStore'
+import Paywall from '../components/Paywall'
 
 const InsightBackdrop = () => (
   <div className="absolute inset-0 pointer-events-none">
@@ -29,6 +31,7 @@ const InsightsPage = () => {
   const handleBack = () => navigate('/profile', { state: { tab: 'us' } })
   const { hasPartner } = useAuthStore()
   const { level, shouldShowInsights, fetchLevel, serverAvailable } = useLevelStore()
+  const { isGold, isLoading: subscriptionLoading } = useSubscriptionStore()
   const {
     insights,
     consent,
@@ -42,13 +45,15 @@ const InsightsPage = () => {
     clearError
   } = useInsightsStore()
 
-  const showInsights = shouldShowInsights()
+  const levelUnlocked = shouldShowInsights()
+  const showInsights = levelUnlocked && isGold
   const selfConsent = consent ? !!consent.selfConsent : true
   const partnerConsent = consent ? !!consent.partnerConsent : true
   const bothConsented = selfConsent && partnerConsent
   const paused = consent?.selfPaused || consent?.partnerPaused
   const insightsCount = insights.length
   const insightsLabel = insightsCount === 1 ? 'insight' : 'insights'
+  const [showPaywall, setShowPaywall] = useState(false)
 
   const statusChip = useMemo(() => {
     if (!consent) {
@@ -78,7 +83,7 @@ const InsightsPage = () => {
 
   const isXPEnabled = import.meta.env.VITE_XP_SYSTEM_ENABLED === 'true'
 
-  if (!isXPEnabled || !showInsights) {
+  if (!isXPEnabled || !levelUnlocked) {
     return (
       <div className="relative min-h-screen overflow-hidden px-4 pb-6 pt-6">
         <InsightBackdrop />
@@ -104,7 +109,7 @@ const InsightsPage = () => {
               Insights unlock at Level 10
             </h2>
             <p className="mt-2 text-sm text-neutral-500">
-              You are currently Level {level}. Keep earning XP together.
+              You are currently Level {level}. Reach Level 10 and Pause Gold to unlock insights.
             </p>
             <motion.button
               whileTap={{ scale: 0.98 }}
@@ -115,6 +120,49 @@ const InsightsPage = () => {
             </motion.button>
           </motion.div>
         </div>
+      </div>
+    )
+  }
+
+  if (!showInsights) {
+    return (
+      <div className="relative min-h-screen overflow-hidden px-4 pb-6 pt-6">
+        <InsightBackdrop />
+        <div className="relative">
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={handleBack}
+            className="flex items-center gap-2 text-sm font-semibold text-neutral-600"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            <span>Back</span>
+          </motion.button>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-10 glass-card text-center px-6 py-8"
+          >
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-amber-200/70 bg-amber-100/80">
+              <Sparkles className="w-8 h-8 text-amber-600" />
+            </div>
+            <h2 className="mt-4 text-xl font-display font-bold text-neutral-800">
+              AI Insights are a Gold feature
+            </h2>
+            <p className="mt-2 text-sm text-neutral-500">
+              You are Level {level}. Upgrade to Pause Gold to unlock your insights.
+            </p>
+            <motion.button
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setShowPaywall(true)}
+              disabled={subscriptionLoading}
+              className="mt-5 w-full rounded-2xl bg-gradient-to-r from-[#C9A227] to-[#8B7019] py-3 text-sm font-bold text-white shadow-soft disabled:opacity-60"
+            >
+              {subscriptionLoading ? 'Checking membership...' : 'Unlock with Pause Gold'}
+            </motion.button>
+          </motion.div>
+        </div>
+        <Paywall isOpen={showPaywall} onClose={() => setShowPaywall(false)} />
       </div>
     )
   }
@@ -330,6 +378,7 @@ const InsightsPage = () => {
           </div>
         )}
       </div>
+      <Paywall isOpen={showPaywall} onClose={() => setShowPaywall(false)} />
     </div>
   )
 }

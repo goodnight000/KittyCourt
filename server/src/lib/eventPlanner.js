@@ -13,6 +13,7 @@ const {
     isSupabaseConfigured,
     getUserProfile,
     retrieveRelevantMemories,
+    retrieveRelevantMemoriesV2,
     checkUserHasMemories,
 } = require('./supabase');
 const { repairAndParseJSON } = require('./jsonRepair');
@@ -27,6 +28,8 @@ const CONFIG = {
     maxTokens: 4500,
     maxRetries: 3,
 };
+
+const USE_V2 = process.env.MEMORY_ENGINE_V2_ENABLED === 'true';
 
 const EVENT_PLAN_JSON_SCHEMA = {
     name: 'pause_event_plan',
@@ -291,7 +294,9 @@ async function retrievePartnerRagContext({ partnerId, event }) {
     }
 
     const queryEmbedding = await generateEmbedding(buildQueryText({ event }));
-    const retrieved = await retrieveRelevantMemories(queryEmbedding, [partnerId], CONFIG.maxMemoriesToRetrieve);
+    const retrieved = USE_V2
+        ? await retrieveRelevantMemoriesV2(queryEmbedding, [partnerId], CONFIG.maxMemoriesToRetrieve, 5)
+        : await retrieveRelevantMemories(queryEmbedding, [partnerId], CONFIG.maxMemoriesToRetrieve);
 
     const filtered = (retrieved || [])
         .filter((m) => (m.similarity || 0) >= CONFIG.minSimilarityScore)

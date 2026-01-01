@@ -103,7 +103,7 @@ router.patch('/profile/:userId', async (req, res) => {
  * 
  * Get all memories for a user
  * 
- * @query {string} type - Optional filter: 'trigger', 'core_value', or 'pattern'
+ * @query {string} type - Optional filter: 'trigger', 'core_value', 'pattern', or 'preference'
  */
 router.get('/memories/:userId', async (req, res) => {
     if (!isSupabaseConfigured()) {
@@ -118,7 +118,7 @@ router.get('/memories/:userId', async (req, res) => {
             return res.status(403).json({ error: 'Forbidden' });
         }
 
-        const allowedTypes = new Set(['trigger', 'core_value', 'pattern']);
+        const allowedTypes = new Set(['trigger', 'core_value', 'pattern', 'preference']);
         const type = typeof req.query.type === 'string' ? req.query.type : null;
         if (type && !allowedTypes.has(type)) {
             return res.status(400).json({ error: 'Invalid type' });
@@ -154,10 +154,11 @@ router.get('/insights/:userId', async (req, res) => {
             return res.status(403).json({ error: 'Forbidden' });
         }
 
-        const [triggers, coreValues, patterns] = await Promise.all([
+        const [triggers, coreValues, patterns, preferences] = await Promise.all([
             getUserMemories(viewerId, 'trigger'),
             getUserMemories(viewerId, 'core_value'),
             getUserMemories(viewerId, 'pattern'),
+            getUserMemories(viewerId, 'preference'),
         ]);
         
         res.json({
@@ -166,12 +167,14 @@ router.get('/insights/:userId', async (req, res) => {
                 triggers: triggers.length,
                 coreValues: coreValues.length,
                 patterns: patterns.length,
-                total: triggers.length + coreValues.length + patterns.length,
+                preferences: preferences.length,
+                total: triggers.length + coreValues.length + patterns.length + preferences.length,
             },
             insights: {
                 triggers: triggers.slice(0, 5), // Top 5 by reinforcement
                 coreValues: coreValues.slice(0, 5),
                 patterns: patterns.slice(0, 5),
+                preferences: preferences.slice(0, 5),
             },
         });
     } catch (error) {

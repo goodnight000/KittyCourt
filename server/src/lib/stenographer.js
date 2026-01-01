@@ -5,12 +5,13 @@
  * It analyzes case inputs to extract deep, reusable psychological insights
  * about each user for long-term memory storage.
  * 
- * Uses Grok 4.1 Fast via OpenRouter with reasoning for high-quality extraction.
+ * Uses DeepSeek v3.2 via OpenRouter with reasoning for high-quality extraction.
  */
 
 const embeddings = require('./embeddings');
 const supabase = require('./supabase');
 const { createChatCompletion, isOpenRouterConfigured } = require('./openrouter');
+const { repairAndParseJSON } = require('./jsonRepair');
 
 // Configuration
 const CONFIG = {
@@ -18,6 +19,13 @@ const CONFIG = {
     temperature: 0.3, // Low temperature for consistent extraction
     maxTokens: 6000, // Increased for reasoning tokens
     similarityThreshold: 0.92, // For de-duplication
+};
+
+const DAILY_QUESTION_CONFIG = {
+    model: 'deepseek/deepseek-v3.2',
+    temperature: 0.2,
+    maxTokens: 2000,
+    similarityThreshold: 0.9,
 };
 
 /**
@@ -87,6 +95,85 @@ Respond with a JSON object containing insights for each user:
 
 If you cannot extract meaningful insights for a user, return an empty insights array for that user.`;
 
+const DAILY_QUESTION_SYSTEM_PROMPT = `You are a relationship researcher extracting durable, user-specific insights from daily question answers.
+
+## YOUR TASK
+From each person's answer, extract stable preferences, values, or patterns that are likely to remain relevant over time.
+
+## INSIGHT TYPES
+- preference: Stable likes/dislikes or recurring choices
+- core_value: Deeply held beliefs or principles
+- pattern: Recurring behavioral tendencies
+
+## RULES
+1. Extract ONLY durable insights (ignore one-off details)
+2. Each insight should be 8-20 words
+3. Assign a confidence score (0.5-1.0)
+4. Include an optional subtype when helpful (e.g., "preference.food", "preference.activities")
+5. Maximum 3 insights per person
+6. Do NOT include names
+
+## OUTPUT FORMAT
+Return JSON in this structure:
+{
+  "userA": { "insights": [ { "text": "...", "type": "preference|core_value|pattern", "subtype": "string|null", "confidence": 0.5 } ] },
+  "userB": { "insights": [ { "text": "...", "type": "preference|core_value|pattern", "subtype": "string|null", "confidence": 0.5 } ] }
+}`;
+
+const DAILY_QUESTION_JSON_SCHEMA = {
+    name: 'daily_question_insights',
+    strict: true,
+    schema: {
+        type: 'object',
+        properties: {
+            userA: {
+                type: 'object',
+                properties: {
+                    insights: {
+                        type: 'array',
+                        items: {
+                            type: 'object',
+                            properties: {
+                                text: { type: 'string' },
+                                type: { type: 'string', enum: ['preference', 'core_value', 'pattern'] },
+                                subtype: { type: ['string', 'null'] },
+                                confidence: { type: 'number', minimum: 0.5, maximum: 1.0 },
+                            },
+                            required: ['text', 'type', 'confidence'],
+                            additionalProperties: false,
+                        }
+                    }
+                },
+                required: ['insights'],
+                additionalProperties: false,
+            },
+            userB: {
+                type: 'object',
+                properties: {
+                    insights: {
+                        type: 'array',
+                        items: {
+                            type: 'object',
+                            properties: {
+                                text: { type: 'string' },
+                                type: { type: 'string', enum: ['preference', 'core_value', 'pattern'] },
+                                subtype: { type: ['string', 'null'] },
+                                confidence: { type: 'number', minimum: 0.5, maximum: 1.0 },
+                            },
+                            required: ['text', 'type', 'confidence'],
+                            additionalProperties: false,
+                        }
+                    }
+                },
+                required: ['insights'],
+                additionalProperties: false,
+            }
+        },
+        required: ['userA', 'userB'],
+        additionalProperties: false,
+    },
+};
+
 /**
  * Build the user prompt for insight extraction
  * 
@@ -127,29 +214,51 @@ Extract lasting psychological insights about each person that would be relevant 
 }
 
 /**
+ * Build the prompt for daily question insight extraction
+ * 
+ * @param {object} payload - Daily question payload
+ * @returns {string} The formatted prompt
+ */
+function buildDailyQuestionPrompt(payload) {
+    return `Extract durable insights from these daily question answers.
+
+## Question
+${payload.question}
+
+## User A: ${payload.userAName}
+Answer: "${payload.userAAnswer}"
+
+## User B: ${payload.userBName}
+Answer: "${payload.userBAnswer}"
+
+${payload.category ? `Category: ${payload.category}` : ''}
+${payload.emoji ? `Emoji: ${payload.emoji}` : ''}`.trim();
+}
+
+/**
  * Call the extraction LLM (Grok 4.1 Fast via OpenRouter)
  * 
  * @param {string} systemPrompt - The system prompt
  * @param {string} userPrompt - The user prompt
  * @returns {Promise<object>} The extracted insights
  */
-async function callExtractionLLM(systemPrompt, userPrompt) {
+async function callExtractionLLM(systemPrompt, userPrompt, jsonSchema = null, configOverride = null) {
     if (!isOpenRouterConfigured()) {
         throw new Error('OPENROUTER_API_KEY is not configured for extraction agent.');
     }
 
     console.log('[Stenographer] Calling extraction LLM with reasoning enabled...');
 
+    const config = configOverride || CONFIG;
     const response = await createChatCompletion({
-        model: CONFIG.model,
+        model: config.model,
         messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userPrompt },
         ],
-        temperature: CONFIG.temperature,
-        maxTokens: CONFIG.maxTokens,
-        // Note: OpenRouter's createChatCompletion doesn't support json_schema yet for Grok
-        // We'll parse the JSON from the response
+        temperature: config.temperature,
+        maxTokens: config.maxTokens,
+        jsonSchema,
     });
 
     let content = response.choices[0].message.content;
@@ -167,8 +276,12 @@ async function callExtractionLLM(systemPrompt, userPrompt) {
     try {
         return JSON.parse(content);
     } catch (error) {
-        console.error('[Stenographer] Failed to parse JSON response:', content);
-        throw new Error('Failed to parse extraction response as JSON');
+        try {
+            return repairAndParseJSON(content);
+        } catch (repairError) {
+            console.error('[Stenographer] Failed to parse JSON response:', content);
+            throw new Error('Failed to parse extraction response as JSON');
+        }
     }
 }
 
@@ -178,10 +291,10 @@ async function callExtractionLLM(systemPrompt, userPrompt) {
  * 
  * @param {string} userId - The user ID
  * @param {Array} insights - Array of extracted insights
- * @param {string} sourceCaseId - The case ID that generated these insights
+ * @param {string|object} sourceCaseIdOrOptions - Case ID or options
  * @returns {Promise<object>} Stats about stored/reinforced insights
  */
-async function processUserInsights(userId, insights, sourceCaseId) {
+async function processUserInsights(userId, insights, sourceCaseIdOrOptions) {
     const stats = {
         stored: 0,
         reinforced: 0,
@@ -192,12 +305,24 @@ async function processUserInsights(userId, insights, sourceCaseId) {
         return stats;
     }
 
+    const options = (sourceCaseIdOrOptions && typeof sourceCaseIdOrOptions === 'object')
+        ? sourceCaseIdOrOptions
+        : { sourceCaseId: sourceCaseIdOrOptions };
+    const sourceType = options.sourceType || (options.sourceCaseId ? 'case' : 'unknown');
+    const sourceId = options.sourceId || options.sourceCaseId || null;
+    const similarityThreshold = options.similarityThreshold || CONFIG.similarityThreshold;
+    const observedAt = options.observedAt || new Date().toISOString();
+
     // Generate embeddings for all insights in batch
-    const insightTexts = insights.map(i => i.text);
+    const insightTexts = insights.map(i => (typeof i?.text === 'string' ? i.text : ''));
     const embeddingsBatch = await embeddings.generateEmbeddings(insightTexts);
 
     for (let i = 0; i < insights.length; i++) {
         const insight = insights[i];
+        if (!insight?.text) {
+            stats.discarded++;
+            continue;
+        }
         const embedding = embeddingsBatch[i];
 
         try {
@@ -205,24 +330,31 @@ async function processUserInsights(userId, insights, sourceCaseId) {
             const similar = await supabase.searchSimilarMemories(
                 embedding,
                 userId,
-                CONFIG.similarityThreshold,
+                similarityThreshold,
                 1
             );
 
-            if (similar.length > 0) {
+            const matchingType = similar.find(entry => entry.memory_type === insight.type);
+
+            if (matchingType) {
                 // Found a similar memory - reinforce it instead of duplicating
-                await supabase.reinforceMemory(similar[0].id);
+                await supabase.reinforceMemory(matchingType.id);
                 stats.reinforced++;
-                console.log(`[Stenographer] Reinforced existing memory: "${similar[0].memory_text.slice(0, 50)}..."`);
+                console.log(`[Stenographer] Reinforced existing memory: "${matchingType.memory_text.slice(0, 50)}..."`);
             } else {
                 // No match - insert new memory
                 await supabase.insertMemory({
                     userId,
                     memoryText: insight.text,
                     memoryType: insight.type,
+                    memorySubtype: insight.subtype || null,
                     embedding,
-                    sourceCaseId,
+                    sourceCaseId: options.sourceCaseId || null,
+                    sourceType,
+                    sourceId,
                     confidenceScore: insight.confidence || 0.8,
+                    observedAt,
+                    lastObservedAt: observedAt,
                 });
                 stats.stored++;
                 console.log(`[Stenographer] Stored new memory: "${insight.text.slice(0, 50)}..."`);
@@ -314,6 +446,92 @@ async function extractAndStoreInsights(caseData, caseId) {
 }
 
 /**
+ * Extract and store insights from daily question answers
+ * 
+ * @param {object} payload - Daily question payload
+ * @returns {Promise<object>} Extraction results
+ */
+async function extractAndStoreDailyQuestionInsights(payload) {
+    console.log('[Stenographer] Starting daily question extraction:', payload?.assignmentId);
+
+    if (!supabase.isSupabaseConfigured()) {
+        console.log('[Stenographer] Supabase not configured, skipping daily question extraction');
+        return {
+            success: false,
+            error: 'Supabase not configured',
+            userA: { stored: 0, reinforced: 0, discarded: 0 },
+            userB: { stored: 0, reinforced: 0, discarded: 0 },
+        };
+    }
+
+    if (!payload?.userAAnswer || !payload?.userBAnswer) {
+        return {
+            success: true,
+            skipped: true,
+            reason: 'Missing answers',
+            userA: { stored: 0, reinforced: 0, discarded: 0 },
+            userB: { stored: 0, reinforced: 0, discarded: 0 },
+        };
+    }
+
+    try {
+        const prompt = buildDailyQuestionPrompt(payload);
+        const extracted = await callExtractionLLM(
+            DAILY_QUESTION_SYSTEM_PROMPT,
+            prompt,
+            DAILY_QUESTION_JSON_SCHEMA,
+            DAILY_QUESTION_CONFIG
+        );
+
+        console.log('[Stenographer] Extracted daily question insights:', JSON.stringify(extracted, null, 2));
+
+        const observedAt = payload.observedAt || new Date().toISOString();
+        const sourceOptions = {
+            sourceType: 'daily_question',
+            sourceId: payload.assignmentId,
+            similarityThreshold: DAILY_QUESTION_CONFIG.similarityThreshold,
+            observedAt,
+        };
+
+        const [userAStats, userBStats] = await Promise.all([
+            processUserInsights(payload.userAId, extracted.userA?.insights || [], sourceOptions),
+            processUserInsights(payload.userBId, extracted.userB?.insights || [], sourceOptions),
+        ]);
+
+        return {
+            success: true,
+            userA: userAStats,
+            userB: userBStats,
+            totalStored: userAStats.stored + userBStats.stored,
+            totalReinforced: userAStats.reinforced + userBStats.reinforced,
+        };
+    } catch (error) {
+        console.error('[Stenographer] Daily question extraction failed:', error);
+        return {
+            success: false,
+            error: error.message,
+            userA: { stored: 0, reinforced: 0, discarded: 0 },
+            userB: { stored: 0, reinforced: 0, discarded: 0 },
+        };
+    }
+}
+
+/**
+ * Trigger daily question extraction in the background (non-blocking)
+ * 
+ * @param {object} payload - Daily question payload
+ */
+function triggerDailyQuestionExtraction(payload) {
+    setImmediate(async () => {
+        try {
+            await extractAndStoreDailyQuestionInsights(payload);
+        } catch (error) {
+            console.error('[Stenographer] Daily question background extraction failed:', error);
+        }
+    });
+}
+
+/**
  * Trigger extraction in the background (non-blocking)
  * This is the main entry point to be called after verdict delivery
  * 
@@ -333,9 +551,13 @@ function triggerBackgroundExtraction(caseData, caseId) {
 
 module.exports = {
     extractAndStoreInsights,
+    extractAndStoreDailyQuestionInsights,
     triggerBackgroundExtraction,
+    triggerDailyQuestionExtraction,
     processUserInsights,
     STENOGRAPHER_SYSTEM_PROMPT,
+    DAILY_QUESTION_SYSTEM_PROMPT,
     buildExtractionPrompt,
+    buildDailyQuestionPrompt,
     CONFIG,
 };

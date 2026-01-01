@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Crown, Heart, Check, Sparkles, Users, Zap, Gavel, Wand2, ChevronRight, Clock, Star, BookHeart } from 'lucide-react';
+import { X, Crown, Heart, Check, Sparkles, Users, Zap, Gavel, Wand2, ChevronRight, Clock, Star, BookHeart, Brain } from 'lucide-react';
 import useSubscriptionStore from '../store/useSubscriptionStore';
 
 /**
@@ -79,6 +79,13 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
             color: '#5B8B6E',
             bgColor: 'rgba(91, 139, 110, 0.14)',
         },
+        {
+            icon: Brain,
+            title: 'Gold-only AI Insights',
+            description: 'Unlock personalized relationship insights once you hit Level 10',
+            color: '#4A6E8A',
+            bgColor: 'rgba(74, 110, 138, 0.14)',
+        },
     ];
 
     // Loss aversion - what they miss without Gold
@@ -86,6 +93,7 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
         'Limited to just 3 judgments per month',
         'Judge Whiskers stays locked',
         'No AI-powered date planning',
+        'No AI insights about your relationship patterns',
         'Risk small issues becoming big fights',
     ];
 
@@ -387,10 +395,10 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                                                 <div className="text-right">
                                                     <div className="flex items-baseline gap-1.5">
                                                         <del className="text-sm text-court-brownLight/60 line-through">$9.99</del>
-                                                        <span className="text-2xl font-bold text-court-brown font-display">$7.50</span>
+                                                        <span className="text-2xl font-bold text-court-brown font-display">$7.77</span>
                                                         <span className="text-sm text-court-brownLight">/mo</span>
                                                     </div>
-                                                    <p className="text-xs text-green-600 font-semibold">Save 25%</p>
+                                                    <p className="text-xs text-green-600 font-semibold">Save 22%</p>
                                                 </div>
                                             </div>
                                         </div>
@@ -563,7 +571,7 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <div className="rounded-full border border-amber-200/70 bg-amber-100/70 px-3 py-1 text-xs font-bold text-amber-700">
-                                                {selectedPlan === 'yearly' ? '$7.50/mo' : '$9.99/mo'}
+                                                {selectedPlan === 'yearly' ? '$7.77/mo' : '$9.99/mo'}
                                             </div>
                                             <ChevronRight className="w-5 h-5 text-amber-600" />
                                         </div>

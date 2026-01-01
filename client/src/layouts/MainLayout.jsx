@@ -5,15 +5,19 @@ import { motion, AnimatePresence } from 'framer-motion';
 import useAppStore from '../store/useAppStore';
 import useCourtStore, { VIEW_PHASE } from '../store/courtStore';
 import useAuthStore from '../store/useAuthStore';
+import useLevelStore from '../store/useLevelStore';
 import useCourtSocket from '../hooks/useCourtSocket';
 import clsx from 'clsx';
+import LevelUpOverlay from '../components/LevelUpOverlay';
 
 const MainLayout = () => {
     const { currentUser, users, fetchUsers, switchUser } = useAppStore();
     const { fetchState, myViewPhase, hasUnreadVerdict } = useCourtStore();
-    const { user: authUser } = useAuthStore();
+    const { user: authUser, hasPartner } = useAuthStore();
+    const { fetchLevel, pendingLevelUps, acknowledgeLevelUp } = useLevelStore();
     const location = useLocation();
     const mainRef = useRef(null);
+    const activeLevelUp = pendingLevelUps?.[0];
 
     // Keep the court WebSocket alive across navigation so verdict/settlement updates
     // (and dock indicators) work even when the user isn't on the courtroom page.
@@ -39,6 +43,17 @@ const MainLayout = () => {
 
         return () => clearInterval(interval);
     }, [authUser?.id]);
+
+    useEffect(() => {
+        if (!authUser?.id || !hasPartner) return;
+        fetchLevel();
+
+        const interval = setInterval(() => {
+            fetchLevel();
+        }, 60000);
+
+        return () => clearInterval(interval);
+    }, [authUser?.id, hasPartner, fetchLevel]);
 
     useLayoutEffect(() => {
         if (mainRef.current) {
@@ -102,6 +117,15 @@ const MainLayout = () => {
                     <TabItem to="/profile" icon={<User size={26} />} label="Profile" />
                 </div>
             </motion.nav>
+
+            <LevelUpOverlay
+                levelUp={activeLevelUp}
+                onComplete={() => {
+                    if (activeLevelUp?.level) {
+                        acknowledgeLevelUp(activeLevelUp.level);
+                    }
+                }}
+            />
         </div>
     );
 };

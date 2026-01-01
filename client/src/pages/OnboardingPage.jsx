@@ -18,7 +18,7 @@ const ONBOARDING_STEPS = [
     {
         id: 'welcome',
         title: 'Welcome to Pause',
-        subtitle: 'A playful, premium space to stay close through the hard moments.',
+        subtitle: 'A playful, calming space to stay close through the hard moments.',
         icon: null,
     },
     {
@@ -183,6 +183,11 @@ const OnboardingPage = () => {
     const [authShowPassword, setAuthShowPassword] = useState(false);
     const [authError, setAuthError] = useState(null);
     const [authSubmitting, setAuthSubmitting] = useState(false);
+    const goldButtonBase =
+        'relative overflow-hidden border border-[#E3D098] bg-gradient-to-br from-[#C9A227] via-[#B9911F] to-[#8B7019] shadow-[0_12px_24px_rgba(201,162,39,0.22)] hover:brightness-105';
+    const goldButtonShineStyle = {
+        background: 'radial-gradient(circle at 20% 20%, rgba(255,255,255,0.65), transparent 55%)'
+    };
 
     const steps = useMemo(() => (
         isAuthenticated
@@ -397,8 +402,8 @@ const OnboardingPage = () => {
                         animate={{ opacity: 1, y: 0 }}
                         className="text-center space-y-6"
                     >
-                        <div className="glass-card p-6 bg-gradient-to-br from-white/80 via-court-cream/60 to-court-tan/20">
-                            <div className="w-20 h-20 mx-auto rounded-3xl overflow-hidden shadow-soft border border-white/60 bg-white/70">
+                        <div className="glass-card p-6">
+                            <div className="w-20 h-20 mx-auto rounded-3xl overflow-hidden shadow-soft border border-white/80 bg-white/80">
                                 <img
                                     src="/assets/avatars/judge_whiskers.png"
                                     alt="Judge Whiskers"
@@ -412,7 +417,7 @@ const OnboardingPage = () => {
                                 {['Fair judgments', 'Daily closeness', 'A calmer vibe'].map((item, i) => (
                                     <span
                                         key={i}
-                                        className="px-3 py-1.5 bg-white/70 border border-white/60 rounded-full text-sm text-court-brown shadow-soft"
+                                        className="px-3 py-1.5 bg-white/80 border border-white/80 rounded-full text-sm text-court-brown shadow-soft"
                                     >
                                         {item}
                                     </span>
@@ -421,7 +426,7 @@ const OnboardingPage = () => {
                         </div>
                         <button
                             onClick={() => navigate('/signin')}
-                            className="text-sm font-semibold text-court-brown hover:text-court-gold transition-colors"
+                            className="text-sm font-semibold text-court-brown hover:text-[#8B7019] transition-colors"
                         >
                             Already have an account? Log in
                         </button>
@@ -441,7 +446,7 @@ const OnboardingPage = () => {
                         className="space-y-6"
                     >
                         {authError && (
-                            <div className="glass-card p-4 bg-red-50/70 border border-red-100 text-red-700 text-sm">
+                            <div className="glass-card p-4 border border-[#E2D6C7] text-[#6B4F3C] text-sm">
                                 {authError}
                             </div>
                         )}
@@ -450,7 +455,7 @@ const OnboardingPage = () => {
                             whileTap={{ scale: 0.98 }}
                             onClick={handleGoogleSignUp}
                             disabled={authSubmitting}
-                            className="w-full py-4 bg-white border-2 border-neutral-200 rounded-2xl font-bold text-neutral-700 flex items-center justify-center gap-3 hover:bg-neutral-50 hover:border-neutral-300 transition-all disabled:opacity-50"
+                            className="w-full py-4 bg-white/90 border border-white/80 rounded-2xl font-bold text-neutral-700 flex items-center justify-center gap-3 hover:bg-white transition-all disabled:opacity-50 shadow-soft"
                         >
                             <svg className="w-5 h-5" viewBox="0 0 24 24">
                                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -475,7 +480,7 @@ const OnboardingPage = () => {
                                     value={authEmail}
                                     onChange={(e) => setAuthEmail(e.target.value)}
                                     placeholder="Email address"
-                                    className="w-full pl-12 pr-4 py-4 bg-white border-2 border-neutral-200 rounded-2xl text-neutral-700 text-base placeholder:text-neutral-400 focus:outline-none focus:border-court-gold focus:ring-2 focus:ring-court-gold/20 transition-all"
+                                    className="w-full pl-12 pr-4 py-4 bg-white/90 border border-white/80 rounded-2xl text-neutral-700 text-base placeholder:text-neutral-400 focus:outline-none focus:border-[#D2BC76] focus:ring-2 focus:ring-[#F1E3B6] transition-all shadow-inner-soft"
                                     autoFocus
                                 />
                             </div>
@@ -487,7 +492,7 @@ const OnboardingPage = () => {
                                     value={authPassword}
                                     onChange={(e) => setAuthPassword(e.target.value)}
                                     placeholder="Create password"
-                                    className="w-full pl-12 pr-12 py-4 bg-white border-2 border-neutral-200 rounded-2xl text-neutral-700 text-base placeholder:text-neutral-400 focus:outline-none focus:border-court-gold focus:ring-2 focus:ring-court-gold/20 transition-all"
+                                    className="w-full pl-12 pr-12 py-4 bg-white/90 border border-white/80 rounded-2xl text-neutral-700 text-base placeholder:text-neutral-400 focus:outline-none focus:border-[#D2BC76] focus:ring-2 focus:ring-[#F1E3B6] transition-all shadow-inner-soft"
                                 />
                                 <button
                                     type="button"
@@ -505,7 +510,7 @@ const OnboardingPage = () => {
                                     value={authConfirmPassword}
                                     onChange={(e) => setAuthConfirmPassword(e.target.value)}
                                     placeholder="Confirm password"
-                                    className="w-full pl-12 pr-4 py-4 bg-white border-2 border-neutral-200 rounded-2xl text-neutral-700 text-base placeholder:text-neutral-400 focus:outline-none focus:border-court-gold focus:ring-2 focus:ring-court-gold/20 transition-all"
+                                    className="w-full pl-12 pr-4 py-4 bg-white/90 border border-white/80 rounded-2xl text-neutral-700 text-base placeholder:text-neutral-400 focus:outline-none focus:border-[#D2BC76] focus:ring-2 focus:ring-[#F1E3B6] transition-all shadow-inner-soft"
                                 />
                             </div>
 
@@ -513,17 +518,19 @@ const OnboardingPage = () => {
                                 whileTap={{ scale: 0.98 }}
                                 type="submit"
                                 disabled={authSubmitting}
-                                className="w-full py-4 rounded-2xl font-bold text-white flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 transition-all"
-                                style={{ background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' }}
+                                className={`w-full py-4 rounded-2xl font-bold text-white flex items-center justify-center gap-2 transition-all disabled:opacity-50 ${goldButtonBase}`}
                             >
-                                {authSubmitting ? 'Creating…' : 'Create account'}
-                                <ArrowRight className="w-5 h-5" />
+                                <span aria-hidden="true" className="absolute inset-0 opacity-60" style={goldButtonShineStyle} />
+                                <span className="relative z-10 flex items-center gap-2">
+                                    {authSubmitting ? 'Creating…' : 'Create account'}
+                                    <ArrowRight className="w-5 h-5" />
+                                </span>
                             </Motion.button>
                         </form>
 
                         <button
                             onClick={() => navigate('/signin')}
-                            className="w-full text-center text-sm font-semibold text-court-brown hover:text-court-gold transition-colors"
+                            className="w-full text-center text-sm font-semibold text-court-brown hover:text-[#8B7019] transition-colors"
                         >
                             Already have an account? Log in
                         </button>
@@ -544,7 +551,7 @@ const OnboardingPage = () => {
                                 value={onboardingData.displayName || ''}
                                 onChange={(e) => updateOnboardingData({ displayName: e.target.value })}
                                 placeholder="Your name or nickname"
-                                className="w-full pl-12 pr-4 py-4 bg-white border-2 border-neutral-200 rounded-2xl text-neutral-700 text-lg placeholder:text-neutral-400 focus:outline-none focus:border-court-gold focus:ring-2 focus:ring-court-gold/20 transition-all"
+                                className="w-full pl-12 pr-4 py-4 bg-white/90 border border-white/80 rounded-2xl text-neutral-700 text-lg placeholder:text-neutral-400 focus:outline-none focus:border-[#D2BC76] focus:ring-2 focus:ring-[#F1E3B6] transition-all shadow-inner-soft"
                                 autoFocus
                             />
                         </div>
@@ -578,14 +585,14 @@ const OnboardingPage = () => {
                                         setBirthdayError(null);
                                     }
                                 }}
-                                className={`w-full min-w-0 max-w-full box-border pl-12 pr-4 py-4 bg-white border-2 rounded-2xl text-neutral-700 text-lg focus:outline-none focus:ring-2 transition-all ${birthdayError
-                                    ? 'border-red-300 focus:border-red-400 focus:ring-red-200'
-                                    : 'border-neutral-200 focus:border-court-gold focus:ring-court-gold/20'
+                                className={`w-full min-w-0 max-w-full box-border pl-12 pr-4 py-4 bg-white/90 border rounded-2xl text-neutral-700 text-lg focus:outline-none focus:ring-2 transition-all shadow-inner-soft ${birthdayError
+                                    ? 'border-[#D2BC76] focus:border-[#B9911F] focus:ring-[#F1E3B6]'
+                                    : 'border-white/80 focus:border-[#D2BC76] focus:ring-[#F1E3B6]'
                                     }`}
                             />
                         </div>
                         {birthdayError && (
-                            <p className="text-sm text-red-500 text-center flex items-center justify-center gap-1">
+                            <p className="text-sm text-[#6B4F3C] text-center flex items-center justify-center gap-1">
                                 <AlertTriangle className="w-4 h-4" />
                                 {birthdayError}
                             </p>
@@ -605,7 +612,7 @@ const OnboardingPage = () => {
                     >
                         {/* Current selection preview */}
                         <div className="flex flex-col items-center">
-                            <div className={`w-20 h-24 rounded-2xl overflow-hidden border-4 shadow-lg bg-white transition-all ${onboardingData.avatarUrl ? 'border-court-gold' : 'border-red-300'}`}>
+                            <div className={`w-20 h-24 rounded-2xl overflow-hidden border-4 shadow-soft bg-white transition-all ${onboardingData.avatarUrl ? 'border-[#D2BC76]' : 'border-neutral-200'}`}>
                                 {onboardingData.avatarUrl ? (
                                     <img
                                         src={onboardingData.avatarUrl}
@@ -618,7 +625,7 @@ const OnboardingPage = () => {
                                     </div>
                                 )}
                             </div>
-                            <p className={`text-sm mt-2 ${onboardingData.avatarUrl ? 'text-neutral-500' : 'text-red-500 font-medium'}`}>
+                            <p className={`text-sm mt-2 ${onboardingData.avatarUrl ? 'text-neutral-500' : 'text-[#6B4F3C] font-medium'}`}>
                                 {onboardingData.avatarUrl ? 'Looking good! ✨' : 'Please select a profile picture'}
                             </p>
                         </div>
@@ -636,8 +643,8 @@ const OnboardingPage = () => {
                                         whileTap={{ scale: 0.9 }}
                                         onClick={() => updateOnboardingData({ avatarUrl: avatar.path })}
                                         className={`aspect-square rounded-2xl overflow-hidden border-3 transition-all ${onboardingData.avatarUrl === avatar.path
-                                            ? 'border-court-gold ring-2 ring-court-gold/30 shadow-lg'
-                                            : 'border-neutral-200 hover:border-neutral-300'
+                                            ? 'border-[#D2BC76] ring-2 ring-[#F1E3B6]/60 shadow-soft'
+                                            : 'border-white/80 hover:border-neutral-200'
                                             }`}
                                     >
                                         <img
@@ -669,7 +676,7 @@ const OnboardingPage = () => {
                                         handleAvatarFile(file);
                                     }}
                                 />
-                                <div className="flex items-center justify-center gap-2 py-3 px-4 bg-white border-2 border-neutral-200 rounded-xl hover:border-neutral-300 hover:bg-neutral-50 transition-all">
+                                <div className="flex items-center justify-center gap-2 py-3 px-4 bg-white/90 border border-white/80 rounded-xl hover:bg-white transition-all shadow-soft">
                                     <Upload className="w-5 h-5 text-neutral-500" />
                                     <span className="font-medium text-neutral-700">Upload</span>
                                 </div>
@@ -686,7 +693,7 @@ const OnboardingPage = () => {
                                         handleAvatarFile(file);
                                     }}
                                 />
-                                <div className="flex items-center justify-center gap-2 py-3 px-4 bg-white border-2 border-neutral-200 rounded-xl hover:border-neutral-300 hover:bg-neutral-50 transition-all">
+                                <div className="flex items-center justify-center gap-2 py-3 px-4 bg-white/90 border border-white/80 rounded-xl hover:bg-white transition-all shadow-soft">
                                     <Camera className="w-5 h-5 text-neutral-500" />
                                     <span className="font-medium text-neutral-700">Camera</span>
                                 </div>
@@ -713,13 +720,13 @@ const OnboardingPage = () => {
                                 initial={{ scale: 0 }}
                                 animate={{ scale: 1 }}
                                 transition={{ type: 'spring', delay: 0.1 }}
-                                className="w-20 h-20 mx-auto rounded-full flex items-center justify-center shadow-lg bg-gradient-to-br from-pink-400 to-pink-500"
+                                className="w-20 h-20 mx-auto rounded-full flex items-center justify-center shadow-soft border border-[#E3D098] bg-gradient-to-br from-[#C9A227] via-[#B9911F] to-[#8B7019]"
                             >
                                 <Heart className="w-10 h-10 text-white" />
                             </Motion.div>
 
                             <div>
-                                <h3 className="text-xl font-bold text-neutral-800 mb-2">
+                                <h3 className="text-xl font-display font-bold text-neutral-800 mb-2">
                                     Ready to connect with your partner? 💕
                                 </h3>
                                 <p className="text-neutral-500 text-sm">
@@ -733,7 +740,7 @@ const OnboardingPage = () => {
                                     initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: 0.3 }}
-                                    className="bg-court-cream/60 rounded-2xl p-4 border border-court-tan"
+                                    className="bg-white/80 rounded-2xl p-4 border border-[#E0D2C4] shadow-inner-soft"
                                 >
                                     <p className="text-xs text-neutral-500 mb-1">Your Partner Code</p>
                                     <p className="text-xl font-mono font-bold text-court-brown tracking-widest">
@@ -749,11 +756,13 @@ const OnboardingPage = () => {
                                 transition={{ delay: 0.4 }}
                                 whileTap={{ scale: 0.97 }}
                                 onClick={handleConnectNow}
-                                className="w-full py-4 rounded-2xl font-bold text-white flex items-center justify-center gap-2 shadow-lg"
-                                style={{ background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' }}
+                                className={`w-full py-4 rounded-2xl font-bold text-white flex items-center justify-center gap-2 ${goldButtonBase}`}
                             >
+                                <span aria-hidden="true" className="absolute inset-0 opacity-60" style={goldButtonShineStyle} />
+                                <span className="relative z-10 flex items-center gap-2">
                                 <Heart className="w-5 h-5" />
                                 Connect with Partner Now
+                                </span>
                             </Motion.button>
 
                             {/* Connect Later Button */}
@@ -763,7 +772,7 @@ const OnboardingPage = () => {
                                 transition={{ delay: 0.5 }}
                                 whileTap={{ scale: 0.97 }}
                                 onClick={handleConnectLater}
-                                className="w-full py-3 rounded-2xl font-medium text-neutral-500 bg-neutral-100 hover:bg-neutral-200 transition-colors"
+                                className="w-full py-3 rounded-2xl font-medium text-neutral-500 bg-white/80 border border-neutral-200/70 hover:bg-white transition-colors shadow-soft"
                             >
                                 I'll connect later
                             </Motion.button>
@@ -791,18 +800,17 @@ const OnboardingPage = () => {
                             initial={{ scale: 0 }}
                             animate={{ scale: 1 }}
                             transition={{ type: 'spring', delay: 0.2 }}
-                            className="w-24 h-24 mx-auto rounded-full flex items-center justify-center shadow-lg"
-                            style={{ background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' }}
+                            className="w-24 h-24 mx-auto rounded-full flex items-center justify-center shadow-soft border border-[#E3D098] bg-gradient-to-br from-[#C9A227] via-[#B9911F] to-[#8B7019]"
                         >
                             <Check className="w-12 h-12 text-white" />
                         </Motion.div>
 
                         <div className="flex flex-wrap justify-center gap-3">
-                            <div className="px-4 py-2 bg-white rounded-xl shadow-sm">
+                            <div className="px-4 py-2 bg-white/80 rounded-xl shadow-soft border border-white/80">
                                 <p className="text-xs text-neutral-400">Name</p>
                                 <p className="font-bold text-neutral-700">{onboardingData.displayName}</p>
                             </div>
-                            <div className="px-4 py-2 bg-white rounded-xl shadow-sm">
+                            <div className="px-4 py-2 bg-white/80 rounded-xl shadow-soft border border-white/80">
                                 <p className="text-xs text-neutral-400">Love Language</p>
                                 <p className="font-bold text-neutral-700">
                                     {ONBOARDING_STEPS.find(s => s.id === 'loveLanguage')?.options.find(o => o.id === onboardingData.loveLanguage)?.emoji}{' '}
@@ -816,9 +824,9 @@ const OnboardingPage = () => {
                             <Motion.div
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                className="p-4 bg-red-50 border border-red-200 rounded-xl"
+                                className="p-4 bg-[#F7F1EA] border border-[#E2D6C7] rounded-xl"
                             >
-                                <p className="text-sm text-red-600 font-medium flex items-center gap-2">
+                                <p className="text-sm text-[#6B4F3C] font-medium flex items-center gap-2">
                                     <AlertTriangle className="w-4 h-4" />
                                     {saveError}
                                 </p>
@@ -845,9 +853,9 @@ const OnboardingPage = () => {
                                         transition={{ delay: index * 0.05 }}
                                         whileTap={{ scale: 0.97 }}
                                         onClick={() => handleOptionSelect(option.id)}
-                                        className={`p-4 rounded-2xl text-left transition-all border-2 ${isOptionSelected(option.id)
-                                            ? 'border-court-gold bg-court-cream/50 shadow-md'
-                                            : 'border-neutral-200 bg-white hover:border-neutral-300 hover:shadow-sm'
+                                        className={`p-4 rounded-2xl text-left transition-all border ${isOptionSelected(option.id)
+                                            ? 'border-[#D2BC76] bg-[#FBF6E8] shadow-soft'
+                                            : 'border-white/80 bg-white/80 hover:bg-white'
                                             }`}
                                     >
                                         <div className="flex items-start gap-3">
@@ -864,8 +872,7 @@ const OnboardingPage = () => {
                                                 <Motion.div
                                                     initial={{ scale: 0 }}
                                                     animate={{ scale: 1 }}
-                                                    className="w-5 h-5 rounded-full flex items-center justify-center"
-                                                    style={{ background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' }}
+                                                    className="w-5 h-5 rounded-full flex items-center justify-center bg-gradient-to-br from-[#C9A227] to-[#8B7019]"
                                                 >
                                                     <Check className="w-3 h-3 text-white" />
                                                 </Motion.div>
@@ -895,7 +902,7 @@ const OnboardingPage = () => {
                                                 setCustomInputs({ ...customInputs, [currentStepData.field]: '' });
                                             }
                                         }}
-                                        className="w-full px-4 py-3 bg-neutral-50 border border-dashed border-neutral-300 rounded-xl text-neutral-600 placeholder:text-neutral-400 focus:outline-none focus:border-court-gold transition-all"
+                                        className="w-full px-4 py-3 bg-white/80 border border-dashed border-neutral-200 rounded-xl text-neutral-600 placeholder:text-neutral-400 focus:outline-none focus:border-[#D2BC76] transition-all"
                                     />
                                 </Motion.div>
                             )}
@@ -907,125 +914,155 @@ const OnboardingPage = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-court-cream via-white to-court-tan/30 flex flex-col">
-            <Paywall
-                isOpen={showPaywall}
-                onClose={handlePaywallClose}
-                triggerReason="Pause Gold unlocks more judges and planning features"
-            />
+        <div className="relative min-h-screen overflow-hidden">
+            <OnboardingBackdrop />
+            <div className="relative min-h-screen flex flex-col">
+                <Paywall
+                    isOpen={showPaywall}
+                    onClose={handlePaywallClose}
+                    triggerReason="Pause Gold unlocks more judges and planning features"
+                />
 
-            {/* Progress Bar */}
-            <div
-                className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-lg border-b border-neutral-100"
-                style={{ paddingTop: 'var(--app-safe-top)' }}
-            >
-                <div className="max-w-lg mx-auto px-6 py-4">
-                    <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs text-neutral-400">
-                            Step {onboardingStep + 1} of {totalSteps}
-                        </span>
-                        <span className="text-xs font-bold text-court-gold">
-                            {Math.round(progress)}%
-                        </span>
+                {/* Progress Bar */}
+                <div
+                    className="fixed top-0 left-0 right-0 z-50"
+                    style={{ paddingTop: 'var(--app-safe-top)' }}
+                >
+                    <div className="max-w-lg mx-auto px-6 pt-4 pb-3">
+                        <div className="glass-card relative overflow-hidden px-4 py-3">
+                            <div className="absolute -top-6 -right-4 h-16 w-16 rounded-full bg-[#E8DED1]/35 blur-2xl" />
+                            <div className="absolute -bottom-6 -left-4 h-16 w-16 rounded-full bg-[#E8DED1]/25 blur-2xl" />
+                            <div className="relative">
+                                <div className="flex items-center justify-between mb-2 text-[11px] font-semibold text-neutral-500">
+                                    <span>Step {onboardingStep + 1} of {totalSteps}</span>
+                                    <span className="text-[#8B7019]">{Math.round(progress)}%</span>
+                                </div>
+                                <div className="h-2 bg-white/80 rounded-full overflow-hidden shadow-inner-soft">
+                                        <Motion.div
+                                            initial={{ width: 0 }}
+                                            animate={{ width: `${progress}%` }}
+                                            transition={{ duration: 0.5, ease: "easeOut" }}
+                                            className="h-full rounded-full bg-gradient-to-r from-[#C9A227] via-[#B9911F] to-[#8B7019] shadow-[0_0_8px_rgba(201,162,39,0.35)]"
+                                        />
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div className="h-2 bg-neutral-100 rounded-full overflow-hidden">
+                </div>
+
+                {/* Main Content */}
+                <div
+                    className="flex-1 flex flex-col max-w-lg mx-auto w-full px-6 pb-32"
+                    style={{ paddingTop: 'calc(6.5rem + var(--app-safe-top))' }}
+                >
+                    <AnimatePresence mode="wait">
                         <Motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${progress}%` }}
-                            transition={{ duration: 0.5, ease: "easeOut" }}
-                            className="h-full rounded-full"
-                            style={{ background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' }}
-                        />
-                    </div>
-                </div>
-            </div>
-
-            {/* Main Content */}
-            <div
-                className="flex-1 flex flex-col max-w-lg mx-auto w-full px-6 pb-32"
-                style={{ paddingTop: 'calc(6rem + var(--app-safe-top))' }}
-            >
-                <AnimatePresence mode="wait">
-                    <Motion.div
-                        key={currentStepData.id}
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -20 }}
-                        transition={{ duration: 0.3 }}
-                        className="flex-1 flex flex-col"
-                    >
-                        {/* Step Header */}
-                        <div className="text-center mb-8">
-                            {currentStepData.icon && (
-                                <Motion.div
-                                    animate={{ y: [0, -5, 0] }}
-                                    transition={{ duration: 2, repeat: Infinity }}
-                                    className="text-5xl mb-4"
-                                >
-                                    {currentStepData.icon}
-                                </Motion.div>
-                            )}
-                            <h2 className="text-2xl font-bold text-neutral-800 mb-2">
-                                {showConnectChoice ? "One more thing..." : currentStepData.title}
-                            </h2>
-                            <p className="text-neutral-500">
-                                {showConnectChoice ? "Your profile is saved! 🎉" : currentStepData.subtitle}
-                            </p>
-                        </div>
-
-                        {/* Step Content */}
-                        <div className="flex-1">
-                            {renderStepContent()}
-                        </div>
-                    </Motion.div>
-                </AnimatePresence>
-            </div>
-
-            {/* Navigation Buttons */}
-            {!showConnectChoice && currentStepData.id !== 'auth' && (
-                <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-lg border-t border-neutral-100">
-                    <div className="max-w-lg mx-auto px-6 py-4 flex items-center gap-3">
-                        {onboardingStep > 0 && (
-                            <Motion.button
-                                whileTap={{ scale: 0.95 }}
-                                onClick={handleBack}
-                                className="p-3.5 rounded-2xl bg-neutral-100 text-neutral-600 hover:bg-neutral-200 transition-all"
-                            >
-                                <ArrowLeft className="w-5 h-5" />
-                            </Motion.button>
-                        )}
-
-                        <Motion.button
-                            whileTap={{ scale: 0.97 }}
-                            onClick={handleNext}
-                            disabled={!canProceed() || isSubmitting}
-                            className={`flex-1 py-3.5 rounded-2xl font-bold text-white flex items-center justify-center gap-2 shadow-lg transition-all disabled:opacity-50`}
-                            style={{ background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' }}
+                            key={currentStepData.id}
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -20 }}
+                            transition={{ duration: 0.3 }}
+                            className="flex-1 flex flex-col"
                         >
-                            {isSubmitting ? (
-                                <Motion.div
-                                    animate={{ rotate: 360 }}
-                                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                                >
-                                    <Sparkles className="w-5 h-5" />
-                                </Motion.div>
-                            ) : currentStepData.id === 'complete' ? (
-                                <>
-                                    Save Profile
-                                    <Check className="w-5 h-5" />
-                                </>
-                            ) : (
-                                <>
-                                    Continue
-                                    <ArrowRight className="w-5 h-5" />
-                                </>
-                            )}
-                        </Motion.button>
-                    </div>
+                            <div className="glass-card relative overflow-hidden p-6 flex-1 flex flex-col">
+                                <div className="absolute -top-10 -right-6 h-20 w-20 rounded-full bg-[#E8DED1]/30 blur-3xl" />
+                                <div className="absolute -bottom-12 -left-8 h-24 w-24 rounded-full bg-[#E8DED1]/25 blur-3xl" />
+                                <div className="relative flex-1 flex flex-col">
+                                    {/* Step Header */}
+                                    <div className="text-center mb-6">
+                                        {currentStepData.icon && (
+                                            <Motion.div
+                                                animate={{ y: [0, -5, 0] }}
+                                                transition={{ duration: 2, repeat: Infinity }}
+                                                className="text-5xl mb-3"
+                                            >
+                                                {currentStepData.icon}
+                                            </Motion.div>
+                                        )}
+                                        <div className="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/80 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-neutral-400">
+                                            {showConnectChoice ? 'Saved' : currentStepData.id.replace(/([A-Z])/g, ' $1')}
+                                        </div>
+                                        <h2 className="text-2xl font-display font-bold text-neutral-800 mt-3 mb-2">
+                                            {showConnectChoice ? "One more thing..." : currentStepData.title}
+                                        </h2>
+                                        <p className="text-neutral-500">
+                                            {showConnectChoice ? "Your profile is saved! 🎉" : currentStepData.subtitle}
+                                        </p>
+                                    </div>
+
+                                    {/* Step Content */}
+                                    <div className="flex-1">
+                                        {renderStepContent()}
+                                    </div>
+                                </div>
+                            </div>
+                        </Motion.div>
+                    </AnimatePresence>
                 </div>
-            )}
+
+                {/* Navigation Buttons */}
+                {!showConnectChoice && currentStepData.id !== 'auth' && (
+                    <div className="fixed bottom-0 left-0 right-0 backdrop-blur-xl border-t border-white/60 bg-white/80">
+                        <div className="max-w-lg mx-auto px-6 py-4 flex items-center gap-3">
+                            {onboardingStep > 0 && (
+                                <Motion.button
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={handleBack}
+                                    className="p-3.5 rounded-2xl bg-white/80 text-neutral-600 border border-white/70 shadow-soft"
+                                >
+                                    <ArrowLeft className="w-5 h-5" />
+                                </Motion.button>
+                            )}
+
+                            <Motion.button
+                                whileTap={{ scale: 0.97 }}
+                                onClick={handleNext}
+                                disabled={!canProceed() || isSubmitting}
+                                className={`flex-1 py-3.5 rounded-2xl font-bold text-white flex items-center justify-center gap-2 transition-all disabled:opacity-50 ${goldButtonBase}`}
+                            >
+                                <span aria-hidden="true" className="absolute inset-0 opacity-60" style={goldButtonShineStyle} />
+                                <span className="relative z-10 flex items-center gap-2">
+                                {isSubmitting ? (
+                                    <Motion.div
+                                        animate={{ rotate: 360 }}
+                                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                    >
+                                        <Sparkles className="w-5 h-5" />
+                                    </Motion.div>
+                                ) : currentStepData.id === 'complete' ? (
+                                    <>
+                                        Save Profile
+                                        <Check className="w-5 h-5" />
+                                    </>
+                                ) : (
+                                    <>
+                                        Continue
+                                        <ArrowRight className="w-5 h-5" />
+                                    </>
+                                )}
+                                </span>
+                            </Motion.button>
+                        </div>
+                    </div>
+                )}
+            </div>
         </div>
     );
 };
+
+const OnboardingBackdrop = () => (
+    <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute -top-24 -right-16 h-56 w-56 rounded-full bg-[#E8DED1]/25 blur-3xl" />
+        <div className="absolute top-20 -left-20 h-60 w-60 rounded-full bg-[#E8DED1]/25 blur-3xl" />
+        <div className="absolute bottom-12 right-8 h-64 w-64 rounded-full bg-[#F2E9DF]/35 blur-3xl" />
+        <div
+            className="absolute inset-0 opacity-45"
+            style={{
+                backgroundImage:
+                    'radial-gradient(circle at 18% 20%, rgba(255,255,255,0.75) 0%, transparent 55%), radial-gradient(circle at 80% 10%, rgba(248,242,233,0.85) 0%, transparent 60%)'
+            }}
+        />
+    </div>
+);
 
 export default OnboardingPage;

@@ -122,6 +122,32 @@ async function generateCaseQueryEmbedding(caseInputs) {
 }
 
 /**
+ * Generate a user-focused query embedding for RAG retrieval
+ * 
+ * @param {object} inputs - The user-specific inputs
+ * @param {string} inputs.userFacts - User's facts
+ * @param {string} inputs.userFeelings - User's feelings
+ * @param {Array} inputs.addendumHistory - Optional addendum entries
+ * @returns {Promise<number[]>} The query embedding vector
+ */
+async function generateUserQueryEmbedding(inputs) {
+    const addendumText = Array.isArray(inputs.addendumHistory)
+        ? inputs.addendumHistory.map(entry => entry?.text).filter(Boolean).join('\n\n')
+        : '';
+    const queryText = [
+        inputs.userFacts || '',
+        inputs.userFeelings || '',
+        addendumText
+    ].filter(Boolean).join('\n\n');
+
+    if (!queryText.trim()) {
+        return new Array(EMBEDDING_DIMENSION).fill(0);
+    }
+
+    return generateEmbedding(queryText);
+}
+
+/**
  * Check if embeddings are configured
  * @returns {boolean}
  */
@@ -133,6 +159,7 @@ module.exports = {
     generateEmbedding,
     generateEmbeddings,
     generateCaseQueryEmbedding,
+    generateUserQueryEmbedding,
     isEmbeddingsConfigured,
     EMBEDDING_MODEL,
     EMBEDDING_DIMENSION,

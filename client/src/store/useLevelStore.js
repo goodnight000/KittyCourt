@@ -56,6 +56,8 @@ const useLevelStore = create((set, get) => ({
     questionsAnswered: 0,
     isLoading: false,
     lastFetched: null,
+    lastSeenLevel: null,
+    pendingLevelUps: [],
     serverAvailable: true,
     error: null,
 
@@ -78,7 +80,7 @@ const useLevelStore = create((set, get) => ({
         if (!isXPSystemEnabled()) return false;
         const { level, serverAvailable } = get();
         if (!serverAvailable) return false;
-        // Note: Also requires AI consent, checked separately
+        // Note: Also requires Pause Gold + AI consent, checked separately
         return level >= 10;
     },
 
@@ -97,6 +99,8 @@ const useLevelStore = create((set, get) => ({
                 questionsAnswered: 0,
                 isLoading: false,
                 lastFetched: null,
+                lastSeenLevel: null,
+                pendingLevelUps: [],
                 serverAvailable: true,
                 error: null,
             });
@@ -110,29 +114,38 @@ const useLevelStore = create((set, get) => ({
             const payload = response?.data || {};
 
             if (payload?.enabled === false || !payload?.level) {
-            set({
-                level: 1,
-                totalXP: 0,
+                set({
+                    level: 1,
+                    totalXP: 0,
                     currentXP: 0,
                     xpForNextLevel: 100,
                     title: 'Curious Kittens',
                     questionsAnswered: 0,
-                isLoading: false,
-                lastFetched: new Date().toISOString(),
-                serverAvailable: true,
-                error: null,
-            });
-            return;
-        }
+                    isLoading: false,
+                    lastFetched: new Date().toISOString(),
+                    lastSeenLevel: null,
+                    pendingLevelUps: [],
+                    serverAvailable: true,
+                    error: null,
+                });
+                return;
+            }
 
-            set({
+            const lastSeenLevel = Number.isFinite(payload.lastSeenLevel)
+                ? payload.lastSeenLevel
+                : payload.level;
+            const queuedLevels = getLevelUpsToQueue(lastSeenLevel, payload.level);
+
+            set((state) => ({
                 ...payload,
                 questionsAnswered: payload.questionsAnswered || 0,
                 isLoading: false,
                 lastFetched: new Date().toISOString(),
+                lastSeenLevel,
+                pendingLevelUps: mergeLevelUps(state.pendingLevelUps, queuedLevels),
                 serverAvailable: true,
                 error: null,
-            });
+            }));
         } catch (error) {
             const status = error?.response?.status;
             if (status === 404) {
@@ -145,6 +158,8 @@ const useLevelStore = create((set, get) => ({
                     questionsAnswered: 0,
                     isLoading: false,
                     lastFetched: new Date().toISOString(),
+                    lastSeenLevel: null,
+                    pendingLevelUps: [],
                     serverAvailable: false,
                     error: null,
                 });
@@ -185,11 +200,52 @@ const useLevelStore = create((set, get) => ({
             questionsAnswered: 0,
             isLoading: false,
             lastFetched: null,
+            lastSeenLevel: null,
+            pendingLevelUps: [],
             serverAvailable: true,
             error: null,
         });
+    },
+
+    acknowledgeLevelUp: async (level) => {
+        const safeLevel = Number(level);
+        if (!Number.isFinite(safeLevel)) return;
+
+        set((state) => ({
+            pendingLevelUps: state.pendingLevelUps.filter((item) => item.level !== safeLevel),
+            lastSeenLevel: Math.max(state.lastSeenLevel || 0, safeLevel),
+        }));
+
+        try {
+            await api.post('/levels/seen', { level: safeLevel });
+        } catch (error) {
+            console.error('[LevelStore] Failed to acknowledge level:', error);
+        }
     },
 }));
 
 export default useLevelStore;
 export { LEVEL_CONFIG, getLevelFromXP };
+
+function getLevelUpsToQueue(lastSeenLevel, currentLevel) {
+    if (!Number.isFinite(lastSeenLevel) || !Number.isFinite(currentLevel)) return [];
+
+    return LEVEL_CONFIG.filter((entry) => entry.level > lastSeenLevel && entry.level <= currentLevel)
+        .map((entry) => ({ level: entry.level, title: entry.title }));
+}
+
+function mergeLevelUps(existing, incoming) {
+    if (!incoming?.length) return existing || [];
+
+    const seen = new Set((existing || []).map((item) => item.level));
+    const merged = [...(existing || [])];
+
+    for (const item of incoming) {
+        if (!seen.has(item.level)) {
+            seen.add(item.level);
+            merged.push(item);
+        }
+    }
+
+    return merged.sort((a, b) => a.level - b.level);
+}

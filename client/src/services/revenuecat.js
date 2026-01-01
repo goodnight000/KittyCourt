@@ -15,7 +15,7 @@ let isInitialized = false;
 const REVENUECAT_API_KEY = import.meta.env.VITE_REVENUECAT_API_KEY || '';
 export const ENTITLEMENT_ID = 'Pause Gold';
 export const PRODUCT_ID_MONTHLY = 'monthly';
-export const PRODUCT_ID_YEARLY = 'yearly';
+export const PRODUCT_ID_YEARLY = 'prodaa5384f89b';
 export const ENTITLEMENT_ID_ALT = 'pause_gold';
 
 /**

@@ -6,11 +6,12 @@
  */
 
 /**
- * @typedef {'trigger' | 'core_value' | 'pattern'} MemoryType
+ * @typedef {'trigger' | 'core_value' | 'pattern' | 'preference'} MemoryType
  * Categorization of extracted insights:
  * - trigger: Emotional triggers that activate strong responses
  * - core_value: Deeply held beliefs that drive behavior
  * - pattern: Recurring behavioral tendencies in conflict
+ * - preference: Stable preferences surfaced in daily answers
  */
 
 /**
@@ -30,6 +31,7 @@
  * @property {string} text - The insight description (10-25 words)
  * @property {MemoryType} type - Category of the insight
  * @property {number} confidence - Confidence score (0.5-1.0)
+ * @property {string} [subtype] - Optional subtype for preference detail
  */
 
 /**
@@ -53,6 +55,11 @@
  * @property {number} confidence_score - Confidence (0-1)
  * @property {number} reinforcement_count - Times this pattern was observed
  * @property {string} last_reinforced_at - ISO timestamp
+ * @property {string} [memory_subtype] - Optional subtype for preferences
+ * @property {string} [observed_at] - ISO timestamp for first observed
+ * @property {string} [last_observed_at] - ISO timestamp for last observed
+ * @property {string} [source_type] - Source type (case, daily_question, etc.)
+ * @property {string} [source_id] - Reference to source entity
  * @property {string} created_at - ISO timestamp
  */
 
@@ -64,6 +71,11 @@
  * @property {string} memory_text - The insight text
  * @property {MemoryType} memory_type - Category
  * @property {number} similarity - Cosine similarity score (0-1)
+ * @property {number} [score] - Composite score for ranking
+ * @property {string} [memory_subtype] - Optional subtype
+ * @property {number} [confidence_score] - Confidence (0-1)
+ * @property {string} [last_observed_at] - ISO timestamp
+ * @property {string} [source_type] - Source type
  */
 
 /**
@@ -74,6 +86,9 @@
  * @property {string} text - The insight text
  * @property {MemoryType} type - Category
  * @property {number} relevance - Relevance percentage (0-100)
+ * @property {number} [confidenceScore] - Confidence (0-1)
+ * @property {string} [lastObservedAt] - ISO timestamp
+ * @property {string} [sourceType] - Source type
  */
 
 /**

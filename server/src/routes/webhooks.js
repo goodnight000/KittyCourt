@@ -12,7 +12,13 @@ const { getSupabase, isSupabaseConfigured } = require('../lib/supabase');
 const REVENUECAT_WEBHOOK_TOKEN = process.env.REVENUECAT_WEBHOOK_TOKEN || '';
 // Support both formats: 'Pause Gold' (with space) or 'pause_gold' (snake_case).
 const PAUSE_GOLD_ENTITLEMENTS = new Set(['pause_gold', 'pause gold']);
-const PAUSE_GOLD_PRODUCTS = new Set(['pause_gold_monthly', 'pause_gold_yearly', 'monthly', 'yearly']);
+const PAUSE_GOLD_PRODUCTS = new Set([
+    'pause_gold_monthly',
+    'pause_gold_yearly',
+    'monthly',
+    'yearly',
+    'prodaa5384f89b',
+]);
 const isProd = process.env.NODE_ENV === 'production';
 
 /**

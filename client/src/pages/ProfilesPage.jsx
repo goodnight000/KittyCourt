@@ -47,6 +47,8 @@ const ProfilesPage = () => {
     const insightsPaused = consent?.selfPaused || consent?.partnerPaused;
     const showChallenges = shouldShowChallenges();
     const showInsights = shouldShowInsights();
+    const insightsUnlocked = showInsights && isGold;
+    const needsGoldForInsights = showInsights && !isGold;
     const partnerFromUsers = users?.find(u => u.id !== currentUser?.id);
     const isXPEnabled = import.meta.env.VITE_XP_SYSTEM_ENABLED === 'true';
     const unlockHint = 'Earn XP together by answering Daily Meow, sending appreciations, and resolving cases.';
@@ -85,9 +87,9 @@ const ProfilesPage = () => {
     }, [fetchMemories, hasPartner, memoriesAvailable]);
 
     useEffect(() => {
-        if (!hasPartner || !isXPEnabled || !serverAvailable || !insightsAvailable) return;
+        if (!hasPartner || !isXPEnabled || !serverAvailable || !insightsAvailable || !showInsights || !isGold) return;
         fetchInsights();
-    }, [fetchInsights, hasPartner, insightsAvailable, isXPEnabled, serverAvailable]);
+    }, [fetchInsights, hasPartner, insightsAvailable, isXPEnabled, serverAvailable, showInsights, isGold]);
 
     useEffect(() => {
         // Update profileData when profile changes (from Supabase only)
@@ -234,6 +236,22 @@ const ProfilesPage = () => {
         <div className="relative min-h-screen pb-6 overflow-hidden">
             <ProfileBackdrop />
             <div className="relative space-y-6">
+
+                <header className="flex items-center gap-3">
+                    <div className="flex-1">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-amber-600">
+                            Profile
+                        </p>
+                        <h1 className="text-2xl font-display font-bold text-neutral-800">Your Space</h1>
+                    </div>
+                    <motion.button
+                        whileTap={{ scale: 0.95 }}
+                        className="rounded-2xl border border-white/80 bg-white/80 p-2 shadow-soft"
+                        aria-label="Settings"
+                    >
+                        <Settings className="w-5 h-5 text-neutral-600" />
+                    </motion.button>
+                </header>
 
                 {/* Tab Switcher */}
                 <div className="relative flex rounded-full border border-white/80 bg-white/75 p-1.5 shadow-inner-soft">
@@ -507,7 +525,7 @@ const ProfilesPage = () => {
                                         </div>
                                         <div className="flex flex-col items-end gap-1">
                                             <div className="rounded-full border border-amber-200/70 bg-amber-100/70 px-3 py-1 text-xs font-bold text-amber-700">
-                                                $7.50/mo
+                                                $7.77/mo
                                             </div>
                                             <div className="text-[10px] text-neutral-400">Tap to view</div>
                                         </div>
@@ -996,7 +1014,7 @@ const ProfilesPage = () => {
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            {showInsights && (
+                                            {insightsUnlocked && (
                                                 <motion.button
                                                     whileTap={{ scale: 0.96 }}
                                                     onClick={() => navigate('/insights')}
@@ -1005,13 +1023,24 @@ const ProfilesPage = () => {
                                                     View all
                                                 </motion.button>
                                             )}
-                                            <motion.button
-                                                whileTap={{ scale: 0.96 }}
-                                                onClick={() => updateConsent(!selfConsent)}
-                                                className="text-xs font-bold text-sky-700 bg-sky-100/70 px-2.5 py-1 rounded-full"
-                                            >
-                                                {selfConsent ? 'Opt out' : 'Turn on'}
-                                            </motion.button>
+                                            {needsGoldForInsights && (
+                                                <motion.button
+                                                    whileTap={{ scale: 0.96 }}
+                                                    onClick={() => setShowPaywall(true)}
+                                                    className="text-xs font-bold text-sky-700 rounded-full border border-sky-200/70 bg-sky-100/70 px-3 py-1"
+                                                >
+                                                    Unlock Gold
+                                                </motion.button>
+                                            )}
+                                            {insightsUnlocked && (
+                                                <motion.button
+                                                    whileTap={{ scale: 0.96 }}
+                                                    onClick={() => updateConsent(!selfConsent)}
+                                                    className="text-xs font-bold text-sky-700 bg-sky-100/70 px-2.5 py-1 rounded-full"
+                                                >
+                                                    {selfConsent ? 'Opt out' : 'Turn on'}
+                                                </motion.button>
+                                            )}
                                         </div>
                                     </div>
 
@@ -1019,7 +1048,7 @@ const ProfilesPage = () => {
                                         <div className="rounded-2xl border border-dashed border-sky-200/70 bg-sky-50/70 px-3 py-3">
                                             <div className="flex items-center justify-between gap-3">
                                                 <div>
-                                                    <div className="text-sm font-semibold text-sky-700">Locked until Level 10</div>
+                                                    <div className="text-sm font-semibold text-sky-700">Locked until Level 10 + Pause Gold</div>
                                                     <p className="text-xs text-sky-600 mt-1">{unlockHint}</p>
                                                 </div>
                                                 <div className="text-xs font-bold text-sky-700 bg-white/70 px-2.5 py-1 rounded-full">
@@ -1029,25 +1058,37 @@ const ProfilesPage = () => {
                                         </div>
                                     )}
 
-                                    {showInsights && !selfConsent && (
+                                    {needsGoldForInsights && (
+                                        <div className="rounded-2xl border border-dashed border-sky-200/70 bg-sky-50/70 px-3 py-3">
+                                            <div className="flex items-center justify-between gap-3">
+                                                <div>
+                                                    <div className="text-sm font-semibold text-sky-700">Pause Gold required</div>
+                                                    <p className="text-xs text-sky-600 mt-1">AI insights are a Gold feature at Level 10+.</p>
+                                                </div>
+                                                <Crown className="w-5 h-5 text-sky-500" />
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {insightsUnlocked && !selfConsent && (
                                         <div className="rounded-2xl border border-sky-200/70 bg-sky-50/70 p-3 text-xs text-sky-700">
                                             AI insights are off. Turn them back on anytime.
                                         </div>
                                     )}
 
-                                    {showInsights && selfConsent && !partnerConsent && (
+                                    {insightsUnlocked && selfConsent && !partnerConsent && (
                                         <div className="rounded-2xl border border-sky-200/70 bg-sky-50/70 p-3 text-xs text-sky-700">
                                             Waiting for your partner to opt in.
                                         </div>
                                     )}
 
-                                    {showInsights && bothConsented && insightsPaused && (
+                                    {insightsUnlocked && bothConsented && insightsPaused && (
                                         <div className="rounded-2xl border border-sky-200/70 bg-sky-50/70 p-3 text-xs text-sky-700">
                                             Insights are paused. Resume anytime from the insights page.
                                         </div>
                                     )}
 
-                                    {showInsights && bothConsented && !insightsPaused && (
+                                    {insightsUnlocked && bothConsented && !insightsPaused && (
                                         <div className="rounded-2xl border border-white/80 bg-white/80 p-3">
                                             {latestInsight ? (
                                                 <>

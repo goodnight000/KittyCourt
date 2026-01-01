@@ -10,6 +10,12 @@
 const { createClient } = require('@supabase/supabase-js');
 
 let _supabase = null;
+const LEGACY_CATEGORY_BY_TYPE = {
+    trigger: 'triggers',
+    core_value: 'strengths',
+    pattern: 'patterns',
+    preference: 'preferences',
+};
 
 /**
  * Get the Supabase client instance
@@ -98,19 +104,59 @@ async function retrieveRelevantMemories(embedding, userIds, limit = 4) {
 }
 
 /**
+ * Retrieve relevant memories for RAG (v2 composite scoring)
+ * 
+ * @param {number[]} embedding - The query embedding vector
+ * @param {string[]} userIds - User IDs to search for
+ * @param {number} limit - Maximum results to return
+ * @param {number} candidateMultiplier - Over-fetch multiplier for reranking
+ * @returns {Promise<Array>} Relevant memories with scores
+ */
+async function retrieveRelevantMemoriesV2(embedding, userIds, limit = 6, candidateMultiplier = 5) {
+    const supabase = getSupabase();
+
+    const { data, error } = await supabase.rpc('retrieve_relevant_memories_v2', {
+        query_embedding: embedding,
+        user_ids: userIds,
+        max_results: limit,
+        candidate_multiplier: candidateMultiplier,
+    });
+
+    if (error) {
+        console.error('[Supabase] Error retrieving relevant memories v2:', error);
+        throw error;
+    }
+
+    return data || [];
+}
+
+/**
  * Insert a new memory with embedding
  * 
  * @param {object} memory - Memory object
  * @param {string} memory.userId - User ID
  * @param {string} memory.memoryText - The insight text
- * @param {string} memory.memoryType - 'trigger', 'core_value', or 'pattern'
+ * @param {string} memory.memoryType - 'trigger', 'core_value', 'pattern', or 'preference'
  * @param {number[]} memory.embedding - The embedding vector
  * @param {string} memory.sourceCaseId - Reference to the source case
+ * @param {string} memory.sourceType - Source type (case, daily_question, etc.)
+ * @param {string} memory.sourceId - Reference to originating source
  * @param {number} memory.confidenceScore - Confidence score (0-1)
+ * @param {string} memory.memorySubtype - Optional subtype for preferences, etc.
+ * @param {string} memory.observedAt - ISO timestamp when observed
+ * @param {string} memory.lastObservedAt - ISO timestamp when last observed
  * @returns {Promise<object>} The inserted memory
  */
 async function insertMemory(memory) {
     const supabase = getSupabase();
+    const nowIso = new Date().toISOString();
+    const sourceType = memory.sourceType || (memory.sourceCaseId ? 'case' : 'unknown');
+    const sourceId = memory.sourceId || memory.sourceCaseId || null;
+    const observedAt = memory.observedAt || nowIso;
+    const lastObservedAt = memory.lastObservedAt || nowIso;
+
+    const legacyCategory = LEGACY_CATEGORY_BY_TYPE[memory.memoryType] || 'patterns';
+    const legacySubcategory = memory.memorySubtype || memory.memoryType || null;
 
     const { data, error } = await supabase
         .from('user_memories')
@@ -118,9 +164,17 @@ async function insertMemory(memory) {
             user_id: memory.userId,
             memory_text: memory.memoryText,
             memory_type: memory.memoryType,
+            memory_subtype: memory.memorySubtype || null,
             embedding: memory.embedding,
             source_case_id: memory.sourceCaseId,
+            source_type: sourceType,
+            source_id: sourceId,
             confidence_score: memory.confidenceScore || 0.8,
+            observed_at: observedAt,
+            last_observed_at: lastObservedAt,
+            content: memory.memoryText,
+            category: legacyCategory,
+            subcategory: legacySubcategory,
         })
         .select()
         .single();
@@ -160,6 +214,7 @@ async function reinforceMemory(memoryId) {
         .update({
             reinforcement_count: (current.reinforcement_count || 1) + 1,
             last_reinforced_at: new Date().toISOString(),
+            last_observed_at: new Date().toISOString(),
         })
         .eq('id', memoryId)
         .select()
@@ -284,7 +339,7 @@ async function getUserMemories(userId, memoryType = null) {
 
     let query = supabase
         .from('user_memories')
-        .select('id, memory_text, memory_type, confidence_score, reinforcement_count, created_at')
+        .select('id, memory_text, memory_type, memory_subtype, confidence_score, reinforcement_count, last_observed_at, created_at, source_type, source_id')
         .eq('user_id', userId)
         .order('reinforcement_count', { ascending: false });
 
@@ -315,10 +370,35 @@ async function checkUserHasMemories(userId) {
     const { count, error } = await supabase
         .from('user_memories')
         .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId);
+        .eq('user_id', userId)
+        .eq('is_active', true);
 
     if (error) {
         console.error('[Supabase] Error checking user memories:', error);
+        return 0;
+    }
+
+    return count || 0;
+}
+
+/**
+ * Check if any memories exist for a given source
+ * 
+ * @param {string} sourceType - Source type
+ * @param {string} sourceId - Source ID
+ * @returns {Promise<number>} Count of memories
+ */
+async function checkMemoriesBySource(sourceType, sourceId) {
+    const supabase = getSupabase();
+
+    const { count, error } = await supabase
+        .from('user_memories')
+        .select('*', { count: 'exact', head: true })
+        .eq('source_type', sourceType)
+        .eq('source_id', sourceId);
+
+    if (error) {
+        console.error('[Supabase] Error checking memories by source:', error);
         return 0;
     }
 
@@ -330,10 +410,12 @@ module.exports = {
     isSupabaseConfigured,
     searchSimilarMemories,
     retrieveRelevantMemories,
+    retrieveRelevantMemoriesV2,
     insertMemory,
     reinforceMemory,
     getUserProfile,
     updateUserProfile,
     getUserMemories,
     checkUserHasMemories,
+    checkMemoriesBySource,
 };

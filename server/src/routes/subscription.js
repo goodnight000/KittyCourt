@@ -12,12 +12,19 @@ const { createRateLimiter } = require('../lib/rateLimit');
 const REVENUECAT_SECRET_KEY = process.env.REVENUECAT_SECRET_KEY || '';
 const REVENUECAT_API_BASE = 'https://api.revenuecat.com/v1/subscribers/';
 const PAUSE_GOLD_ENTITLEMENTS = new Set(['pause_gold', 'pause gold']);
-const PAUSE_GOLD_PRODUCTS = new Set(['pause_gold_monthly', 'pause_gold_yearly', 'monthly', 'yearly']);
+const PAUSE_GOLD_PRODUCTS = new Set([
+    'pause_gold_monthly',
+    'pause_gold_yearly',
+    'monthly',
+    'yearly',
+    'prodaa5384f89b',
+]);
 const PRODUCT_PERIOD_DAYS = new Map([
     ['pause_gold_monthly', 30],
     ['monthly', 30],
     ['pause_gold_yearly', 365],
     ['yearly', 365],
+    ['prodaa5384f89b', 365],
 ]);
 const isProd = process.env.NODE_ENV === 'production';
 

@@ -5,11 +5,13 @@
 const express = require('express');
 const router = express.Router();
 const { requireSupabase, requireAuthUserId, getPartnerIdForUser } = require('../lib/auth');
-const { getOrderedCoupleIds } = require('../lib/xpService');
+const { getOrderedCoupleIds, getLevelStatus } = require('../lib/xpService');
 const { generateInsightsForCouple } = require('../lib/insightService');
+const { getUserSubscriptionTier } = require('../lib/usageLimits');
 
 const isProd = process.env.NODE_ENV === 'production';
 const safeErrorMessage = (error) => (isProd ? 'Internal server error' : (error?.message || String(error)));
+const INSIGHTS_MIN_LEVEL = 10;
 
 const buildConsentState = (profiles, userId, partnerId) => {
     const self = profiles.find(p => p.id === userId);
@@ -37,6 +39,19 @@ router.get('/', async (req, res) => {
 
         if (!partnerId) {
             return res.status(400).json({ error: 'No partner connected' });
+        }
+
+        const tier = await getUserSubscriptionTier(userId);
+        if (tier !== 'pause_gold') {
+            return res.status(403).json({ error: 'Pause Gold required' });
+        }
+
+        const levelStatus = await getLevelStatus(userId, partnerId);
+        if (!levelStatus?.success) {
+            return res.status(500).json({ error: safeErrorMessage(levelStatus?.error || 'Level check failed') });
+        }
+        if (!levelStatus?.data || levelStatus.data.level < INSIGHTS_MIN_LEVEL) {
+            return res.status(403).json({ error: `Level ${INSIGHTS_MIN_LEVEL} required` });
         }
 
         let { data: profiles, error } = await supabase
