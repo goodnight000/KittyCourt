@@ -2,21 +2,28 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Moon, History, Gavel, ChevronRight } from 'lucide-react';
 import JudgeSelection from './JudgeSelection';
+import { useI18n } from '../../i18n';
 
 /**
  * CourtAtRest - Premium Court Idle Experience V2
  * One-pager design with multi-color accents and compact layout
  */
+const FALLBACK_PHRASES = [
+    'Zzz... dreaming of justice...',
+    '*purrs softly*',
+    'No disputes? Purrfect...'
+];
+
 const CourtAtRest = ({ onServe, navigate }) => {
     const [catPhase, setCatPhase] = useState(0);
     const [showJudgeSelection, setShowJudgeSelection] = useState(false);
     const [displayText, setDisplayText] = useState('');
+    const { t } = useI18n();
 
-    const sleepingPhrases = [
-        "Zzz... dreaming of justice...",
-        "*purrs softly*",
-        "No disputes? Purrfect..."
-    ];
+    const localizedPhrases = t('court.atRest.sleepingPhrases');
+    const sleepingPhrases = Array.isArray(localizedPhrases) && localizedPhrases.length
+        ? localizedPhrases
+        : FALLBACK_PHRASES;
 
     // Cycle through phrases
     useEffect(() => {
@@ -129,7 +136,7 @@ const CourtAtRest = ({ onServe, navigate }) => {
                         <div className="relative w-36 h-36 rounded-full mx-auto overflow-hidden shadow-xl border-4 border-white/50">
                             <img
                                 src="/assets/avatars/sleeping_judge_whiskers.png"
-                                alt="Sleeping Judge Whiskers"
+                                alt={t('court.atRest.avatarAlt')}
                                 className="w-full h-full object-cover"
                             />
                         </div>
@@ -199,10 +206,10 @@ const CourtAtRest = ({ onServe, navigate }) => {
                         >
                             <Moon className="w-3.5 h-3.5 text-lavender-400" />
                         </motion.div>
-                        <span className="text-sm font-semibold text-court-brown">Court Adjourned</span>
+                        <span className="text-sm font-semibold text-court-brown">{t('court.atRest.statusTitle')}</span>
                     </div>
                     <p className="text-xs text-court-brownLight mt-1 max-w-[200px] mx-auto">
-                        The courtroom is peaceful. No disputes to settle.
+                        {t('court.atRest.statusSubtitle')}
                     </p>
                 </motion.div>
 
@@ -224,14 +231,14 @@ const CourtAtRest = ({ onServe, navigate }) => {
                                 </div>
                                 <div className="flex-1">
                                     <div className="text-[10px] font-semibold uppercase tracking-[0.3em] text-amber-500">
-                                        Summon the court
+                                        {t('court.atRest.cta.kicker')}
                                     </div>
-                                    <div className="text-base font-bold text-court-brown">New Case</div>
-                                    <div className="text-xs text-court-brownLight">Pick a judge and tell us the story.</div>
+                                    <div className="text-base font-bold text-court-brown">{t('court.atRest.cta.title')}</div>
+                                    <div className="text-xs text-court-brownLight">{t('court.atRest.cta.subtitle')}</div>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <div className="rounded-full border border-amber-200/70 bg-amber-100/70 px-3 py-1 text-xs font-bold text-amber-700">
-                                        Start
+                                        {t('court.atRest.cta.action')}
                                     </div>
                                     <ChevronRight className="w-5 h-5 text-amber-600" />
                                 </div>
@@ -251,8 +258,8 @@ const CourtAtRest = ({ onServe, navigate }) => {
                                         <History className="w-4 h-4 text-rose-600" />
                                     </div>
                                     <div>
-                                        <div className="text-sm font-semibold text-court-brown">Past Cases</div>
-                                        <div className="text-xs text-court-brownLight">Review your verdict history</div>
+                                        <div className="text-sm font-semibold text-court-brown">{t('court.atRest.history.title')}</div>
+                                        <div className="text-xs text-court-brownLight">{t('court.atRest.history.subtitle')}</div>
                                     </div>
                                 </div>
                                 <ChevronRight className="w-4 h-4 text-neutral-400" />

@@ -1,5 +1,7 @@
 import axios from 'axios';
 import { supabase } from './supabase';
+import useAuthStore from '../store/useAuthStore';
+import { normalizeLanguage } from '../i18n';
 
 // API base URL
 // - Prefer same-origin (/api) so dev uses the local server by default.
@@ -41,6 +43,12 @@ api.interceptors.request.use(async (config) => {
         if (token) {
             config.headers = config.headers || {};
             config.headers.Authorization = `Bearer ${token}`;
+        }
+        const state = useAuthStore.getState();
+        const preferred = normalizeLanguage(state.preferredLanguage || state.profile?.preferred_language);
+        if (preferred) {
+            config.headers = config.headers || {};
+            config.headers['Accept-Language'] = preferred;
         }
     } catch (_err) {
         // Best-effort only.

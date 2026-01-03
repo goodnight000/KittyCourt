@@ -1,0 +1,7 @@
+{
+  "default": "en",
+  "supported": [
+    { "code": "en", "labelKey": "language.en", "label": "English", "nativeLabel": "English", "aliases": ["en-US", "en-GB"] },
+    { "code": "zh-Hans", "labelKey": "language.zhHans", "label": "Simplified Chinese", "nativeLabel": "简体中文", "aliases": ["zh", "zh-CN", "zh-SG"] }
+  ]
+}

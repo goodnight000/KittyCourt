@@ -1,12 +1,14 @@
 import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Sparkles, Heart } from 'lucide-react';
+import { useI18n } from '../../i18n';
 
 /**
  * CelebrationAnimation - Shows when both users accept verdict
  * Confetti, bouncing cat, kibble reward display
  */
 const CelebrationAnimation = ({ onComplete, kibbleReward }) => {
+    const { t } = useI18n();
     useEffect(() => {
         const timer = setTimeout(onComplete, 5000);
         return () => clearTimeout(timer);
@@ -85,7 +87,7 @@ const CelebrationAnimation = ({ onComplete, kibbleReward }) => {
                     >
                         <img
                             src="/assets/avatars/judge_whiskers.png"
-                            alt="Judge Whiskers"
+                            alt={t('court.celebration.judgeAlt')}
                             className="w-full h-full object-cover"
                         />
                     </motion.div>
@@ -112,10 +114,10 @@ const CelebrationAnimation = ({ onComplete, kibbleReward }) => {
                         animate={{ scale: [1, 1.05, 1] }}
                         transition={{ duration: 0.5, repeat: Infinity, repeatDelay: 1 }}
                     >
-                        Harmony Restored! 🎉
+                        {t('court.celebration.title')}
                     </motion.h1>
                     <p className="text-court-brownLight text-lg">
-                        You've both accepted the verdict
+                        {t('court.celebration.subtitle')}
                     </p>
                 </motion.div>
 
@@ -133,12 +135,12 @@ const CelebrationAnimation = ({ onComplete, kibbleReward }) => {
                     >
                         🪙
                     </motion.div>
-                    <p className="text-sm text-court-brownLight mb-1">You both earned</p>
+                    <p className="text-sm text-court-brownLight mb-1">{t('court.celebration.kibbleIntro')}</p>
                     <p className="text-3xl font-bold text-court-gold">
-                        +{kibbleReward?.userA || 10} Kibble
+                        {t('court.celebration.kibbleAmount', { amount: kibbleReward?.userA || 10 })}
                     </p>
                     <p className="text-xs text-court-brownLight mt-2">
-                        For resolving your dispute peacefully
+                        {t('court.celebration.kibbleOutro')}
                     </p>
                 </motion.div>
 
@@ -162,9 +164,9 @@ const CelebrationAnimation = ({ onComplete, kibbleReward }) => {
                     transition={{ delay: 1.5 }}
                     className="text-court-brownLight text-sm italic"
                 >
-                    "Love is not about winning, it's about choosing each other every day"
+                    {t('court.celebration.quote')}
                     <br />
-                    <span className="text-court-tan">— Judge Whiskers</span>
+                    <span className="text-court-tan">{t('court.celebration.signature')}</span>
                 </motion.p>
 
                 {/* Auto-redirect notice */}
@@ -174,7 +176,7 @@ const CelebrationAnimation = ({ onComplete, kibbleReward }) => {
                     transition={{ delay: 2 }}
                     className="text-xs text-court-tan"
                 >
-                    Returning home in a moment...
+                    {t('court.celebration.returning')}
                 </motion.p>
             </div>
         </motion.div>

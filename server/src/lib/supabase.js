@@ -60,12 +60,13 @@ function isSupabaseConfigured() {
  * @param {number} limit - Maximum results to return
  * @returns {Promise<Array>} Similar memories
  */
-async function searchSimilarMemories(embedding, userId, threshold = 0.92, limit = 10) {
+async function searchSimilarMemories(embedding, userId, threshold = 0.92, limit = 10, language = 'en') {
     const supabase = getSupabase();
 
     const { data, error } = await supabase.rpc('search_similar_memories', {
         query_embedding: embedding,
         target_user_id: userId,
+        target_language: language || 'en',
         similarity_threshold: threshold,
         max_results: limit,
     });
@@ -86,12 +87,13 @@ async function searchSimilarMemories(embedding, userId, threshold = 0.92, limit 
  * @param {number} limit - Maximum results to return
  * @returns {Promise<Array>} Relevant memories
  */
-async function retrieveRelevantMemories(embedding, userIds, limit = 4) {
+async function retrieveRelevantMemories(embedding, userIds, limit = 4, language = 'en') {
     const supabase = getSupabase();
 
     const { data, error } = await supabase.rpc('retrieve_relevant_memories', {
         query_embedding: embedding,
         user_ids: userIds,
+        target_language: language || 'en',
         max_results: limit,
     });
 
@@ -112,12 +114,13 @@ async function retrieveRelevantMemories(embedding, userIds, limit = 4) {
  * @param {number} candidateMultiplier - Over-fetch multiplier for reranking
  * @returns {Promise<Array>} Relevant memories with scores
  */
-async function retrieveRelevantMemoriesV2(embedding, userIds, limit = 6, candidateMultiplier = 5) {
+async function retrieveRelevantMemoriesV2(embedding, userIds, limit = 6, candidateMultiplier = 5, language = 'en') {
     const supabase = getSupabase();
 
     const { data, error } = await supabase.rpc('retrieve_relevant_memories_v2', {
         query_embedding: embedding,
         user_ids: userIds,
+        target_language: language || 'en',
         max_results: limit,
         candidate_multiplier: candidateMultiplier,
     });
@@ -175,6 +178,7 @@ async function insertMemory(memory) {
             content: memory.memoryText,
             category: legacyCategory,
             subcategory: legacySubcategory,
+            language: memory.language || 'en',
         })
         .select()
         .single();
@@ -248,7 +252,8 @@ async function getUserProfile(userId) {
             favorite_date_activities,
             pet_peeves,
             appreciation_style,
-            bio
+            bio,
+            preferred_language
         `)
         .eq('id', userId)
         .single();
@@ -283,6 +288,9 @@ async function getUserProfile(userId) {
     }
     if (data.bio) {
         profile.bio = data.bio;
+    }
+    if (data.preferred_language) {
+        profile.preferredLanguage = data.preferred_language;
     }
 
     return profile;
@@ -334,7 +342,7 @@ async function updateUserProfile(userId, profileUpdate) {
  * @param {string} memoryType - Optional filter by memory type
  * @returns {Promise<Array>} User's memories
  */
-async function getUserMemories(userId, memoryType = null) {
+async function getUserMemories(userId, memoryType = null, language = null) {
     const supabase = getSupabase();
 
     let query = supabase
@@ -345,6 +353,9 @@ async function getUserMemories(userId, memoryType = null) {
 
     if (memoryType) {
         query = query.eq('memory_type', memoryType);
+    }
+    if (language) {
+        query = query.eq('language', language);
     }
 
     const { data, error } = await query;
@@ -364,15 +375,20 @@ async function getUserMemories(userId, memoryType = null) {
  * @param {string} userId - User ID
  * @returns {Promise<number>} Count of memories
  */
-async function checkUserHasMemories(userId) {
+async function checkUserHasMemories(userId, language = null) {
     const supabase = getSupabase();
 
-    const { count, error } = await supabase
+    let query = supabase
         .from('user_memories')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', userId)
         .eq('is_active', true);
 
+    if (language) {
+        query = query.eq('language', language);
+    }
+
+    const { count, error } = await query;
     if (error) {
         console.error('[Supabase] Error checking user memories:', error);
         return 0;

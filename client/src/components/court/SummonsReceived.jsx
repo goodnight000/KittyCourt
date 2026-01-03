@@ -1,13 +1,15 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Gavel } from 'lucide-react';
+import { useI18n } from '../../i18n';
 
 /**
  * SummonsReceived - Shows when partner has filed a case
  * Invitation to join the court session
  */
 const SummonsReceived = ({ session, senderName, onJoin }) => {
-    const displaySenderName = senderName || 'Your partner';
+    const { t } = useI18n();
+    const displaySenderName = senderName || t('common.yourPartner');
 
     return (
         <motion.div
@@ -24,10 +26,11 @@ const SummonsReceived = ({ session, senderName, onJoin }) => {
             </motion.div>
 
             <h2 className="text-xl font-bold text-court-brown mb-2">
-                You've Been Summoned! ⚖️
+                {t('court.summons.title')}
             </h2>
             <p className="text-court-brownLight text-sm mb-4">
-                <span className="font-bold text-court-gold">{displaySenderName}</span> has filed a case and requests your presence in court.
+                <span className="font-bold text-court-gold">{displaySenderName}</span>{' '}
+                {t('court.summons.body')}
             </p>
 
             <motion.button
@@ -36,11 +39,11 @@ const SummonsReceived = ({ session, senderName, onJoin }) => {
                 className="btn-primary w-full flex items-center justify-center gap-2"
             >
                 <Gavel className="w-4 h-4" />
-                Join Court Session
+                {t('court.summons.cta')}
             </motion.button>
 
             <p className="text-xs text-court-brownLight mt-4">
-                ⏰ This summons expires in 24 hours
+                {t('court.summons.expiry')}
             </p>
         </motion.div>
     );

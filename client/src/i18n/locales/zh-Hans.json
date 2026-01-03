@@ -1,0 +1,1941 @@
+{
+  "common": {
+    "loadingPause": "正在加载 Pause...",
+    "you": "你",
+    "partner": "伴侣",
+    "yourPartner": "你的伴侣",
+    "user": "用户",
+    "today": "今天",
+    "yesterday": "昨天",
+    "tryAgain": "再试一次",
+    "refresh": "刷新",
+    "continue": "继续",
+    "change": "更改",
+    "waiting": "等待中",
+    "edit": "编辑",
+    "cancel": "取消",
+    "saveChanges": "保存更改",
+    "or": "或",
+    "back": "返回",
+    "unknown": "未知",
+    "justNow": "刚刚",
+    "minutesAgo": "{count} 分钟前",
+    "hoursAgo": "{count} 小时前",
+    "daysAgo": "{count} 天前",
+    "catMessages": [
+      "完美可以喵！🐱",
+      "法官暂时认可…… 👁️",
+      "喵妙绝伦！✨",
+      "你赢得了我的尊敬（也许还有猫粮）🪙",
+      "法庭很满意！⚖️",
+      "提交得很好，人类！📜",
+      "*赞许地呼噜* 😺",
+      "正义已伸张！🎉"
+    ],
+    "streakMessages": {
+      "legendary": "传奇情侣！👑",
+      "pawSome": "爪赞搭档！🌟",
+      "steady": "爱意持续升温！💕",
+      "start": "开局不错！🐾",
+      "new": "刚刚开始！✨"
+    },
+    "profileAlt": "头像"
+  },
+  "nav": {
+    "home": "首页",
+    "court": "法庭",
+    "calendar": "日历",
+    "profile": "我的"
+  },
+  "language": {
+    "en": "English",
+    "zhHans": "简体中文"
+  },
+  "profile": {
+    "languageLabel": "首选语言",
+    "loveLanguageLabel": "爱之语 💝",
+    "saveProfile": "保存资料",
+    "unlockHint": "一起回答每日喵问、发送感谢、解决案件来赚取 XP。"
+  },
+  "options": {
+    "loveLanguage": {
+      "words": "肯定的话语",
+      "wordsDesc": "甜蜜的消息与赞美",
+      "acts": "服务行动",
+      "actsDesc": "贴心的帮助与行动",
+      "gifts": "收礼物",
+      "giftsDesc": "惊喜与贴心礼物",
+      "time": "高质量陪伴",
+      "timeDesc": "专注的相处时间",
+      "touch": "身体接触",
+      "touchDesc": "拥抱、贴贴与亲近"
+    },
+    "communicationStyle": {
+      "direct": "直接坦诚",
+      "directDesc": "我会直接说出来",
+      "processing": "需要时间消化",
+      "processingDesc": "我会先想一想再回应",
+      "emotional": "情感表达者",
+      "emotionalDesc": "我先表达感受",
+      "logical": "理性分析者",
+      "logicalDesc": "我更关注事实与解决方案",
+      "avoidant": "回避冲突",
+      "avoidantDesc": "我更倾向保持和平"
+    },
+    "conflictStyle": {
+      "talk": "想立刻沟通",
+      "talkDesc": "现在就聊清楚",
+      "space": "先冷静一下",
+      "spaceDesc": "冷静后再谈",
+      "write": "用文字表达",
+      "writeDesc": "短信、便签或信",
+      "physical": "释放精力",
+      "physicalDesc": "走走、运动、活动",
+      "distract": "需要转移注意",
+      "distractDesc": "缓一缓再谈"
+    },
+    "dateActivities": {
+      "dining": "外出吃饭",
+      "cooking": "一起做饭",
+      "movies": "电影/追剧",
+      "outdoors": "户外冒险",
+      "travel": "旅行",
+      "gaming": "游戏",
+      "music": "音乐/演出",
+      "arts": "艺术与文化",
+      "sports": "运动",
+      "relaxing": "在家放松",
+      "fitness": "健身",
+      "shopping": "逛街"
+    },
+    "petPeeves": {
+      "lateness": "迟到",
+      "phone": "约会时玩手机",
+      "mess": "乱糟糟",
+      "interrupting": "被打断",
+      "forgetful": "健忘",
+      "passive": "被动攻击",
+      "plans": "临时改计划",
+      "chewing": "咀嚼声太大",
+      "dishes": "水槽里堆碗",
+      "silent": "冷处理"
+    },
+    "appreciationStyle": {
+      "public": "公开认可",
+      "publicDesc": "让大家知道",
+      "private": "私下感谢",
+      "privateDesc": "只属于我们",
+      "reciprocate": "行动回馈",
+      "reciprocateDesc": "用行动回应",
+      "none": "心里知道就好",
+      "noneDesc": "不需要太多仪式感"
+    },
+    "animals": {
+      "bear": "熊",
+      "bunny": "兔子",
+      "capybara": "水豚",
+      "cat": "猫",
+      "dog": "狗",
+      "fox": "狐狸",
+      "panda": "熊猫",
+      "penguin": "企鹅"
+    }
+  },
+  "moods": {
+    "happy": "开心",
+    "loved": "被爱",
+    "grateful": "感恩",
+    "excited": "兴奋",
+    "peaceful": "平静",
+    "playful": "俏皮",
+    "cozy": "温暖",
+    "romantic": "浪漫",
+    "silly": "傻乐",
+    "hopeful": "充满希望",
+    "tired": "疲惫",
+    "stressed": "压力大",
+    "anxious": "焦虑",
+    "sad": "难过",
+    "frustrated": "挫败",
+    "overwhelmed": "不知所措",
+    "lonely": "孤独",
+    "confused": "困惑",
+    "meh": "一般般",
+    "hangry": "饿怒"
+  },
+  "validation": {
+    "DATE_REQUIRED": "需要填写日期",
+    "INVALID_DATE_FORMAT": "日期格式无效",
+    "INVALID_DATE": "日期无效",
+    "YEAR_TOO_EARLY": "年份需不早于 {minYear} 年",
+    "YEAR_TOO_LATE": "年份需不晚于 {maxYear} 年",
+    "DATE_IN_FUTURE": "日期不能是未来时间",
+    "AGE_TOO_YOUNG": "你必须年满 13 岁",
+    "AGE_TOO_OLD": "请输入有效的出生年份"
+  },
+  "errors": {
+    "NO_PARTNER": "尚未绑定伴侣",
+    "PARTNER_REQUIRED": "需要伴侣",
+    "INVALID_PARTNER": "伴侣无效",
+    "EVIDENCE_REQUIRED": "需要提供证据",
+    "XP_DISABLED": "经验系统已关闭",
+    "CHALLENGES_FETCH_FAILED": "无法加载挑战",
+    "CHALLENGE_START_FAILED": "无法开始挑战",
+    "CHALLENGE_SKIP_FAILED": "无法跳过挑战",
+    "CHALLENGE_COMPLETE_FAILED": "无法完成挑战",
+    "CHALLENGE_CONFIRM_FAILED": "无法确认挑战",
+    "USER_ID_MISMATCH": "用户不匹配",
+    "DAILY_QUESTION_FETCH_FAILED": "无法加载今日问题",
+    "DAILY_QUESTION_ERROR": "今日问题出错",
+    "ANSWER_REQUIRED": "需要填写回答",
+    "ANSWER_TOO_LONG": "回答太长",
+    "ASSIGNMENT_NOT_FOUND": "未找到问题",
+    "ASSIGNMENT_FORBIDDEN": "没有权限访问该问题",
+    "ANSWER_SUBMIT_FAILED": "提交回答失败",
+    "HISTORY_FETCH_FAILED": "无法加载历史记录",
+    "ANSWER_NOT_FOUND": "未找到回答",
+    "ANSWER_FORBIDDEN": "没有权限编辑该回答",
+    "ANSWER_UPDATE_FAILED": "更新回答失败",
+    "PENDING_FETCH_FAILED": "无法加载待回答",
+    "VERDICT_NOT_ALLOWED": "不允许提交客户端裁决",
+    "CASE_NOT_FOUND": "未找到案件",
+    "CASE_FORBIDDEN": "没有权限访问该案件",
+    "IMAGE_INVALID": "请选择图片文件",
+    "IMAGE_TOO_LARGE": "图片需小于 5MB",
+    "IMAGE_READ_FAILED": "读取图片失败"
+  },
+  "dailyMeow": {
+    "feature": "每日喵问",
+    "requirePartnerDescription": "连接伴侣后才能使用每日喵问。",
+    "tagline": "每天的小小关心仪式。",
+    "errors": {
+      "userDataUnavailable": "暂时无法加载你的资料，请稍后再试。",
+      "noData": "今天没有问题。",
+      "invalidQuestion": "问题格式无效。",
+      "loadFailed": "无法加载今日问题。",
+      "submitFailed": "提交回答失败。",
+      "updateFailed": "更新回答失败。"
+    },
+    "step": {
+      "shared": "已分享",
+      "mood": "心情",
+      "answer": "回答"
+    },
+    "moodsSelected": "已选 {count} 个心情",
+    "toast": {
+      "saved": "已保存"
+    },
+    "loading": "正在加载今日问题...",
+    "noQuestions": {
+      "title": "今日暂无问题",
+      "body": "明天再来看看。"
+    },
+    "title": "每日喵问",
+    "questionTitle": "今日问题",
+    "badge": {
+      "catchUp": "补答"
+    },
+    "stepBadge": {
+      "mood": "心情",
+      "answer": "回答",
+      "shared": "已共享"
+    },
+    "moodPrompt": "现在的心情是？",
+    "moodHint": "已选 {count}/3",
+    "moodLockHint": "继续后心情将锁定",
+    "pickMood": "请选择心情继续",
+    "privateUntilBoth": "双方回答后才公开",
+    "answerPlaceholder": "写下你的回答...",
+    "answerHint": "简短真诚即可",
+    "submitAnswer": "提交回答",
+    "youFelt": "你的心情",
+    "partnerFelt": "{name} 的心情",
+    "yourAnswer": "你的回答",
+    "partnerAnswer": "{name} 的回答",
+    "partnerAnswerLocked": "{name} 回答后解锁",
+    "editedAt": "已编辑 {date}",
+    "bothAnsweredReward": "双方都回答了！获得 +10 XP。",
+    "continueNext": "继续下一题",
+    "moodLocked": "心情已锁定",
+    "questionArchives": "问题归档",
+    "dailyReset": "每天午夜重置"
+  },
+  "dailyMeowHistory": {
+    "feature": "每日喵问回顾",
+    "requirePartnerDescription": "连接伴侣后才能查看回顾。",
+    "headerLabel": "每日归档",
+    "title": "每日喵问",
+    "subtitle": "回看你们一起回答的问题。",
+    "journeyTitle": "你们的旅程",
+    "journeySubtitle": "记录共同的回答与连续天数",
+    "answeredCount": "已回答 {count} 次",
+    "streakCount": "连续 {count} 天",
+    "searchPlaceholder": "搜索问题或回答...",
+    "backToArchives": "返回归档",
+    "dailyQuestionTitle": "每日问题",
+    "felt": "{name} 的心情",
+    "answerLabel": "{name} 的回答",
+    "emptySearchTitle": "没有匹配结果",
+    "emptyTitle": "还没有回答",
+    "emptySearchHint": "试试其他关键词。",
+    "emptyHint": "一起回答一次每日喵问，就会出现在这里。"
+  },
+  "calendar": {
+    "iconAlt": "日历",
+    "title": "我们的日历",
+    "subtitle": "重要日子与回忆",
+    "addEventAria": "添加事件",
+    "eventCount": {
+      "one": "1 个事件",
+      "other": "{count} 个事件"
+    },
+    "upcoming": {
+      "title": "即将到来",
+      "subtitle": "未来 7 天",
+      "countOne": "1 个事件",
+      "countOther": "{count} 个事件",
+      "emptyTitle": "暂无即将到来的事件",
+      "emptyHint": "点 + 添加一个特别日子。"
+    },
+    "paywall": {
+      "planFeature": "帮我计划是 Pause Gold 功能"
+    },
+    "timing": {
+      "today": "今天",
+      "tomorrow": "明天",
+      "inDays": "{count} 天后"
+    },
+    "plan": {
+      "view": "查看我的计划",
+      "help": "帮我计划"
+    },
+    "visibility": {
+      "shared": "共享",
+      "secret": "私密"
+    },
+    "addEvent": {
+      "title": "添加事件 ✨",
+      "visibilityLabel": "可见性",
+      "secretHint": "私密事件仅你可见。",
+      "sharedHint": "共享事件你和伴侣都可见。",
+      "typeLabel": "事件类型",
+      "titleLabel": "事件标题",
+      "titlePlaceholder": "例如：我们的周年纪念 💕",
+      "dateLabel": "日期",
+      "emojiLabel": "选择表情",
+      "repeatYearly": "🔄 每年重复",
+      "notesLabel": "备注（可选）",
+      "notesPlaceholder": "添加特别备注...",
+      "submit": "添加事件"
+    },
+    "details": {
+      "eventsOnDayOne": "当天 1 个事件",
+      "eventsOnDayOther": "当天 {count} 个事件",
+      "yearly": "每年",
+      "personal": "个人",
+      "defaultHoliday": "📅 默认节日",
+      "fromProfile": "💕 来自资料",
+      "addedBy": "由 {name} 添加",
+      "addAnother": "再添加一个事件"
+    },
+    "birthdayFor": "{name} 的生日",
+    "anniversaryTitle": "周年纪念",
+    "holidays": {
+      "valentinesDay": "情人节",
+      "internationalWomensDay": "国际妇女节",
+      "mothersDay": "母亲节",
+      "fathersDay": "父亲节",
+      "halloween": "万圣节",
+      "thanksgiving": "感恩节",
+      "christmasEve": "平安夜",
+      "christmasDay": "圣诞节",
+      "newYearsEve": "除夕",
+      "newYearsDay": "元旦"
+    },
+    "eventTypes": {
+      "birthday": "生日",
+      "anniversary": "纪念日",
+      "holiday": "节日",
+      "dateNight": "约会夜",
+      "custom": "自定义"
+    },
+    "planning": {
+      "errors": {
+        "partnerRequired": "连接伴侣后才能生成个性化计划。",
+        "generateFailed": "生成计划失败",
+        "generateFailedTitle": "无法生成计划",
+        "showingCached": "计划生成遇到问题，显示最近的计划。"
+      },
+      "title": "计划 {title}",
+      "subtitle": "{date} • 为 {name}",
+      "styles": {
+        "cozy": "温馨",
+        "playful": "活泼",
+        "fancy": "精致",
+        "lowKey": "低调"
+      },
+      "sections": {
+        "prepChecklist": "准备清单",
+        "littleTouches": "小心思",
+        "giftIdeas": "礼物点子",
+        "alternatives": "替代方案",
+        "backupPlan": "备选计划"
+      },
+      "optional": "可选",
+      "generateNew": "生成新的计划",
+      "memoriesOne": "结合 1 条记忆洞察。",
+      "memoriesOther": "结合 {count} 条记忆洞察。"
+    }
+  },
+  "appreciations": {
+    "feature": "感谢",
+    "partnerFallback": "你的伴侣",
+    "requirePartnerDescription": "向伴侣表达感谢！发送感谢信息并一起赚取猫粮。连接伴侣后体验最佳。",
+    "preview": {
+      "title": "感谢",
+      "subtitle": "向伴侣传递爱意"
+    },
+    "header": {
+      "kicker": "感谢记录",
+      "title": "你的爱意账本",
+      "subtitle": "{name} 对你感激的点滴 💕"
+    },
+    "summary": {
+      "title": "感谢总数",
+      "from": "来自 {name}"
+    },
+    "empty": {
+      "title": "还没有感谢",
+      "line1": "当 {name} 发送感谢时，",
+      "line2": "它会出现在这里！💕"
+    },
+    "kibbleReward": "+{count} 颗猫粮"
+  },
+  "challenges": {
+    "locked": {
+      "title": "等级达到 {level} 解锁挑战",
+      "subtitle": "你现在是 {level} 级，继续一起赚取 XP。",
+      "cta": "查看进度"
+    },
+    "header": {
+      "kicker": "庭审清单",
+      "title": "挑战",
+      "subtitle": "一起赚取 XP",
+      "level": "等级 {level}"
+    },
+    "section": {
+      "dropKicker": "挑战投放",
+      "dropTitle": "每日与每周任务自动开始",
+      "dropSubtitle": "每天午夜（美东）更新。",
+      "activeCount": "{count} 个进行中任务",
+      "dailyTitle": "每日任务",
+      "dailyBadge": "每日刷新",
+      "dailyActive": "每日挑战进行中",
+      "dailyXp": "+{xp} XP",
+      "dailyXpLabel": "今日奖励",
+      "weeklyTitle": "每周任务",
+      "weeklyBadge": "周一重置",
+      "weeklyActive": "每周挑战进行中",
+      "weeklyXp": "+{xp} XP",
+      "weeklyXpLabel": "本周奖励"
+    },
+    "active": {
+      "kicker": "进行中",
+      "title": "进行中的挑战",
+      "count": "{count} 个"
+    },
+    "actions": {
+      "markDone": "标记完成",
+      "confirm": "确认",
+      "waiting": "等待中",
+      "skip": "跳过"
+    },
+    "completed": {
+      "kicker": "已完成归档",
+      "title": "已完成（{count}）"
+    },
+    "empty": {
+      "title": "暂无挑战",
+      "subtitle": "明天再来看看新的任务。"
+    },
+    "errors": {
+      "LOAD_FAILED": "无法加载挑战",
+      "SKIP_FAILED": "无法跳过挑战",
+      "COMPLETE_FAILED": "无法完成挑战",
+      "CONFIRM_FAILED": "无法确认挑战"
+    },
+    "card": {
+      "status": {
+        "expired": "已过期",
+        "completed": "已完成"
+      },
+      "cadence": {
+        "daily": "每日",
+        "weekly": "每周"
+      },
+      "difficulty": {
+        "easy": "简单",
+        "medium": "中等",
+        "hard": "困难"
+      },
+      "completedReward": "完成！一起获得 +{xp} XP。",
+      "progress": "{current} / {total} 步",
+      "reward": "+{xp} XP",
+      "daysLeft": "剩余 {count} 天"
+    }
+  },
+  "court": {
+    "journey": {
+      "title": "流程地图",
+      "priming": "引导",
+      "joint": "共同",
+      "resolution": "方案",
+      "verdict": "裁决"
+    },
+    "resolution": {
+      "optionLabel": "选项 {label}",
+      "optionNumber": "选项 {count}",
+      "loadingTitle": "方案仍在加载",
+      "loadingSubtitle": "请稍等片刻。",
+      "confirm": {
+        "waiting": "等待 {name} 确认",
+        "selectShared": "请选择共同方案",
+        "confirmShared": "确认该方案",
+        "selectPlan": "请选择一个方案继续",
+        "confirmMine": "确认我的选择"
+      },
+      "selected": "已选择",
+      "waiting": {
+        "title": "已记录选择",
+        "subtitle": "等待 {name} 选择。",
+        "badge": "你的选择"
+      },
+      "header": {
+        "title": "选择方案",
+        "subtitle": "选择你认为最可行的选项。",
+        "mismatchTitle": "寻找共同方案",
+        "mismatchSubtitle": "你们的选择不同，请共同选择一个方案继续。",
+        "alignTogether": "达成共识",
+        "pickConfirm": "选择并确认"
+      },
+      "mismatch": {
+        "intro": "下面列出了你和 {name} 的首选方案。",
+        "hint": "选择相同方案继续，若生成混合方案会显示。",
+        "lockedTitle": "已锁定选择",
+        "lockedSubtitle": "等待 {name} 匹配。"
+      },
+      "badges": {
+        "picked": "{name} 选择",
+        "blended": "混合方案"
+      },
+      "selectionLabel": "你选择的是：{title}",
+      "selectionHint": "请选择上方一个选项继续。",
+      "hybrid": {
+        "title": "混合方案生成中",
+        "description": "正在融合双方选择生成新的方案。",
+        "rationale": "方案很快出现。",
+        "duration": "10-20 分钟"
+      }
+    },
+    "verdict": {
+      "banner": "裁决已下达",
+      "title": "胡须法官已宣判",
+      "subtitle": "治疗猫带来智慧",
+      "versionLabel": "版本：",
+      "patternDetected": "识别到 {pattern} 模式",
+      "sections": {
+        "summary": {
+          "title": "真实核心",
+          "subtitle": "你们真正争执的是什么"
+        },
+        "purr": {
+          "title": "温柔肯定",
+          "subtitle": "你的感受是合理的"
+        },
+        "hiss": {
+          "title": "轻柔提醒",
+          "subtitle": "需要调整的行为"
+        },
+        "repair": {
+          "title": "修复方案",
+          "subtitle": "重建连接的路径"
+        }
+      },
+      "signature": "- 胡须法官",
+      "horsemenTitle": "发现 Gottman 四骑士",
+      "addendumTitle": "补充材料",
+      "addendumHint": "补充更多背景以便复议",
+      "addendumLimitReached": "已达补充上限",
+      "addendumStatus": "剩余 {remaining}/{limit} 次补充",
+      "accept": "接受裁决",
+      "accepted": "你已接受！",
+      "waitingForPartner": "等待 {name}...",
+      "history": "历史记录",
+      "judgeAlt": "胡须法官"
+    },
+    "atRest": {
+      "avatarAlt": "睡着的胡须法官",
+      "sleepingPhrases": [
+        "呼噜...法庭打盹中...",
+        "轻轻呼噜...",
+        "没有纠纷？完美。"
+      ],
+      "statusTitle": "法庭休息中",
+      "statusSubtitle": "暂无案件。",
+      "cta": {
+        "kicker": "新案件",
+        "title": "传唤伴侣",
+        "subtitle": "开启新的法庭流程。",
+        "action": "传唤"
+      },
+      "history": {
+        "title": "过往案件",
+        "subtitle": "查看裁决与补充。"
+      }
+    },
+    "opening": {
+      "title": "法庭开庭",
+      "subtitle": "胡须法官驾到",
+      "judgeAlt": "胡须法官"
+    },
+    "deliberating": {
+      "title": "法官审理中",
+      "subtitle": "胡须法官正在评估你们的案件。",
+      "analyzingTitle": "正在分析",
+      "analyzingSubtitle": "权衡双方观点",
+      "working": "处理中...",
+      "note": "可能需要几分钟。",
+      "quotes": [
+        "法庭箴言：先理解，再解决。",
+        "胡须智慧：好奇胜过防御。",
+        "法官备注：公平裁决保护两颗心。"
+      ],
+      "judgeAlt": "胡须法官",
+      "steps": {
+        "review": {
+          "title": "审阅证据",
+          "subtitle": "细读双方陈述"
+        },
+        "honor": {
+          "title": "尊重感受",
+          "subtitle": "看见情绪背后"
+        },
+        "draft": {
+          "title": "拟定裁决",
+          "subtitle": "梳理前进方向"
+        }
+      }
+    },
+    "priming": {
+      "loadingTitle": "预热内容加载中...",
+      "loadingSubtitle": "请稍等。",
+      "header": {
+        "title": "预热引导",
+        "subtitle": "给 {name} 的温柔镜子",
+        "badges": {
+          "private": "私密",
+          "readTime": "阅读 2-3 分钟",
+          "gentle": "温和语气"
+        }
+      },
+      "feelings": {
+        "title": "你的感受",
+        "subtitle": "说出你正在承受的"
+      },
+      "partnerPerspective": {
+        "title": "对方视角",
+        "subtitle": "他们可能的感受"
+      },
+      "reflection": {
+        "title": "反思问题",
+        "subtitle": "回应前先自省"
+      },
+      "questionsForPartner": {
+        "title": "给 {name} 的问题",
+        "subtitle": "邀请更平静的对话"
+      },
+      "actions": {
+        "continue": "继续"
+      }
+    },
+    "jointMenu": {
+      "loadingTitle": "共菜单加载中...",
+      "loadingSubtitle": "马上好。",
+      "header": {
+        "title": "共菜单",
+        "subtitle": "给你们双方的共同反思。",
+        "badges": {
+          "together": "一起",
+          "readTime": "阅读 2-3 分钟",
+          "shared": "共享"
+        }
+      },
+      "realIssue": {
+        "title": "真正的问题",
+        "subtitle": "冲突背后的核心"
+      },
+      "goodStuff": {
+        "title": "好的部分",
+        "subtitle": "仍在奏效的地方"
+      },
+      "growthEdges": {
+        "title": "成长空间",
+        "subtitle": "可以一起改进"
+      },
+      "resolutionPreview": {
+        "title": "方案预览",
+        "subtitle": "前进方向的简要预告"
+      },
+      "closing": {
+        "label": "结束语"
+      },
+      "actions": {
+        "continue": "继续"
+      }
+    },
+    "judgeSelection": {
+      "title": "选择法官",
+      "subtitle": "挑选本次裁决风格。",
+      "goldBadge": "Gold",
+      "judgeAlt": "{name} 头像",
+      "selectPrompt": "请选择法官",
+      "serve": "开始审理",
+      "upgrade": "升级到 Gold",
+      "paywall": {
+        "bestLocked": "Gold 解锁胡须法官。",
+        "limitReached": "{judge} 的使用次数已达上限。"
+      }
+    },
+    "judges": {
+      "fast": {
+        "name": "闪电法官",
+        "subtitle": "快速聚焦",
+        "description": "需要速度时的简洁裁决。"
+      },
+      "logical": {
+        "name": "米滕斯法官",
+        "subtitle": "理性平衡",
+        "description": "条理清晰、温和的指导。"
+      },
+      "best": {
+        "name": "胡须法官",
+        "subtitle": "深度共情",
+        "description": "最细腻、最有温度的裁决。"
+      }
+    },
+    "celebration": {
+      "title": "裁决已接受",
+      "subtitle": "你们都选择了接收裁决。",
+      "kibbleIntro": "你们获得",
+      "kibbleAmount": "{amount} 猫粮",
+      "kibbleOutro": "干得漂亮！",
+      "quote": "一点点善意，能走很远。",
+      "signature": "- 胡须法官",
+      "returning": "即将返回法庭...",
+      "judgeAlt": "胡须法官"
+    },
+    "settlement": {
+      "cta": "庭外和解",
+      "waiting": "等待 {name} 同意和解...",
+      "declined": "对方拒绝了和解。",
+      "dismiss": "关闭",
+      "partnerRequest": {
+        "title": "{name} 想和解",
+        "subtitle": "同意后案件将关闭。",
+        "accept": "同意和解",
+        "reject": "继续案件",
+        "settling": "处理中..."
+      },
+      "modal": {
+        "title": "要和解吗？",
+        "body": "向 {name} 发起和解请求，若对方同意案件将关闭。",
+        "note": "你们也可以选择继续审理。",
+        "confirm": "发送请求",
+        "requesting": "发送中..."
+      }
+    },
+    "settleModal": {
+      "title": {
+        "accept": "接受和解",
+        "request": "请求和解"
+      },
+      "body": {
+        "accept": "希望与您和解此案件。",
+        "requestIntro": "向",
+        "requestOutro": "发起和解并结束案件。"
+      },
+      "quote": "选择和平，而不是输赢。",
+      "signature": "- 胡须法官",
+      "keep": "继续审理",
+      "request": "请求和解",
+      "accept": "接受和解"
+    },
+    "settleSuccess": {
+      "title": "案件已撤销",
+      "subtitle": "你们已达成和解。",
+      "quote": "当你们共同选择爱，爱就会赢。",
+      "signature": "- 胡须法官",
+      "returning": "正在返回法庭..."
+    },
+    "summons": {
+      "title": "收到传唤",
+      "body": "发起了案件。要进入法庭吗？",
+      "cta": "进入法庭",
+      "expiry": "传唤 24 小时内有效。"
+    },
+    "waitingEvidence": {
+      "title": "等待证据",
+      "subtitle": "等待 {name} 提交他们的部分。",
+      "statusIntro": "正在等待 ",
+      "statusOutro": " 提交证据。",
+      "panelTitle": "提交状态",
+      "submitted": "已提交",
+      "pending": "待提交",
+      "waiting": "等待中",
+      "note": "等待时可选择庭外和解。"
+    },
+    "waitingPartner": {
+      "title": "等待伴侣",
+      "subtitle": "等待 {name} 进入法庭。",
+      "statusIntro": "我们已通知 ",
+      "statusOutro": " 加入法庭。",
+      "panelTitle": "法庭出席",
+      "present": "已到场",
+      "awaiting": "等待中",
+      "cancel": "取消请求",
+      "tipTitle": "小提示",
+      "tipBody": "可以发个提醒让对方知道。"
+    },
+    "waitingStep": {
+      "statusIntro": "正在等待 ",
+      "panelTitle": "法庭状态",
+      "panelBody": "等 {name} 准备好后继续。",
+      "note": "你可以先离开，我们会保留进度。"
+    },
+    "rating": {
+      "title": "评价裁决",
+      "subtitle": "这份裁决有多有帮助？",
+      "descriptions": {
+        "one": "不太合适",
+        "two": "还有提升空间",
+        "three": "一般般",
+        "four": "很有帮助",
+        "five": "太棒了"
+      },
+      "submit": "提交",
+      "submitting": "提交中...",
+      "skip": "跳过",
+      "saveError": "无法保存评分。",
+      "footer": "感谢你的反馈。"
+    },
+    "start": {
+      "title": "开始新案件",
+      "subtitle": "传唤伴侣，开启法庭流程。",
+      "card": {
+        "title": "流程说明",
+        "subtitle": "只需三步开始。"
+      },
+      "steps": {
+        "serve": {
+          "title": "传唤伴侣",
+          "subtitle": "发送传唤开始案件。"
+        },
+        "wait": {
+          "title": "等待入庭",
+          "subtitle": "双方到场后开始。"
+        },
+        "present": {
+          "title": "提交证据",
+          "subtitle": "分享事实与感受。"
+        }
+      },
+      "cta": "发送传唤",
+      "history": "查看案件记录"
+    },
+    "timeout": {
+      "label": "剩余时间"
+    }
+  },
+  "onboarding": {
+    "steps": {
+      "welcome": {
+        "title": "欢迎来到 Pause",
+        "subtitle": "一个温柔又好玩的空间，陪你们走过难的时刻。"
+      },
+      "auth": {
+        "title": "创建账号",
+        "subtitle": "让你的进度安全保存。"
+      },
+      "name": {
+        "title": "我们该怎么称呼你？",
+        "subtitle": "选择一个喜欢的名字"
+      },
+      "avatar": {
+        "title": "选择你的头像！🐾",
+        "subtitle": "从头像中挑一个或上传自己的"
+      },
+      "birthday": {
+        "title": "你的生日是？🎂",
+        "subtitle": "连接后会提醒伴侣"
+      },
+      "loveLanguage": {
+        "title": "你的爱之语是什么？",
+        "subtitle": "你最容易感受到被爱的是？"
+      },
+      "communicationStyle": {
+        "title": "在争执时你更倾向怎样沟通？",
+        "subtitle": "理解彼此有助于化解分歧 🕊️"
+      },
+      "conflictStyle": {
+        "title": "难过时你通常会...",
+        "subtitle": "自我觉察很重要！🦸"
+      },
+      "dateActivities": {
+        "title": "理想的约会活动？",
+        "subtitle": "可多选！🌟"
+      },
+      "petPeeves": {
+        "title": "有关系中的小雷区吗？",
+        "subtitle": "哪些小事会让你不舒服？（每个人都有）😅"
+      },
+      "appreciationStyle": {
+        "title": "你做了好事之后...",
+        "subtitle": "什么样的认可最让你舒服？🏆"
+      },
+      "complete": {
+        "title": "都准备好了！🎉",
+        "subtitle": "资料已准备好，接下来连接伴侣吧！"
+      }
+    },
+    "language": {
+      "title": "选择语言",
+      "subtitle": "请选择你在 Pause 中使用的语言。",
+      "helper": "稍后可在设置中更改。",
+      "cta": "继续"
+    },
+    "welcome": {
+      "judgeAlt": "胡须法官",
+      "description": "用幽默与温暖化解小争执，轻轻推你们走向理解。",
+      "highlights": {
+        "fair": "公平裁决",
+        "dailyCloseness": "每日亲近",
+        "calmerVibe": "更平和的氛围"
+      },
+      "signInPrompt": "已有账号？登录",
+      "upgradeNote": "稍后再升级也可以 - 结尾会提供 Pause Gold。"
+    },
+    "auth": {
+      "continueWithGoogle": "使用 Google 继续",
+      "emailPlaceholder": "邮箱地址",
+      "passwordPlaceholder": "设置密码",
+      "confirmPasswordPlaceholder": "确认密码",
+      "creating": "创建中...",
+      "createAccount": "创建账号"
+    },
+    "name": {
+      "placeholder": "你的名字或昵称",
+      "helper": "这是你在伴侣眼中的名字 💕"
+    },
+    "birthday": {
+      "helper": "伴侣会收到生日提醒！🎈"
+    },
+    "avatar": {
+      "selectedAlt": "你的头像",
+      "selectedHint": "看起来不错！✨",
+      "requiredHint": "请选择头像",
+      "presetLabel": "选择一个动物朋友",
+      "presetAlt": "{name} 头像",
+      "upload": "上传",
+      "camera": "相机",
+      "changeLater": "之后可以在资料里修改"
+    },
+    "complete": {
+      "connectTitle": "准备好连接伴侣了吗？💕",
+      "connectSubtitle": "分享你的专属邀请码，或输入对方的邀请码即可连接。",
+      "partnerCodeLabel": "你的伴侣邀请码",
+      "connectNow": "立即连接伴侣",
+      "connectLater": "稍后再连接",
+      "connectNote": "提示：法庭与每日问题等功能需要连接伴侣。",
+      "summaryName": "名字",
+      "summaryLoveLanguage": "爱之语",
+      "oneMoreThing": "还有一步...",
+      "savedNotice": "资料已保存！🎉"
+    },
+    "customOptionPlaceholder": "+ 添加自定义...",
+    "paywall": {
+      "reason": "Pause Gold 解锁更多法官与计划功能"
+    },
+    "progress": "第 {current}/{total} 步",
+    "badge": {
+      "saved": "已保存",
+      "step": "第 {current} 步"
+    },
+    "actions": {
+      "saveProfile": "保存资料"
+    },
+    "errors": {
+      "saveFailed": "保存资料失败，请再试一次。",
+      "unexpected": "发生未知错误，请稍后再试。",
+      "googleFailed": "无法使用 Google 继续。",
+      "missingFields": "请填写所有字段。",
+      "passwordsMismatch": "两次密码不一致。",
+      "passwordTooShort": "密码至少 8 位。",
+      "signUpFailed": "创建账号失败。",
+      "invalidImage": "请选择图片文件。",
+      "imageTooLarge": "图片需小于 5MB。",
+      "imageReadFailed": "读取图片失败。"
+    }
+  },
+  "authCallback": {
+    "signingIn": "正在登录..."
+  },
+  "cases": {
+    "feature": "案件",
+    "preview": {
+      "title": "案件记录",
+      "subtitle": "查看历史裁决与方案。"
+    },
+    "requirePartnerDescription": "连接伴侣后才能查看案件记录。",
+    "horsemen": {
+      "criticism": "批评",
+      "contempt": "轻蔑",
+      "defensiveness": "防御",
+      "stonewalling": "冷战"
+    },
+    "severity": {
+      "highTension": "高度紧张",
+      "friction": "摩擦",
+      "disconnection": "疏离"
+    },
+    "history": {
+      "kicker": "案件历史",
+      "title": "过往案件",
+      "subtitle": "看看你们的故事如何成长。",
+      "empty": {
+        "title": "还没有案件",
+        "subtitle": "开始一个案件，这里会显示记录。",
+        "cta": "开始案件"
+      },
+      "caseNumber": "第 {number} 案",
+      "resolutionFallback": "待定解决方案",
+      "resolutionDescriptionFallback": "裁决后会显示细节。",
+      "addendumOne": "1 条补充",
+      "addendumOther": "{count} 条补充",
+      "resolutionChosen": "已选方案",
+      "flow": {
+        "analyze": "分析",
+        "prime": "预热",
+        "resolve": "解决"
+      }
+    },
+    "detail": {
+      "notFound": "未找到案件",
+      "titleFallback": "未命名案件",
+      "verdicts": {
+        "one": "1 份裁决",
+        "other": "{count} 份裁决"
+      },
+      "journey": {
+        "title": "审理流程",
+        "subtitle": "案件流程概览",
+        "evidence": "证据",
+        "analysis": "分析",
+        "priming": "预热",
+        "jointMenu": "共菜单",
+        "resolution": "方案",
+        "missing": "此案件创建于旧流程之前。"
+      },
+      "partnerStatements": {
+        "title": "双方陈述",
+        "partnerA": "伴侣 A",
+        "partnerB": "伴侣 B",
+        "noInput": "暂无陈述"
+      },
+      "analysis": {
+        "title": "分析",
+        "intensity": "强度",
+        "notAssessed": "未评估",
+        "dynamic": "动态",
+        "rootConflict": "核心冲突",
+        "partnerAVulnerable": "伴侣 A 脆弱情绪",
+        "partnerBVulnerable": "伴侣 B 脆弱情绪",
+        "partnerAPatterns": "伴侣 A 模式",
+        "partnerBPatterns": "伴侣 B 模式",
+        "none": "无"
+      },
+      "priming": {
+        "title": "预热洞察",
+        "partnerA": "伴侣 A",
+        "partnerB": "伴侣 B",
+        "yourFeelings": "你的感受",
+        "partnerPerspective": "对方视角",
+        "reflectionQuestions": "反思问题",
+        "questionsForPartner": "给伴侣的问题"
+      },
+      "jointMenu": {
+        "title": "共菜单",
+        "summary": "摘要",
+        "goodStuff": "好的部分",
+        "growthEdges": "成长空间",
+        "resolutionPreview": "方案预览"
+      },
+      "resolutions": {
+        "title": "方案列表",
+        "chosen": "已选",
+        "why": "原因：{reason}"
+      },
+      "timeline": {
+        "title": "补充时间线",
+        "originalVerdict": "原始裁决",
+        "addendumBy": "补充来自 {name}"
+      },
+      "verdict": {
+        "title": "裁决",
+        "judgeName": "胡须法官",
+        "judgeTitle": "疗愈猫法官",
+        "originalLabel": "原始裁决",
+        "addendumLabel": "补充 {number}",
+        "addendumBy": "补充来自 {name}",
+        "legacyRuling": "裁定",
+        "legacySentence": "判决",
+        "repairLabel": "修复：{title}",
+        "repairWhy": "原因：{reason}"
+      }
+    }
+  },
+  "connectPartner": {
+    "header": {
+      "title": "连接伴侣",
+      "subtitle": "连接账号以解锁共享功能。"
+    },
+    "pending": {
+      "title": "请求已发送",
+      "waiting": "等待 {name} 接受...",
+      "cancel": "取消请求"
+    },
+    "tabs": {
+      "share": "分享邀请码",
+      "enter": "输入邀请码"
+    },
+    "share": {
+      "title": "分享你的邀请码",
+      "subtitle": "把这个码发给伴侣。",
+      "copied": "已复制"
+    },
+    "enter": {
+      "title": "输入伴侣邀请码",
+      "subtitle": "输入对方分享的 12 位码。",
+      "placeholder": "输入邀请码",
+      "submit": "发送请求"
+    },
+    "howItWorks": {
+      "title": "如何连接",
+      "body": "分享邀请码并输入对方的邀请码即可连接。"
+    },
+    "skip": "先跳过",
+    "skipHint": "之后可在个人资料里连接。",
+    "signOut": "退出登录",
+    "success": "已向 {name} 发送邀请。",
+    "errors": {
+      "generic": "出现错误，请稍后再试。",
+      "notAuthenticated": "请重新登录后再试。",
+      "selfConnect": "不能和自己连接。",
+      "codeNotFound": "未找到该邀请码。",
+      "alreadyConnected": "对方已与他人连接。",
+      "noSentRequest": "没有可取消的请求。"
+    }
+  },
+  "courtroom": {
+    "feature": "法庭",
+    "requirePartnerDescription": "连接伴侣后才能使用法庭功能。",
+    "waiting": {
+      "primingTitle": "等待伴侣阅读预热",
+      "primingSubtitle": "对方完成后继续。",
+      "jointTitle": "等待伴侣查看共菜单",
+      "jointSubtitle": "请稍候。"
+    },
+    "errors": {
+      "title": "裁决出错",
+      "verdictFailed": "生成裁决失败。",
+      "return": "返回法庭"
+    },
+    "evidence": {
+      "title": "提交证据",
+      "subtitle": "分享事实与感受。",
+      "live": "实时",
+      "vs": "vs",
+      "factsLabel": "发生了什么？",
+      "factsPlaceholder": "描述具体情况...",
+      "factsHint": "尽量客观描述。",
+      "feelingsLabel": "你的感受",
+      "feelingsPlaceholder": "表达你的感受...",
+      "feelingsHint": "使用“我”来表达。",
+      "submit": "提交证据",
+      "footer": "对方提交后将看到你的内容。"
+    },
+    "addendum": {
+      "title": "补充说明",
+      "subtitle": "补充更多背景，供法官参考。",
+      "remaining": "剩余 {remaining}/{limit} 次补充",
+      "placeholder": "补充更多信息...",
+      "limitReached": "补充次数已用完",
+      "submit": "提交补充"
+    }
+  },
+  "dashboard": {
+    "header": {
+      "title": "你好，{name}",
+      "subtitle": "看看与 {name} 的最新进展"
+    },
+    "stats": {
+      "daysLabel": "天数",
+      "daysTogether": "在一起",
+      "streakLabel": "连击",
+      "questionStreak": "每日喵问连击"
+    },
+    "connectPrompt": "连接伴侣后解锁更多功能。",
+    "dailyQuestion": {
+      "connectBadge": "连接",
+      "connectTitle": "连接伴侣以解锁每日喵问",
+      "ready": "已准备",
+      "notConnected": "未连接",
+      "tapToConnect": "点击连接",
+      "badge": {
+        "daily": "今日",
+        "waiting": "等待",
+        "completed": "已完成"
+      },
+      "loading": "正在加载今日问题...",
+      "fallbackQuestion": "今天让你微笑的是什么？",
+      "youLabel": "你 {status}",
+      "partnerLabel": "{name} {status}",
+      "answered": "已回答",
+      "waiting": "等待中"
+    },
+    "quickActions": {
+      "title": "快捷操作",
+      "subtitle": "快速开始",
+      "go": "进入",
+      "appreciate": {
+        "label": "感谢",
+        "detail": "发送一条感谢。"
+      },
+      "loveNotes": {
+        "label": "爱意记录",
+        "detail": "查看过往感谢。"
+      },
+      "cases": {
+        "label": "案件",
+        "detail": "查看裁决记录。"
+      },
+      "redeem": {
+        "label": "兑换",
+        "detail": "用猫粮换奖励。"
+      }
+    },
+    "archive": {
+      "kicker": "每日喵问",
+      "title": "问题档案",
+      "subtitle": "回顾你们的回答。"
+    },
+    "goodDeed": {
+      "kicker": "感谢",
+      "title": "对 {name} 说点好听的",
+      "hint": "一起获得 +10 XP",
+      "placeholder": "我喜欢你...",
+      "helper": "简短真诚即可。",
+      "submit": "发送感谢",
+      "successTitle": "已发送给 {name}！",
+      "successSubtitle": "你的感谢已送达。"
+    },
+    "goodDeedSuggestions": [
+      "谢谢你今天的耐心",
+      "我很喜欢我们的散步",
+      "感谢你听我说完",
+      "今天有你我很安心",
+      "谢谢你帮我分担家务"
+    ]
+  },
+  "economy": {
+    "feature": "猫粮商店",
+    "requirePartnerDescription": "连接伴侣后才能兑换奖励。",
+    "preview": {
+      "title": "猫粮商店",
+      "subtitle": "把猫粮换成专属奖励。"
+    },
+    "header": {
+      "kicker": "猫粮",
+      "title": "奖励商店",
+      "subtitle": "把好行为变成小奖励。"
+    },
+    "balance": {
+      "kicker": "余额",
+      "title": "我的猫粮",
+      "subtitle": "通过感谢获得。",
+      "label": "余额",
+      "coins": "猫粮"
+    },
+    "partner": {
+      "label": "伴侣",
+      "subtitle": "从对方菜单兑换。"
+    },
+    "pending": {
+      "title": "{name} 兑换了",
+      "redeemedOn": "兑换时间 {date}",
+      "done": "标记完成"
+    },
+    "redeem": {
+      "kicker": "兑换",
+      "title": "兑换 {name} 的奖励",
+      "count": "{count} 个奖励",
+      "empty": "{name} 还没有添加奖励。"
+    },
+    "myMenu": {
+      "kicker": "我的菜单",
+      "title": "给 {name} 的奖励",
+      "add": "添加奖励",
+      "empty": "还没有奖励，先添加一个吧。"
+    },
+    "coupon": {
+      "cost": "{count} 猫粮",
+      "treat": "奖励",
+      "redeem": "兑换",
+      "needMore": "猫粮不足"
+    },
+    "defaults": {
+      "footMassage": {
+        "title": "足部按摩",
+        "subtitle": "10 分钟放松"
+      },
+      "dishDuty": {
+        "title": "洗碗任务",
+        "subtitle": "我来洗碗"
+      },
+      "movieChoice": {
+        "title": "电影选择",
+        "subtitle": "你来选片"
+      },
+      "breakfast": {
+        "title": "床上早餐",
+        "subtitle": "甜蜜早晨"
+      },
+      "cuddle": {
+        "title": "抱抱时刻",
+        "subtitle": "15 分钟抱抱"
+      },
+      "dateNight": {
+        "title": "约会之夜",
+        "subtitle": "安排一次特别约会"
+      }
+    },
+    "rewardModal": {
+      "kicker": "奖励",
+      "addTitle": "添加奖励",
+      "editTitle": "编辑奖励",
+      "fields": {
+        "title": "标题",
+        "description": "描述",
+        "cost": "花费",
+        "icon": "图标",
+        "color": "颜色"
+      },
+      "placeholders": {
+        "title": "电影之夜",
+        "description": "你来选电影"
+      },
+      "add": "添加",
+      "save": "保存"
+    },
+    "errors": {
+      "notEnoughKibble": "猫粮不足。"
+    },
+    "success": {
+      "redeem": "已兑换 {title}，告诉 {name}！",
+      "fulfilled": "已完成：{title}"
+    }
+  },
+  "forgotPassword": {
+    "title": "忘记密码？",
+    "subtitle": "我们会发送重置链接。",
+    "description": "输入邮箱，我们将发送重置链接。",
+    "emailLabel": "邮箱",
+    "emailPlaceholder": "you@example.com",
+    "submit": "发送重置链接",
+    "sending": "发送中...",
+    "remember": "记得密码？",
+    "signIn": "登录",
+    "errors": {
+      "emailRequired": "请输入邮箱。",
+      "emailInvalid": "邮箱格式不正确。",
+      "rateLimit": "请求过多，请稍后再试。",
+      "generic": "出现错误，请稍后再试。"
+    },
+    "success": {
+      "title": "请查收邮件",
+      "subtitle": "我们已发送重置链接到",
+      "nextStepsTitle": "下一步",
+      "step1": "打开来自 Pause 的邮件。",
+      "step2": "点击重置链接。",
+      "step3": "设置新密码。",
+      "resendPrompt": "没有收到邮件？",
+      "resendLink": "重新发送",
+      "backToSignIn": "返回登录"
+    }
+  },
+  "insights": {
+    "header": {
+      "kicker": "洞察",
+      "title": "关系洞察",
+      "subtitle": "帮助你们成长的 AI 观察。"
+    },
+    "observatory": {
+      "kicker": "观察站",
+      "title": "洞察列表",
+      "subtitle": "模式与温柔提醒。",
+      "level": "等级 {level}"
+    },
+    "countOne": "条洞察",
+    "countOther": "{count} 条洞察",
+    "status": {
+      "syncing": "同步中",
+      "off": "已关闭",
+      "waiting": "等待中",
+      "paused": "已暂停",
+      "active": "已开启"
+    },
+    "locked": {
+      "title": "洞察未解锁",
+      "subtitle": "达到 {level} 级后解锁洞察。",
+      "cta": "返回资料"
+    },
+    "gold": {
+      "title": "需要 Gold",
+      "subtitle": "达到 {level} 级后可用 Gold 解锁洞察。",
+      "cta": "解锁 Gold",
+      "checking": "检查中..."
+    },
+    "consent": {
+      "offTitle": "洞察已关闭",
+      "offSubtitle": "开启后每周获得洞察。",
+      "turnOn": "开启洞察",
+      "waitingPartner": "等待伴侣同意。"
+    },
+    "paused": {
+      "title": "洞察已暂停",
+      "subtitle": "暂停一周。",
+      "resume": "恢复"
+    },
+    "actions": {
+      "pause": "暂停一周",
+      "dismiss": "关闭"
+    },
+    "empty": {
+      "title": "暂无洞察",
+      "subtitle": "完成下一次案件后再来看看。"
+    },
+    "card": {
+      "categoryFallback": "通用",
+      "insightLabel": "洞察",
+      "contextLabel": "背景",
+      "helpful": "有帮助",
+      "notQuite": "还不够"
+    },
+    "errors": {
+      "loadFailed": "无法加载洞察。",
+      "updateFailed": "无法更新设置。",
+      "pauseFailed": "无法暂停洞察。",
+      "feedbackFailed": "无法发送反馈。"
+    }
+  },
+  "levelProgress": {
+    "compact": {
+      "title": "第 {level} 级 · {title}",
+      "xp": "{current}/{total} XP",
+      "toGo": "还差 {remaining} XP"
+    },
+    "full": {
+      "kicker": "我们的故事",
+      "levelLabel": "第 {level} 级",
+      "nextLevelLabel": "下一级",
+      "nextLevelValue": "第 {level} 级",
+      "progressLabel": "进度",
+      "xpToGo": "还差 {remaining} XP",
+      "focusLabel": "焦点",
+      "focusValue": "连接",
+      "togetherLabel": "一起"
+    }
+  },
+  "loadingScreen": {
+    "messages": [
+      {
+        "text": "法庭热身中...",
+        "emoji": "🐾"
+      },
+      {
+        "text": "整理胡须中...",
+        "emoji": "✨"
+      },
+      {
+        "text": "马上就好...",
+        "emoji": "💫"
+      },
+      {
+        "text": "正在加载 Pause...",
+        "emoji": "⚖️"
+      }
+    ],
+    "reset": "重置并重新登录"
+  },
+  "memories": {
+    "header": {
+      "kicker": "回忆",
+      "title": "共享回忆",
+      "subtitle": "你们的时刻收藏夹。",
+      "add": "添加回忆"
+    },
+    "overview": {
+      "kicker": "概览",
+      "title": "回忆书架",
+      "subtitle": "记录你们分享的瞬间。"
+    },
+    "stats": {
+      "momentOne": "条回忆",
+      "momentOther": "条回忆",
+      "hearts": "{count} 个心",
+      "notes": "{count} 条评论"
+    },
+    "actions": {
+      "dismiss": "关闭"
+    },
+    "deleted": {
+      "title": "最近删除",
+      "deletedOn": "删除于 {date}",
+      "restore": "恢复",
+      "shelfTitle": "回收站",
+      "waiting": "待恢复 {count} 条"
+    },
+    "locked": {
+      "title": "回忆未解锁",
+      "subtitle": "连接伴侣后解锁回忆。",
+      "cta": "返回资料"
+    },
+    "unavailable": {
+      "title": "回忆不可用",
+      "subtitle": "回忆服务暂时不可用。",
+      "cta": "返回资料"
+    },
+    "empty": {
+      "title": "还没有回忆",
+      "subtitle": "上传你们的第一条回忆吧。",
+      "cta": "添加回忆"
+    },
+    "card": {
+      "defaultTitle": "未命名回忆",
+      "altFallback": "回忆",
+      "processing": "处理中"
+    },
+    "uploader": {
+      "title": "添加回忆",
+      "subtitle": "上传照片并写下说明。",
+      "chooseTitle": "选择照片",
+      "chooseHint": "点击从设备上传",
+      "previewAlt": "回忆预览",
+      "replace": "替换照片",
+      "captionLabel": "说明",
+      "captionPlaceholder": "写一句话...",
+      "dateLabel": "日期",
+      "save": "保存回忆",
+      "uploading": "上传中..."
+    },
+    "viewer": {
+      "title": "回忆",
+      "altFallback": "回忆",
+      "processing": "处理中...",
+      "reactions": "回应",
+      "comments": "评论",
+      "commentCount": "{count} 条评论",
+      "commentPlaceholder": "写下评论...",
+      "emptyComments": "暂无评论",
+      "send": "发送",
+      "delete": "删除回忆"
+    },
+    "errors": {
+      "loadFailed": "无法加载回忆。",
+      "uploadFailed": "无法上传回忆。",
+      "deleteFailed": "无法删除回忆。",
+      "restoreFailed": "无法恢复回忆。",
+      "reactFailed": "无法点赞回忆。",
+      "removeReactFailed": "无法取消点赞。",
+      "commentsLoadFailed": "无法加载评论。",
+      "commentAddFailed": "无法添加评论。",
+      "commentDeleteFailed": "无法删除评论。"
+    }
+  },
+  "paywall": {
+    "title": "Pause Gold",
+    "subtitle": "解锁更深度的法官、规划与洞察。",
+    "trialBadge": "7 天免费试用",
+    "bundleNotice": {
+      "prefix": "一份会员",
+      "emphasis": "两人共享",
+      "suffix": "一起使用"
+    },
+    "benefits": {
+      "title": "包含内容",
+      "items": {
+        "resolve": {
+          "title": "更多审理次数",
+          "description": "每月更多法官判案。"
+        },
+        "judge": {
+          "title": "解锁胡须法官",
+          "description": "最细腻、最共情的裁决。"
+        },
+        "planning": {
+          "title": "帮我规划",
+          "description": "可执行的行动方案。"
+        },
+        "questions": {
+          "title": "每日喵问存档",
+          "description": "查看全部历史回答。"
+        },
+        "insights": {
+          "title": "关系洞察",
+          "description": "每周模式与提示。"
+        }
+      }
+    },
+    "withoutGold": {
+      "title": "没有 Gold",
+      "items": {
+        "limit": "法官次数有限",
+        "whiskersLocked": "胡须法官未解锁",
+        "noPlanning": "无法使用规划",
+        "noInsights": "洞察不可用",
+        "risk": "解决进度变慢"
+      }
+    },
+    "plans": {
+      "title": "选择套餐",
+      "yearly": {
+        "label": "年付",
+        "badge": "最划算",
+        "trialNote": "7 天试用后年付",
+        "billedNote": "按年计费",
+        "save": "省 35%"
+      },
+      "monthly": {
+        "label": "月付",
+        "trialNote": "7 天试用后月付",
+        "billedNote": "按月计费"
+      },
+      "perMonth": "每月"
+    },
+    "pricingNote": {
+      "yearly": "年付更划算",
+      "monthly": "月付更灵活"
+    },
+    "cancelAnytime": "随时取消",
+    "social": {
+      "quote": "我们更快化解矛盾，也更亲近了。",
+      "author": "- Emma & Leo",
+      "count": "已有 1,000+ 对伴侣升级"
+    },
+    "restore": {
+      "cta": "恢复购买",
+      "restoring": "正在恢复..."
+    },
+    "errors": {
+      "noPurchase": "未找到历史购买。",
+      "unavailable": "购买仅支持 iOS/Android 客户端。",
+      "restoreUnavailable": "恢复购买仅支持 iOS/Android 客户端。"
+    },
+    "cta": {
+      "processingTitle": "处理中...",
+      "processingSubtitle": "请稍候",
+      "trial": "开始免费试用",
+      "subscribe": "立即订阅",
+      "subtitle": "一份会员，两人共享。",
+      "price": "{price}/月"
+    },
+    "trialFootnote": "新用户可享免费试用。",
+    "maybeLater": "稍后再说",
+    "settingsHint": "可在设置中管理订阅。",
+    "usage": {
+      "used": "已用 {used}/{limit}",
+      "unlimited": "✨ 不限量",
+      "locked": "🔒 已锁定"
+    },
+    "remaining": {
+      "left": "剩余 {count}",
+      "unlimited": "不限量",
+      "upgrade": "升级解锁"
+    }
+  },
+  "subscription": {
+    "usage": {
+      "used": "已用 {used}/{limit}",
+      "unlimited": "✨ 不限量",
+      "locked": "🔒 已锁定"
+    },
+    "remaining": {
+      "left": "剩余 {count}",
+      "unlimited": "不限量",
+      "upgrade": "升级解锁"
+    }
+  },
+  "profilePage": {
+    "header": {
+      "kicker": "我的",
+      "title": "个人资料",
+      "settingsAria": "个人设置"
+    },
+    "tabs": {
+      "me": "我",
+      "us": "我们"
+    },
+    "profile": {
+      "kicker": "个人资料",
+      "anniversary": "纪念日 {date}",
+      "edit": "编辑资料",
+      "signOut": "退出登录"
+    },
+    "stats": {
+      "kibble": "猫粮",
+      "appreciations": "感谢",
+      "cases": "案件",
+      "questions": "问题"
+    },
+    "subscription": {
+      "freePlan": "免费版",
+      "freeSubtitle": "基础功能",
+      "goldPlan": "Gold 会员",
+      "goldSubtitle": "更多法官与规划",
+      "judgeLightning": "闪电法官",
+      "judgeMittens": "米滕斯法官",
+      "judgeWhiskers": "胡须法官",
+      "goldOnly": "仅限 Gold",
+      "helpMePlan": "帮我规划",
+      "unlimited": "无限制",
+      "upgradeKicker": "升级",
+      "upgradeTitle": "解锁 Gold",
+      "upgradeSubtitle": "更多法官与规划",
+      "price": "每月 $7.77",
+      "ctaHint": "7 天试用",
+      "usage": {
+        "used": "已用 {used}/{limit}",
+        "unlimited": "✨ 不限量",
+        "locked": "🔒 已锁定"
+      },
+      "remaining": {
+        "left": "剩余 {count}",
+        "unlimited": "不限量",
+        "upgrade": "升级解锁"
+      },
+      "thanks": "感谢你的支持！"
+    },
+    "connect": {
+      "title": "连接伴侣",
+      "subtitle": "连接后解锁共享功能。",
+      "partnerCode": "你的邀请码",
+      "cta": "立即连接",
+      "connected": "已连接"
+    },
+    "relationship": {
+      "kicker": "关系",
+      "togetherSince": "在一起 {date}",
+      "anniversaryMissing": "添加纪念日来显示在这里。"
+    },
+    "devTools": {
+      "title": "开发工具",
+      "subtitle": "用于测试的 XP",
+      "addXp": "增加 {amount} XP",
+      "adding": "正在增加...",
+      "success": "已增加 {amount} XP",
+      "error": "增加 XP 失败"
+    },
+    "memories": {
+      "title": "回忆",
+      "subtitle": "共享时刻",
+      "viewAll": "查看全部",
+      "unavailable": "回忆暂不可用。",
+      "restoreOne": "1 条已删除",
+      "restoreOther": "{count} 条已删除",
+      "emptyCta": "添加回忆"
+    },
+    "challenges": {
+      "title": "挑战",
+      "subtitle": "双人每日任务",
+      "view": "查看全部",
+      "loading": "加载中...",
+      "activeNow": "正在进行",
+      "swipe": "滑动查看更多",
+      "liveCount": "{count} 个进行中",
+      "activeLabel": "挑战 {number}",
+      "fallbackTitle": "新的挑战",
+      "fallbackDescription": "一起完成吧。",
+      "progress": "{current}/{total} 步",
+      "reward": "+{xp} XP",
+      "daysLeft": "剩余 {count} 天",
+      "current": "当前",
+      "moreWaiting": "还有 {count} 个待解锁",
+      "emptyActive": "暂无进行中挑战",
+      "readyOne": "有 1 个新挑战",
+      "readyOther": "有 {count} 个新挑战",
+      "none": "挑战将稍后解锁",
+      "locked": "未解锁",
+      "levelShort": "Lv {level}+"
+    },
+    "insights": {
+      "title": "洞察",
+      "subtitle": "AI 关系观察",
+      "viewAll": "查看全部",
+      "unlockGold": "解锁 Gold",
+      "turnOn": "开启",
+      "optOut": "关闭",
+      "locked": "未解锁",
+      "levelShort": "Lv {level}+",
+      "goldRequiredTitle": "需要 Gold",
+      "goldRequiredSubtitle": "升级 Gold 解锁",
+      "off": "洞察已关闭",
+      "waitingPartner": "等待伴侣同意",
+      "paused": "已暂停",
+      "empty": "暂无洞察"
+    },
+    "milestones": {
+      "title": "里程碑",
+      "firstCase": "第一次案件",
+      "appreciation": "第一次感谢",
+      "fiveCases": "5 次案件",
+      "giftGiver": "送礼达人",
+      "tenCases": "10 次案件",
+      "superFan": "超级粉丝",
+      "deepTalks": "深度沟通",
+      "storyTellers": "故事分享"
+    },
+    "edit": {
+      "title": "编辑资料",
+      "photoLabel": "头像",
+      "profileAlt": "头像预览",
+      "takePhoto": "拍照",
+      "uploadPhoto": "上传照片",
+      "uploading": "上传中...",
+      "chooseAvatar": "选择头像",
+      "avatarAlt": "{name} 头像",
+      "nicknameLabel": "昵称",
+      "nicknamePlaceholder": "你的昵称",
+      "birthdayLabel": "生日"
+    }
+  },
+  "requirePartner": {
+    "title": "连接伴侣",
+    "subtitle": "{feature} 需要连接伴侣。",
+    "description": "连接伴侣后解锁 {feature}。",
+    "partnerCodeLabel": "你的邀请码",
+    "cta": "连接伴侣",
+    "hint": "之后可在个人资料里连接。"
+  },
+  "resetPassword": {
+    "header": {
+      "title": "重置密码",
+      "subtitle": "设置新密码。"
+    },
+    "form": {
+      "passwordLabel": "新密码",
+      "passwordPlaceholder": "输入新密码",
+      "passwordHint": "至少 8 位字符。",
+      "confirmLabel": "确认密码",
+      "confirmPlaceholder": "再次输入新密码",
+      "submit": "更新密码",
+      "updating": "更新中..."
+    },
+    "errors": {
+      "tooShort": "密码至少 8 位。",
+      "mismatch": "两次密码不一致。",
+      "sameAsCurrent": "新密码不能与当前密码相同。",
+      "updateFailed": "更新密码失败。",
+      "generic": "出现错误，请稍后再试。"
+    },
+    "invalid": {
+      "title": "链接已失效",
+      "subtitle": "该重置链接无效或已过期。",
+      "requestNew": "重新申请链接",
+      "backToSignIn": "返回登录"
+    },
+    "success": {
+      "title": "密码已更新",
+      "subtitle": "可以使用新密码登录。",
+      "signInNow": "立即登录"
+    }
+  },
+  "signIn": {
+    "brand": "Pause",
+    "subtitle": "欢迎回来",
+    "google": "使用 Google 继续",
+    "emailPlaceholder": "邮箱",
+    "passwordPlaceholder": "密码",
+    "submit": "登录",
+    "forgotPassword": "忘记密码？",
+    "newHere": "第一次来？",
+    "actions": {
+      "createAccount": "创建账号",
+      "createAccountShort": "注册账号",
+      "resetPassword": "重置密码"
+    },
+    "errors": {
+      "invalid": {
+        "title": "账号或密码错误",
+        "message": "邮箱或密码不正确。"
+      },
+      "noAccount": {
+        "title": "未找到账号",
+        "message": "该邮箱尚未注册。"
+      },
+      "unconfirmed": {
+        "title": "邮箱未验证",
+        "message": "请先验证邮箱。"
+      },
+      "rateLimit": {
+        "title": "操作过于频繁",
+        "message": "请稍后再试。"
+      },
+      "validation": {
+        "title": "信息不完整",
+        "message": "请输入邮箱和密码。"
+      },
+      "generic": {
+        "title": "登录失败",
+        "message": "发生错误，请稍后再试。"
+      }
+    },
+    "footer": "继续即表示你同意我们的条款与隐私政策。"
+  },
+  "signUp": {
+    "header": {
+      "title": "创建账号",
+      "subtitle": "开启你的 Pause 之旅。"
+    },
+    "emailPlaceholder": "邮箱",
+    "passwordPlaceholder": "创建密码",
+    "confirmPlaceholder": "确认密码",
+    "submit": "创建账号",
+    "google": "使用 Google 继续",
+    "requirements": {
+      "length": "至少 8 位"
+    },
+    "errors": {
+      "missingFields": "请填写所有字段。",
+      "mismatch": "两次密码不一致。",
+      "requirements": "密码未满足要求。",
+      "alreadyRegistered": "该邮箱已注册。",
+      "generic": "注册失败，请稍后再试。"
+    },
+    "terms": "注册即表示你同意我们的条款与隐私政策。",
+    "alreadyHave": "已有账号？",
+    "signIn": "登录",
+    "success": {
+      "title": "账号已创建",
+      "subtitle": "正在跳转到引导页..."
+    }
+  }
+}

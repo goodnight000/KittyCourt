@@ -11,6 +11,7 @@ import ChallengeCard from '../components/ChallengeCard';
 import useLevelStore from '../store/useLevelStore';
 import useChallengeStore from '../store/useChallengeStore';
 import useAuthStore from '../store/useAuthStore';
+import { useI18n } from '../i18n';
 
 // Loading skeleton component
 const ChallengeSkeleton = () => (
@@ -43,6 +44,7 @@ const ChallengeBackdrop = () => (
 
 const ChallengesPage = () => {
     const navigate = useNavigate();
+    const { t, language } = useI18n();
     const handleBack = () => navigate('/profile', { state: { tab: 'us' } });
     const { hasPartner, user } = useAuthStore();
     const { level, shouldShowChallenges, fetchLevel } = useLevelStore();
@@ -51,6 +53,7 @@ const ChallengesPage = () => {
         completed,
         isLoading,
         error,
+        errorCode,
         fetchChallenges,
         skipChallenge,
         completeChallenge,
@@ -72,13 +75,14 @@ const ChallengesPage = () => {
             weeklyXP: sumXP(weeklyActive),
         };
     }, [active, completed]);
+    const errorMessage = errorCode ? t(`challenges.errors.${errorCode}`) : error;
 
     useEffect(() => {
         if (hasPartner) {
             fetchLevel();
             fetchChallenges();
         }
-    }, [hasPartner, fetchLevel, fetchChallenges]);
+    }, [hasPartner, fetchLevel, fetchChallenges, language]);
 
     const handleSkip = async (id) => {
         await skipChallenge(id);
@@ -109,7 +113,7 @@ const ChallengesPage = () => {
                         className="flex items-center gap-2 text-sm font-semibold text-neutral-600"
                     >
                         <ArrowLeft className="w-5 h-5" />
-                        <span>Back</span>
+                        <span>{t('common.back')}</span>
                     </motion.button>
 
                     <motion.div
@@ -121,17 +125,17 @@ const ChallengesPage = () => {
                             <Trophy className="w-8 h-8 text-amber-600" />
                         </div>
                         <h2 className="mt-4 text-xl font-display font-bold text-neutral-800">
-                            Challenges unlock at Level 5
+                            {t('challenges.locked.title', { level: 5 })}
                         </h2>
                         <p className="mt-2 text-sm text-neutral-500">
-                            You are currently Level {level}. Keep earning XP together.
+                            {t('challenges.locked.subtitle', { level })}
                         </p>
                         <motion.button
                             whileTap={{ scale: 0.98 }}
                             onClick={handleBack}
                             className="mt-5 w-full rounded-2xl bg-gradient-to-r from-[#C9A227] to-[#8B7019] py-3 text-sm font-bold text-white shadow-soft"
                         >
-                            View your progress
+                            {t('challenges.locked.cta')}
                         </motion.button>
                     </motion.div>
                 </div>
@@ -153,14 +157,14 @@ const ChallengesPage = () => {
                     </motion.button>
                     <div className="flex-1">
                         <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-amber-600">
-                            Court docket
+                            {t('challenges.header.kicker')}
                         </p>
-                        <h1 className="text-2xl font-display font-bold text-neutral-800">Challenges</h1>
-                        <p className="text-sm text-neutral-500">Earn XP together as a couple</p>
+                        <h1 className="text-2xl font-display font-bold text-neutral-800">{t('challenges.header.title')}</h1>
+                        <p className="text-sm text-neutral-500">{t('challenges.header.subtitle')}</p>
                     </div>
                     <div className="flex items-center gap-1 rounded-full border border-amber-200/70 bg-amber-100/70 px-3 py-2 text-xs font-bold text-amber-700">
                         <Sparkles className="w-4 h-4 text-amber-600" />
-                        Level {level}
+                        {t('challenges.header.level', { level })}
                     </div>
                 </header>
 
@@ -177,53 +181,53 @@ const ChallengesPage = () => {
                         <div className="flex flex-wrap items-center justify-between gap-4">
                             <div>
                                 <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-neutral-400">
-                                    Challenge drops
+                                    {t('challenges.section.dropKicker')}
                                 </p>
                                 <h2 className="mt-1 text-lg font-display font-bold text-neutral-800">
-                                    Daily & weekly quests auto-start
+                                    {t('challenges.section.dropTitle')}
                                 </h2>
                                 <p className="mt-1 text-xs text-neutral-500">
-                                    A fresh docket lands at midnight ET.
+                                    {t('challenges.section.dropSubtitle')}
                                 </p>
                             </div>
                             <div className="rounded-2xl border border-white/80 bg-white/80 px-3 py-2 text-xs font-semibold text-amber-700 shadow-inner-soft">
-                                {challengeStats.active} active quests
+                                {t('challenges.section.activeCount', { count: challengeStats.active })}
                             </div>
                         </div>
                         <div className="grid gap-3 md:grid-cols-2">
                             <div className="rounded-[22px] border border-white/80 bg-gradient-to-br from-sky-50 via-white to-sky-100/70 px-4 py-3 shadow-inner-soft">
                                 <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.28em] text-sky-500">
-                                    Daily docket
+                                    {t('challenges.section.dailyTitle')}
                                     <span className="rounded-full border border-sky-200/70 bg-sky-100/70 px-2 py-0.5 text-[10px] font-bold text-sky-700">
-                                        Refreshes nightly
+                                        {t('challenges.section.dailyBadge')}
                                     </span>
                                 </div>
                                 <div className="mt-3 flex items-center justify-between">
                                     <div>
                                         <div className="text-2xl font-display font-bold text-neutral-800">{challengeStats.dailyActive}</div>
-                                        <div className="text-xs text-neutral-500">Daily challenges live</div>
+                                        <div className="text-xs text-neutral-500">{t('challenges.section.dailyActive')}</div>
                                     </div>
                                     <div className="text-right">
-                                        <div className="text-lg font-display font-bold text-sky-600">+{challengeStats.dailyXP} XP</div>
-                                        <div className="text-[11px] text-sky-500">On the line today</div>
+                                        <div className="text-lg font-display font-bold text-sky-600">{t('challenges.section.dailyXp', { xp: challengeStats.dailyXP })}</div>
+                                        <div className="text-[11px] text-sky-500">{t('challenges.section.dailyXpLabel')}</div>
                                     </div>
                                 </div>
                             </div>
                             <div className="rounded-[22px] border border-white/80 bg-gradient-to-br from-amber-50 via-white to-rose-100/70 px-4 py-3 shadow-inner-soft">
                                 <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.28em] text-amber-600">
-                                    Weekly docket
+                                    {t('challenges.section.weeklyTitle')}
                                     <span className="rounded-full border border-amber-200/70 bg-amber-100/70 px-2 py-0.5 text-[10px] font-bold text-amber-700">
-                                        Resets Monday
+                                        {t('challenges.section.weeklyBadge')}
                                     </span>
                                 </div>
                                 <div className="mt-3 flex items-center justify-between">
                                     <div>
                                         <div className="text-2xl font-display font-bold text-neutral-800">{challengeStats.weeklyActive}</div>
-                                        <div className="text-xs text-neutral-500">Weekly challenges live</div>
+                                        <div className="text-xs text-neutral-500">{t('challenges.section.weeklyActive')}</div>
                                     </div>
                                     <div className="text-right">
-                                        <div className="text-lg font-display font-bold text-amber-600">+{challengeStats.weeklyXP} XP</div>
-                                        <div className="text-[11px] text-amber-500">This week’s stakes</div>
+                                        <div className="text-lg font-display font-bold text-amber-600">{t('challenges.section.weeklyXp', { xp: challengeStats.weeklyXP })}</div>
+                                        <div className="text-[11px] text-amber-500">{t('challenges.section.weeklyXpLabel')}</div>
                                     </div>
                                 </div>
                             </div>
@@ -231,7 +235,7 @@ const ChallengesPage = () => {
                     </div>
                 </motion.section>
 
-                {error && (
+                {errorMessage && (
                     <motion.div
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -239,7 +243,7 @@ const ChallengesPage = () => {
                     >
                         <AlertCircle className="w-5 h-5 text-rose-500 flex-shrink-0" />
                         <div className="flex-1">
-                            <p className="text-sm text-rose-700">{error}</p>
+                            <p className="text-sm text-rose-700">{errorMessage}</p>
                         </div>
                         <motion.button
                             whileTap={{ scale: 0.95 }}
@@ -263,12 +267,12 @@ const ChallengesPage = () => {
                         <div className="flex items-center justify-between gap-3">
                             <div>
                                 <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-neutral-400">
-                                    In progress
+                                    {t('challenges.active.kicker')}
                                 </p>
-                                <h2 className="text-base font-display font-bold text-neutral-800">Active challenges</h2>
+                                <h2 className="text-base font-display font-bold text-neutral-800">{t('challenges.active.title')}</h2>
                             </div>
                             <div className="rounded-full border border-amber-200/70 bg-amber-100/70 px-3 py-1 text-[11px] font-bold text-amber-700">
-                                {active.length} live
+                                {t('challenges.active.count', { count: active.length })}
                             </div>
                         </div>
                         <div className="space-y-3">
@@ -279,11 +283,11 @@ const ChallengesPage = () => {
                                     actionLabel={
                                         challenge.requiresConfirmation
                                             ? challenge.confirmationStatus === 'none'
-                                                ? 'Mark done'
+                                                ? t('challenges.actions.markDone')
                                                 : challenge.confirmationStatus === 'pending'
                                                     ? (challenge.confirmRequestedBy && challenge.confirmRequestedBy !== currentUserId
-                                                        ? 'Confirm'
-                                                        : 'Waiting')
+                                                        ? t('challenges.actions.confirm')
+                                                        : t('challenges.actions.waiting'))
                                                     : null
                                             : null
                                     }
@@ -318,10 +322,10 @@ const ChallengesPage = () => {
                         >
                             <div>
                                 <div className="text-[11px] font-semibold uppercase tracking-[0.3em] text-neutral-400">
-                                    Completed archive
+                                    {t('challenges.completed.kicker')}
                                 </div>
                                 <div className="text-sm font-bold text-neutral-700">
-                                    Completed ({completed.length})
+                                    {t('challenges.completed.title', { count: completed.length })}
                                 </div>
                             </div>
                             {showCompleted ? (
@@ -352,7 +356,7 @@ const ChallengesPage = () => {
                     </section>
                 )}
 
-                {!isLoading && !error && active.length === 0 && (
+                {!isLoading && !errorMessage && active.length === 0 && (
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -362,9 +366,9 @@ const ChallengesPage = () => {
                             <Trophy className="w-8 h-8 text-amber-500" />
                         </div>
                         <h3 className="mt-4 text-lg font-display font-bold text-neutral-800">
-                            No challenges right now
+                            {t('challenges.empty.title')}
                         </h3>
-                        <p className="mt-2 text-sm text-neutral-500">Check back tomorrow for a fresh docket.</p>
+                        <p className="mt-2 text-sm text-neutral-500">{t('challenges.empty.subtitle')}</p>
                     </motion.div>
                 )}
             </div>

@@ -1,12 +1,14 @@
 import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Gavel, Sparkles } from 'lucide-react';
+import { useI18n } from '../../i18n';
 
 /**
  * CourtOpeningAnimation - Plays when both partners join court
  * Gavel animation with "Court is Now in Session" message
  */
 const CourtOpeningAnimation = ({ onComplete }) => {
+    const { t } = useI18n();
     useEffect(() => {
         const timer = setTimeout(onComplete, 4000);
         return () => clearTimeout(timer);
@@ -68,9 +70,9 @@ const CourtOpeningAnimation = ({ onComplete }) => {
                         animate={{ scale: [1, 1.05, 1] }}
                         transition={{ delay: 2.5, duration: 0.5 }}
                     >
-                        Court is Now in Session
+                        {t('court.opening.title')}
                     </motion.h1>
-                    <p className="text-court-tan text-lg">All rise for the Honorable Judge Whiskers</p>
+                    <p className="text-court-tan text-lg">{t('court.opening.subtitle')}</p>
                 </motion.div>
 
                 {/* Judge Whiskers Entrance */}
@@ -87,7 +89,7 @@ const CourtOpeningAnimation = ({ onComplete }) => {
                     >
                         <img
                             src="/assets/avatars/judge_whiskers.png"
-                            alt="Judge Whiskers"
+                            alt={t('court.opening.judgeAlt')}
                             className="w-full h-full object-cover"
                         />
                     </motion.div>

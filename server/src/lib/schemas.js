@@ -27,6 +27,7 @@ const ParticipantSchema = z.object({
     conflictStyle: z.string().optional(),
     appreciationStyle: z.string().optional(),
     petPeeves: z.array(z.string()).optional().default([]),
+    language: z.string().optional(),
 });
 
 const SubmissionSchema = z.object({
@@ -55,6 +56,7 @@ const DeliberationInputSchema = z.object({
     addendumHistory: z.array(AddendumEntrySchema).optional().default([]),
     // New: User can optionally self-report conflict intensity
     userReportedIntensity: z.enum(['high', 'medium', 'low']).optional().nullable(),
+    language: z.string().optional(),
 });
 
 // ============================================================================

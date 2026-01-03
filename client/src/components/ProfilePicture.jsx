@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { User } from 'lucide-react';
+import { useI18n } from '../i18n';
 
 /**
  * ProfilePicture - Centralized component for displaying profile pictures
@@ -35,6 +36,7 @@ const ProfilePicture = ({
     className = '',
     rounded = true
 }) => {
+    const { t } = useI18n();
     const [imageError, setImageError] = useState(false);
 
     // Get the first letter of the name for fallback display
@@ -63,7 +65,7 @@ const ProfilePicture = ({
             >
                 <img
                     src={avatarUrl}
-                    alt={name || 'Profile'}
+                    alt={name || t('common.profileAlt')}
                     className="w-full h-full object-cover"
                     onError={handleImageError}
                 />

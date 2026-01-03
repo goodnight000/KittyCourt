@@ -6,9 +6,11 @@ import {
     Send, Loader2, AlertCircle, Clock, UserPlus
 } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
+import { useI18n } from '../i18n';
 
 const ConnectPartnerPage = () => {
     const navigate = useNavigate();
+    const { t } = useI18n();
     const {
         profile,
         signOut,
@@ -26,6 +28,18 @@ const ConnectPartnerPage = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    const errorMap = {
+        'Not authenticated': 'connectPartner.errors.notAuthenticated',
+        "You can't connect with yourself! 😹": 'connectPartner.errors.selfConnect',
+        'Partner code not found. Please check and try again.': 'connectPartner.errors.codeNotFound',
+        'This user is already connected with someone.': 'connectPartner.errors.alreadyConnected',
+        'No sent request to cancel': 'connectPartner.errors.noSentRequest'
+    };
+    const translateError = (message) => {
+        if (!message) return '';
+        const key = errorMap[message];
+        return key ? t(key) : t('connectPartner.errors.generic');
+    };
 
     // Redirect to home if partner is connected
     useEffect(() => {
@@ -66,9 +80,11 @@ const ConnectPartnerPage = () => {
         setIsSubmitting(false);
 
         if (result.error) {
-            setError(result.error);
+            setError(translateError(result.error));
         } else {
-            setSuccess(`Request sent to ${result.receiverName || 'your partner'}! 💕`);
+            setSuccess(t('connectPartner.success', {
+                name: result.receiverName || t('common.yourPartner')
+            }));
             setPartnerCode('');
         }
     };
@@ -126,9 +142,9 @@ const ConnectPartnerPage = () => {
                     >
                         <Users className="w-10 h-10 text-white" />
                     </motion.div>
-                    <h1 className="text-2xl font-bold text-neutral-800">Connect with Your Partner</h1>
+                    <h1 className="text-2xl font-bold text-neutral-800">{t('connectPartner.header.title')}</h1>
                     <p className="text-neutral-500 mt-2">
-                        Link your accounts to start using Pause together 💕
+                        {t('connectPartner.header.subtitle')}
                     </p>
                 </motion.div>
 
@@ -146,16 +162,18 @@ const ConnectPartnerPage = () => {
                                     <Clock className="w-5 h-5 text-amber-600" />
                                 </div>
                                 <div className="flex-1">
-                                    <p className="font-bold text-amber-800">Request Pending</p>
+                                    <p className="font-bold text-amber-800">{t('connectPartner.pending.title')}</p>
                                     <p className="text-sm text-amber-600 mt-0.5">
-                                        Waiting for {sentRequest.receiver?.display_name || 'your partner'} to accept...
+                                        {t('connectPartner.pending.waiting', {
+                                            name: sentRequest.receiver?.display_name || t('common.yourPartner')
+                                        })}
                                     </p>
                                     <button
                                         onClick={handleCancelRequest}
                                         disabled={isSubmitting}
                                         className="mt-2 text-xs text-amber-700 underline hover:no-underline"
                                     >
-                                        Cancel request
+                                        {t('connectPartner.pending.cancel')}
                                     </button>
                                 </div>
                             </div>
@@ -174,7 +192,7 @@ const ConnectPartnerPage = () => {
                         style={activeTab === 'share' ? { background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' } : {}}
                     >
                         <Link2 className="w-4 h-4" />
-                        Share My Code
+                        {t('connectPartner.tabs.share')}
                     </button>
                     <button
                         onClick={() => setActiveTab('enter')}
@@ -185,7 +203,7 @@ const ConnectPartnerPage = () => {
                         style={activeTab === 'enter' ? { background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' } : {}}
                     >
                         <UserPlus className="w-4 h-4" />
-                        Enter Partner's Code
+                        {t('connectPartner.tabs.enter')}
                     </button>
                 </div>
 
@@ -203,9 +221,9 @@ const ConnectPartnerPage = () => {
                                 <div className="w-12 h-12 mx-auto rounded-full bg-court-cream flex items-center justify-center mb-3">
                                     <Link2 className="w-6 h-6 text-court-gold" />
                                 </div>
-                                <h3 className="font-bold text-neutral-700">Your Partner Code</h3>
+                                <h3 className="font-bold text-neutral-700">{t('connectPartner.share.title')}</h3>
                                 <p className="text-xs text-neutral-400 mt-1">
-                                    Share this code with your partner so they can connect with you
+                                    {t('connectPartner.share.subtitle')}
                                 </p>
                             </div>
 
@@ -234,7 +252,7 @@ const ConnectPartnerPage = () => {
                                     animate={{ opacity: 1, y: 0 }}
                                     className="text-center text-sm text-green-600 mt-3"
                                 >
-                                    Copied! Send it to your partner 💕
+                                    {t('connectPartner.share.copied')}
                                 </motion.p>
                             )}
                         </motion.div>
@@ -250,9 +268,9 @@ const ConnectPartnerPage = () => {
                                 <div className="w-12 h-12 mx-auto rounded-full bg-pink-100 flex items-center justify-center mb-3">
                                     <Heart className="w-6 h-6 text-pink-500" />
                                 </div>
-                                <h3 className="font-bold text-neutral-700">Enter Partner's Code</h3>
+                                <h3 className="font-bold text-neutral-700">{t('connectPartner.enter.title')}</h3>
                                 <p className="text-xs text-neutral-400 mt-1">
-                                    Type in the 12-character code your partner shared with you
+                                    {t('connectPartner.enter.subtitle')}
                                 </p>
                             </div>
 
@@ -263,7 +281,7 @@ const ConnectPartnerPage = () => {
                                     setPartnerCode(e.target.value.replace(/[^a-zA-Z0-9]/g, ''));
                                     setError('');
                                 }}
-                                placeholder="Enter 12-character code"
+                                placeholder={t('connectPartner.enter.placeholder')}
                                 maxLength={12}
                                 disabled={!!sentRequest}
                                 className="w-full px-4 py-4 bg-neutral-50 border-2 border-neutral-200 rounded-2xl text-center text-xl font-mono tracking-widest text-neutral-700 placeholder:text-neutral-300 focus:outline-none focus:border-court-gold focus:ring-2 focus:ring-court-gold/20 transition-all disabled:opacity-50"
@@ -306,17 +324,17 @@ const ConnectPartnerPage = () => {
                                 className="w-full mt-4 py-3.5 rounded-2xl font-bold text-white flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 transition-all"
                                 style={{ background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' }}
                             >
-                                {isSubmitting ? (
-                                    <Loader2 className="w-5 h-5 animate-spin" />
-                                ) : (
-                                    <>
-                                        <Send className="w-5 h-5" />
-                                        Send Connection Request
-                                    </>
-                                )}
-                            </motion.button>
-                        </motion.div>
-                    )}
+                                        {isSubmitting ? (
+                                            <Loader2 className="w-5 h-5 animate-spin" />
+                                        ) : (
+                                            <>
+                                                <Send className="w-5 h-5" />
+                                                {t('connectPartner.enter.submit')}
+                                            </>
+                                        )}
+                                    </motion.button>
+                                </motion.div>
+                            )}
                 </AnimatePresence>
 
                 {/* Info Box */}
@@ -327,8 +345,7 @@ const ConnectPartnerPage = () => {
                     className="bg-blue-50 rounded-2xl p-4 border border-blue-100"
                 >
                     <p className="text-sm text-blue-700 text-center">
-                        <span className="font-bold">How it works:</span> When you enter your partner's code,
-                        they'll receive a request to connect. Once they accept, you'll be linked! 🔗
+                        <span className="font-bold">{t('connectPartner.howItWorks.title')}</span> {t('connectPartner.howItWorks.body')}
                     </p>
                 </motion.div>
 
@@ -343,17 +360,17 @@ const ConnectPartnerPage = () => {
                         onClick={handleSkip}
                         className="text-sm text-neutral-500 hover:text-neutral-700 transition-colors"
                     >
-                        Skip for now →
+                        {t('connectPartner.skip')}
                     </button>
                     <p className="text-xs text-neutral-400">
-                        You can connect later from your Profile page
+                        {t('connectPartner.skipHint')}
                     </p>
                     <div className="pt-2">
                         <button
                             onClick={signOut}
                             className="text-xs text-neutral-400 hover:text-neutral-600 transition-colors"
                         >
-                            Sign out
+                            {t('connectPartner.signOut')}
                         </button>
                     </div>
                 </motion.div>

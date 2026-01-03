@@ -16,23 +16,24 @@ const useChallengeStore = create((set, get) => ({
     completed: [],
     isLoading: false,
     error: null,
+    errorCode: null,
     lastFetched: null,
 
     // Computed
     hasActiveChallenges: () => get().active.length > 0,
     hasChallenges: () => get().active.length > 0,
 
-    // Actions
+        // Actions
     fetchChallenges: async () => {
         if (!isXPSystemEnabled()) {
-            set({ active: [], completed: [], isLoading: false });
+            set({ active: [], completed: [], isLoading: false, error: null, errorCode: null });
             return;
         }
 
         // Prevent duplicate fetches
         if (get().isLoading) return;
 
-        set({ isLoading: true, error: null });
+        set({ isLoading: true, error: null, errorCode: null });
 
         try {
             const response = await api.get('/challenges');
@@ -44,12 +45,14 @@ const useChallengeStore = create((set, get) => ({
                 isLoading: false,
                 lastFetched: new Date().toISOString(),
                 error: null,
+                errorCode: null,
             });
         } catch (error) {
             console.error('[ChallengeStore] Failed to fetch challenges:', error);
             set({
                 isLoading: false,
                 error: error.message || 'Failed to load challenges',
+                errorCode: 'LOAD_FAILED',
             });
         }
     },
@@ -75,6 +78,7 @@ const useChallengeStore = create((set, get) => ({
             set({
                 active: originalActive,
                 error: 'Failed to skip challenge. Please try again.',
+                errorCode: 'SKIP_FAILED',
             });
         }
     },
@@ -87,7 +91,7 @@ const useChallengeStore = create((set, get) => ({
             fetchChallenges();
         } catch (error) {
             console.error('[ChallengeStore] Failed to request completion:', error);
-            set({ error: 'Failed to complete challenge. Please try again.' });
+            set({ error: 'Failed to complete challenge. Please try again.', errorCode: 'COMPLETE_FAILED' });
         }
     },
 
@@ -99,12 +103,12 @@ const useChallengeStore = create((set, get) => ({
             fetchChallenges();
         } catch (error) {
             console.error('[ChallengeStore] Failed to confirm challenge:', error);
-            set({ error: 'Failed to confirm challenge. Please try again.' });
+            set({ error: 'Failed to confirm challenge. Please try again.', errorCode: 'CONFIRM_FAILED' });
         }
     },
 
     // Clear error
-    clearError: () => set({ error: null }),
+    clearError: () => set({ error: null, errorCode: null }),
 
     // Reset store
     reset: () => set({
@@ -112,6 +116,7 @@ const useChallengeStore = create((set, get) => ({
         completed: [],
         isLoading: false,
         error: null,
+        errorCode: null,
         lastFetched: null,
     }),
 }));

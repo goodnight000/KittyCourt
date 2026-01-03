@@ -10,153 +10,163 @@ import useAuthStore from '../store/useAuthStore';
 import { validateDate } from '../utils/helpers';
 import Paywall from '../components/Paywall';
 import { PRESET_AVATARS } from '../services/avatarService';
+import { useI18n } from '../i18n';
+import { DEFAULT_LANGUAGE, normalizeLanguage } from '../i18n/languageConfig';
 
 // Note: PRESET_AVATARS is now imported from avatarService
 
 // Onboarding Steps Configuration
 const ONBOARDING_STEPS = [
     {
+        id: 'language',
+        titleKey: 'onboarding.language.title',
+        subtitleKey: 'onboarding.language.subtitle',
+        icon: '🌍',
+        field: 'preferredLanguage',
+    },
+    {
         id: 'welcome',
-        title: 'Welcome to Pause',
-        subtitle: 'A playful, calming space to stay close through the hard moments.',
+        titleKey: 'onboarding.steps.welcome.title',
+        subtitleKey: 'onboarding.steps.welcome.subtitle',
         icon: null,
     },
     {
         id: 'auth',
-        title: 'Create your account',
-        subtitle: 'So your progress stays safely saved.',
+        titleKey: 'onboarding.steps.auth.title',
+        subtitleKey: 'onboarding.steps.auth.subtitle',
         icon: null,
     },
     {
         id: 'name',
-        title: "What should we call you?",
-        subtitle: "Pick a name that feels like you",
+        titleKey: 'onboarding.steps.name.title',
+        subtitleKey: 'onboarding.steps.name.subtitle',
         icon: '👤',
         field: 'displayName',
     },
     {
         id: 'avatar',
-        title: "Choose Your Avatar! 🐾",
-        subtitle: "Pick a profile picture or upload your own",
+        titleKey: 'onboarding.steps.avatar.title',
+        subtitleKey: 'onboarding.steps.avatar.subtitle',
         icon: '📸',
         field: 'avatarUrl',
     },
     {
         id: 'birthday',
-        title: "When's your birthday? 🎂",
-        subtitle: "We'll remind your partner (once you're connected!)",
+        titleKey: 'onboarding.steps.birthday.title',
+        subtitleKey: 'onboarding.steps.birthday.subtitle',
         icon: '🎈',
         field: 'birthday',
     },
     {
         id: 'loveLanguage',
-        title: "What's your love language?",
-        subtitle: "How do you feel most loved?",
+        titleKey: 'onboarding.steps.loveLanguage.title',
+        subtitleKey: 'onboarding.steps.loveLanguage.subtitle',
         icon: '💕',
         field: 'loveLanguage',
         options: [
-            { id: 'words', emoji: '💬', label: 'Words of Affirmation', desc: 'Sweet messages & compliments' },
-            { id: 'acts', emoji: '🎁', label: 'Acts of Service', desc: 'Helpful gestures & tasks' },
-            { id: 'gifts', emoji: '🎀', label: 'Receiving Gifts', desc: 'Thoughtful presents & surprises' },
-            { id: 'time', emoji: '⏰', label: 'Quality Time', desc: 'Undivided attention & presence' },
-            { id: 'touch', emoji: '🤗', label: 'Physical Touch', desc: 'Hugs, cuddles & closeness' },
+            { id: 'words', emoji: '💬', labelKey: 'options.loveLanguage.words', descKey: 'options.loveLanguage.wordsDesc' },
+            { id: 'acts', emoji: '🎁', labelKey: 'options.loveLanguage.acts', descKey: 'options.loveLanguage.actsDesc' },
+            { id: 'gifts', emoji: '🎀', labelKey: 'options.loveLanguage.gifts', descKey: 'options.loveLanguage.giftsDesc' },
+            { id: 'time', emoji: '⏰', labelKey: 'options.loveLanguage.time', descKey: 'options.loveLanguage.timeDesc' },
+            { id: 'touch', emoji: '🤗', labelKey: 'options.loveLanguage.touch', descKey: 'options.loveLanguage.touchDesc' },
         ],
     },
     {
         id: 'communicationStyle',
-        title: "How do you communicate in disagreements?",
-        subtitle: "No judgment here! Understanding this helps resolve disputes 🕊️",
+        titleKey: 'onboarding.steps.communicationStyle.title',
+        subtitleKey: 'onboarding.steps.communicationStyle.subtitle',
         icon: '💭',
         field: 'communicationStyle',
         options: [
-            { id: 'direct', emoji: '🎯', label: 'Direct & Honest', desc: 'I say what I mean right away' },
-            { id: 'processing', emoji: '🧠', label: 'Need Time to Process', desc: 'I like to think before responding' },
-            { id: 'emotional', emoji: '💖', label: 'Emotional Expresser', desc: 'I lead with feelings first' },
-            { id: 'logical', emoji: '📊', label: 'Logical Analyzer', desc: 'I focus on facts and solutions' },
-            { id: 'avoidant', emoji: '🐢', label: 'Conflict-Avoidant', desc: 'I prefer to keep the peace' },
+            { id: 'direct', emoji: '🎯', labelKey: 'options.communicationStyle.direct', descKey: 'options.communicationStyle.directDesc' },
+            { id: 'processing', emoji: '🧠', labelKey: 'options.communicationStyle.processing', descKey: 'options.communicationStyle.processingDesc' },
+            { id: 'emotional', emoji: '💖', labelKey: 'options.communicationStyle.emotional', descKey: 'options.communicationStyle.emotionalDesc' },
+            { id: 'logical', emoji: '📊', labelKey: 'options.communicationStyle.logical', descKey: 'options.communicationStyle.logicalDesc' },
+            { id: 'avoidant', emoji: '🐢', labelKey: 'options.communicationStyle.avoidant', descKey: 'options.communicationStyle.avoidantDesc' },
         ],
     },
     {
         id: 'conflictStyle',
-        title: "When upset, you usually...",
-        subtitle: "Self-awareness is a superpower! 🦸",
+        titleKey: 'onboarding.steps.conflictStyle.title',
+        subtitleKey: 'onboarding.steps.conflictStyle.subtitle',
         icon: '⚡',
         field: 'conflictStyle',
         options: [
-            { id: 'talk', emoji: '🗣️', label: 'Want to talk it out', desc: 'Right here, right now' },
-            { id: 'space', emoji: '🌙', label: 'Need space first', desc: 'I cool down then discuss' },
-            { id: 'write', emoji: '✍️', label: 'Express through writing', desc: 'Texts, notes, letters' },
-            { id: 'physical', emoji: '🏃', label: 'Get physical energy out', desc: 'Walk, exercise, move' },
-            { id: 'distract', emoji: '🎮', label: 'Need a distraction', desc: 'Reset before engaging' },
+            { id: 'talk', emoji: '🗣️', labelKey: 'options.conflictStyle.talk', descKey: 'options.conflictStyle.talkDesc' },
+            { id: 'space', emoji: '🌙', labelKey: 'options.conflictStyle.space', descKey: 'options.conflictStyle.spaceDesc' },
+            { id: 'write', emoji: '✍️', labelKey: 'options.conflictStyle.write', descKey: 'options.conflictStyle.writeDesc' },
+            { id: 'physical', emoji: '🏃', labelKey: 'options.conflictStyle.physical', descKey: 'options.conflictStyle.physicalDesc' },
+            { id: 'distract', emoji: '🎮', labelKey: 'options.conflictStyle.distract', descKey: 'options.conflictStyle.distractDesc' },
         ],
     },
     {
         id: 'dateActivities',
-        title: "Your ideal date activities?",
-        subtitle: "Pick all that apply! 🌟",
+        titleKey: 'onboarding.steps.dateActivities.title',
+        subtitleKey: 'onboarding.steps.dateActivities.subtitle',
         icon: '🎯',
         field: 'favoriteDateActivities',
         multiSelect: true,
         options: [
-            { id: 'dining', emoji: '🍽️', label: 'Dining Out' },
-            { id: 'cooking', emoji: '👨‍🍳', label: 'Cooking Together' },
-            { id: 'movies', emoji: '🎬', label: 'Movies/Shows' },
-            { id: 'outdoors', emoji: '🌲', label: 'Outdoor Adventures' },
-            { id: 'travel', emoji: '✈️', label: 'Traveling' },
-            { id: 'gaming', emoji: '🎮', label: 'Gaming' },
-            { id: 'music', emoji: '🎵', label: 'Concerts/Music' },
-            { id: 'arts', emoji: '🎨', label: 'Arts & Culture' },
-            { id: 'sports', emoji: '⚽', label: 'Sports' },
-            { id: 'relaxing', emoji: '🛋️', label: 'Relaxing at Home' },
-            { id: 'fitness', emoji: '💪', label: 'Working Out' },
-            { id: 'shopping', emoji: '🛍️', label: 'Shopping' },
+            { id: 'dining', emoji: '🍽️', labelKey: 'options.dateActivities.dining' },
+            { id: 'cooking', emoji: '👨‍🍳', labelKey: 'options.dateActivities.cooking' },
+            { id: 'movies', emoji: '🎬', labelKey: 'options.dateActivities.movies' },
+            { id: 'outdoors', emoji: '🌲', labelKey: 'options.dateActivities.outdoors' },
+            { id: 'travel', emoji: '✈️', labelKey: 'options.dateActivities.travel' },
+            { id: 'gaming', emoji: '🎮', labelKey: 'options.dateActivities.gaming' },
+            { id: 'music', emoji: '🎵', labelKey: 'options.dateActivities.music' },
+            { id: 'arts', emoji: '🎨', labelKey: 'options.dateActivities.arts' },
+            { id: 'sports', emoji: '⚽', labelKey: 'options.dateActivities.sports' },
+            { id: 'relaxing', emoji: '🛋️', labelKey: 'options.dateActivities.relaxing' },
+            { id: 'fitness', emoji: '💪', labelKey: 'options.dateActivities.fitness' },
+            { id: 'shopping', emoji: '🛍️', labelKey: 'options.dateActivities.shopping' },
         ],
         allowCustom: true,
     },
     {
         id: 'petPeeves',
-        title: "Any relationship pet peeves?",
-        subtitle: "What little things bug you? (It's okay, we all have them!) 😅",
+        titleKey: 'onboarding.steps.petPeeves.title',
+        subtitleKey: 'onboarding.steps.petPeeves.subtitle',
         icon: '🙈',
         field: 'petPeeves',
         multiSelect: true,
         options: [
-            { id: 'lateness', emoji: '⏰', label: 'Being late' },
-            { id: 'phone', emoji: '📱', label: 'Phone during quality time' },
-            { id: 'mess', emoji: '🧹', label: 'Messiness' },
-            { id: 'interrupting', emoji: '🤐', label: 'Being interrupted' },
-            { id: 'forgetful', emoji: '🤔', label: 'Forgetfulness' },
-            { id: 'passive', emoji: '😶', label: 'Passive aggression' },
-            { id: 'plans', emoji: '📅', label: 'Last-minute plan changes' },
-            { id: 'chewing', emoji: '😬', label: 'Loud chewing' },
-            { id: 'dishes', emoji: '🍽️', label: 'Dishes in the sink' },
-            { id: 'silent', emoji: '🤫', label: 'Silent treatment' },
+            { id: 'lateness', emoji: '⏰', labelKey: 'options.petPeeves.lateness' },
+            { id: 'phone', emoji: '📱', labelKey: 'options.petPeeves.phone' },
+            { id: 'mess', emoji: '🧹', labelKey: 'options.petPeeves.mess' },
+            { id: 'interrupting', emoji: '🤐', labelKey: 'options.petPeeves.interrupting' },
+            { id: 'forgetful', emoji: '🤔', labelKey: 'options.petPeeves.forgetful' },
+            { id: 'passive', emoji: '😶', labelKey: 'options.petPeeves.passive' },
+            { id: 'plans', emoji: '📅', labelKey: 'options.petPeeves.plans' },
+            { id: 'chewing', emoji: '😬', labelKey: 'options.petPeeves.chewing' },
+            { id: 'dishes', emoji: '🍽️', labelKey: 'options.petPeeves.dishes' },
+            { id: 'silent', emoji: '🤫', labelKey: 'options.petPeeves.silent' },
         ],
         allowCustom: true,
     },
     {
         id: 'appreciationStyle',
-        title: "When you do something nice...",
-        subtitle: "What kind of recognition feels best? 🏆",
+        titleKey: 'onboarding.steps.appreciationStyle.title',
+        subtitleKey: 'onboarding.steps.appreciationStyle.subtitle',
         icon: '🌟',
         field: 'appreciationStyle',
         options: [
-            { id: 'public', emoji: '📢', label: 'Public recognition', desc: 'Tell the world!' },
-            { id: 'private', emoji: '💌', label: 'Private thanks', desc: 'Just between us' },
-            { id: 'reciprocate', emoji: '🔄', label: 'Reciprocal action', desc: 'Do something nice back' },
-            { id: 'none', emoji: '😊', label: "Just knowing is enough", desc: 'No fuss needed' },
+            { id: 'public', emoji: '📢', labelKey: 'options.appreciationStyle.public', descKey: 'options.appreciationStyle.publicDesc' },
+            { id: 'private', emoji: '💌', labelKey: 'options.appreciationStyle.private', descKey: 'options.appreciationStyle.privateDesc' },
+            { id: 'reciprocate', emoji: '🔄', labelKey: 'options.appreciationStyle.reciprocate', descKey: 'options.appreciationStyle.reciprocateDesc' },
+            { id: 'none', emoji: '😊', labelKey: 'options.appreciationStyle.none', descKey: 'options.appreciationStyle.noneDesc' },
         ],
     },
     {
         id: 'complete',
-        title: "You're all set! 🎉",
-        subtitle: "Your profile is ready. Now let's connect you with your partner!",
+        titleKey: 'onboarding.steps.complete.title',
+        subtitleKey: 'onboarding.steps.complete.subtitle',
         icon: '✅',
     },
 ];
 
 const OnboardingPage = () => {
     const navigate = useNavigate();
+    const { t, supportedLanguages } = useI18n();
     const {
         isAuthenticated,
         onboardingStep,
@@ -166,7 +176,9 @@ const OnboardingPage = () => {
         completeOnboarding,
         profile,
         signUp,
-        signInWithGoogle
+        signInWithGoogle,
+        preferredLanguage,
+        setPreferredLanguage
     } = useAuthStore();
 
     const [customInputs, setCustomInputs] = useState({});
@@ -188,6 +200,18 @@ const OnboardingPage = () => {
     const goldButtonShineStyle = {
         background: 'radial-gradient(circle at 20% 20%, rgba(255,255,255,0.65), transparent 55%)'
     };
+    const welcomeHighlights = [
+        'onboarding.welcome.highlights.fair',
+        'onboarding.welcome.highlights.dailyCloseness',
+        'onboarding.welcome.highlights.calmerVibe'
+    ];
+    const translateValidationError = (validation) => {
+        if (!validation?.error) return null;
+        if (validation.errorCode) {
+            return t(`validation.${validation.errorCode}`, validation.meta);
+        }
+        return validation.error;
+    };
 
     const steps = useMemo(() => (
         isAuthenticated
@@ -203,6 +227,67 @@ const OnboardingPage = () => {
     const currentStepData = steps[onboardingStep];
     const totalSteps = steps.length;
     const progress = ((onboardingStep + 1) / totalSteps) * 100;
+    const stepBadgeLabel = showConnectChoice
+        ? t('onboarding.badge.saved')
+        : t('onboarding.badge.step', { current: onboardingStep + 1 });
+    const loveLanguageOption = ONBOARDING_STEPS
+        .find((step) => step.id === 'loveLanguage')
+        ?.options
+        .find((option) => option.id === onboardingData.loveLanguage);
+
+    useEffect(() => {
+        if (currentStepData?.id !== 'language') return;
+        if (!supportedLanguages?.length) return;
+        const firstLanguage = supportedLanguages[0];
+
+        if (supportedLanguages.length === 1 && firstLanguage?.code) {
+            if (onboardingData.preferredLanguage !== firstLanguage.code) {
+                updateOnboardingData({ preferredLanguage: firstLanguage.code });
+            }
+            if (preferredLanguage !== firstLanguage.code) {
+                setPreferredLanguage(firstLanguage.code);
+            }
+            setOnboardingStep(onboardingStep + 1);
+            return;
+        }
+
+        const profileLanguage = normalizeLanguage(profile?.preferred_language);
+        const storeLanguage = normalizeLanguage(preferredLanguage);
+        const hasProfileLanguage = !!profile?.preferred_language;
+        const hasStoredLanguage = storeLanguage && (hasProfileLanguage || storeLanguage !== DEFAULT_LANGUAGE);
+
+        if (!onboardingData.preferredLanguage) {
+            if (hasProfileLanguage && profileLanguage) {
+                updateOnboardingData({ preferredLanguage: profileLanguage });
+                return;
+            }
+            if (hasStoredLanguage) {
+                updateOnboardingData({ preferredLanguage: storeLanguage });
+                return;
+            }
+            const navigatorLanguage = typeof navigator === 'undefined' ? null : navigator.language;
+            const initialLanguage = normalizeLanguage(navigatorLanguage) || firstLanguage?.code || DEFAULT_LANGUAGE;
+            updateOnboardingData({ preferredLanguage: initialLanguage });
+            if (preferredLanguage !== initialLanguage) {
+                setPreferredLanguage(initialLanguage);
+            }
+            return;
+        }
+
+        if (onboardingData.preferredLanguage !== preferredLanguage) {
+            setPreferredLanguage(onboardingData.preferredLanguage);
+        }
+    }, [
+        currentStepData?.id,
+        supportedLanguages,
+        onboardingData.preferredLanguage,
+        preferredLanguage,
+        profile?.preferred_language,
+        updateOnboardingData,
+        setPreferredLanguage,
+        onboardingStep,
+        setOnboardingStep,
+    ]);
 
     const handleNext = async () => {
         // Clear any previous error
@@ -225,7 +310,7 @@ const OnboardingPage = () => {
             if (currentStepData.field === 'birthday' && value) {
                 const validation = validateDate(value);
                 if (!validation.isValid) {
-                    setBirthdayError(validation.error);
+                    setBirthdayError(translateValidationError(validation));
                     return;
                 }
             }
@@ -242,7 +327,7 @@ const OnboardingPage = () => {
 
                 if (result.error) {
                     console.error('[OnboardingPage] Error:', result.error);
-                    setSaveError(typeof result.error === 'string' ? result.error : 'Failed to save profile. Please try again.');
+                    setSaveError(t('onboarding.errors.saveFailed'));
                     // Don't set isSubmitting to false here, let the finally block handle it
                     return;
                 }
@@ -252,7 +337,7 @@ const OnboardingPage = () => {
                 setShowConnectChoice(true);
             } catch (err) {
                 console.error('[OnboardingPage] Unexpected error:', err);
-                setSaveError('An unexpected error occurred. Please try again.');
+                setSaveError(t('onboarding.errors.unexpected'));
             } finally {
                 // Only stop submitting if we encountered an error
                 // If success (showConnectChoice is true), we want to keep the "success" state or transition smoothly
@@ -290,7 +375,7 @@ const OnboardingPage = () => {
         const result = await signInWithGoogle();
         setAuthSubmitting(false);
         if (result?.error) {
-            setAuthError(result.error?.message || 'Failed to continue with Google');
+            setAuthError(t('onboarding.errors.googleFailed'));
         }
     };
 
@@ -301,19 +386,19 @@ const OnboardingPage = () => {
 
         const email = authEmail.trim();
         if (!email || !authPassword || !authConfirmPassword) {
-            setAuthError('Please fill in all fields');
+            setAuthError(t('onboarding.errors.missingFields'));
             setAuthSubmitting(false);
             return;
         }
 
         if (authPassword !== authConfirmPassword) {
-            setAuthError('Passwords do not match');
+            setAuthError(t('onboarding.errors.passwordsMismatch'));
             setAuthSubmitting(false);
             return;
         }
 
         if (authPassword.length < 8) {
-            setAuthError('Password must be at least 8 characters');
+            setAuthError(t('onboarding.errors.passwordTooShort'));
             setAuthSubmitting(false);
             return;
         }
@@ -321,7 +406,7 @@ const OnboardingPage = () => {
         const { error } = await signUp(email, authPassword);
         setAuthSubmitting(false);
         if (error) {
-            setAuthError(error.message || 'Failed to create account');
+            setAuthError(t('onboarding.errors.signUpFailed'));
             return;
         }
         // After sign-up, `isAuthenticated` becomes true and the auth step is removed.
@@ -354,16 +439,21 @@ const OnboardingPage = () => {
         return value === optionId;
     };
 
+    const handleLanguageSelect = (languageCode) => {
+        updateOnboardingData({ preferredLanguage: languageCode });
+        setPreferredLanguage(languageCode);
+    };
+
     const handleAvatarFile = (file) => {
         if (!file) return;
 
         if (!file.type.startsWith('image/')) {
-            alert('Please select an image file');
+            alert(t('onboarding.errors.invalidImage'));
             return;
         }
 
         if (file.size > 5 * 1024 * 1024) {
-            alert('Image must be less than 5MB');
+            alert(t('onboarding.errors.imageTooLarge'));
             return;
         }
 
@@ -371,12 +461,12 @@ const OnboardingPage = () => {
         reader.onload = (event) => {
             const result = event.target?.result;
             if (typeof result !== 'string') {
-                alert('Failed to read image');
+                alert(t('onboarding.errors.imageReadFailed'));
                 return;
             }
             updateOnboardingData({ avatarUrl: result });
         };
-        reader.onerror = () => alert('Failed to read image');
+        reader.onerror = () => alert(t('onboarding.errors.imageReadFailed'));
         reader.readAsDataURL(file);
     };
 
@@ -395,6 +485,70 @@ const OnboardingPage = () => {
 
     const renderStepContent = () => {
         switch (currentStepData.id) {
+            case 'language':
+                return (
+                    <Motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="space-y-4"
+                    >
+                        <div className={`grid gap-3 ${supportedLanguages.length > 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                            {supportedLanguages.map((languageOption, index) => {
+                                const label = languageOption.labelKey
+                                    ? t(languageOption.labelKey)
+                                    : (languageOption.label || languageOption.code);
+                                const nativeLabel = languageOption.nativeLabel;
+                                const isSelected = onboardingData.preferredLanguage === languageOption.code;
+                                const showNativeLabel = nativeLabel && nativeLabel !== label;
+                                return (
+                                    <Motion.button
+                                        key={languageOption.code}
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: index * 0.05 }}
+                                        whileTap={{ scale: 0.97 }}
+                                        onClick={() => handleLanguageSelect(languageOption.code)}
+                                        className={`p-4 rounded-2xl text-left transition-all border ${isSelected
+                                            ? 'border-[#D2BC76] bg-[#FBF6E8] shadow-soft'
+                                            : 'border-white/80 bg-white/80 hover:bg-white'
+                                            }`}
+                                    >
+                                        <div className="flex items-start gap-3">
+                                            <div className={`px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-[0.2em] ${isSelected
+                                                ? 'bg-white/80 text-[#8B7019]'
+                                                : 'bg-white/70 text-neutral-400'
+                                                }`}
+                                            >
+                                                {languageOption.code}
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className={`font-bold ${isSelected ? 'text-court-brown' : 'text-neutral-700'}`}>
+                                                    {label}
+                                                </p>
+                                                {showNativeLabel && (
+                                                    <p className="text-xs text-neutral-400 mt-0.5">{nativeLabel}</p>
+                                                )}
+                                            </div>
+                                            {isSelected && (
+                                                <Motion.div
+                                                    initial={{ scale: 0 }}
+                                                    animate={{ scale: 1 }}
+                                                    className="w-5 h-5 rounded-full flex items-center justify-center bg-gradient-to-br from-[#C9A227] to-[#8B7019]"
+                                                >
+                                                    <Check className="w-3 h-3 text-white" />
+                                                </Motion.div>
+                                            )}
+                                        </div>
+                                    </Motion.button>
+                                );
+                            })}
+                        </div>
+                        <p className="text-xs text-neutral-400 text-center">
+                            {t('onboarding.language.helper')}
+                        </p>
+                    </Motion.div>
+                );
+
             case 'welcome':
                 return (
                     <Motion.div
@@ -406,20 +560,20 @@ const OnboardingPage = () => {
                             <div className="w-20 h-20 mx-auto rounded-3xl overflow-hidden shadow-soft border border-white/80 bg-white/80">
                                 <img
                                     src="/assets/avatars/judge_whiskers.png"
-                                    alt="Judge Whiskers"
+                                    alt={t('onboarding.welcome.judgeAlt')}
                                     className="w-full h-full object-cover"
                                 />
                             </div>
                             <p className="text-neutral-700 mt-4 leading-relaxed">
-                                Resolve little disagreements with humor, warmth, and a gentle push toward understanding.
+                                {t('onboarding.welcome.description')}
                             </p>
                             <div className="flex flex-wrap justify-center gap-2 mt-4">
-                                {['Fair judgments', 'Daily closeness', 'A calmer vibe'].map((item, i) => (
+                                {welcomeHighlights.map((item, i) => (
                                     <span
                                         key={i}
                                         className="px-3 py-1.5 bg-white/80 border border-white/80 rounded-full text-sm text-court-brown shadow-soft"
                                     >
-                                        {item}
+                                        {t(item)}
                                     </span>
                                 ))}
                             </div>
@@ -428,11 +582,11 @@ const OnboardingPage = () => {
                             onClick={() => navigate('/signin')}
                             className="text-sm font-semibold text-court-brown hover:text-[#8B7019] transition-colors"
                         >
-                            Already have an account? Log in
+                            {t('onboarding.welcome.signInPrompt')}
                         </button>
                         <div className="space-y-4">
                             <p className="text-xs text-neutral-400">
-                                You can upgrade later — we’ll offer Pause Gold at the end.
+                                {t('onboarding.welcome.upgradeNote')}
                             </p>
                         </div>
                     </Motion.div>
@@ -463,12 +617,12 @@ const OnboardingPage = () => {
                                 <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
                                 <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                             </svg>
-                            Continue with Google
+                            {t('onboarding.auth.continueWithGoogle')}
                         </Motion.button>
 
                         <div className="flex items-center gap-4">
                             <div className="flex-1 h-px bg-neutral-200" />
-                            <span className="text-neutral-400 text-sm">or</span>
+                            <span className="text-neutral-400 text-sm">{t('common.or')}</span>
                             <div className="flex-1 h-px bg-neutral-200" />
                         </div>
 
@@ -479,7 +633,7 @@ const OnboardingPage = () => {
                                     type="email"
                                     value={authEmail}
                                     onChange={(e) => setAuthEmail(e.target.value)}
-                                    placeholder="Email address"
+                                    placeholder={t('onboarding.auth.emailPlaceholder')}
                                     className="w-full pl-12 pr-4 py-4 bg-white/90 border border-white/80 rounded-2xl text-neutral-700 text-base placeholder:text-neutral-400 focus:outline-none focus:border-[#D2BC76] focus:ring-2 focus:ring-[#F1E3B6] transition-all shadow-inner-soft"
                                     autoFocus
                                 />
@@ -491,7 +645,7 @@ const OnboardingPage = () => {
                                     type={authShowPassword ? 'text' : 'password'}
                                     value={authPassword}
                                     onChange={(e) => setAuthPassword(e.target.value)}
-                                    placeholder="Create password"
+                                    placeholder={t('onboarding.auth.passwordPlaceholder')}
                                     className="w-full pl-12 pr-12 py-4 bg-white/90 border border-white/80 rounded-2xl text-neutral-700 text-base placeholder:text-neutral-400 focus:outline-none focus:border-[#D2BC76] focus:ring-2 focus:ring-[#F1E3B6] transition-all shadow-inner-soft"
                                 />
                                 <button
@@ -509,7 +663,7 @@ const OnboardingPage = () => {
                                     type={authShowPassword ? 'text' : 'password'}
                                     value={authConfirmPassword}
                                     onChange={(e) => setAuthConfirmPassword(e.target.value)}
-                                    placeholder="Confirm password"
+                                    placeholder={t('onboarding.auth.confirmPasswordPlaceholder')}
                                     className="w-full pl-12 pr-4 py-4 bg-white/90 border border-white/80 rounded-2xl text-neutral-700 text-base placeholder:text-neutral-400 focus:outline-none focus:border-[#D2BC76] focus:ring-2 focus:ring-[#F1E3B6] transition-all shadow-inner-soft"
                                 />
                             </div>
@@ -522,7 +676,7 @@ const OnboardingPage = () => {
                             >
                                 <span aria-hidden="true" className="absolute inset-0 opacity-60" style={goldButtonShineStyle} />
                                 <span className="relative z-10 flex items-center gap-2">
-                                    {authSubmitting ? 'Creating…' : 'Create account'}
+                                    {authSubmitting ? t('onboarding.auth.creating') : t('onboarding.auth.createAccount')}
                                     <ArrowRight className="w-5 h-5" />
                                 </span>
                             </Motion.button>
@@ -532,7 +686,7 @@ const OnboardingPage = () => {
                             onClick={() => navigate('/signin')}
                             className="w-full text-center text-sm font-semibold text-court-brown hover:text-[#8B7019] transition-colors"
                         >
-                            Already have an account? Log in
+                            {t('onboarding.welcome.signInPrompt')}
                         </button>
                     </Motion.div>
                 );
@@ -550,13 +704,13 @@ const OnboardingPage = () => {
                                 type="text"
                                 value={onboardingData.displayName || ''}
                                 onChange={(e) => updateOnboardingData({ displayName: e.target.value })}
-                                placeholder="Your name or nickname"
+                                placeholder={t('onboarding.name.placeholder')}
                                 className="w-full pl-12 pr-4 py-4 bg-white/90 border border-white/80 rounded-2xl text-neutral-700 text-lg placeholder:text-neutral-400 focus:outline-none focus:border-[#D2BC76] focus:ring-2 focus:ring-[#F1E3B6] transition-all shadow-inner-soft"
                                 autoFocus
                             />
                         </div>
                         <p className="text-sm text-neutral-400 text-center">
-                            This is how you'll appear to your partner 💕
+                            {t('onboarding.name.helper')}
                         </p>
                     </Motion.div>
                 );
@@ -580,7 +734,7 @@ const OnboardingPage = () => {
                                     // Validate the date
                                     if (value) {
                                         const validation = validateDate(value);
-                                        setBirthdayError(validation.isValid ? null : validation.error);
+                                        setBirthdayError(validation.isValid ? null : translateValidationError(validation));
                                     } else {
                                         setBirthdayError(null);
                                     }
@@ -598,7 +752,7 @@ const OnboardingPage = () => {
                             </p>
                         )}
                         <p className="text-sm text-neutral-400 text-center">
-                            Your partner will be reminded to wish you a happy birthday! 🎈
+                            {t('onboarding.birthday.helper')}
                         </p>
                     </Motion.div>
                 );
@@ -616,7 +770,7 @@ const OnboardingPage = () => {
                                 {onboardingData.avatarUrl ? (
                                     <img
                                         src={onboardingData.avatarUrl}
-                                        alt="Your avatar"
+                                        alt={t('onboarding.avatar.selectedAlt')}
                                         className="w-full h-full object-cover"
                                     />
                                 ) : (
@@ -626,13 +780,13 @@ const OnboardingPage = () => {
                                 )}
                             </div>
                             <p className={`text-sm mt-2 ${onboardingData.avatarUrl ? 'text-neutral-500' : 'text-[#6B4F3C] font-medium'}`}>
-                                {onboardingData.avatarUrl ? 'Looking good! ✨' : 'Please select a profile picture'}
+                                {onboardingData.avatarUrl ? t('onboarding.avatar.selectedHint') : t('onboarding.avatar.requiredHint')}
                             </p>
                         </div>
 
                         {/* Preset avatars grid */}
                         <div>
-                            <p className="text-xs text-neutral-400 uppercase tracking-wider mb-3 text-center">Pick an animal friend</p>
+                            <p className="text-xs text-neutral-400 uppercase tracking-wider mb-3 text-center">{t('onboarding.avatar.presetLabel')}</p>
                             <div className="grid grid-cols-4 gap-3">
                                 {PRESET_AVATARS.map((avatar, index) => (
                                     <Motion.button
@@ -649,7 +803,9 @@ const OnboardingPage = () => {
                                     >
                                         <img
                                             src={avatar.path}
-                                            alt={avatar.label}
+                                            alt={t('onboarding.avatar.presetAlt', {
+                                                name: avatar.labelKey ? t(avatar.labelKey) : avatar.label
+                                            })}
                                             className="w-full h-full object-cover"
                                         />
                                     </Motion.button>
@@ -660,7 +816,7 @@ const OnboardingPage = () => {
                         {/* Divider */}
                         <div className="flex items-center gap-4">
                             <div className="flex-1 h-px bg-neutral-200" />
-                            <span className="text-neutral-400 text-xs">or</span>
+                            <span className="text-neutral-400 text-xs">{t('common.or')}</span>
                             <div className="flex-1 h-px bg-neutral-200" />
                         </div>
 
@@ -678,7 +834,7 @@ const OnboardingPage = () => {
                                 />
                                 <div className="flex items-center justify-center gap-2 py-3 px-4 bg-white/90 border border-white/80 rounded-xl hover:bg-white transition-all shadow-soft">
                                     <Upload className="w-5 h-5 text-neutral-500" />
-                                    <span className="font-medium text-neutral-700">Upload</span>
+                                    <span className="font-medium text-neutral-700">{t('onboarding.avatar.upload')}</span>
                                 </div>
                             </label>
 
@@ -695,14 +851,14 @@ const OnboardingPage = () => {
                                 />
                                 <div className="flex items-center justify-center gap-2 py-3 px-4 bg-white/90 border border-white/80 rounded-xl hover:bg-white transition-all shadow-soft">
                                     <Camera className="w-5 h-5 text-neutral-500" />
-                                    <span className="font-medium text-neutral-700">Camera</span>
+                                    <span className="font-medium text-neutral-700">{t('onboarding.avatar.camera')}</span>
                                 </div>
                             </label>
                         </div>
 
                         {/* Note about changing later */}
                         <p className="text-xs text-neutral-400 text-center">
-                            You can change this later in your profile settings
+                            {t('onboarding.avatar.changeLater')}
                         </p>
                     </Motion.div>
                 );
@@ -727,10 +883,10 @@ const OnboardingPage = () => {
 
                             <div>
                                 <h3 className="text-xl font-display font-bold text-neutral-800 mb-2">
-                                    Ready to connect with your partner? 💕
+                                    {t('onboarding.complete.connectTitle')}
                                 </h3>
                                 <p className="text-neutral-500 text-sm">
-                                    You can share your unique code or enter theirs to link your accounts.
+                                    {t('onboarding.complete.connectSubtitle')}
                                 </p>
                             </div>
 
@@ -742,7 +898,7 @@ const OnboardingPage = () => {
                                     transition={{ delay: 0.3 }}
                                     className="bg-white/80 rounded-2xl p-4 border border-[#E0D2C4] shadow-inner-soft"
                                 >
-                                    <p className="text-xs text-neutral-500 mb-1">Your Partner Code</p>
+                                    <p className="text-xs text-neutral-500 mb-1">{t('onboarding.complete.partnerCodeLabel')}</p>
                                     <p className="text-xl font-mono font-bold text-court-brown tracking-widest">
                                         {profile.partner_code}
                                     </p>
@@ -761,7 +917,7 @@ const OnboardingPage = () => {
                                 <span aria-hidden="true" className="absolute inset-0 opacity-60" style={goldButtonShineStyle} />
                                 <span className="relative z-10 flex items-center gap-2">
                                 <Heart className="w-5 h-5" />
-                                Connect with Partner Now
+                                {t('onboarding.complete.connectNow')}
                                 </span>
                             </Motion.button>
 
@@ -774,7 +930,7 @@ const OnboardingPage = () => {
                                 onClick={handleConnectLater}
                                 className="w-full py-3 rounded-2xl font-medium text-neutral-500 bg-white/80 border border-neutral-200/70 hover:bg-white transition-colors shadow-soft"
                             >
-                                I'll connect later
+                                {t('onboarding.complete.connectLater')}
                             </Motion.button>
 
                             <Motion.p
@@ -783,7 +939,7 @@ const OnboardingPage = () => {
                                 transition={{ delay: 0.6 }}
                                 className="text-xs text-neutral-400"
                             >
-                                Note: Some features like Court & Daily Questions require a partner connection.
+                                {t('onboarding.complete.connectNote')}
                             </Motion.p>
                         </Motion.div>
                     );
@@ -807,14 +963,14 @@ const OnboardingPage = () => {
 
                         <div className="flex flex-wrap justify-center gap-3">
                             <div className="px-4 py-2 bg-white/80 rounded-xl shadow-soft border border-white/80">
-                                <p className="text-xs text-neutral-400">Name</p>
+                                <p className="text-xs text-neutral-400">{t('onboarding.complete.summaryName')}</p>
                                 <p className="font-bold text-neutral-700">{onboardingData.displayName}</p>
                             </div>
                             <div className="px-4 py-2 bg-white/80 rounded-xl shadow-soft border border-white/80">
-                                <p className="text-xs text-neutral-400">Love Language</p>
+                                <p className="text-xs text-neutral-400">{t('onboarding.complete.summaryLoveLanguage')}</p>
                                 <p className="font-bold text-neutral-700">
-                                    {ONBOARDING_STEPS.find(s => s.id === 'loveLanguage')?.options.find(o => o.id === onboardingData.loveLanguage)?.emoji}{' '}
-                                    {ONBOARDING_STEPS.find(s => s.id === 'loveLanguage')?.options.find(o => o.id === onboardingData.loveLanguage)?.label}
+                                    {loveLanguageOption?.emoji}{' '}
+                                    {loveLanguageOption ? t(loveLanguageOption.labelKey) : (onboardingData.loveLanguage || t('common.unknown'))}
                                 </p>
                             </div>
                         </div>
@@ -845,7 +1001,10 @@ const OnboardingPage = () => {
                             className="space-y-3"
                         >
                             <div className={`grid gap-3 ${currentStepData.multiSelect ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                                {currentStepData.options.map((option, index) => (
+                                {currentStepData.options.map((option, index) => {
+                                    const optionLabel = option.labelKey ? t(option.labelKey) : option.label;
+                                    const optionDesc = option.descKey ? t(option.descKey) : option.desc;
+                                    return (
                                     <Motion.button
                                         key={option.id}
                                         initial={{ opacity: 0, y: 10 }}
@@ -862,10 +1021,10 @@ const OnboardingPage = () => {
                                             <span className="text-2xl">{option.emoji}</span>
                                             <div className="flex-1">
                                                 <p className={`font-bold ${isOptionSelected(option.id) ? 'text-court-brown' : 'text-neutral-700'}`}>
-                                                    {option.label}
+                                                    {optionLabel}
                                                 </p>
-                                                {option.desc && (
-                                                    <p className="text-xs text-neutral-400 mt-0.5">{option.desc}</p>
+                                                {optionDesc && (
+                                                    <p className="text-xs text-neutral-400 mt-0.5">{optionDesc}</p>
                                                 )}
                                             </div>
                                             {isOptionSelected(option.id) && (
@@ -879,7 +1038,8 @@ const OnboardingPage = () => {
                                             )}
                                         </div>
                                     </Motion.button>
-                                ))}
+                                );
+                                })}
                             </div>
 
                             {/* Custom input for multi-select */}
@@ -892,7 +1052,7 @@ const OnboardingPage = () => {
                                 >
                                     <input
                                         type="text"
-                                        placeholder="+ Add your own..."
+                                        placeholder={t('onboarding.customOptionPlaceholder')}
                                         value={customInputs[currentStepData.field] || ''}
                                         onChange={(e) => setCustomInputs({ ...customInputs, [currentStepData.field]: e.target.value })}
                                         onKeyPress={(e) => {
@@ -920,7 +1080,7 @@ const OnboardingPage = () => {
                 <Paywall
                     isOpen={showPaywall}
                     onClose={handlePaywallClose}
-                    triggerReason="Pause Gold unlocks more judges and planning features"
+                    triggerReason={t('onboarding.paywall.reason')}
                 />
 
                 {/* Progress Bar */}
@@ -934,7 +1094,7 @@ const OnboardingPage = () => {
                             <div className="absolute -bottom-6 -left-4 h-16 w-16 rounded-full bg-[#E8DED1]/25 blur-2xl" />
                             <div className="relative">
                                 <div className="flex items-center justify-between mb-2 text-[11px] font-semibold text-neutral-500">
-                                    <span>Step {onboardingStep + 1} of {totalSteps}</span>
+                                    <span>{t('onboarding.progress', { current: onboardingStep + 1, total: totalSteps })}</span>
                                     <span className="text-[#8B7019]">{Math.round(progress)}%</span>
                                 </div>
                                 <div className="h-2 bg-white/80 rounded-full overflow-hidden shadow-inner-soft">
@@ -980,13 +1140,13 @@ const OnboardingPage = () => {
                                             </Motion.div>
                                         )}
                                         <div className="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/80 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-neutral-400">
-                                            {showConnectChoice ? 'Saved' : currentStepData.id.replace(/([A-Z])/g, ' $1')}
+                                            {stepBadgeLabel}
                                         </div>
                                         <h2 className="text-2xl font-display font-bold text-neutral-800 mt-3 mb-2">
-                                            {showConnectChoice ? "One more thing..." : currentStepData.title}
+                                            {showConnectChoice ? t('onboarding.complete.oneMoreThing') : t(currentStepData.titleKey)}
                                         </h2>
                                         <p className="text-neutral-500">
-                                            {showConnectChoice ? "Your profile is saved! 🎉" : currentStepData.subtitle}
+                                            {showConnectChoice ? t('onboarding.complete.savedNotice') : t(currentStepData.subtitleKey)}
                                         </p>
                                     </div>
 
@@ -1031,12 +1191,17 @@ const OnboardingPage = () => {
                                     </Motion.div>
                                 ) : currentStepData.id === 'complete' ? (
                                     <>
-                                        Save Profile
+                                        {t('onboarding.actions.saveProfile')}
                                         <Check className="w-5 h-5" />
+                                    </>
+                                ) : currentStepData.id === 'language' ? (
+                                    <>
+                                        {t('onboarding.language.cta')}
+                                        <ArrowRight className="w-5 h-5" />
                                     </>
                                 ) : (
                                     <>
-                                        Continue
+                                        {t('common.continue')}
                                         <ArrowRight className="w-5 h-5" />
                                     </>
                                 )}

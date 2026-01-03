@@ -19,6 +19,7 @@ const ANALYST_REPAIR_JSON_SCHEMA = {
     strict: true,
     schema: {
         type: 'object',
+        description: 'All narrative strings must be in the requested language. Keep enum values and IDs in English.',
         properties: {
             userReportedIntensity: {
                 type: ['string', 'null'],
@@ -145,6 +146,7 @@ const PRIMING_JOINT_JSON_SCHEMA = {
     strict: true,
     schema: {
         type: 'object',
+        description: 'All narrative strings must be in the requested language. Keep enum values and IDs in English.',
         properties: {
             voiceUsed: {
                 type: 'string',
@@ -259,6 +261,7 @@ const HYBRID_RESOLUTION_JSON_SCHEMA = {
     strict: true,
     schema: {
         type: 'object',
+        description: 'All narrative strings must be in the requested language. Keep enum values and IDs in English.',
         properties: {
             hybridResolution: {
                 type: 'object',

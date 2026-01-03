@@ -7,6 +7,8 @@
 const express = require('express');
 const router = express.Router();
 const { requireSupabase, requireAuthUserId, getPartnerIdForUser } = require('../lib/auth');
+const { resolveRequestLanguage } = require('../lib/language');
+const { sendError } = require('../lib/http');
 
 const isProd = process.env.NODE_ENV === 'production';
 const safeErrorMessage = (error) => (isProd ? 'Internal server error' : (error?.message || String(error)));
@@ -29,6 +31,7 @@ function transformCase(c) {
         userBInput: c.user_b_input,
         userBFeelings: c.user_b_feelings,
         status: c.status,
+        caseLanguage: c.case_language,
         caseTitle: c.case_title,
         severityLevel: c.severity_level,
         primaryHissTag: c.primary_hiss_tag,
@@ -71,7 +74,7 @@ router.post('/', async (req, res) => {
         const partnerId = await getPartnerIdForUser(supabase, viewerId);
 
         if (isProd && verdict) {
-            return res.status(400).json({ error: 'Client-supplied verdicts are not allowed' });
+            return sendError(res, 400, 'VERDICT_NOT_ALLOWED', 'Client-supplied verdicts are not allowed');
         }
 
         if (id) {
@@ -82,13 +85,13 @@ router.post('/', async (req, res) => {
                 .single();
 
             if (existingError || !existingCase) {
-                return res.status(404).json({ error: 'Case not found' });
+                return sendError(res, 404, 'CASE_NOT_FOUND', 'Case not found');
             }
 
             const isUserA = String(existingCase.user_a_id) === String(viewerId);
             const isUserB = String(existingCase.user_b_id) === String(viewerId);
             if (!isUserA && !isUserB) {
-                return res.status(403).json({ error: 'Forbidden' });
+                return sendError(res, 403, 'CASE_FORBIDDEN', 'Forbidden');
             }
 
             // Update existing case
@@ -136,11 +139,12 @@ router.post('/', async (req, res) => {
             return res.json(transformCase(result));
         } else {
             if (userAId && String(userAId) !== String(viewerId)) {
-                return res.status(403).json({ error: 'userAId does not match authenticated user' });
+                return sendError(res, 403, 'USER_ID_MISMATCH', 'userAId does not match authenticated user');
             }
             if (userBId && partnerId && String(userBId) !== String(partnerId)) {
-                return res.status(400).json({ error: 'Invalid partner' });
+                return sendError(res, 400, 'INVALID_PARTNER', 'Invalid partner');
             }
+            const caseLanguage = await resolveRequestLanguage(req, supabase, viewerId);
 
             // Create new case
             const { data: newCase, error: insertError } = await supabase
@@ -153,6 +157,7 @@ router.post('/', async (req, res) => {
                     user_b_input: '',
                     user_b_feelings: '',
                     status: isProd ? 'PENDING' : (status || 'PENDING'),
+                    case_language: caseLanguage || 'en',
                     case_title: caseTitle || null,
                     severity_level: severityLevel || null,
                     primary_hiss_tag: primaryHissTag || null,

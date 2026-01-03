@@ -2,10 +2,12 @@ import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../store/useAuthStore';
 import LoadingScreen from '../components/LoadingScreen';
+import { useI18n } from '../i18n';
 
 const AuthCallbackPage = () => {
     const navigate = useNavigate();
     const { initialize, onboardingComplete } = useAuthStore();
+    const { t } = useI18n();
 
     useEffect(() => {
         const handleCallback = async () => {
@@ -52,7 +54,7 @@ const AuthCallbackPage = () => {
 
     return (
         <LoadingScreen
-            message="Signing you in..."
+            message={t('authCallback.signingIn')}
             showResetButton={false}
         />
     );

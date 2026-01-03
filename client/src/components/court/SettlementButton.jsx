@@ -3,6 +3,7 @@ import { motion, AnimatePresence, useMotionValue, useTransform, useSpring } from
 import { Handshake, Heart, X } from 'lucide-react';
 import useCourtStore from '../../store/courtStore';
 import useAuthStore from '../../store/useAuthStore';
+import { useI18n } from '../../i18n';
 
 /**
  * Settlement Button Component
@@ -15,6 +16,7 @@ import useAuthStore from '../../store/useAuthStore';
 export default function SettlementButton({ className = '' }) {
     const [isLoading, setIsLoading] = useState(false);
     const [showConfirmation, setShowConfirmation] = useState(false);
+    const { t } = useI18n();
 
     // Single animated value driving the entire modal transition (blur, opacity, scale)
     const animationProgress = useMotionValue(0);
@@ -54,7 +56,7 @@ export default function SettlementButton({ className = '' }) {
     // Check if I have already requested
     const iHaveRequested = session?.settlementRequested === user?.id;
 
-    const partnerName = partner?.display_name || partner?.name || 'Your partner';
+    const partnerName = partner?.display_name || partner?.name || t('common.yourPartner');
 
     const handleSettle = async () => {
         setIsLoading(true);
@@ -172,13 +174,13 @@ export default function SettlementButton({ className = '' }) {
                                     textShadow: '0 1px 2px rgba(255,255,255,0.3)',
                                 }}
                             >
-                                {partnerName} wants to settle
+                                {t('court.settlement.partnerRequest.title', { name: partnerName })}
                             </p>
                             <p
                                 className="text-sm"
                                 style={{ color: 'rgba(60, 45, 40, 0.75)' }}
                             >
-                                A sweet reset: dismiss the case and hug it out?
+                                {t('court.settlement.partnerRequest.subtitle')}
                             </p>
                         </div>
                     </div>
@@ -197,7 +199,7 @@ export default function SettlementButton({ className = '' }) {
                                 boxShadow: '0 6px 20px rgba(236, 72, 153, 0.32), inset 0 1px 0 0 rgba(255,255,255,0.25)',
                             }}
                         >
-                            {isLoading ? 'Settling...' : 'Accept & Settle 💕'}
+                            {isLoading ? t('court.settlement.partnerRequest.settling') : t('court.settlement.partnerRequest.accept')}
                         </button>
 
                         {/* Secondary: Outline style on glass */}
@@ -220,7 +222,7 @@ export default function SettlementButton({ className = '' }) {
                                 e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.4)';
                             }}
                         >
-                            Reject
+                            {t('court.settlement.partnerRequest.reject')}
                         </button>
                     </div>
                 </div>
@@ -237,7 +239,7 @@ export default function SettlementButton({ className = '' }) {
                 className={`flex items-center gap-2 text-pink-300/70 ${className}`}
             >
                 <Handshake className="w-4 h-4" />
-                <span className="text-sm">Waiting for {partnerName} to agree to settle...</span>
+                <span className="text-sm">{t('court.settlement.waiting', { name: partnerName })}</span>
             </motion.div>
         );
     }
@@ -262,7 +264,7 @@ export default function SettlementButton({ className = '' }) {
                     />
                     <div className="relative z-10 flex items-center justify-between gap-3 px-4 py-3">
                         <div className="text-sm font-medium" style={{ color: 'rgba(60, 45, 40, 0.85)' }}>
-                            Settlement declined — case continues.
+                            {t('court.settlement.declined')}
                         </div>
                         <button
                             onClick={clearSettlementDeclinedNotice}
@@ -271,7 +273,7 @@ export default function SettlementButton({ className = '' }) {
                                 background: 'rgba(255, 255, 255, 0.22)',
                                 border: '1px solid rgba(255, 255, 255, 0.4)'
                             }}
-                            aria-label="Dismiss"
+                            aria-label={t('court.settlement.dismiss')}
                         >
                             <X className="w-4 h-4" style={{ color: 'rgba(60, 45, 40, 0.75)' }} />
                         </button>
@@ -284,7 +286,7 @@ export default function SettlementButton({ className = '' }) {
                 className={`flex items-center justify-center gap-2 text-sm font-semibold text-pink-600/90 hover:text-pink-700 transition ${className}`}
             >
                 <Handshake className="w-4 h-4" />
-                <span>Want to settle instead?</span>
+                <span>{t('court.settlement.cta')}</span>
             </button>
 
             {/* Confirmation Modal - Apple Liquid Glass with Synchronized Animation */}
@@ -408,7 +410,7 @@ export default function SettlementButton({ className = '' }) {
                                         textShadow: '0 1px 2px rgba(255,255,255,0.3)',
                                     }}
                                 >
-                                    Request to Settle?
+                                    {t('court.settlement.modal.title')}
                                 </h3>
 
                                 {/* Body: Slightly dimmer but readable */}
@@ -416,15 +418,14 @@ export default function SettlementButton({ className = '' }) {
                                     className="text-sm mb-4 leading-relaxed"
                                     style={{ color: 'rgba(60, 45, 40, 0.78)' }}
                                 >
-                                    This will send a settlement request to {partnerName}.
-                                    If they agree, the case will be dismissed without a verdict.
+                                    {t('court.settlement.modal.body', { name: partnerName })}
                                 </p>
 
                                 <p
                                     className="text-xs mb-6"
                                     style={{ color: 'rgba(180, 50, 90, 0.85)' }}
                                 >
-                                    💕 Sometimes the best resolution is to hug it out!
+                                    {t('court.settlement.modal.note')}
                                 </p>
 
                                 {/* ═══ BUTTONS (Integrated with Glass) ═══ */}
@@ -449,7 +450,7 @@ export default function SettlementButton({ className = '' }) {
                                             e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.4)';
                                         }}
                                     >
-                                        Cancel
+                                        {t('common.cancel')}
                                     </button>
 
                                     {/* Primary: Pink gradient, slightly translucent over glass */}
@@ -464,7 +465,7 @@ export default function SettlementButton({ className = '' }) {
                                             boxShadow: '0 6px 24px rgba(236, 72, 153, 0.35), inset 0 1px 0 0 rgba(255,255,255,0.25)',
                                         }}
                                     >
-                                        {isLoading ? 'Requesting...' : 'Request Settlement'}
+                                        {isLoading ? t('court.settlement.modal.requesting') : t('court.settlement.modal.confirm')}
                                     </button>
                                 </div>
                             </div>

@@ -12,6 +12,8 @@ const { requireAuthUserId, requireSupabase, getPartnerIdForUser } = require('../
 const { isSupabaseConfigured } = require('../lib/supabase');
 const { awardXP, ACTION_TYPES } = require('../lib/xpService');
 const { recordChallengeAction, CHALLENGE_ACTIONS } = require('../lib/challengeService');
+const { resolveRequestLanguage, getUserPreferredLanguage } = require('../lib/language');
+const { sendError } = require('../lib/http');
 
 const requireUserId = async (req, fallbackUserId) => {
     if (isSupabaseConfigured()) {
@@ -72,18 +74,26 @@ router.post('/serve', async (req, res) => {
         const userId = await requireUserId(req, fallbackUserId);
 
         if (!partnerId) {
-            return res.status(400).json({ error: 'partnerId required' });
+            return sendError(res, 400, 'PARTNER_REQUIRED', 'partnerId required');
         }
 
-        if (isSupabaseConfigured()) {
-            const supabase = requireSupabase();
+        const supabase = isSupabaseConfigured() ? requireSupabase() : null;
+        if (supabase) {
             const resolvedPartnerId = await getPartnerIdForUser(supabase, userId);
             if (!resolvedPartnerId || String(resolvedPartnerId) !== String(partnerId)) {
-                return res.status(400).json({ error: 'Invalid partnerId for current user' });
+                return sendError(res, 400, 'INVALID_PARTNER', 'Invalid partnerId for current user');
             }
         }
 
-        await courtSessionManager.serve(userId, partnerId, coupleId, judgeType);
+        const creatorLanguage = await resolveRequestLanguage(req, supabase, userId);
+        const partnerLanguage = supabase
+            ? await getUserPreferredLanguage(supabase, partnerId)
+            : null;
+        await courtSessionManager.serve(userId, partnerId, coupleId, judgeType, {
+            creatorLanguage,
+            partnerLanguage,
+            caseLanguage: creatorLanguage || 'en',
+        });
         const state = courtSessionManager.getStateForUser(userId);
         res.json(state);
     } catch (error) {
@@ -138,7 +148,7 @@ router.post('/evidence', async (req, res) => {
 
         const safeEvidence = typeof evidence === 'string' ? evidence.trim().slice(0, 5000) : '';
         const safeFeelings = typeof feelings === 'string' ? feelings.trim().slice(0, 2000) : '';
-        if (!safeEvidence) return res.status(400).json({ error: 'evidence is required' });
+        if (!safeEvidence) return sendError(res, 400, 'EVIDENCE_REQUIRED', 'evidence is required');
 
         await courtSessionManager.submitEvidence(userId, safeEvidence, safeFeelings);
         const state = courtSessionManager.getStateForUser(userId);

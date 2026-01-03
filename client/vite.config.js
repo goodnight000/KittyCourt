@@ -1,4 +1,5 @@
 import { defineConfig, loadEnv } from 'vite'
+import path from 'path'
 import react from '@vitejs/plugin-react'
 
 // https://vite.dev/config/
@@ -8,12 +9,16 @@ export default defineConfig(({ mode }) => {
   const devPort = Number(env.VITE_DEV_PORT || 5173)
   const apiBase = env.VITE_API_URL
   const apiTarget = apiBase ? String(apiBase).replace(/\/api\/?$/, '') : `http://${devHost}:3001`
+  const repoRoot = path.resolve(__dirname, '..')
 
   return {
     plugins: [react()],
     server: {
       host: devHost,
       port: devPort,
+      fs: {
+        allow: [repoRoot],
+      },
       proxy: {
         // Proxy API calls in dev so the client can use same-origin '/api'.
         '/api': {

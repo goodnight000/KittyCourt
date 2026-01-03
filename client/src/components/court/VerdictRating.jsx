@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Star, X } from 'lucide-react';
 import useCourtStore from '../../store/courtStore';
+import { useI18n } from '../../i18n';
 
 /**
  * Verdict Rating Component
@@ -15,11 +16,11 @@ import useCourtStore from '../../store/courtStore';
  */
 
 const RATING_DESCRIPTIONS = {
-    1: { text: 'Hisss... disappointing', emoji: '😾' },
-    2: { text: 'Could be better', emoji: '😿' },
-    3: { text: 'Purrfectly fair', emoji: '🐱' },
-    4: { text: 'Very wise ruling!', emoji: '😺' },
-    5: { text: 'Absolutely purrfect!', emoji: '😻' }
+    1: { textKey: 'court.rating.descriptions.one', emoji: '😾' },
+    2: { textKey: 'court.rating.descriptions.two', emoji: '😿' },
+    3: { textKey: 'court.rating.descriptions.three', emoji: '🐱' },
+    4: { textKey: 'court.rating.descriptions.four', emoji: '😺' },
+    5: { textKey: 'court.rating.descriptions.five', emoji: '😻' }
 };
 
 export default function VerdictRating({ onRate, onSkip }) {
@@ -27,6 +28,7 @@ export default function VerdictRating({ onRate, onSkip }) {
     const [selectedRating, setSelectedRating] = useState(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [localError, setLocalError] = useState('');
+    const { t } = useI18n();
 
     const {
         showRatingPopup,
@@ -49,7 +51,7 @@ export default function VerdictRating({ onRate, onSkip }) {
             dismissRating(session?.id);
             setShowRatingPopup(false);
         } catch (e) {
-            setLocalError('Could not save your rating. Please try again.');
+            setLocalError(t('court.rating.saveError'));
         } finally {
             setIsSubmitting(false);
         }
@@ -120,10 +122,10 @@ export default function VerdictRating({ onRate, onSkip }) {
                                         ⚖️
                                     </motion.div>
                                     <h2 className="text-2xl font-bold text-white mb-1">
-                                        Rate This Verdict
+                                        {t('court.rating.title')}
                                     </h2>
                                     <p className="text-white/60 text-sm">
-                                        How fair was Judge Whiskers' ruling?
+                                        {t('court.rating.subtitle')}
                                     </p>
                                 </div>
 
@@ -176,7 +178,7 @@ export default function VerdictRating({ onRate, onSkip }) {
                                                 className="text-lg text-white/80"
                                             >
                                                 <span className="mr-2">{ratingInfo.emoji}</span>
-                                                {ratingInfo.text}
+                                                {t(ratingInfo.textKey)}
                                             </motion.p>
                                         )}
                                     </AnimatePresence>
@@ -188,7 +190,7 @@ export default function VerdictRating({ onRate, onSkip }) {
                                         onClick={handleSkip}
                                         className="flex-1 py-3 px-4 rounded-xl text-white/50 hover:text-white/70 hover:bg-white/5 transition font-medium"
                                     >
-                                        Skip
+                                        {t('court.rating.skip')}
                                     </button>
                                     <motion.button
                                         onClick={handleSubmit}
@@ -207,17 +209,17 @@ export default function VerdictRating({ onRate, onSkip }) {
                                                     transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
                                                     className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full"
                                                 />
-                                                Submitting...
+                                                {t('court.rating.submitting')}
                                             </span>
                                         ) : (
-                                            'Submit Rating'
+                                            t('court.rating.submit')
                                         )}
                                     </motion.button>
                                 </div>
 
                                 {/* Footer hint */}
                                 <p className="text-center text-white/30 text-xs mt-4">
-                                    Your rating helps Judge Whiskers improve! 🐱
+                                    {t('court.rating.footer')}
                                 </p>
                             </div>
                         </div>

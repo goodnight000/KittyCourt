@@ -9,6 +9,7 @@ import useLevelStore from '../store/useLevelStore';
 import useCourtSocket from '../hooks/useCourtSocket';
 import clsx from 'clsx';
 import LevelUpOverlay from '../components/LevelUpOverlay';
+import { useI18n } from '../i18n';
 
 const MainLayout = () => {
     const { currentUser, users, fetchUsers, switchUser } = useAppStore();
@@ -18,6 +19,7 @@ const MainLayout = () => {
     const location = useLocation();
     const mainRef = useRef(null);
     const activeLevelUp = pendingLevelUps?.[0];
+    const { t } = useI18n();
 
     // Keep the court WebSocket alive across navigation so verdict/settlement updates
     // (and dock indicators) work even when the user isn't on the courtroom page.
@@ -74,7 +76,7 @@ const MainLayout = () => {
                     transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
                     className="w-12 h-12 mx-auto rounded-full border-3 border-court-tan border-t-court-gold"
                 />
-                <p className="text-court-brownLight font-medium">Loading Pause...</p>
+                <p className="text-court-brownLight font-medium">{t('common.loadingPause')}</p>
             </motion.div>
         </div>
     );
@@ -106,15 +108,15 @@ const MainLayout = () => {
                 className="fixed bottom-0 left-1/2 -translate-x-1/2 z-40 w-full max-w-lg bg-white/80 backdrop-blur-xl border-t border-court-tan/30 shadow-soft-lg pb-2 rounded-t-2xl"
             >
                 <div className="flex items-center justify-around h-18 px-2">
-                    <TabItem to="/" icon={<Home size={26} />} label="Home" />
+                    <TabItem to="/" icon={<Home size={26} />} label={t('nav.home')} />
                     <TabItem
                         to="/courtroom"
                         icon={<Gavel size={26} />}
-                        label="Court"
+                        label={t('nav.court')}
                         isAlerting={isCourtAlerting}
                     />
-                    <TabItem to="/calendar" icon={<Calendar size={26} />} label="Calendar" />
-                    <TabItem to="/profile" icon={<User size={26} />} label="Profile" />
+                    <TabItem to="/calendar" icon={<Calendar size={26} />} label={t('nav.calendar')} />
+                    <TabItem to="/profile" icon={<User size={26} />} label={t('nav.profile')} />
                 </div>
             </motion.nav>
 

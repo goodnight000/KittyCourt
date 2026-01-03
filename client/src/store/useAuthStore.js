@@ -24,10 +24,25 @@ import {
 } from '../services/supabase';
 import { readSessionBackup, writeSessionBackup, clearSessionBackup } from '../services/authSessionBackup';
 import useSubscriptionStore from './useSubscriptionStore';
+import useCacheStore from './useCacheStore';
 import { logOutUser as revenueCatLogOut } from '../services/revenuecat';
+import { DEFAULT_LANGUAGE, normalizeLanguage } from '../i18n/languageConfig';
 
 const AUTH_PROFILE_TIMEOUT_MS = 5000;
 const AUTH_REQUESTS_TIMEOUT_MS = 5000;
+const resolvePreferredLanguage = (profile) => (
+    normalizeLanguage(profile?.preferred_language) || DEFAULT_LANGUAGE
+);
+
+const getInitialLanguage = () => {
+    if (typeof navigator === 'undefined') return DEFAULT_LANGUAGE;
+    const normalized = normalizeLanguage(navigator.language);
+    return normalized || DEFAULT_LANGUAGE;
+};
+
+const resolveInitialProfileLanguage = (preferredLanguage) => (
+    normalizeLanguage(preferredLanguage) || getInitialLanguage()
+);
 
 let initializePromise = null;
 let authListenerSubscription = null;
@@ -42,7 +57,7 @@ const withTimeout = (promise, timeoutMs, label) => {
     ]);
 };
 
-const loadAuthContext = async (user) => {
+const loadAuthContext = async (user, preferredLanguage) => {
     let profile = null;
     try {
         const profileResult = await withTimeout(getProfile(user.id), AUTH_PROFILE_TIMEOUT_MS, 'getProfile');
@@ -58,6 +73,7 @@ const loadAuthContext = async (user) => {
                 partner_code: partnerCode,
                 onboarding_complete: false,
                 created_at: new Date().toISOString(),
+                preferred_language: resolveInitialProfileLanguage(preferredLanguage),
             });
 
             if (!createError) {
@@ -162,6 +178,7 @@ const useAuthStore = create(
             onboardingComplete: false,
             onboardingStep: 0,
             onboardingData: {},
+            preferredLanguage: DEFAULT_LANGUAGE,
 
             handleSupabaseAuthEvent: async (event, session) => {
                 const sessionUser = session?.user || null;
@@ -182,6 +199,7 @@ const useAuthStore = create(
                         onboardingComplete: false,
                         onboardingStep: 0,
                         onboardingData: {},
+                        preferredLanguage: DEFAULT_LANGUAGE,
                         isLoading: false
                     });
                     return;
@@ -213,7 +231,8 @@ const useAuthStore = create(
                             hasPartner: false,
                             onboardingComplete: false,
                             onboardingStep: 0,
-                            onboardingData: {}
+                            onboardingData: {},
+                            preferredLanguage: DEFAULT_LANGUAGE
                         });
                     }
 
@@ -228,6 +247,7 @@ const useAuthStore = create(
                         set({
                             hasPartner: !!cachedProfile.partner_id,
                             onboardingComplete: !!cachedProfile.onboarding_complete,
+                            preferredLanguage: resolvePreferredLanguage(cachedProfile),
                         });
 
                         setTimeout(() => {
@@ -239,7 +259,7 @@ const useAuthStore = create(
                     }
 
                     try {
-                        const { profile, partner, requests, sent } = await loadAuthContext(sessionUser);
+                        const { profile, partner, requests, sent } = await loadAuthContext(sessionUser, get().preferredLanguage);
                         const stateAfterHydrate = get();
                         set({
                             profile,
@@ -248,6 +268,7 @@ const useAuthStore = create(
                             sentRequest: sent,
                             hasPartner: profile ? !!profile.partner_id : stateAfterHydrate.hasPartner,
                             onboardingComplete: profile ? !!profile.onboarding_complete : stateAfterHydrate.onboardingComplete,
+                            preferredLanguage: profile ? resolvePreferredLanguage(profile) : stateAfterHydrate.preferredLanguage,
                         });
 
                         // Initialize subscription store after auth
@@ -307,6 +328,7 @@ const useAuthStore = create(
                             onboardingComplete: false,
                             onboardingStep: 0,
                             onboardingData: {},
+                            preferredLanguage: DEFAULT_LANGUAGE,
                             isLoading: false
                         });
                     }
@@ -369,6 +391,7 @@ const useAuthStore = create(
                                     partner_code: partnerCode,
                                     onboarding_complete: false,
                                     created_at: new Date().toISOString(),
+                                    preferred_language: resolveInitialProfileLanguage(get().preferredLanguage),
                                 });
                                 if (createError) {
                                     console.error('[Auth] Failed to create profile:', createError);
@@ -409,6 +432,7 @@ const useAuthStore = create(
                         hasPartner: !!profile?.partner_id,
                         isAuthenticated: true,
                         onboardingComplete: profile?.onboarding_complete || false,
+                        preferredLanguage: profile ? resolvePreferredLanguage(profile) : DEFAULT_LANGUAGE,
                         isLoading: false
                     });
 
@@ -437,14 +461,15 @@ const useAuthStore = create(
 
                 // Create initial profile with partner code
                 if (data.user) {
-                    const partnerCode = generatePartnerCode();
-                    await upsertProfile({
-                        id: data.user.id,
-                        email: data.user.email,
-                        partner_code: partnerCode,
-                        onboarding_complete: false,
-                        created_at: new Date().toISOString(),
-                    });
+                const partnerCode = generatePartnerCode();
+                await upsertProfile({
+                    id: data.user.id,
+                    email: data.user.email,
+                    partner_code: partnerCode,
+                    onboarding_complete: false,
+                    created_at: new Date().toISOString(),
+                    preferred_language: resolveInitialProfileLanguage(get().preferredLanguage),
+                });
                 }
 
                 set({
@@ -452,6 +477,7 @@ const useAuthStore = create(
                     session: data.session,
                     isAuthenticated: true,
                     onboardingComplete: false,
+                    preferredLanguage: DEFAULT_LANGUAGE,
                     isLoading: false
                 });
                 return { data };
@@ -486,6 +512,7 @@ const useAuthStore = create(
                     onboardingComplete: false,
                     onboardingStep: 0,
                     onboardingData: {},
+                    preferredLanguage: DEFAULT_LANGUAGE,
                     isLoading: false
                 });
             },
@@ -663,6 +690,7 @@ const useAuthStore = create(
                         appreciation_style: onboardingData.appreciationStyle,
                         bio: onboardingData.bio || null,
                         onboarding_complete: true,
+                        preferred_language: get().preferredLanguage || DEFAULT_LANGUAGE,
                         updated_at: new Date().toISOString(),
                     };
 
@@ -688,7 +716,8 @@ const useAuthStore = create(
                         profile: data,
                         onboardingComplete: true,
                         onboardingStep: 0,
-                        onboardingData: {}
+                        onboardingData: {},
+                        preferredLanguage: resolvePreferredLanguage(data)
                     });
                     console.log('[completeOnboarding] State set, returning data');
                     return { data };
@@ -718,12 +747,54 @@ const useAuthStore = create(
                         partner,
                         hasPartner: !!profile?.partner_id,
                         onboardingComplete: profile?.onboarding_complete || false,
-                        sentRequest: profile?.partner_id ? null : get().sentRequest // Clear sent request if connected
+                        sentRequest: profile?.partner_id ? null : get().sentRequest, // Clear sent request if connected
+                        preferredLanguage: resolvePreferredLanguage(profile),
                     });
 
                     console.log('[Auth] Profile refreshed, hasPartner:', !!profile?.partner_id);
                 } catch (e) {
                     console.warn('[Auth] Failed to refresh profile:', e);
+                }
+            },
+
+            setPreferredLanguage: async (language) => {
+                const normalizedLanguage = normalizeLanguage(language) || DEFAULT_LANGUAGE;
+                const { user, profile, preferredLanguage: currentLanguage } = get();
+                const shouldInvalidateCache = normalizedLanguage !== currentLanguage;
+
+                if (profile) {
+                    set({
+                        preferredLanguage: normalizedLanguage,
+                        profile: { ...profile, preferred_language: normalizedLanguage },
+                    });
+                } else {
+                    set({ preferredLanguage: normalizedLanguage });
+                }
+
+                if (!user) {
+                    if (shouldInvalidateCache) {
+                        useCacheStore.getState().clearAll();
+                    }
+                    return;
+                }
+
+                try {
+                    const { error } = await upsertProfile({
+                        id: user.id,
+                        preferred_language: normalizedLanguage,
+                        updated_at: new Date().toISOString(),
+                    });
+                    if (error) {
+                        console.warn('[Auth] Failed to update language:', error);
+                        return;
+                    }
+                    await get().refreshProfile();
+                } catch (err) {
+                    console.warn('[Auth] Failed to persist language:', err);
+                } finally {
+                    if (shouldInvalidateCache) {
+                        useCacheStore.getState().clearAll();
+                    }
                 }
             },
 
@@ -795,6 +866,7 @@ const useAuthStore = create(
                     }
                     : {},
                 onboardingStep: state.onboardingStep,
+                preferredLanguage: state.preferredLanguage,
             }),
         }
     )

@@ -4,11 +4,19 @@ import {
     Gavel, Sparkles, Quote, AlertTriangle, HeartHandshake,
     Plus, Check, ChevronRight, History
 } from 'lucide-react';
+import { useI18n } from '../../i18n';
 
 /**
  * VerdictView - Displays Judge Whiskers' verdict
  * Shows summary, purr (validation), hiss (accountability), sentence (repair), and actions
  */
+const HORSEMAN_LABELS = {
+    Criticism: 'cases.horsemen.criticism',
+    Contempt: 'cases.horsemen.contempt',
+    Defensiveness: 'cases.horsemen.defensiveness',
+    Stonewalling: 'cases.horsemen.stonewalling',
+};
+
 const VerdictView = ({
     activeCase, verdict, analysis, allVerdicts, selectedVerdictVersion,
     setSelectedVerdictVersion, userAName, userBName, setShowAddendumModal,
@@ -16,13 +24,14 @@ const VerdictView = ({
     addendumRemaining = null,
     addendumLimit = null
 }) => {
+    const { t } = useI18n();
     const isUserA = isInitiator;
     const hasAccepted = isUserA ? activeCase.userAAccepted : activeCase.userBAccepted;
     const partnerHasAccepted = isUserA ? activeCase.userBAccepted : activeCase.userAAccepted;
     const partnerName = isUserA ? userBName : userAName;
     const addendumDisabled = addendumRemaining !== null && addendumRemaining <= 0;
     const addendumStatus = addendumLimit !== null && addendumRemaining !== null
-        ? `${addendumRemaining} of ${addendumLimit} addendums left`
+        ? t('court.verdict.addendumStatus', { remaining: addendumRemaining, limit: addendumLimit })
         : null;
 
     return (
@@ -36,7 +45,7 @@ const VerdictView = ({
                 {/* Courtroom Banner */}
                 <div className="bg-gradient-to-r from-court-gold to-court-goldDark text-white text-xs font-bold py-1.5 px-4 rounded-full inline-flex items-center gap-1.5 mb-4">
                     <Gavel className="w-3 h-3" />
-                    VERDICT DELIVERED
+                    {t('court.verdict.banner')}
                 </div>
 
                 <motion.div
@@ -46,18 +55,18 @@ const VerdictView = ({
                 >
                     <img
                         src="/assets/avatars/judge_whiskers.png"
-                        alt="Judge Whiskers"
+                        alt={t('court.verdict.judgeAlt')}
                         className="w-full h-full object-cover"
                     />
                 </motion.div>
 
-                <h2 className="text-xl font-bold text-court-brown mb-1">Judge Whiskers Has Spoken</h2>
-                <p className="text-xs text-court-brownLight">The Therapist Cat delivers wisdom</p>
+                <h2 className="text-xl font-bold text-court-brown mb-1">{t('court.verdict.title')}</h2>
+                <p className="text-xs text-court-brownLight">{t('court.verdict.subtitle')}</p>
 
                 {/* Verdict Version Selector */}
                 {allVerdicts.length > 1 && (
                     <div className="mt-4 flex items-center justify-center gap-2">
-                        <span className="text-xs text-court-brownLight">Version:</span>
+                        <span className="text-xs text-court-brownLight">{t('court.verdict.versionLabel')}</span>
                         <div className="flex gap-1">
                             {allVerdicts.map((v, idx) => (
                                 <button
@@ -84,7 +93,7 @@ const VerdictView = ({
                         className="mt-3 inline-flex items-center gap-1.5 bg-court-gold/20 text-court-goldDark text-xs font-bold px-3 py-1.5 rounded-full"
                     >
                         <Sparkles className="w-3 h-3" />
-                        {analysis.identifiedDynamic} Pattern Detected
+                        {t('court.verdict.patternDetected', { pattern: analysis.identifiedDynamic })}
                     </motion.div>
                 )}
             </motion.div>
@@ -101,8 +110,8 @@ const VerdictView = ({
                         <Quote className="w-4 h-4 text-court-gold" />
                     </div>
                     <div>
-                        <h3 className="text-sm font-bold text-court-gold">The Real Story</h3>
-                        <p className="text-[10px] text-court-brownLight">What you're really fighting about</p>
+                        <h3 className="text-sm font-bold text-court-gold">{t('court.verdict.sections.summary.title')}</h3>
+                        <p className="text-[10px] text-court-brownLight">{t('court.verdict.sections.summary.subtitle')}</p>
                     </div>
                 </div>
                 <p className="text-court-brown text-sm leading-relaxed pl-10">
@@ -123,8 +132,8 @@ const VerdictView = ({
                             <span className="text-lg">😻</span>
                         </div>
                         <div>
-                            <h3 className="text-sm font-bold text-green-700">The Purr</h3>
-                            <p className="text-[10px] text-green-600/70">Your feelings are valid</p>
+                            <h3 className="text-sm font-bold text-green-700">{t('court.verdict.sections.purr.title')}</h3>
+                            <p className="text-[10px] text-green-600/70">{t('court.verdict.sections.purr.subtitle')}</p>
                         </div>
                     </div>
 
@@ -159,8 +168,8 @@ const VerdictView = ({
                             <span className="text-lg">🙀</span>
                         </div>
                         <div>
-                            <h3 className="text-sm font-bold text-court-goldDark">The Hiss</h3>
-                            <p className="text-[10px] text-court-brownLight">Behaviors to work on</p>
+                            <h3 className="text-sm font-bold text-court-goldDark">{t('court.verdict.sections.hiss.title')}</h3>
+                            <p className="text-[10px] text-court-brownLight">{t('court.verdict.sections.hiss.subtitle')}</p>
                         </div>
                     </div>
 
@@ -188,8 +197,8 @@ const VerdictView = ({
                             <HeartHandshake className="w-4 h-4 text-court-maroon" />
                         </div>
                         <div>
-                            <h3 className="text-sm font-bold text-court-maroon">The Repair</h3>
-                            <p className="text-[10px] text-court-maroonLight">Your path to reconnection</p>
+                            <h3 className="text-sm font-bold text-court-maroon">{t('court.verdict.sections.repair.title')}</h3>
+                            <p className="text-[10px] text-court-maroonLight">{t('court.verdict.sections.repair.subtitle')}</p>
                         </div>
                     </div>
 
@@ -221,7 +230,7 @@ const VerdictView = ({
                     <p className="text-court-brownLight text-sm italic leading-relaxed">
                         "{verdict.closingStatement}"
                     </p>
-                    <p className="text-court-tan text-xs mt-2">— Judge Whiskers</p>
+                    <p className="text-court-tan text-xs mt-2">{t('court.verdict.signature')}</p>
                 </motion.div>
             )}
 
@@ -233,14 +242,14 @@ const VerdictView = ({
                     transition={{ delay: 0.6 }}
                     className="glass-card p-3 bg-court-cream/50"
                 >
-                    <p className="text-xs text-court-brownLight text-center mb-2">Gottman's Four Horsemen Detected</p>
+                    <p className="text-xs text-court-brownLight text-center mb-2">{t('court.verdict.horsemenTitle')}</p>
                     <div className="flex flex-wrap justify-center gap-1.5">
                         {[...new Set([...(analysis.userA_Horsemen || []), ...(analysis.userB_Horsemen || [])])].filter(h => h !== 'None').map((horseman, i) => (
                             <span key={i} className={`text-xs px-2 py-1 rounded-full ${horseman === 'Contempt' || horseman === 'Stonewalling'
                                 ? 'bg-court-maroon/20 text-court-maroon'
                                 : 'bg-court-gold/20 text-court-goldDark'
                                 }`}>
-                                {horseman}
+                                {HORSEMAN_LABELS[horseman] ? t(HORSEMAN_LABELS[horseman]) : horseman}
                             </span>
                         ))}
                     </div>
@@ -263,9 +272,9 @@ const VerdictView = ({
                             <Plus className="w-5 h-5 text-court-gold" />
                         </div>
                         <div className="text-left">
-                            <p className="font-bold text-court-brown text-sm">File an Addendum</p>
+                            <p className="font-bold text-court-brown text-sm">{t('court.verdict.addendumTitle')}</p>
                             <p className="text-xs text-court-brownLight">
-                                {addendumDisabled ? 'Addendum limit reached' : 'Add more context for reconsideration'}
+                                {addendumDisabled ? t('court.verdict.addendumLimitReached') : t('court.verdict.addendumHint')}
                             </p>
                             {addendumStatus && (
                                 <p className="text-[10px] text-court-brownLight mt-1">
@@ -287,7 +296,7 @@ const VerdictView = ({
                             style={{ background: 'linear-gradient(135deg, #1c1c84 0%, #000035 100%)' }}
                         >
                             <Check className="w-5 h-5" />
-                            Accept Verdict
+                            {t('court.verdict.accept')}
                         </motion.button>
                     ) : !partnerHasAccepted ? (
                         <motion.div
@@ -302,8 +311,8 @@ const VerdictView = ({
                             >
                                 ⏳
                             </motion.div>
-                            <p className="text-sm font-medium text-court-brown">You accepted!</p>
-                            <p className="text-xs text-court-brownLight">Waiting for {partnerName}...</p>
+                            <p className="text-sm font-medium text-court-brown">{t('court.verdict.accepted')}</p>
+                            <p className="text-xs text-court-brownLight">{t('court.verdict.waitingForPartner', { name: partnerName })}</p>
                         </motion.div>
                     ) : null}
                     <motion.button
@@ -312,7 +321,7 @@ const VerdictView = ({
                         className="glass-card px-4 py-3 flex items-center justify-center gap-2 text-court-gold font-bold text-sm"
                     >
                         <History className="w-4 h-4" />
-                        History
+                        {t('court.verdict.history')}
                     </motion.button>
                 </div>
             </div>

@@ -5,32 +5,34 @@ import { ChevronLeft, Heart, Calendar, Sparkles } from 'lucide-react';
 import useAppStore from '../store/useAppStore';
 import useAuthStore from '../store/useAuthStore';
 import RequirePartner from '../components/RequirePartner';
+import { useI18n } from '../i18n';
 
 const AppreciationsPage = () => {
     const navigate = useNavigate();
     const { appreciations, fetchAppreciations } = useAppStore();
     const { hasPartner, partner: connectedPartner } = useAuthStore();
+    const { t, language } = useI18n();
     
     // Get partner info from auth store
-    const partnerName = connectedPartner?.display_name || connectedPartner?.name || 'Your partner';
+    const partnerName = connectedPartner?.display_name || connectedPartner?.name || t('appreciations.partnerFallback');
 
     useEffect(() => {
         fetchAppreciations();
-    }, [fetchAppreciations]);
+    }, [fetchAppreciations, language]);
 
     // Require partner for appreciations
     if (!hasPartner) {
         return (
             <RequirePartner
-                feature="Appreciations"
-                description="Show gratitude to your partner! Send appreciation messages and earn kibble together. This feature works best with a connected partner."
+                feature={t('appreciations.feature')}
+                description={t('appreciations.requirePartnerDescription')}
             >
                 {/* Preview content */}
                 <div className="space-y-4">
                     <div className="glass-card p-5 text-center">
                         <Heart className="w-12 h-12 mx-auto text-rose-500 mb-3" />
-                        <h2 className="text-lg font-bold text-neutral-800">Appreciations</h2>
-                        <p className="text-sm text-neutral-500">Send love to your partner</p>
+                        <h2 className="text-lg font-bold text-neutral-800">{t('appreciations.preview.title')}</h2>
+                        <p className="text-sm text-neutral-500">{t('appreciations.preview.subtitle')}</p>
                     </div>
                 </div>
             </RequirePartner>
@@ -45,12 +47,12 @@ const AppreciationsPage = () => {
         const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
         const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-        if (diffMins < 1) return 'Just now';
-        if (diffMins < 60) return `${diffMins}m ago`;
-        if (diffHours < 24) return `${diffHours}h ago`;
-        if (diffDays < 7) return `${diffDays}d ago`;
+        if (diffMins < 1) return t('common.justNow');
+        if (diffMins < 60) return t('common.minutesAgo', { count: diffMins });
+        if (diffHours < 24) return t('common.hoursAgo', { count: diffHours });
+        if (diffDays < 7) return t('common.daysAgo', { count: diffDays });
         
-        return date.toLocaleDateString('en-US', { 
+        return date.toLocaleDateString(language, { 
             month: 'short', 
             day: 'numeric',
             hour: 'numeric',
@@ -60,7 +62,7 @@ const AppreciationsPage = () => {
 
     const formatFullDate = (dateString) => {
         const date = new Date(dateString);
-        return date.toLocaleDateString('en-US', { 
+        return date.toLocaleDateString(language, { 
             weekday: 'short',
             month: 'short', 
             day: 'numeric',
@@ -90,9 +92,9 @@ const AppreciationsPage = () => {
         const yesterday = new Date(today);
         yesterday.setDate(yesterday.getDate() - 1);
 
-        if (date.toDateString() === today.toDateString()) return 'Today';
-        if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
-        return date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+        if (date.toDateString() === today.toDateString()) return t('common.today');
+        if (date.toDateString() === yesterday.toDateString()) return t('common.yesterday');
+        return date.toLocaleDateString(language, { weekday: 'long', month: 'short', day: 'numeric' });
     };
 
     return (
@@ -110,10 +112,12 @@ const AppreciationsPage = () => {
                 </motion.button>
                 <div>
                     <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-amber-600">
-                        Appreciation log
+                        {t('appreciations.header.kicker')}
                     </p>
-                    <h1 className="text-2xl font-display font-bold text-neutral-800">Your Love Ledger</h1>
-                    <p className="text-neutral-500 text-sm">Things {partnerName} appreciates about you 💕</p>
+                    <h1 className="text-2xl font-display font-bold text-neutral-800">{t('appreciations.header.title')}</h1>
+                    <p className="text-neutral-500 text-sm">
+                        {t('appreciations.header.subtitle', { name: partnerName })}
+                    </p>
                 </div>
             </div>
 
@@ -130,13 +134,15 @@ const AppreciationsPage = () => {
                 <div className="flex items-center justify-between">
                     <div>
                         <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-neutral-400 mb-1">
-                            Total Appreciations
+                            {t('appreciations.summary.title')}
                         </p>
                         <div className="flex items-baseline gap-2">
                             <span className="text-4xl font-display font-bold text-neutral-800">{appreciations.length}</span>
                             <span className="text-neutral-500 text-lg">💕</span>
                         </div>
-                        <p className="text-xs text-neutral-500 mt-1">from {partnerName}</p>
+                        <p className="text-xs text-neutral-500 mt-1">
+                            {t('appreciations.summary.from', { name: partnerName })}
+                        </p>
                     </div>
                     <motion.div 
                         animate={{ scale: [1, 1.1, 1] }}
@@ -163,12 +169,12 @@ const AppreciationsPage = () => {
                         >
                             <Heart className="w-10 h-10 text-rose-400" />
                         </motion.div>
-                        <h3 className="font-bold text-neutral-700 mb-2">No Appreciations Yet</h3>
+                        <h3 className="font-bold text-neutral-700 mb-2">{t('appreciations.empty.title')}</h3>
                         <p className="text-neutral-500 text-sm mb-1">
-                            When {partnerName} shows appreciation for something you did,
+                            {t('appreciations.empty.line1', { name: partnerName })}
                         </p>
                         <p className="text-neutral-500 text-sm">
-                            it will appear here! 💕
+                            {t('appreciations.empty.line2')}
                         </p>
                     </motion.div>
                 ) : (
@@ -220,7 +226,7 @@ const AppreciationsPage = () => {
                                                     </span>
                                                     <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-amber-100/70 text-amber-700 rounded-full text-[10px] font-bold border border-amber-200/70">
                                                         <Sparkles className="w-3 h-3" />
-                                                        +{appreciation.kibbleAmount} kibble
+                                                        {t('appreciations.kibbleReward', { count: appreciation.kibbleAmount })}
                                                     </span>
                                                 </div>
                                             </div>

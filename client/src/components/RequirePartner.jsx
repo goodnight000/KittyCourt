@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Link2, Lock, Users } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
+import { useI18n } from '../i18n';
 
 /**
  * Wrapper component that shows a "Connect with Partner" overlay
@@ -16,6 +17,7 @@ import useAuthStore from '../store/useAuthStore';
 const RequirePartner = ({ children, feature, description }) => {
     const navigate = useNavigate();
     const { hasPartner, profile } = useAuthStore();
+    const { t } = useI18n();
 
     // If connected, show the actual content
     if (hasPartner) {
@@ -49,22 +51,22 @@ const RequirePartner = ({ children, feature, description }) => {
                         >
                             <Lock className="w-8 h-8 text-white" />
                         </motion.div>
-                        <h2 className="text-xl font-bold text-white">Partner Required</h2>
+                        <h2 className="text-xl font-bold text-white">{t('requirePartner.title')}</h2>
                         <p className="text-pink-100 text-sm mt-1">
-                            {feature} needs a connected partner
+                            {t('requirePartner.subtitle', { feature })}
                         </p>
                     </div>
 
                     {/* Content */}
                     <div className="p-6 space-y-4">
                         <p className="text-neutral-600 text-center text-sm">
-                            {description || `To use ${feature}, you need to connect with your partner first. It only takes a minute!`}
+                            {description || t('requirePartner.description', { feature })}
                         </p>
 
                         {/* Partner Code Quick View */}
                         {profile?.partner_code && (
                             <div className="bg-court-cream/50 rounded-xl p-3 border border-court-tan/50 text-center">
-                                <p className="text-xs text-neutral-500 mb-1">Your Partner Code</p>
+                                <p className="text-xs text-neutral-500 mb-1">{t('requirePartner.partnerCodeLabel')}</p>
                                 <p className="font-mono font-bold text-lg text-court-brown tracking-wider">
                                     {profile.partner_code}
                                 </p>
@@ -79,11 +81,11 @@ const RequirePartner = ({ children, feature, description }) => {
                             style={{ background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' }}
                         >
                             <Link2 className="w-5 h-5" />
-                            Connect with Partner
+                            {t('requirePartner.cta')}
                         </motion.button>
 
                         <p className="text-xs text-neutral-400 text-center">
-                            Share your code or enter your partner's code to link accounts
+                            {t('requirePartner.hint')}
                         </p>
                     </div>
                 </div>

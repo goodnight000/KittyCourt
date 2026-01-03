@@ -1,17 +1,24 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { HeartHandshake, Eye, MessageCircle, HelpCircle, ArrowRight, Sparkles, Clock, Feather } from 'lucide-react';
+import { useI18n } from '../../i18n';
 
 const PrimingPage = ({ priming, myName, partnerName, onComplete, isSubmitting }) => {
-    const displayPartnerName = partnerName || 'your partner';
-    const journeySteps = ['Priming', 'Joint', 'Resolution', 'Verdict'];
+    const { t } = useI18n();
+    const displayPartnerName = partnerName || t('common.yourPartner');
+    const journeySteps = [
+        t('court.journey.priming'),
+        t('court.journey.joint'),
+        t('court.journey.resolution'),
+        t('court.journey.verdict')
+    ];
     const currentStepIndex = 1;
 
     if (!priming) {
         return (
             <div className="max-w-md mx-auto glass-card p-4 text-center">
-                <p className="text-sm text-court-brown">Priming content is still loading.</p>
-                <p className="text-xs text-court-brownLight mt-1">Please hang tight for a moment.</p>
+                <p className="text-sm text-court-brown">{t('court.priming.loadingTitle')}</p>
+                <p className="text-xs text-court-brownLight mt-1">{t('court.priming.loadingSubtitle')}</p>
             </div>
         );
     }
@@ -23,7 +30,7 @@ const PrimingPage = ({ priming, myName, partnerName, onComplete, isSubmitting })
             <div className="sticky top-3 z-10">
                 <div className="glass-card p-3 bg-white/70 border border-court-tan/30">
                     <div className="text-[12px] uppercase tracking-[0.2em] text-court-brownLight">
-                        Journey map
+                        {t('court.journey.title')}
                     </div>
                     <div className="mt-2 flex items-center gap-3 overflow-x-auto">
                         {journeySteps.map((step, index) => {
@@ -57,22 +64,22 @@ const PrimingPage = ({ priming, myName, partnerName, onComplete, isSubmitting })
                         <Eye className="w-6 h-6 text-court-gold" />
                     </div>
                     <div className="flex-1">
-                        <h2 className="text-lg font-bold text-court-brown">Private Priming</h2>
+                        <h2 className="text-lg font-bold text-court-brown">{t('court.priming.header.title')}</h2>
                         <p className="text-sm text-court-brownLight">
-                            Read this on your own. It is tailored for {myName}.
+                            {t('court.priming.header.subtitle', { name: myName })}
                         </p>
                         <div className="mt-3 flex flex-wrap gap-2 text-[10px] text-court-brownLight">
                             <span className="inline-flex items-center gap-1 rounded-full border border-court-tan/40 bg-white/60 px-2 py-1">
                                 <Sparkles className="w-3 h-3 text-court-gold" />
-                                Private space
+                                {t('court.priming.header.badges.private')}
                             </span>
                             <span className="inline-flex items-center gap-1 rounded-full border border-court-tan/40 bg-white/60 px-2 py-1">
                                 <Clock className="w-3 h-3 text-court-brown" />
-                                2-4 min read
+                                {t('court.priming.header.badges.readTime')}
                             </span>
                             <span className="inline-flex items-center gap-1 rounded-full border border-court-tan/40 bg-white/60 px-2 py-1">
                                 <Feather className="w-3 h-3 text-court-brown" />
-                                Gentle tone
+                                {t('court.priming.header.badges.gentle')}
                             </span>
                         </div>
                     </div>
@@ -91,8 +98,8 @@ const PrimingPage = ({ priming, myName, partnerName, onComplete, isSubmitting })
                         <HeartHandshake className="w-4 h-4 text-court-gold" />
                     </div>
                     <div>
-                        <h3 className="text-sm font-bold text-court-brown">Your Feelings</h3>
-                        <p className="text-[10px] text-court-brownLight">Name the emotion, not the verdict</p>
+                        <h3 className="text-sm font-bold text-court-brown">{t('court.priming.feelings.title')}</h3>
+                        <p className="text-[10px] text-court-brownLight">{t('court.priming.feelings.subtitle')}</p>
                     </div>
                 </div>
                 <div className="rounded-2xl border border-court-tan/30 bg-white/70 p-3 text-sm text-court-brown leading-relaxed">
@@ -112,8 +119,8 @@ const PrimingPage = ({ priming, myName, partnerName, onComplete, isSubmitting })
                         <MessageCircle className="w-4 h-4 text-court-brown" />
                     </div>
                     <div>
-                        <h3 className="text-sm font-bold text-court-brown">Partner Perspective</h3>
-                        <p className="text-[10px] text-court-brownLight">A gentle reframe for empathy</p>
+                        <h3 className="text-sm font-bold text-court-brown">{t('court.priming.partnerPerspective.title')}</h3>
+                        <p className="text-[10px] text-court-brownLight">{t('court.priming.partnerPerspective.subtitle')}</p>
                     </div>
                 </div>
                 <div className="rounded-2xl border border-court-tan/30 bg-white/70 p-3 text-sm text-court-brown leading-relaxed">
@@ -133,8 +140,8 @@ const PrimingPage = ({ priming, myName, partnerName, onComplete, isSubmitting })
                         <HelpCircle className="w-4 h-4 text-court-brown" />
                     </div>
                     <div>
-                        <h3 className="text-sm font-bold text-court-brown">Reflection Questions</h3>
-                        <p className="text-[10px] text-court-brownLight">Journal before you meet</p>
+                        <h3 className="text-sm font-bold text-court-brown">{t('court.priming.reflection.title')}</h3>
+                        <p className="text-[10px] text-court-brownLight">{t('court.priming.reflection.subtitle')}</p>
                     </div>
                 </div>
                 <ul className="grid gap-3 sm:grid-cols-2 text-sm text-court-brown">
@@ -161,8 +168,10 @@ const PrimingPage = ({ priming, myName, partnerName, onComplete, isSubmitting })
                         <HelpCircle className="w-4 h-4 text-court-gold" />
                     </div>
                     <div>
-                        <h3 className="text-sm font-bold text-court-brown">Questions for {displayPartnerName}</h3>
-                        <p className="text-[10px] text-court-brownLight">Try these out loud together</p>
+                        <h3 className="text-sm font-bold text-court-brown">
+                            {t('court.priming.questionsForPartner.title', { name: displayPartnerName })}
+                        </h3>
+                        <p className="text-[10px] text-court-brownLight">{t('court.priming.questionsForPartner.subtitle')}</p>
                     </div>
                 </div>
                 <ul className="grid gap-3 sm:grid-cols-2 text-sm text-court-brown">
@@ -195,7 +204,7 @@ const PrimingPage = ({ priming, myName, partnerName, onComplete, isSubmitting })
                 ) : (
                     <>
                         <ArrowRight className="w-5 h-5" />
-                        I am ready to continue
+                        {t('court.priming.actions.continue')}
                     </>
                 )}
             </motion.button>

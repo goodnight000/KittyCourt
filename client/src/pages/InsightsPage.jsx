@@ -10,6 +10,7 @@ import useAuthStore from '../store/useAuthStore'
 import useInsightsStore from '../store/useInsightsStore'
 import useSubscriptionStore from '../store/useSubscriptionStore'
 import Paywall from '../components/Paywall'
+import { useI18n } from '../i18n'
 
 const InsightBackdrop = () => (
   <div className="absolute inset-0 pointer-events-none">
@@ -28,6 +29,7 @@ const InsightBackdrop = () => (
 
 const InsightsPage = () => {
   const navigate = useNavigate()
+  const { t, language } = useI18n()
   const handleBack = () => navigate('/profile', { state: { tab: 'us' } })
   const { hasPartner } = useAuthStore()
   const { level, shouldShowInsights, fetchLevel, serverAvailable } = useLevelStore()
@@ -52,24 +54,33 @@ const InsightsPage = () => {
   const bothConsented = selfConsent && partnerConsent
   const paused = consent?.selfPaused || consent?.partnerPaused
   const insightsCount = insights.length
-  const insightsLabel = insightsCount === 1 ? 'insight' : 'insights'
+  const insightsLabel = insightsCount === 1
+    ? t('insights.countOne')
+    : t('insights.countOther', { count: insightsCount })
   const [showPaywall, setShowPaywall] = useState(false)
+  const errorMap = {
+    'Failed to load insights': 'insights.errors.loadFailed',
+    'Failed to update consent': 'insights.errors.updateFailed',
+    'Failed to pause insights': 'insights.errors.pauseFailed',
+    'Failed to send feedback': 'insights.errors.feedbackFailed'
+  }
+  const translatedError = errorMap[error] ? t(errorMap[error]) : error
 
   const statusChip = useMemo(() => {
     if (!consent) {
-      return { label: 'Syncing', className: 'border-white/80 bg-white/80 text-neutral-500' }
+      return { label: t('insights.status.syncing'), className: 'border-white/80 bg-white/80 text-neutral-500' }
     }
     if (!bothConsented) {
       if (!selfConsent) {
-        return { label: 'Off', className: 'border-white/80 bg-white/80 text-neutral-500' }
+        return { label: t('insights.status.off'), className: 'border-white/80 bg-white/80 text-neutral-500' }
       }
-      return { label: 'Waiting for partner', className: 'border-amber-200/70 bg-amber-100/70 text-amber-700' }
+      return { label: t('insights.status.waiting'), className: 'border-amber-200/70 bg-amber-100/70 text-amber-700' }
     }
     if (paused) {
-      return { label: 'Paused', className: 'border-amber-200/70 bg-amber-100/70 text-amber-700' }
+      return { label: t('insights.status.paused'), className: 'border-amber-200/70 bg-amber-100/70 text-amber-700' }
     }
-    return { label: 'Active', className: 'border-emerald-200/70 bg-emerald-100/70 text-emerald-700' }
-  }, [consent, bothConsented, paused, selfConsent])
+    return { label: t('insights.status.active'), className: 'border-emerald-200/70 bg-emerald-100/70 text-emerald-700' }
+  }, [consent, bothConsented, paused, selfConsent, t])
 
   useEffect(() => {
     if (!hasPartner) return
@@ -79,7 +90,7 @@ const InsightsPage = () => {
   useEffect(() => {
     if (!hasPartner || !serverAvailable || !showInsights || !insightsAvailable) return
     fetchInsights()
-  }, [fetchInsights, hasPartner, insightsAvailable, serverAvailable, showInsights])
+  }, [fetchInsights, hasPartner, insightsAvailable, serverAvailable, showInsights, language])
 
   const isXPEnabled = import.meta.env.VITE_XP_SYSTEM_ENABLED === 'true'
 
@@ -94,7 +105,7 @@ const InsightsPage = () => {
             className="flex items-center gap-2 text-sm font-semibold text-neutral-600"
           >
             <ArrowLeft className="w-5 h-5" />
-            <span>Back</span>
+            <span>{t('common.back')}</span>
           </motion.button>
 
           <motion.div
@@ -106,17 +117,17 @@ const InsightsPage = () => {
               <Sparkles className="w-8 h-8 text-amber-600" />
             </div>
             <h2 className="mt-4 text-xl font-display font-bold text-neutral-800">
-              Insights unlock at Level 10
+              {t('insights.locked.title')}
             </h2>
             <p className="mt-2 text-sm text-neutral-500">
-              You are currently Level {level}. Reach Level 10 and Pause Gold to unlock insights.
+              {t('insights.locked.subtitle', { level })}
             </p>
             <motion.button
               whileTap={{ scale: 0.98 }}
               onClick={handleBack}
               className="mt-5 w-full rounded-2xl bg-gradient-to-r from-[#C9A227] to-[#8B7019] py-3 text-sm font-bold text-white shadow-soft"
             >
-              View your progress
+              {t('insights.locked.cta')}
             </motion.button>
           </motion.div>
         </div>
@@ -135,7 +146,7 @@ const InsightsPage = () => {
             className="flex items-center gap-2 text-sm font-semibold text-neutral-600"
           >
             <ArrowLeft className="w-5 h-5" />
-            <span>Back</span>
+            <span>{t('common.back')}</span>
           </motion.button>
 
           <motion.div
@@ -147,10 +158,10 @@ const InsightsPage = () => {
               <Sparkles className="w-8 h-8 text-amber-600" />
             </div>
             <h2 className="mt-4 text-xl font-display font-bold text-neutral-800">
-              AI Insights are a Gold feature
+              {t('insights.gold.title')}
             </h2>
             <p className="mt-2 text-sm text-neutral-500">
-              You are Level {level}. Upgrade to Pause Gold to unlock your insights.
+              {t('insights.gold.subtitle', { level })}
             </p>
             <motion.button
               whileTap={{ scale: 0.98 }}
@@ -158,7 +169,7 @@ const InsightsPage = () => {
               disabled={subscriptionLoading}
               className="mt-5 w-full rounded-2xl bg-gradient-to-r from-[#C9A227] to-[#8B7019] py-3 text-sm font-bold text-white shadow-soft disabled:opacity-60"
             >
-              {subscriptionLoading ? 'Checking membership...' : 'Unlock with Pause Gold'}
+              {subscriptionLoading ? t('insights.gold.checking') : t('insights.gold.cta')}
             </motion.button>
           </motion.div>
         </div>
@@ -181,10 +192,10 @@ const InsightsPage = () => {
           </motion.button>
           <div className="flex-1">
             <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-amber-600">
-              Insight ledger
+              {t('insights.header.kicker')}
             </p>
-            <h1 className="text-2xl font-display font-bold text-neutral-800">AI Insights</h1>
-            <p className="text-sm text-neutral-500">Gentle observations, not advice</p>
+            <h1 className="text-2xl font-display font-bold text-neutral-800">{t('insights.header.title')}</h1>
+            <p className="text-sm text-neutral-500">{t('insights.header.subtitle')}</p>
           </div>
           <div className={`rounded-full border px-3 py-2 text-xs font-bold ${statusChip.className}`}>
             {statusChip.label}
@@ -203,13 +214,13 @@ const InsightsPage = () => {
           <div className="relative flex flex-wrap items-center justify-between gap-4">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-neutral-400">
-                Observatory
+                {t('insights.observatory.kicker')}
               </p>
               <h2 className="mt-1 text-lg font-display font-bold text-neutral-800">
-                Notes from your shared story
+                {t('insights.observatory.title')}
               </h2>
               <p className="mt-1 text-xs text-neutral-500">
-                Insights appear as you resolve cases, answer daily prompts, and share moments.
+                {t('insights.observatory.subtitle')}
               </p>
             </div>
             <div className="flex flex-wrap justify-end gap-2 text-[11px] font-semibold">
@@ -217,13 +228,13 @@ const InsightsPage = () => {
                 {insightsCount} {insightsLabel}
               </div>
               <div className="rounded-full border border-white/80 bg-white/85 px-3 py-1 text-amber-700">
-                Level {level}
+                {t('insights.observatory.level', { level })}
               </div>
             </div>
           </div>
         </motion.section>
 
-        {error && (
+        {translatedError && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -231,14 +242,14 @@ const InsightsPage = () => {
           >
             <AlertCircle className="w-5 h-5 text-rose-500 flex-shrink-0" />
             <div className="flex-1">
-              <p className="text-sm text-rose-700">{error}</p>
+              <p className="text-sm text-rose-700">{translatedError}</p>
             </div>
             <motion.button
               whileTap={{ scale: 0.95 }}
               onClick={clearError}
               className="rounded-xl border border-rose-200/70 bg-white/80 px-3 py-2 text-xs font-bold text-rose-600"
             >
-              Dismiss
+              {t('insights.actions.dismiss')}
             </motion.button>
           </motion.div>
         )}
@@ -246,9 +257,9 @@ const InsightsPage = () => {
         {consent && !selfConsent && (
           <div className="glass-card space-y-3">
             <div>
-              <div className="text-sm font-semibold text-neutral-700">Insights are off</div>
+              <div className="text-sm font-semibold text-neutral-700">{t('insights.consent.offTitle')}</div>
               <p className="mt-1 text-xs text-neutral-500">
-                Turn insights on anytime. These notes are not professional advice.
+                {t('insights.consent.offSubtitle')}
               </p>
             </div>
             <motion.button
@@ -256,29 +267,29 @@ const InsightsPage = () => {
               onClick={() => updateConsent(true)}
               className="w-full rounded-2xl bg-gradient-to-r from-[#C9A227] to-[#8B7019] py-2.5 text-sm font-bold text-white shadow-soft"
             >
-              Turn on insights
+              {t('insights.consent.turnOn')}
             </motion.button>
           </div>
         )}
 
         {consent && selfConsent && !partnerConsent && (
           <div className="glass-card border border-amber-100/70 bg-amber-50/60 text-sm text-amber-700">
-            Waiting for your partner to opt in to insights.
+            {t('insights.consent.waitingPartner')}
           </div>
         )}
 
         {bothConsented && paused && (
           <div className="glass-card flex items-center justify-between gap-3">
             <div>
-              <div className="text-sm font-semibold text-neutral-700">Insights paused</div>
-              <div className="text-xs text-neutral-500">Resume anytime to see new insights.</div>
+              <div className="text-sm font-semibold text-neutral-700">{t('insights.paused.title')}</div>
+              <div className="text-xs text-neutral-500">{t('insights.paused.subtitle')}</div>
             </div>
             <motion.button
               whileTap={{ scale: 0.96 }}
               onClick={() => updateConsent(true)}
               className="rounded-2xl border border-amber-200/70 bg-amber-100/70 px-3 py-2 text-xs font-bold text-amber-700"
             >
-              Resume
+              {t('insights.paused.resume')}
             </motion.button>
           </div>
         )}
@@ -290,7 +301,7 @@ const InsightsPage = () => {
             className="flex w-fit items-center gap-2 rounded-2xl border border-amber-200/70 bg-white/80 px-4 py-2 text-xs font-bold text-amber-700 shadow-inner-soft"
           >
             <PauseCircle className="w-4 h-4" />
-            Pause for 7 days
+            {t('insights.actions.pause')}
           </motion.button>
         )}
 
@@ -315,10 +326,10 @@ const InsightsPage = () => {
               <Sparkles className="w-8 h-8 text-amber-600" />
             </div>
             <h3 className="mt-4 text-lg font-display font-bold text-neutral-800">
-              No insights yet
+              {t('insights.empty.title')}
             </h3>
             <p className="mt-2 text-sm text-neutral-500">
-              Keep using the app together and check back soon.
+              {t('insights.empty.subtitle')}
             </p>
           </motion.div>
         )}
@@ -340,18 +351,18 @@ const InsightsPage = () => {
                 <div className="relative space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="rounded-full border border-amber-200/70 bg-amber-100/70 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-amber-700">
-                      {insight.category || 'Insight'}
+                      {insight.category || t('insights.card.categoryFallback')}
                     </span>
                     <div className="flex items-center gap-1 text-[11px] font-semibold text-neutral-500">
                       <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                      Insight
+                      {t('insights.card.insightLabel')}
                     </div>
                   </div>
                   <div className="text-sm font-semibold text-neutral-800">{insight.text}</div>
                   {insight.evidenceSummary && (
                     <div className="rounded-2xl border border-white/80 bg-white/70 p-3 text-xs text-neutral-500">
                       <div className="text-[10px] font-semibold uppercase tracking-[0.3em] text-neutral-400">
-                        Context
+                        {t('insights.card.contextLabel')}
                       </div>
                       <p className="mt-1">{insight.evidenceSummary}</p>
                     </div>
@@ -362,14 +373,14 @@ const InsightsPage = () => {
                       onClick={() => sendFeedback(insight.id, true)}
                       className="rounded-full border border-emerald-200/70 bg-emerald-100/70 px-3 py-1 text-xs font-bold text-emerald-700 flex items-center gap-1"
                     >
-                      <ThumbsUp className="w-3 h-3" /> Helpful
+                      <ThumbsUp className="w-3 h-3" /> {t('insights.card.helpful')}
                     </motion.button>
                     <motion.button
                       whileTap={{ scale: 0.95 }}
                       onClick={() => sendFeedback(insight.id, false)}
                       className="rounded-full border border-white/80 bg-white/80 px-3 py-1 text-xs font-bold text-neutral-500 flex items-center gap-1"
                     >
-                      <ThumbsDown className="w-3 h-3" /> Not quite
+                      <ThumbsDown className="w-3 h-3" /> {t('insights.card.notQuite')}
                     </motion.button>
                   </div>
                 </div>

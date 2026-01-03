@@ -16,6 +16,7 @@
  */
 
 const { getAllRepairs } = require('./repairAttempts');
+const { getLanguageLabel, normalizeLanguage } = require('./language');
 
 // ============================================================================
 // PROMPT 1: ANALYST + REPAIR SELECTOR
@@ -325,6 +326,14 @@ const formatRepairLibraryForPrompt = () => {
   return formatted.join('\n');
 };
 
+const formatLanguageInstruction = (language) => {
+  const normalized = normalizeLanguage(language) || 'en';
+  const label = getLanguageLabel(normalized);
+  return `## OUTPUT LANGUAGE
+Respond in ${label} (${normalized}) for all narrative fields.
+Keep enum values and IDs in English (assessedIntensity, analysisDepth, identifiedDynamic, severityLevel, horsemen labels, resolution ids, repairAttemptIds, voiceUsed).`;
+};
+
 // ============================================================================
 // USER PROMPT BUILDERS
 // ============================================================================
@@ -336,6 +345,7 @@ const buildAnalystRepairUserPrompt = (input, historicalContext = '') => {
   const userAProfile = formatProfileContext(input.participants.userA);
   const userBProfile = formatProfileContext(input.participants.userB);
   const repairLibrary = formatRepairLibraryForPrompt();
+  const languageInstruction = formatLanguageInstruction(input?.language);
 
   // Get user-reported intensity if provided
   const userReportedIntensity = input.userReportedIntensity || null;
@@ -383,6 +393,8 @@ ${historicalContext || "No prior history available"}
 ## Addendums
 ${addendumLines}
 
+${languageInstruction}
+
 ## REPAIR LIBRARY
 Select from these. You may combine ANY number per resolution. Reference by ID (e.g., "physical_0", "verbal_2").
 ${repairLibrary}
@@ -397,6 +409,7 @@ Output analysis and 3 resolutions as JSON.`;
 const buildPrimingJointUserPrompt = (input, analysis, resolutions, historicalContext = '') => {
   const intensity = analysis.assessedIntensity || 'medium';
   const voiceToUse = intensity === 'high' ? 'GENTLE COUNSELOR' : 'JUDGE WHISKERS';
+  const languageInstruction = formatLanguageInstruction(input?.language);
 
   return `Generate individual priming and joint menu content for this couple.
 
@@ -426,6 +439,8 @@ ${JSON.stringify(resolutions, null, 2)}
 ## Historical Context
 ${historicalContext || "No prior history"}
 
+${languageInstruction}
+
 ---
 Generate priming content for both users AND joint menu content. 
 Use real names: ${input.participants.userA.name} and ${input.participants.userB.name}.
@@ -437,6 +452,7 @@ Output as JSON.`;
  */
 const buildHybridResolutionUserPrompt = (input, analysis, userAChoice, userBChoice, historicalContext = '') => {
   const intensity = analysis.assessedIntensity || 'medium';
+  const languageInstruction = formatLanguageInstruction(input?.language);
 
   return `Create a hybrid resolution.
 
@@ -458,6 +474,8 @@ ${JSON.stringify(analysis, null, 2)}
 
 ## Historical Context
 ${historicalContext || "No prior history"}
+
+${languageInstruction}
 
 ---
 Create hybrid resolution as JSON.`;

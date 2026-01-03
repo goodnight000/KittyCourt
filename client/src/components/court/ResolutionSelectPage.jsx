@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle, Clock, ArrowRight, Sparkles } from 'lucide-react';
+import { useI18n } from '../../i18n';
 
 const ResolutionSelectPage = ({
     resolutions = [],
@@ -16,12 +17,18 @@ const ResolutionSelectPage = ({
     hybridResolution = null,
     hybridPending = false
 }) => {
-    const displayPartnerName = partnerName || 'your partner';
-    const displayMyName = myName || 'You';
+    const { t } = useI18n();
+    const displayPartnerName = partnerName || t('common.yourPartner');
+    const displayMyName = myName || t('common.you');
     const isMismatch = mode === 'mismatch';
     const [pendingPick, setPendingPick] = useState(null);
-    const optionLabels = ['Option A', 'Option B', 'Option C'];
-    const journeySteps = ['Priming', 'Joint', 'Resolution', 'Verdict'];
+    const optionLabels = ['A', 'B', 'C'].map((label) => t('court.resolution.optionLabel', { label }));
+    const journeySteps = [
+        t('court.journey.priming'),
+        t('court.journey.joint'),
+        t('court.journey.resolution'),
+        t('court.journey.verdict')
+    ];
     const currentStepIndex = 3;
 
 
@@ -51,19 +58,19 @@ const ResolutionSelectPage = ({
     const isMismatchChanging = isMismatch && mismatchPick && pendingPick && pendingPick !== mismatchPick;
     const confirmLabel = useMemo(() => {
         if (isMismatch) {
-            if (mismatchPick && !isMismatchChanging) return `Waiting for ${displayPartnerName} to confirm`;
-            if (!pendingPick) return 'Select a shared resolution';
-            return 'Confirm this resolution';
+            if (mismatchPick && !isMismatchChanging) return t('court.resolution.confirm.waiting', { name: displayPartnerName });
+            if (!pendingPick) return t('court.resolution.confirm.selectShared');
+            return t('court.resolution.confirm.confirmShared');
         }
-        if (!pendingPick) return 'Select a plan to continue';
-        return 'Confirm my selection';
-    }, [isMismatch, pendingPick, mismatchPick, displayPartnerName, isMismatchChanging]);
+        if (!pendingPick) return t('court.resolution.confirm.selectPlan');
+        return t('court.resolution.confirm.confirmMine');
+    }, [isMismatch, pendingPick, mismatchPick, displayPartnerName, isMismatchChanging, t]);
 
     if (!resolutions.length) {
         return (
             <div className="max-w-md mx-auto glass-card p-4 text-center">
-                <p className="text-sm text-court-brown">Resolutions are still loading.</p>
-                <p className="text-xs text-court-brownLight mt-1">Please wait a moment.</p>
+                <p className="text-sm text-court-brown">{t('court.resolution.loadingTitle')}</p>
+                <p className="text-xs text-court-brownLight mt-1">{t('court.resolution.loadingSubtitle')}</p>
             </div>
         );
     }
@@ -73,7 +80,7 @@ const ResolutionSelectPage = ({
         <div className="sticky top-3 z-10">
             <div className="glass-card p-3 bg-white/70 border border-court-tan/30">
                 <div className="text-[12px] uppercase tracking-[0.2em] text-court-brownLight">
-                    Journey map
+                    {t('court.journey.title')}
                 </div>
                 <div className="mt-2 flex items-center gap-3 overflow-x-auto">
                     {journeySteps.map((step, index) => {
@@ -116,16 +123,16 @@ const ResolutionSelectPage = ({
         } else if (hybridPending) {
             options.push({
                 id: 'resolution_hybrid',
-                title: 'Blended option in progress',
-                combinedDescription: 'We are drafting a blended plan that honors both choices.',
-                rationale: 'This option will appear shortly.',
-                estimatedDuration: '10-20 minutes',
+                title: t('court.resolution.hybrid.title'),
+                combinedDescription: t('court.resolution.hybrid.description'),
+                rationale: t('court.resolution.hybrid.rationale'),
+                estimatedDuration: t('court.resolution.hybrid.duration'),
                 isPlaceholder: true
             });
         }
 
         return options;
-    }, [isMismatch, myOriginalPickId, partnerOriginalPickId, hybridResolution, hybridPending, resolutions]);
+    }, [isMismatch, myOriginalPickId, partnerOriginalPickId, hybridResolution, hybridPending, resolutions, t]);
 
     const renderResolutionCard = (resolution, selected, onSelect, badge, disabled = false) => {
         const description = resolution.combinedDescription || resolution.description;
@@ -185,7 +192,7 @@ const ResolutionSelectPage = ({
                                 className="flex items-center gap-1 text-xs font-bold text-green-600"
                             >
                                 <CheckCircle className="w-4 h-4" />
-                                Selected
+                                {t('court.resolution.selected')}
                             </motion.div>
                         )}
                     </div>
@@ -212,26 +219,28 @@ const ResolutionSelectPage = ({
                     className="glass-card p-5 bg-gradient-to-br from-court-cream to-court-tan/30 text-center relative overflow-hidden"
                 >
                     <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-court-gold/60 to-transparent" />
-                    <h2 className="text-lg font-bold text-court-brown">Choice Recorded</h2>
-                    <p className="text-sm text-court-brownLight">Waiting for {displayPartnerName} to choose.</p>
+                    <h2 className="text-lg font-bold text-court-brown">{t('court.resolution.waiting.title')}</h2>
+                    <p className="text-sm text-court-brownLight">{t('court.resolution.waiting.subtitle', { name: displayPartnerName })}</p>
                 </motion.div>
-                {myResolution && renderResolutionCard(myResolution, true, null, 'Your pick', true)}
+                {myResolution && renderResolutionCard(myResolution, true, null, t('court.resolution.waiting.badge'), true)}
             </div>
         );
     }
 
-    const headerTitle = isMismatch ? 'Find a shared resolution' : 'Pick a Resolution';
+    const headerTitle = isMismatch
+        ? t('court.resolution.header.mismatchTitle')
+        : t('court.resolution.header.title');
     const headerSubtitle = isMismatch
-        ? 'You chose different paths. Select one option together to move forward.'
-        : 'Choose the option that feels most workable to you.';
+        ? t('court.resolution.header.mismatchSubtitle')
+        : t('court.resolution.header.subtitle');
 
     const resolutionList = isMismatch ? mismatchOptions : resolutions;
 
     const resolveBadge = (resolution, index) => {
-        if (!isMismatch) return optionLabels[index] || `Option ${index + 1}`;
-        if (resolution.id === myOriginalPickId) return `${displayMyName} picked`;
-        if (resolution.id === partnerOriginalPickId) return `${displayPartnerName} picked`;
-        return 'Blended option';
+        if (!isMismatch) return optionLabels[index] || t('court.resolution.optionNumber', { count: index + 1 });
+        if (resolution.id === myOriginalPickId) return t('court.resolution.badges.picked', { name: displayMyName });
+        if (resolution.id === partnerOriginalPickId) return t('court.resolution.badges.picked', { name: displayPartnerName });
+        return t('court.resolution.badges.blended');
     };
 
     return (
@@ -256,11 +265,11 @@ const ResolutionSelectPage = ({
                         <div className="mt-3 flex flex-wrap gap-2 text-[10px] text-court-brownLight">
                             <span className="inline-flex items-center gap-1 rounded-full border border-court-tan/40 bg-white/60 px-2 py-1">
                                 <Sparkles className="w-3 h-3 text-court-gold" />
-                                Align together
+                                {t('court.resolution.header.alignTogether')}
                             </span>
                             <span className="inline-flex items-center gap-1 rounded-full border border-court-tan/40 bg-white/60 px-2 py-1">
                                 <Clock className="w-3 h-3 text-court-brown" />
-                                Pick + confirm
+                                {t('court.resolution.header.pickConfirm')}
                             </span>
                         </div>
                     </div>
@@ -276,10 +285,10 @@ const ResolutionSelectPage = ({
                 >
                     <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-court-gold/60 to-transparent" />
                     <p className="text-sm font-semibold text-court-brown">
-                        Your first pick and {displayPartnerName}'s first pick are listed below.
+                        {t('court.resolution.mismatch.intro', { name: displayPartnerName })}
                     </p>
                     <p className="text-xs text-court-brownLight">
-                        Choose the same resolution to continue. A blended option will appear if generated.
+                        {t('court.resolution.mismatch.hint')}
                     </p>
                 </motion.div>
             )}
@@ -296,8 +305,8 @@ const ResolutionSelectPage = ({
                         <Clock className="w-4 h-4 text-court-brown" />
                     </div>
                     <div>
-                        <p className="text-sm font-semibold text-court-brown">Choice locked in</p>
-                        <p className="text-xs text-court-brownLight">Waiting for {displayPartnerName} to match it.</p>
+                        <p className="text-sm font-semibold text-court-brown">{t('court.resolution.mismatch.lockedTitle')}</p>
+                        <p className="text-xs text-court-brownLight">{t('court.resolution.mismatch.lockedSubtitle', { name: displayPartnerName })}</p>
                     </div>
                 </motion.div>
             )}
@@ -320,11 +329,11 @@ const ResolutionSelectPage = ({
                 <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-court-gold/60 to-transparent" />
                 {selectedResolution ? (
                     <div className="text-xs text-court-brownLight">
-                        You are selecting: <span className="font-semibold text-court-brown">{selectedResolution.title}</span>
+                        {t('court.resolution.selectionLabel', { title: selectedResolution.title })}
                     </div>
                 ) : (
                     <div className="text-xs text-court-brownLight">
-                        Choose one option above to continue.
+                        {t('court.resolution.selectionHint')}
                     </div>
                 )}
                 <motion.button

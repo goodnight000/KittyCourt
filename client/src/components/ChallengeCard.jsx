@@ -4,6 +4,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Clock, Check, ChevronRight } from 'lucide-react';
+import { useI18n } from '../i18n';
 
 const ChallengeCard = ({
     title,
@@ -23,6 +24,7 @@ const ChallengeCard = ({
     onClick,
     className = '',
 }) => {
+    const { t } = useI18n();
     const progress = Math.min((currentProgress / targetProgress) * 100, 100);
     const isComplete = currentProgress >= targetProgress;
     const isExpired = status === 'expired';
@@ -44,8 +46,14 @@ const ChallengeCard = ({
     };
 
     const colors = difficultyStyles[difficulty] || difficultyStyles.medium;
-    const statusLabel = status === 'expired' ? 'Expired' : null;
-    const cadenceLabel = cadence === 'daily' ? 'Daily' : 'Weekly';
+    const statusLabel = status === 'expired' ? t('challenges.card.status.expired') : null;
+    const cadenceLabel = cadence === 'daily' ? t('challenges.card.cadence.daily') : t('challenges.card.cadence.weekly');
+    const difficultyLabelMap = {
+        easy: t('challenges.card.difficulty.easy'),
+        medium: t('challenges.card.difficulty.medium'),
+        hard: t('challenges.card.difficulty.hard'),
+    };
+    const difficultyLabel = difficultyLabelMap[difficulty] || t('challenges.card.difficulty.medium');
     const cadenceStyles = cadence === 'daily'
         ? 'border-sky-200/70 bg-sky-100/80 text-sky-700'
         : 'border-amber-200/70 bg-amber-100/80 text-amber-700';
@@ -64,7 +72,7 @@ const ChallengeCard = ({
                     </div>
                     <div className="flex-1">
                         <div className="text-[10px] font-semibold uppercase tracking-[0.3em] text-emerald-500">
-                            Completed
+                            {t('challenges.card.status.completed')}
                         </div>
                         <div className="mt-1 flex items-center gap-2">
                             <span className="text-lg">{emoji}</span>
@@ -76,7 +84,7 @@ const ChallengeCard = ({
                             </span>
                         </div>
                         <p className="mt-1 text-xs text-emerald-600 font-semibold">
-                            Completed! +{rewardXP} XP earned together.
+                            {t('challenges.card.completedReward', { xp: rewardXP })}
                         </p>
                     </div>
                 </div>
@@ -119,7 +127,7 @@ const ChallengeCard = ({
                                     {cadenceLabel}
                                 </span>
                                 <span className={`rounded-full border px-2.5 py-1 font-bold ${colors.badge}`}>
-                                    {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
+                                    {difficultyLabel}
                                 </span>
                             </div>
                         </div>
@@ -129,8 +137,8 @@ const ChallengeCard = ({
 
                 <div className="space-y-2">
                     <div className="flex items-center justify-between text-xs text-neutral-500">
-                        <span>{currentProgress} / {targetProgress} steps</span>
-                        <span className="font-semibold text-amber-700">+{rewardXP} XP</span>
+                        <span>{t('challenges.card.progress', { current: currentProgress, total: targetProgress })}</span>
+                        <span className="font-semibold text-amber-700">{t('challenges.card.reward', { xp: rewardXP })}</span>
                     </div>
                     <div className="h-2.5 rounded-full bg-white/80 shadow-inner-soft overflow-hidden">
                         <motion.div
@@ -146,7 +154,7 @@ const ChallengeCard = ({
                     <div className="flex items-center gap-2 text-xs text-neutral-500">
                         <div className="flex items-center gap-1 rounded-full border border-white/80 bg-white/80 px-2.5 py-1">
                             <Clock className="w-3.5 h-3.5" />
-                            <span>{daysLeft} days left</span>
+                            <span>{t('challenges.card.daysLeft', { count: daysLeft })}</span>
                         </div>
                     </div>
 
@@ -178,7 +186,7 @@ const ChallengeCard = ({
                                 }}
                                 className="px-2 py-1 text-[11px] font-semibold text-neutral-400 hover:text-neutral-600"
                             >
-                                Skip
+                                {t('challenges.actions.skip')}
                             </motion.button>
                         )}
                         {isClickable && <ChevronRight className="w-4 h-4 text-neutral-400" />}

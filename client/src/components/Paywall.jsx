@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Crown, Heart, Check, Sparkles, Users, Zap, Gavel, Wand2, ChevronRight, Clock, Star, BookHeart, Brain } from 'lucide-react';
 import useSubscriptionStore from '../store/useSubscriptionStore';
+import { useI18n } from '../i18n';
 
 /**
  * Paywall Modal - High-Converting Premium Experience
@@ -21,6 +22,7 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
     const [restoring, setRestoring] = useState(false);
     const [error, setError] = useState(null);
     const [selectedPlan, setSelectedPlan] = useState('yearly');
+    const { t } = useI18n();
 
     const handlePurchase = async () => {
         setError(null);
@@ -43,7 +45,7 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
         if (result.success && result.isGold) {
             onClose();
         } else if (!result.isGold) {
-            setError('No previous purchase found');
+            setError(t('paywall.errors.noPurchase'));
         } else if (result.error) {
             setError(result.error);
         }
@@ -53,36 +55,36 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
     const benefits = [
         {
             icon: Zap,
-            title: 'Resolve Arguments Efficiently',
-            description: 'Quick and effective resolutions before tensions escalate',
+            titleKey: 'paywall.benefits.items.resolve.title',
+            descriptionKey: 'paywall.benefits.items.resolve.description',
             color: '#C9921A',
             bgColor: 'rgba(201, 146, 26, 0.14)',
         },
         {
             icon: Gavel,
-            title: 'Meet Judge Whiskers',
-            description: 'Your wisest advisor trained for the tricky disagreements',
+            titleKey: 'paywall.benefits.items.judge.title',
+            descriptionKey: 'paywall.benefits.items.judge.description',
             color: '#B86B5E',
             bgColor: 'rgba(184, 107, 94, 0.14)',
         },
         {
             icon: Wand2,
-            title: 'Effortless Quality Time',
-            description: 'AI plans perfect date nights you\'ll actually love',
+            titleKey: 'paywall.benefits.items.planning.title',
+            descriptionKey: 'paywall.benefits.items.planning.description',
             color: '#8B7019',
             bgColor: 'rgba(139, 112, 25, 0.14)',
         },
         {
             icon: BookHeart,
-            title: 'Never Lose The Plot',
-            description: 'Personlized daily questions to keep the spark alive',
+            titleKey: 'paywall.benefits.items.questions.title',
+            descriptionKey: 'paywall.benefits.items.questions.description',
             color: '#5B8B6E',
             bgColor: 'rgba(91, 139, 110, 0.14)',
         },
         {
             icon: Brain,
-            title: 'Gold-only AI Insights',
-            description: 'Unlock personalized relationship insights once you hit Level 10',
+            titleKey: 'paywall.benefits.items.insights.title',
+            descriptionKey: 'paywall.benefits.items.insights.description',
             color: '#4A6E8A',
             bgColor: 'rgba(74, 110, 138, 0.14)',
         },
@@ -90,11 +92,11 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
 
     // Loss aversion - what they miss without Gold
     const withoutGold = [
-        'Limited to just 3 judgments per month',
-        'Judge Whiskers stays locked',
-        'No AI-powered date planning',
-        'No AI insights about your relationship patterns',
-        'Risk small issues becoming big fights',
+        'paywall.withoutGold.items.limit',
+        'paywall.withoutGold.items.whiskersLocked',
+        'paywall.withoutGold.items.noPlanning',
+        'paywall.withoutGold.items.noInsights',
+        'paywall.withoutGold.items.risk',
     ];
 
     // Floating sparkle particles
@@ -142,6 +144,13 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
         </div>
     );
 
+    const translatedError = error
+        ? (error === 'Purchases are only available in the iOS/Android app.'
+            ? t('paywall.errors.unavailable')
+            : error === 'Restore is only available in the iOS/Android app.'
+                ? t('paywall.errors.restoreUnavailable')
+                : error)
+        : null;
 
     return (
         <AnimatePresence>
@@ -197,7 +206,7 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: 0.3 }}
                                 >
-                                    Pause Gold
+                                    {t('paywall.title')}
                                 </motion.h1>
                                 <motion.p
                                     className="text-court-brownLight text-sm max-w-xs mx-auto"
@@ -205,7 +214,7 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                                     animate={{ opacity: 1 }}
                                     transition={{ delay: 0.4 }}
                                 >
-                                    For couples serious about staying close through every argument
+                                    {t('paywall.subtitle')}
                                 </motion.p>
                             </div>
                         </motion.div>
@@ -227,7 +236,7 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                                 >
                                     <Clock className="w-5 h-5 text-emerald-600" />
                                     <span className="text-sm font-bold text-emerald-700 font-display">
-                                        Try FREE for 7 days — cancel anytime
+                                        {t('paywall.trialBadge')}
                                     </span>
                                 </div>
                             </motion.div>
@@ -249,7 +258,9 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                             >
                                 <Users className="w-5 h-5 text-amber-600" />
                                 <span className="text-sm font-semibold text-court-brown font-display">
-                                    One subscription = Gold status for <span className="text-amber-600">both</span> of you
+                                    {t('paywall.bundleNotice.prefix')}{' '}
+                                    <span className="text-amber-600">{t('paywall.bundleNotice.emphasis')}</span>{' '}
+                                    {t('paywall.bundleNotice.suffix')}
                                 </span>
                                 <motion.div
                                     animate={{ scale: [1, 1.2, 1] }}
@@ -279,12 +290,12 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                             className="mb-6"
                         >
                             <h3 className="text-[11px] font-semibold text-court-brownLight uppercase tracking-[0.3em] mb-3 font-display">
-                                Transform Your Relationship
+                                {t('paywall.benefits.title')}
                             </h3>
                             <div className="space-y-3">
                                 {benefits.map((benefit, index) => (
                                     <motion.div
-                                        key={benefit.title}
+                                        key={benefit.titleKey}
                                         initial={{ opacity: 0, x: -10 }}
                                         animate={{ opacity: 1, x: 0 }}
                                         transition={{ delay: 0.4 + index * 0.05 }}
@@ -304,10 +315,10 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                                         </div>
                                         <div>
                                             <p className="font-bold text-court-brown text-sm font-display">
-                                                {benefit.title}
+                                                {t(benefit.titleKey)}
                                             </p>
                                             <p className="text-xs text-court-brownLight mt-0.5">
-                                                {benefit.description}
+                                                {t(benefit.descriptionKey)}
                                             </p>
                                         </div>
                                     </motion.div>
@@ -323,13 +334,13 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                             className="mb-6 p-4 rounded-3xl bg-rose-50/60 border border-rose-200/70"
                         >
                             <h4 className="text-[11px] font-semibold text-rose-600 uppercase tracking-[0.3em] mb-3 font-display">
-                                Without Gold...
+                                {t('paywall.withoutGold.title')}
                             </h4>
                             <ul className="space-y-1.5">
                                 {withoutGold.map((item, index) => (
                                     <li key={index} className="flex items-center gap-2 text-sm text-court-brown/70">
                                         <X className="w-3.5 h-3.5 text-rose-500/70 flex-shrink-0" />
-                                        {item}
+                                        {t(item)}
                                     </li>
                                 ))}
                             </ul>
@@ -344,7 +355,7 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                         >
 
                             <h3 className="text-[11px] font-semibold text-court-brownLight uppercase tracking-[0.3em] mb-3 font-display">
-                                Choose Your Plan
+                                {t('paywall.plans.title')}
                             </h3>
                             <div className="space-y-3">
                                 {/* Yearly Plan - Recommended */}
@@ -360,7 +371,7 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                                             boxShadow: '0 2px 8px rgba(212, 175, 55, 0.25)',
                                         }}
                                     >
-                                        ✨ BEST VALUE
+                                        {t('paywall.plans.yearly.badge')}
                                     </div>
                                     <button
                                         onClick={() => setSelectedPlan('yearly')}
@@ -387,18 +398,20 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                                             {/* Plan Info */}
                                             <div className="flex-1 flex items-center justify-between min-w-0">
                                                 <div>
-                                                    <p className="font-bold text-court-brown font-display">Yearly</p>
+                                                    <p className="font-bold text-court-brown font-display">{t('paywall.plans.yearly.label')}</p>
                                                     <p className="text-xs text-court-brownLight">
-                                                        {trialEligible ? '7 days free, then billed annually' : 'Billed annually'}
+                                                        {trialEligible
+                                                            ? t('paywall.plans.yearly.trialNote')
+                                                            : t('paywall.plans.yearly.billedNote')}
                                                     </p>
                                                 </div>
                                                 <div className="text-right">
                                                     <div className="flex items-baseline gap-1.5">
                                                         <del className="text-sm text-court-brownLight/60 line-through">$9.99</del>
                                                         <span className="text-2xl font-bold text-court-brown font-display">$7.77</span>
-                                                        <span className="text-sm text-court-brownLight">/mo</span>
+                                                        <span className="text-sm text-court-brownLight">{t('paywall.plans.perMonth')}</span>
                                                     </div>
-                                                    <p className="text-xs text-green-600 font-semibold">Save 22%</p>
+                                                    <p className="text-xs text-green-600 font-semibold">{t('paywall.plans.yearly.save')}</p>
                                                 </div>
                                             </div>
                                         </div>
@@ -435,15 +448,17 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                                             {/* Plan Info */}
                                             <div className="flex-1 flex items-center justify-between min-w-0">
                                                 <div>
-                                                    <p className="font-bold text-court-brown font-display">Monthly</p>
+                                                    <p className="font-bold text-court-brown font-display">{t('paywall.plans.monthly.label')}</p>
                                                     <p className="text-xs text-court-brownLight">
-                                                        {trialEligible ? '7 days free, then billed monthly' : 'Billed monthly'}
+                                                        {trialEligible
+                                                            ? t('paywall.plans.monthly.trialNote')
+                                                            : t('paywall.plans.monthly.billedNote')}
                                                     </p>
                                                 </div>
                                                 <div className="text-right">
                                                     <div className="flex items-baseline gap-1">
                                                         <span className="text-2xl font-bold text-court-brown font-display">$9.99</span>
-                                                        <span className="text-sm text-court-brownLight">/mo</span>
+                                                        <span className="text-sm text-court-brownLight">{t('paywall.plans.perMonth')}</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -456,13 +471,13 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                             <div className="text-center mt-3">
                                 <p className="text-xs text-court-brownLight">
                                     {selectedPlan === 'yearly'
-                                        ? '☕ Less than 2 coffees per month for a happier relationship'
-                                        : '☕ Less than 3 coffees per month for a happier relationship'
+                                        ? t('paywall.pricingNote.yearly')
+                                        : t('paywall.pricingNote.monthly')
                                     }
                                 </p>
                                 <p className="text-xs text-court-brownLight/70 mt-1 flex items-center justify-center gap-1">
                                     <Check className="w-3 h-3" />
-                                    Cancel anytime
+                                    {t('paywall.cancelAnytime')}
                                 </p>
                             </div>
                         </motion.div>
@@ -482,13 +497,13 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                                     ))}
                                 </div>
                                 <p className="text-sm text-court-brown text-center italic font-display">
-                                    "We used to argue for hours. Now it takes 2 minutes with Judge Whiskers. Game changer!"
+                                    {t('paywall.social.quote')}
                                 </p>
                                 <p className="text-xs text-court-brownLight text-center mt-2 font-medium">
-                                    — Sarah & Mike, San Francisco
+                                    {t('paywall.social.author')}
                                 </p>
                                 <p className="text-xs text-court-brownLight/60 text-center mt-1">
-                                    Joined by 1,000+ happy couples
+                                    {t('paywall.social.count')}
                                 </p>
                             </div>
                         </motion.div>
@@ -502,7 +517,7 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                                 animate={{ opacity: 1, y: 0 }}
                                 className="bg-rose-50 text-rose-600 text-sm rounded-2xl p-3 mb-4 text-center border border-rose-200/70"
                             >
-                                {error}
+                                {translatedError}
                             </motion.div>
                         )}
 
@@ -512,7 +527,7 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                             disabled={isLoading || restoring}
                             className="w-full py-2 text-xs font-semibold text-court-brownLight hover:text-court-brown transition-colors disabled:opacity-50 mb-2"
                         >
-                            {restoring ? 'Restoring...' : 'Restore Purchases'}
+                            {restoring ? t('paywall.restore.restoring') : t('paywall.restore.cta')}
                         </button>
 
                         {/* Maybe Later with consequence */}
@@ -552,8 +567,8 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                                             <div className="w-5 h-5 border-2 border-amber-300/60 border-t-amber-700 rounded-full animate-spin" />
                                         </div>
                                         <div className="flex-1">
-                                            <div className="text-sm font-bold text-neutral-800">Processing...</div>
-                                            <div className="text-xs text-neutral-500">Hang tight while we unlock Gold.</div>
+                                            <div className="text-sm font-bold text-neutral-800">{t('paywall.cta.processingTitle')}</div>
+                                            <div className="text-xs text-neutral-500">{t('paywall.cta.processingSubtitle')}</div>
                                         </div>
                                     </div>
                                 ) : (
@@ -563,15 +578,15 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                                         </div>
                                         <div className="flex-1">
                                             <div className="text-sm font-bold text-neutral-800">
-                                                {trialEligible ? 'Start 7-Day Free Trial' : 'Subscribe Now'}
+                                                {trialEligible ? t('paywall.cta.trial') : t('paywall.cta.subscribe')}
                                             </div>
                                             <div className="text-xs text-neutral-500">
-                                                Cancel anytime · Gold for both of you
+                                                {t('paywall.cta.subtitle')}
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <div className="rounded-full border border-amber-200/70 bg-amber-100/70 px-3 py-1 text-xs font-bold text-amber-700">
-                                                {selectedPlan === 'yearly' ? '$7.77/mo' : '$9.99/mo'}
+                                                {t('paywall.cta.price', { price: selectedPlan === 'yearly' ? '$7.77' : '$9.99' })}
                                             </div>
                                             <ChevronRight className="w-5 h-5 text-amber-600" />
                                         </div>
@@ -580,7 +595,7 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                             </motion.button>
                             {trialEligible && (
                                 <p className="text-xs text-court-brownLight/70 text-center mt-2">
-                                    You won't be charged for 7 days
+                                    {t('paywall.trialFootnote')}
                                 </p>
                             )}
 
@@ -589,10 +604,10 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                                 onClick={onClose}
                                 className="w-full mt-4 py-2 text-center text-court-brown/80 text-sm font-medium hover:text-court-brown transition-colors"
                             >
-                                Maybe later — stay on free tier
+                                {t('paywall.maybeLater')}
                             </button>
                             <p className="text-xs text-court-brownLight/60 text-center">
-                                You can upgrade anytime from Settings
+                                {t('paywall.settingsHint')}
                             </p>
                         </div>
                     </motion.div>

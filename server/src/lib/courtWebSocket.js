@@ -10,6 +10,7 @@ const { courtSessionManager, VIEW_PHASE } = require('./courtSessionManager');
 const { createSocketCorsOptions } = require('./security');
 const { isSupabaseConfigured } = require('./supabase');
 const { requireSupabase, getPartnerIdForUser } = require('./auth');
+const { resolveLanguageFromHeader, getUserPreferredLanguage } = require('./language');
 
 class CourtWebSocketService {
     constructor() {
@@ -98,14 +99,26 @@ class CourtWebSocketService {
                 try {
                     if (!socket.userId) throw new Error('Not registered');
                     if (!partnerId) throw new Error('partnerId required');
-                    if (isSupabaseConfigured()) {
-                        const supabase = requireSupabase();
+                    const supabase = isSupabaseConfigured() ? requireSupabase() : null;
+                    if (supabase) {
                         const resolvedPartnerId = await getPartnerIdForUser(supabase, socket.userId);
                         if (!resolvedPartnerId || String(resolvedPartnerId) !== String(partnerId)) {
                             throw new Error('Invalid partnerId for current user');
                         }
                     }
-                    await courtSessionManager.serve(socket.userId, partnerId, coupleId, judgeType);
+                    const creatorLanguage = await resolveLanguageFromHeader(
+                        socket.handshake?.headers?.['accept-language'],
+                        supabase,
+                        socket.userId
+                    );
+                    const partnerLanguage = supabase
+                        ? await getUserPreferredLanguage(supabase, partnerId)
+                        : null;
+                    await courtSessionManager.serve(socket.userId, partnerId, coupleId, judgeType, {
+                        creatorLanguage,
+                        partnerLanguage,
+                        caseLanguage: creatorLanguage || 'en',
+                    });
                     const state = courtSessionManager.getStateForUser(socket.userId);
                     if (typeof ack === 'function') ack({ ok: true, state });
                 } catch (error) {

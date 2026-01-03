@@ -60,6 +60,7 @@
  * @property {string} [last_observed_at] - ISO timestamp for last observed
  * @property {string} [source_type] - Source type (case, daily_question, etc.)
  * @property {string} [source_id] - Reference to source entity
+ * @property {string} [language] - Language tag (e.g., en, zh-Hans)
  * @property {string} created_at - ISO timestamp
  */
 
@@ -76,6 +77,7 @@
  * @property {number} [confidence_score] - Confidence (0-1)
  * @property {string} [last_observed_at] - ISO timestamp
  * @property {string} [source_type] - Source type
+ * @property {string} [language] - Language tag
  */
 
 /**

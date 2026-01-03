@@ -10,6 +10,7 @@ const { requireSupabase, requireAuthUserId, getPartnerIdForUser } = require('../
 const { canUseFeature } = require('../lib/usageLimits');
 const { awardXP, ACTION_TYPES } = require('../lib/xpService');
 const { recordChallengeAction, CHALLENGE_ACTIONS } = require('../lib/challengeService');
+const { resolveRequestLanguage } = require('../lib/language');
 
 const isProd = process.env.NODE_ENV === 'production';
 const safeErrorMessage = (error) => (isProd ? 'Internal server error' : (error?.message || String(error)));
@@ -347,6 +348,7 @@ router.post('/plan-event', async (req, res) => {
         const viewerId = await requireAuthUserId(req);
         const supabase = requireSupabase();
         const resolvedPartnerId = await getPartnerIdForUser(supabase, viewerId);
+        const language = await resolveRequestLanguage(req, supabase, viewerId);
 
         const normalizedEvent = event || {
             title: eventTitle,
@@ -376,6 +378,7 @@ router.post('/plan-event', async (req, res) => {
             partnerDisplayName,
             currentUserName,
             style,
+            language,
         });
 
         // Persist plan (best effort) when we have a non-fallback plan and an eventKey

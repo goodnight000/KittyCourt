@@ -7,6 +7,7 @@
  */
 import React from 'react';
 import { motion } from 'framer-motion';
+import { useI18n } from '../i18n';
 
 const LevelProgress = ({
     level = 1,
@@ -16,11 +17,15 @@ const LevelProgress = ({
     compact = false,
     className = '',
 }) => {
+    const { t, language } = useI18n();
     // Calculate progress percentage
     const progress = xpForNextLevel > 0
         ? Math.min((currentXP / xpForNextLevel) * 100, 100)
         : 100;
     const remainingXP = Math.max(xpForNextLevel - currentXP, 0);
+    const formattedCurrentXP = currentXP.toLocaleString(language);
+    const formattedNextXP = xpForNextLevel.toLocaleString(language);
+    const formattedRemaining = remainingXP.toLocaleString(language);
 
     // Get level emoji based on level tier
     const getLevelEmoji = (lvl) => {
@@ -58,15 +63,15 @@ const LevelProgress = ({
                         </div>
                         <div>
                             <div className="text-sm font-display font-bold text-neutral-800">
-                                Level {level} - {title}
+                                {t('levelProgress.compact.title', { level, title })}
                             </div>
                             <div className="text-[11px] text-neutral-500">
-                                {currentXP.toLocaleString()} / {xpForNextLevel.toLocaleString()} XP
+                                {t('levelProgress.compact.xp', { current: formattedCurrentXP, total: formattedNextXP })}
                             </div>
                         </div>
                     </div>
                     <div className="text-[11px] font-semibold text-amber-700 bg-amber-100/60 px-2.5 py-1 rounded-full">
-                        {remainingXP.toLocaleString()} to go
+                        {t('levelProgress.compact.toGo', { remaining: formattedRemaining })}
                     </div>
                 </div>
 
@@ -112,25 +117,29 @@ const LevelProgress = ({
                             {getLevelEmoji(level)}
                         </motion.div>
                         <div>
-                            <div className="text-[11px] uppercase tracking-[0.2em] text-neutral-500 font-semibold">Our Story</div>
+                            <div className="text-[11px] uppercase tracking-[0.2em] text-neutral-500 font-semibold">
+                                {t('levelProgress.full.kicker')}
+                            </div>
                             <div className="text-xl font-display font-bold text-neutral-800">
-                                Level {level}
+                                {t('levelProgress.full.levelLabel', { level })}
                             </div>
                             <div className="text-sm text-neutral-600">{title}</div>
                         </div>
                     </div>
                     <div className="rounded-2xl bg-white/80 border border-amber-100/70 px-3 py-2 text-center shadow-sm">
-                        <div className="text-[10px] uppercase tracking-[0.16em] text-neutral-500">Next Level</div>
+                        <div className="text-[10px] uppercase tracking-[0.16em] text-neutral-500">{t('levelProgress.full.nextLevelLabel')}</div>
                         <div className="text-base font-display font-bold text-neutral-800">
-                            Level {level + 1}
+                            {t('levelProgress.full.nextLevelValue', { level: level + 1 })}
                         </div>
                     </div>
                 </div>
 
                 <div className="mt-5">
                     <div className="flex items-center justify-between text-xs text-neutral-500 mb-2">
-                        <span>Progress to next level</span>
-                        <span className="font-semibold text-amber-700">{remainingXP.toLocaleString()} XP to go</span>
+                        <span>{t('levelProgress.full.progressLabel')}</span>
+                        <span className="font-semibold text-amber-700">
+                            {t('levelProgress.full.xpToGo', { remaining: formattedRemaining })}
+                        </span>
                     </div>
                     <div className="relative h-3 rounded-full bg-white/80 border border-white/80 overflow-hidden">
                         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.5),transparent_40%)]" />
@@ -145,11 +154,15 @@ const LevelProgress = ({
 
                 <div className="mt-4 grid grid-cols-2 gap-3">
                     <div className="rounded-2xl border border-white/80 bg-white/70 px-3 py-2 text-center">
-                        <div className="text-[10px] uppercase tracking-[0.16em] text-neutral-500">Story Focus</div>
-                        <div className="text-sm font-semibold text-neutral-800">Small wins, daily</div>
+                        <div className="text-[10px] uppercase tracking-[0.16em] text-neutral-500">
+                            {t('levelProgress.full.focusLabel')}
+                        </div>
+                        <div className="text-sm font-semibold text-neutral-800">{t('levelProgress.full.focusValue')}</div>
                     </div>
                     <div className="rounded-2xl border border-white/80 bg-white/70 px-3 py-2 text-center">
-                        <div className="text-[10px] uppercase tracking-[0.16em] text-neutral-500">Together</div>
+                        <div className="text-[10px] uppercase tracking-[0.16em] text-neutral-500">
+                            {t('levelProgress.full.togetherLabel')}
+                        </div>
                         <div className="text-sm font-semibold text-neutral-800">
                             {title}
                         </div>

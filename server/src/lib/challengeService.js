@@ -4,6 +4,7 @@
 
 const { getSupabase, isSupabaseConfigured } = require('./supabase');
 const { getOrderedCoupleIds, isXPSystemEnabled, awardXP, ACTION_TYPES, getLevelStatus } = require('./xpService');
+const { normalizeLanguage } = require('./language');
 
 const DEFAULT_DURATION_DAYS = 7;
 
@@ -24,6 +25,42 @@ const CADENCE = {
 const RECENT_REPEAT_LIMITS = {
     [CADENCE.DAILY]: 10,
     [CADENCE.WEEKLY]: 2,
+};
+
+const loadChallengeTranslations = async (supabase, challengeIds, language) => {
+    const ids = Array.isArray(challengeIds) ? challengeIds.filter(Boolean) : [];
+    if (!ids.length) return new Map();
+    const targetLanguage = normalizeLanguage(language) || 'en';
+    const { data, error } = await supabase
+        .from('challenges_translations')
+        .select('challenge_id, language, name, description')
+        .in('challenge_id', ids)
+        .in('language', [targetLanguage, 'en']);
+    if (error) {
+        console.warn('[Challenges] Failed to load translations:', error);
+        return new Map();
+    }
+    const map = new Map();
+    for (const row of data || []) {
+        if (!map.has(row.challenge_id)) {
+            map.set(row.challenge_id, {});
+        }
+        map.get(row.challenge_id)[row.language] = row;
+    }
+    return map;
+};
+
+const applyChallengeTranslation = (definition, translationMap, language) => {
+    if (!definition) return definition;
+    const targetLanguage = normalizeLanguage(language) || 'en';
+    const translations = translationMap.get(definition.id) || {};
+    const translation = translations[targetLanguage] || translations.en;
+    if (!translation) return definition;
+    return {
+        ...definition,
+        name: translation.name || definition.name,
+        description: translation.description || definition.description,
+    };
 };
 
 const computeDaysLeft = (expiresAt) => {
@@ -462,7 +499,7 @@ const ensureActiveForAssignments = async ({ supabase, coupleIds, assignments }) 
     }
 };
 
-const fetchChallenges = async ({ userId, partnerId }) => {
+const fetchChallenges = async ({ userId, partnerId, language = 'en' }) => {
     if (!isXPSystemEnabled()) {
         return { active: [], available: [], completed: [], enabled: false };
     }
@@ -534,9 +571,10 @@ const fetchChallenges = async ({ userId, partnerId }) => {
         return { error: coupleError.message };
     }
 
+    const translationMap = await loadChallengeTranslations(supabase, assignedIds, language);
     const definitionMap = new Map();
     (definitions || []).forEach(def => {
-        definitionMap.set(def.id, def);
+        definitionMap.set(def.id, applyChallengeTranslation(def, translationMap, language));
     });
 
     const active = [];
@@ -580,7 +618,7 @@ const fetchChallenges = async ({ userId, partnerId }) => {
     return { active, available: [], completed, enabled: true };
 };
 
-const startChallenge = async ({ userId, partnerId, challengeId }) => {
+const startChallenge = async ({ userId, partnerId, challengeId, language = 'en' }) => {
     if (!isXPSystemEnabled()) {
         return { error: 'feature_disabled' };
     }
@@ -633,7 +671,9 @@ const startChallenge = async ({ userId, partnerId, challengeId }) => {
     }
 
     if (existing) {
-        return { challenge: toChallengeDto(definition, existing) };
+        const translationMap = await loadChallengeTranslations(supabase, [definition?.id], language);
+        const translated = applyChallengeTranslation(definition, translationMap, language);
+        return { challenge: toChallengeDto(translated, existing) };
     }
 
     const periodEnd = assignment.period_end || getPeriodRange(cadence).endDate;
@@ -656,10 +696,14 @@ const startChallenge = async ({ userId, partnerId, challengeId }) => {
         return { error: insertError.message };
     }
 
-    return { challenge: toChallengeDto(definition, created) };
+    {
+        const translationMap = await loadChallengeTranslations(supabase, [definition?.id], language);
+        const translated = applyChallengeTranslation(definition, translationMap, language);
+        return { challenge: toChallengeDto(translated, created) };
+    }
 };
 
-const skipChallenge = async ({ userId, partnerId, challengeId }) => {
+const skipChallenge = async ({ userId, partnerId, challengeId, language = 'en' }) => {
     if (!isXPSystemEnabled()) {
         return { error: 'feature_disabled' };
     }

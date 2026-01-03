@@ -2,9 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-    User, Heart, Calendar, Star, Settings,
+    User, Heart, Calendar, Settings,
     Edit3, Check, X, Scale,
-    Coffee, TrendingUp, Award, Link2, Copy, Users, LogOut, Lock, MessageSquare, AlertTriangle,
+    Coffee, Award, Link2, Copy, Users, LogOut, Lock, MessageSquare, AlertTriangle,
     Crown, Sparkles, Zap, Gavel, Wand2, ImagePlus
 } from 'lucide-react';
 import useAppStore from '../store/useAppStore';
@@ -21,18 +21,13 @@ import LevelProgress from '../components/LevelProgress';
 import MemoryCard from '../components/MemoryCard';
 import { PRESET_AVATARS, processAvatarForSave } from '../services/avatarService';
 import api from '../services/api';
-
-const LOVE_LANGUAGES = [
-    { id: 'words', label: 'Words of Affirmation', emoji: '💬' },
-    { id: 'acts', label: 'Acts of Service', emoji: '🤲' },
-    { id: 'gifts', label: 'Receiving Gifts', emoji: '🎁' },
-    { id: 'time', label: 'Quality Time', emoji: '⏰' },
-    { id: 'touch', label: 'Physical Touch', emoji: '🤗' },
-];
+import { useI18n } from '../i18n';
+import { DEFAULT_LANGUAGE, normalizeLanguage } from '../i18n/languageConfig';
 
 const ProfilesPage = () => {
     const navigate = useNavigate();
     const location = useLocation();
+    const { t, language } = useI18n();
     const { currentUser, users, caseHistory, appreciations, fetchAppreciations } = useAppStore();
     const { profile, partner: connectedPartner, hasPartner, signOut, refreshProfile, user: authUser } = useAuthStore();
     const { isGold, usage, limits, getUsageDisplay, purchaseGold, restorePurchases, isLoading: subLoading } = useSubscriptionStore();
@@ -51,9 +46,16 @@ const ProfilesPage = () => {
     const needsGoldForInsights = showInsights && !isGold;
     const partnerFromUsers = users?.find(u => u.id !== currentUser?.id);
     const isXPEnabled = import.meta.env.VITE_XP_SYSTEM_ENABLED === 'true';
-    const unlockHint = 'Earn XP together by answering Daily Meow, sending appreciations, and resolving cases.';
+    const unlockHint = t('profile.unlockHint');
     const activeChallengeCount = activeChallenges?.length || 0;
     const availableChallengeCount = availableChallenges?.length || 0;
+    const loveLanguages = [
+        { id: 'words', label: t('options.loveLanguage.words'), emoji: '💬' },
+        { id: 'acts', label: t('options.loveLanguage.acts'), emoji: '🤲' },
+        { id: 'gifts', label: t('options.loveLanguage.gifts'), emoji: '🎁' },
+        { id: 'time', label: t('options.loveLanguage.time'), emoji: '⏰' },
+        { id: 'touch', label: t('options.loveLanguage.touch'), emoji: '🤗' },
+    ];
 
     const [showEditModal, setShowEditModal] = useState(false);
     const [activeTab, setActiveTab] = useState('me'); // 'me' or 'us'
@@ -64,6 +66,13 @@ const ProfilesPage = () => {
     const [activeChallengeIndex, setActiveChallengeIndex] = useState(0);
     const challengeTrackRef = useRef(null);
     const challengeCardWidthRef = useRef(0);
+    const translateValidationError = (validation) => {
+        if (!validation?.error) return null;
+        if (validation.errorCode) {
+            return t(`validation.${validation.errorCode}`, validation.meta);
+        }
+        return validation.error;
+    };
 
     // Profile settings - ONLY from Supabase profile (no localStorage for avatars)
     const [profileData, setProfileData] = useState(() => ({
@@ -72,6 +81,7 @@ const ProfilesPage = () => {
         loveLanguage: profile?.love_language || '',
         avatarUrl: profile?.avatar_url || null,
         anniversaryDate: profile?.anniversary_date || '',
+        preferredLanguage: normalizeLanguage(profile?.preferred_language) || DEFAULT_LANGUAGE,
     }));
 
     useEffect(() => {
@@ -79,7 +89,7 @@ const ProfilesPage = () => {
         if (hasPartner) {
             fetchLevel();
         }
-    }, [fetchAppreciations, hasPartner, fetchLevel]);
+    }, [fetchAppreciations, hasPartner, fetchLevel, language]);
 
     useEffect(() => {
         if (!hasPartner || !memoriesAvailable) return;
@@ -99,6 +109,7 @@ const ProfilesPage = () => {
             loveLanguage: profile?.love_language || '',
             avatarUrl: profile?.avatar_url || null,
             anniversaryDate: profile?.anniversary_date || '',
+            preferredLanguage: normalizeLanguage(profile?.preferred_language) || DEFAULT_LANGUAGE,
         });
     }, [profile]);
 
@@ -153,6 +164,7 @@ const ProfilesPage = () => {
                     display_name: newData.nickname || null,
                     love_language: newData.loveLanguage || null,
                     birthday: newData.birthday || null,
+                    preferred_language: newData.preferredLanguage || DEFAULT_LANGUAGE,
                 };
 
                 // Only include anniversary_date if it's being set for the first time
@@ -209,11 +221,11 @@ const ProfilesPage = () => {
             setDevXPMessage('');
             await api.post('/levels/dev/award-xp', { amount });
             await fetchLevel();
-            setDevXPMessage(`+${amount} XP added`);
+            setDevXPMessage(t('profilePage.devTools.success', { amount }));
             setTimeout(() => setDevXPMessage(''), 2000);
         } catch (error) {
             console.error('[ProfilesPage] Dev XP award failed:', error);
-            setDevXPMessage('Dev XP failed (check server)');
+            setDevXPMessage(t('profilePage.devTools.error'));
             setTimeout(() => setDevXPMessage(''), 3000);
         } finally {
             setDevXPLoading(false);
@@ -230,7 +242,7 @@ const ProfilesPage = () => {
     const partnerQuestionsAnswered = connectedPartner?.questions_answered || 0;
 
     // Get love language
-    const selectedLoveLanguage = LOVE_LANGUAGES.find(l => l.id === profileData.loveLanguage);
+    const selectedLoveLanguage = loveLanguages.find(l => l.id === profileData.loveLanguage);
 
     return (
         <div className="relative min-h-screen pb-6 overflow-hidden">
@@ -240,14 +252,14 @@ const ProfilesPage = () => {
                 <header className="flex items-center gap-3">
                     <div className="flex-1">
                         <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-amber-600">
-                            Profile
+                            {t('profilePage.header.kicker')}
                         </p>
-                        <h1 className="text-2xl font-display font-bold text-neutral-800">Your Space</h1>
+                        <h1 className="text-2xl font-display font-bold text-neutral-800">{t('profilePage.header.title')}</h1>
                     </div>
                     <motion.button
                         whileTap={{ scale: 0.95 }}
                         className="rounded-2xl border border-white/80 bg-white/80 p-2 shadow-soft"
-                        aria-label="Settings"
+                        aria-label={t('profilePage.header.settingsAria')}
                     >
                         <Settings className="w-5 h-5 text-neutral-600" />
                     </motion.button>
@@ -269,7 +281,7 @@ const ProfilesPage = () => {
                         )}
                         <span className="relative z-10 flex items-center justify-center gap-2">
                             <User className="w-4 h-4" />
-                            My Profile
+                            {t('profilePage.tabs.me')}
                         </span>
                     </button>
                     <button
@@ -289,7 +301,7 @@ const ProfilesPage = () => {
                         )}
                         <span className="relative z-10 flex items-center justify-center gap-2">
                             {!hasPartner && <Lock className="w-3.5 h-3.5" />}
-                            Our Story
+                            {t('profilePage.tabs.us')}
                         </span>
                     </button>
                 </div>
@@ -326,7 +338,7 @@ const ProfilesPage = () => {
                                 </motion.div>
                                 <div className="flex-1 space-y-2">
                                     <div className="text-[11px] font-semibold uppercase tracking-[0.3em] text-neutral-400">
-                                        My profile
+                                        {t('profilePage.profile.kicker')}
                                     </div>
                                     <h2 className="text-lg font-display font-bold text-neutral-800">
                                         {profileData.nickname || currentUser?.name}
@@ -335,13 +347,15 @@ const ProfilesPage = () => {
                                         {profileData.birthday && (
                                             <span className="inline-flex items-center gap-1 rounded-full border border-white/80 bg-white/80 px-3 py-1 text-[11px] font-semibold text-neutral-600">
                                                 <Calendar className="w-3.5 h-3.5" />
-                                                {new Date(profileData.birthday).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                                {new Date(profileData.birthday).toLocaleDateString(language, { month: 'short', day: 'numeric' })}
                                             </span>
                                         )}
                                         {profileData.anniversaryDate && (
                                             <span className="inline-flex items-center gap-1 rounded-full border border-rose-200/70 bg-rose-100/70 px-3 py-1 text-[11px] font-semibold text-rose-700">
                                                 <Heart className="w-3.5 h-3.5 fill-rose-500 text-rose-500" />
-                                                Anniversary {new Date(profileData.anniversaryDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                {t('profilePage.profile.anniversary', {
+                                                    date: new Date(profileData.anniversaryDate).toLocaleDateString(language, { month: 'short', day: 'numeric', year: 'numeric' })
+                                                })}
                                             </span>
                                         )}
                                         {selectedLoveLanguage && (
@@ -361,7 +375,7 @@ const ProfilesPage = () => {
                                     className="flex items-center justify-center gap-2 rounded-2xl border border-white/80 bg-white/90 py-2.5 text-sm font-bold text-amber-700 shadow-inner-soft"
                                 >
                                     <Settings className="w-4 h-4" />
-                                    Edit
+                                    {t('profilePage.profile.edit')}
                                 </motion.button>
 
                                 <motion.button
@@ -373,7 +387,7 @@ const ProfilesPage = () => {
                                     className="flex items-center justify-center gap-2 rounded-2xl border border-rose-200/70 bg-rose-50/70 py-2.5 text-sm font-bold text-rose-600"
                                 >
                                     <LogOut className="w-4 h-4" />
-                                    Sign out
+                                    {t('profilePage.profile.signOut')}
                                 </motion.button>
                             </div>
                         </motion.div>
@@ -390,7 +404,7 @@ const ProfilesPage = () => {
                                 <div className="relative space-y-2">
                                     <Coffee className="w-6 h-6 text-amber-600 mx-auto" />
                                     <p className="text-2xl font-display font-bold text-neutral-800">{currentUser?.kibbleBalance || 0}</p>
-                                    <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-neutral-500">Kibble</p>
+                                    <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-neutral-500">{t('profilePage.stats.kibble')}</p>
                                 </div>
                             </motion.div>
                             <motion.div
@@ -403,7 +417,7 @@ const ProfilesPage = () => {
                                 <div className="relative space-y-2">
                                     <Heart className="w-6 h-6 text-rose-500 mx-auto" />
                                     <p className="text-2xl font-display font-bold text-neutral-800">{totalAppreciations}</p>
-                                    <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-neutral-500">Appreciations</p>
+                                    <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-neutral-500">{t('profilePage.stats.appreciations')}</p>
                                 </div>
                             </motion.div>
                             <motion.div
@@ -416,7 +430,7 @@ const ProfilesPage = () => {
                                 <div className="relative space-y-2">
                                     <Scale className="w-6 h-6 text-amber-700 mx-auto" />
                                     <p className="text-2xl font-display font-bold text-neutral-800">{totalCases}</p>
-                                    <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-neutral-500">Cases</p>
+                                    <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-neutral-500">{t('profilePage.stats.cases')}</p>
                                 </div>
                             </motion.div>
                             <motion.div
@@ -429,7 +443,7 @@ const ProfilesPage = () => {
                                 <div className="relative space-y-2">
                                     <MessageSquare className="w-6 h-6 text-amber-600 mx-auto" />
                                     <p className="text-2xl font-display font-bold text-neutral-800">{questionsAnswered}</p>
-                                    <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-neutral-500">Questions</p>
+                                    <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-neutral-500">{t('profilePage.stats.questions')}</p>
                                 </div>
                             </motion.div>
                         </div>
@@ -458,12 +472,12 @@ const ProfilesPage = () => {
                                 <div className="flex-1">
                                     <div className="flex items-center gap-2">
                                         <h3 className="font-display font-bold text-neutral-800">
-                                            {isGold ? 'Pause Gold' : 'Free Plan'}
+                                            {isGold ? t('profilePage.subscription.goldPlan') : t('profilePage.subscription.freePlan')}
                                         </h3>
                                         {isGold && <Sparkles className="w-4 h-4 text-amber-500" />}
                                     </div>
                                     <p className="text-xs text-neutral-500">
-                                        {isGold ? 'Premium features unlocked' : 'Upgrade to unlock more'}
+                                        {isGold ? t('profilePage.subscription.goldSubtitle') : t('profilePage.subscription.freeSubtitle')}
                                     </p>
                                 </div>
                             </div>
@@ -473,33 +487,33 @@ const ProfilesPage = () => {
                                 <div className="flex items-center justify-between text-sm">
                                     <span className="flex items-center gap-2 text-neutral-600">
                                         <Zap className="w-4 h-4 text-amber-600" />
-                                        Judge Lightning
+                                        {t('profilePage.subscription.judgeLightning')}
                                     </span>
-                                    <span className="font-medium text-neutral-700">{getUsageDisplay('fast')}</span>
+                                    <span className="font-medium text-neutral-700">{getUsageDisplay('fast', t)}</span>
                                 </div>
                                 <div className="flex items-center justify-between text-sm">
                                     <span className="flex items-center gap-2 text-neutral-600">
                                         <Scale className="w-4 h-4 text-amber-600" />
-                                        Judge Mittens
+                                        {t('profilePage.subscription.judgeMittens')}
                                     </span>
-                                    <span className="font-medium text-neutral-700">{getUsageDisplay('logical')}</span>
+                                    <span className="font-medium text-neutral-700">{getUsageDisplay('logical', t)}</span>
                                 </div>
                                 <div className="flex items-center justify-between text-sm">
                                     <span className="flex items-center gap-2 text-neutral-600">
                                         <Gavel className="w-4 h-4 text-amber-600" />
-                                        Judge Whiskers
+                                        {t('profilePage.subscription.judgeWhiskers')}
                                     </span>
                                     <span className={`font-medium ${isGold ? 'text-neutral-700' : 'text-neutral-400'}`}>
-                                        {isGold ? getUsageDisplay('best') : 'Gold Only'}
+                                        {isGold ? getUsageDisplay('best', t) : t('profilePage.subscription.goldOnly')}
                                     </span>
                                 </div>
                                 <div className="flex items-center justify-between text-sm">
                                     <span className="flex items-center gap-2 text-neutral-600">
                                         <Wand2 className="w-4 h-4 text-amber-600" />
-                                        Help Me Plan
+                                        {t('profilePage.subscription.helpMePlan')}
                                     </span>
                                     <span className={`font-medium ${isGold ? 'text-neutral-700' : 'text-neutral-400'}`}>
-                                        {isGold ? 'Unlimited ✨' : 'Gold Only'}
+                                        {isGold ? t('profilePage.subscription.unlimited') : t('profilePage.subscription.goldOnly')}
                                     </span>
                                 </div>
                             </div>
@@ -518,16 +532,16 @@ const ProfilesPage = () => {
                                         </div>
                                         <div className="flex-1">
                                             <div className="text-[10px] font-semibold uppercase tracking-[0.3em] text-amber-500">
-                                                Gold
+                                                {t('profilePage.subscription.upgradeKicker')}
                                             </div>
-                                            <div className="text-sm font-bold text-neutral-800">Upgrade to Gold</div>
-                                            <div className="text-xs text-neutral-500">Unlimited Judge Whiskers + Help Me Plan</div>
+                                            <div className="text-sm font-bold text-neutral-800">{t('profilePage.subscription.upgradeTitle')}</div>
+                                            <div className="text-xs text-neutral-500">{t('profilePage.subscription.upgradeSubtitle')}</div>
                                         </div>
                                         <div className="flex flex-col items-end gap-1">
                                             <div className="rounded-full border border-amber-200/70 bg-amber-100/70 px-3 py-1 text-xs font-bold text-amber-700">
-                                                $7.77/mo
+                                                {t('profilePage.subscription.price')}
                                             </div>
-                                            <div className="text-[10px] text-neutral-400">Tap to view</div>
+                                            <div className="text-[10px] text-neutral-400">{t('profilePage.subscription.ctaHint')}</div>
                                         </div>
                                     </div>
                                 </motion.button>
@@ -535,7 +549,7 @@ const ProfilesPage = () => {
 
                             {isGold && (
                                 <p className="text-center text-xs text-neutral-500">
-                                    Thank you for being a Gold member! 🐱✨
+                                    {t('profilePage.subscription.thanks')}
                                 </p>
                             )}
                         </motion.div>
@@ -558,15 +572,15 @@ const ProfilesPage = () => {
                                             <Users className="w-5 h-5 text-rose-600" />
                                         </div>
                                         <div className="flex-1">
-                                            <h3 className="font-display font-bold text-neutral-800">Connect with Partner</h3>
-                                            <p className="text-xs text-neutral-500">Unlock all features together.</p>
+                                            <h3 className="font-display font-bold text-neutral-800">{t('profilePage.connect.title')}</h3>
+                                            <p className="text-xs text-neutral-500">{t('profilePage.connect.subtitle')}</p>
                                         </div>
                                     </div>
 
                                     {/* Partner Code */}
                                     <div className="rounded-2xl border border-white/80 bg-white/80 p-3">
                                         <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-neutral-400 text-center mb-2">
-                                            Partner Code
+                                            {t('profilePage.connect.partnerCode')}
                                         </p>
                                         <div className="flex items-center justify-center gap-2">
                                             <p className="font-mono font-bold text-lg text-neutral-800 tracking-wider">
@@ -598,7 +612,7 @@ const ProfilesPage = () => {
                                         className="w-full rounded-2xl bg-gradient-to-r from-[#C9A227] to-[#8B7019] py-3 text-sm font-bold text-white shadow-soft flex items-center justify-center gap-2"
                                     >
                                         <Link2 className="w-5 h-5" />
-                                        Connect Now
+                                        {t('profilePage.connect.cta')}
                                     </motion.button>
                                 </div>
                             </motion.div>
@@ -625,15 +639,15 @@ const ProfilesPage = () => {
                                     />
                                     <div className="flex-1">
                                         <p className="text-xs text-emerald-600 font-semibold flex items-center gap-1">
-                                            <Check className="w-3 h-3" /> Connected
+                                            <Check className="w-3 h-3" /> {t('profilePage.connect.connected')}
                                         </p>
                                         <h3 className="font-display font-bold text-neutral-800">
-                                            {connectedPartner.display_name || 'Your Partner'}
+                                            {connectedPartner.display_name || t('common.yourPartner')}
                                         </h3>
                                         {connectedPartner.love_language && (
                                             <p className="text-xs text-neutral-500">
-                                                {LOVE_LANGUAGES.find(l => l.id === connectedPartner.love_language)?.emoji}{' '}
-                                                {LOVE_LANGUAGES.find(l => l.id === connectedPartner.love_language)?.label}
+                                                {loveLanguages.find(l => l.id === connectedPartner.love_language)?.emoji}{' '}
+                                                {loveLanguages.find(l => l.id === connectedPartner.love_language)?.label}
                                             </p>
                                         )}
                                     </div>
@@ -678,21 +692,23 @@ const ProfilesPage = () => {
                                 </div>
                                 <div>
                                     <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-neutral-400">
-                                        Our story
+                                        {t('profilePage.relationship.kicker')}
                                     </p>
                                     <h2 className="text-lg font-display font-bold text-neutral-800">
-                                        {profileData.nickname || profile?.display_name || currentUser?.name} & {connectedPartner?.display_name || 'Partner'}
+                                        {profileData.nickname || profile?.display_name || currentUser?.name} & {connectedPartner?.display_name || t('common.partner')}
                                     </h2>
                                 </div>
                                 {profileData.anniversaryDate && (
                                     <p className="text-rose-600 text-sm flex items-center justify-center gap-1">
                                         <Heart className="w-3.5 h-3.5 fill-rose-500 text-rose-500" />
-                                        Together since {new Date(profileData.anniversaryDate).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                                        {t('profilePage.relationship.togetherSince', {
+                                            date: new Date(profileData.anniversaryDate).toLocaleDateString(language, { month: 'long', year: 'numeric' })
+                                        })}
                                     </p>
                                 )}
                                 {!profileData.anniversaryDate && hasPartner && (
                                     <p className="text-neutral-400 text-sm italic">
-                                        Anniversary not set
+                                        {t('profilePage.relationship.anniversaryMissing')}
                                     </p>
                                 )}
                             </div>
@@ -713,8 +729,8 @@ const ProfilesPage = () => {
                             <div className="glass-card p-3 border border-neutral-200/60">
                                 <div className="flex items-center justify-between gap-3">
                                     <div>
-                                        <div className="text-xs font-bold text-neutral-700">Dev tools</div>
-                                        <div className="text-[11px] text-neutral-500">Temporary XP boost for testing.</div>
+                                        <div className="text-xs font-bold text-neutral-700">{t('profilePage.devTools.title')}</div>
+                                        <div className="text-[11px] text-neutral-500">{t('profilePage.devTools.subtitle')}</div>
                                     </div>
                                     <div className="flex items-center gap-2">
                                         {devXPMessage && (
@@ -729,7 +745,7 @@ const ProfilesPage = () => {
                                             className={`text-xs font-bold text-white px-3 py-2 rounded-xl shadow-soft ${devXPLoading ? 'opacity-70' : ''}`}
                                             style={{ background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)' }}
                                         >
-                                            {devXPLoading ? 'Adding…' : '+250 XP'}
+                                            {devXPLoading ? t('profilePage.devTools.adding') : t('profilePage.devTools.addXp', { amount: 250 })}
                                         </motion.button>
                                     </div>
                                 </div>
@@ -753,8 +769,8 @@ const ProfilesPage = () => {
                                             <ImagePlus className="w-4 h-4 text-rose-600" />
                                         </div>
                                         <div>
-                                            <h3 className="font-display font-bold text-neutral-800">Memory Album</h3>
-                                            <p className="text-xs text-neutral-500">A shared gallery of your favorite days.</p>
+                                            <h3 className="font-display font-bold text-neutral-800">{t('profilePage.memories.title')}</h3>
+                                            <p className="text-xs text-neutral-500">{t('profilePage.memories.subtitle')}</p>
                                         </div>
                                     </div>
                                     <motion.button
@@ -763,19 +779,21 @@ const ProfilesPage = () => {
                                         className={`text-xs font-bold text-rose-600 rounded-full border border-rose-200/70 bg-rose-50/70 px-3 py-1 ${memoriesAvailable ? '' : 'opacity-60 cursor-not-allowed'}`}
                                         disabled={!memoriesAvailable}
                                     >
-                                        View all
+                                        {t('profilePage.memories.viewAll')}
                                     </motion.button>
                                 </div>
 
                                 {!memoriesAvailable ? (
                                     <div className="rounded-2xl border border-dashed border-rose-200/70 bg-rose-50/70 px-3 py-3 text-xs text-rose-600">
-                                        Memories are unavailable right now. Please check back soon.
+                                        {t('profilePage.memories.unavailable')}
                                     </div>
                                 ) : (
                                     <>
                                         {deletedMemories?.length > 0 && (
                                             <div className="text-xs text-rose-600 bg-rose-50 border border-rose-100 rounded-2xl px-3 py-2">
-                                                {deletedMemories.length} memory{deletedMemories.length === 1 ? '' : 'ies'} can be restored
+                                                {deletedMemories.length === 1
+                                                    ? t('profilePage.memories.restoreOne', { count: deletedMemories.length })
+                                                    : t('profilePage.memories.restoreOther', { count: deletedMemories.length })}
                                             </div>
                                         )}
 
@@ -785,7 +803,7 @@ const ProfilesPage = () => {
                                                 onClick={() => navigate('/memories')}
                                                 className="w-full py-3 rounded-2xl border border-rose-200/70 bg-white/80 text-sm font-semibold text-rose-600"
                                             >
-                                                Add your first memory
+                                                {t('profilePage.memories.emptyCta')}
                                             </motion.button>
                                         ) : (
                                             <div className="grid grid-cols-2 gap-3">
@@ -822,8 +840,8 @@ const ProfilesPage = () => {
                                                 <Gavel className="w-4 h-4 text-amber-700" />
                                             </div>
                                             <div>
-                                                <h3 className="font-display font-bold text-neutral-800">Challenges</h3>
-                                                <p className="text-xs text-neutral-500">Weekly quests to earn XP together.</p>
+                                                <h3 className="font-display font-bold text-neutral-800">{t('profilePage.challenges.title')}</h3>
+                                                <p className="text-xs text-neutral-500">{t('profilePage.challenges.subtitle')}</p>
                                             </div>
                                         </div>
                                         {showChallenges && (
@@ -832,7 +850,7 @@ const ProfilesPage = () => {
                                                 onClick={() => navigate('/challenges')}
                                                 className="text-xs font-bold text-amber-700 rounded-full border border-amber-200/70 bg-amber-100/70 px-3 py-1"
                                             >
-                                                View docket
+                                                {t('profilePage.challenges.view')}
                                             </motion.button>
                                         )}
                                     </div>
@@ -841,7 +859,7 @@ const ProfilesPage = () => {
                                         <>
                                             {challengesLoading && (
                                                 <div className="rounded-2xl border border-white/80 bg-white/80 px-3 py-3 text-xs text-neutral-500">
-                                                    Loading the docket...
+                                                    {t('profilePage.challenges.loading')}
                                                 </div>
                                             )}
 
@@ -849,16 +867,16 @@ const ProfilesPage = () => {
                                                 <div className="space-y-3">
                                                     <div className="flex items-center justify-between gap-3">
                                                         <div className="text-[11px] font-semibold uppercase tracking-[0.3em] text-neutral-400">
-                                                            Active now
+                                                            {t('profilePage.challenges.activeNow')}
                                                         </div>
                                                         <div className="flex items-center gap-2">
                                                             {activeChallengeCount > 1 && (
                                                                 <span className="text-[10px] font-semibold uppercase tracking-[0.3em] text-amber-500">
-                                                                    Swipe
+                                                                    {t('profilePage.challenges.swipe')}
                                                                 </span>
                                                             )}
                                                             <span className="text-[11px] font-bold text-amber-700 bg-amber-100/70 px-2.5 py-1 rounded-full">
-                                                                {activeChallengeCount} live
+                                                                {t('profilePage.challenges.liveCount', { count: activeChallengeCount })}
                                                             </span>
                                                         </div>
                                                     </div>
@@ -900,21 +918,21 @@ const ProfilesPage = () => {
                                                                             </div>
                                                                             <div className="flex-1 space-y-1">
                                                                                 <div className="text-[10px] font-semibold uppercase tracking-[0.25em] text-neutral-400">
-                                                                                    Active challenge {index + 1}
+                                                                                    {t('profilePage.challenges.activeLabel', { number: index + 1 })}
                                                                                 </div>
                                                                                 <div className="text-sm font-display font-bold text-neutral-800">
-                                                                                    {challenge.title || challenge.name || 'Challenge in progress'}
+                                                                                    {challenge.title || challenge.name || t('profilePage.challenges.fallbackTitle')}
                                                                                 </div>
                                                                                 <p className="text-[11px] text-neutral-500 leading-snug">
-                                                                                    {challenge.description || 'A short quest to keep your story moving.'}
+                                                                                    {challenge.description || t('profilePage.challenges.fallbackDescription')}
                                                                                 </p>
                                                                             </div>
                                                                         </div>
 
                                                                         <div className="space-y-2">
                                                                             <div className="flex items-center justify-between text-[11px] text-neutral-500">
-                                                                                <span>{currentProgress} / {targetProgress} steps</span>
-                                                                                <span className="font-semibold text-amber-700">+{rewardXP} XP</span>
+                                                                                <span>{t('profilePage.challenges.progress', { current: currentProgress, total: targetProgress })}</span>
+                                                                                <span className="font-semibold text-amber-700">{t('profilePage.challenges.reward', { xp: rewardXP })}</span>
                                                                             </div>
                                                                             <div className="h-2.5 rounded-full bg-white/80 shadow-inner-soft overflow-hidden">
                                                                                 <motion.div
@@ -925,9 +943,9 @@ const ProfilesPage = () => {
                                                                                 />
                                                                             </div>
                                                                             <div className="flex items-center justify-between text-[10px] text-neutral-400">
-                                                                                <span>{daysLeft} days left</span>
+                                                                                <span>{t('profilePage.challenges.daysLeft', { count: daysLeft })}</span>
                                                                                 <span className="font-semibold text-amber-600">
-                                                                                    {isActive ? 'Current' : 'Swipe'}
+                                                                                    {isActive ? t('profilePage.challenges.current') : t('profilePage.challenges.swipe')}
                                                                                 </span>
                                                                             </div>
                                                                         </div>
@@ -953,7 +971,7 @@ const ProfilesPage = () => {
 
                                                     {availableChallengeCount > 0 && (
                                                         <div className="rounded-2xl border border-amber-200/70 bg-amber-50/70 px-3 py-2 text-[11px] text-amber-700 text-center">
-                                                            {availableChallengeCount} more waiting in the docket.
+                                                            {t('profilePage.challenges.moreWaiting', { count: availableChallengeCount })}
                                                         </div>
                                                     )}
                                                 </div>
@@ -961,16 +979,18 @@ const ProfilesPage = () => {
 
                                             {!challengesLoading && activeChallengeCount === 0 && availableChallengeCount > 0 && (
                                                 <div className="rounded-2xl border border-white/80 bg-white/80 px-3 py-3 space-y-2">
-                                                    <div className="text-xs font-semibold text-neutral-700">No active challenges yet</div>
+                                                    <div className="text-xs font-semibold text-neutral-700">{t('profilePage.challenges.emptyActive')}</div>
                                                     <div className="text-[11px] text-neutral-500">
-                                                        {availableChallengeCount} quest{availableChallengeCount === 1 ? '' : 's'} ready to start.
+                                                        {availableChallengeCount === 1
+                                                            ? t('profilePage.challenges.readyOne', { count: availableChallengeCount })
+                                                            : t('profilePage.challenges.readyOther', { count: availableChallengeCount })}
                                                     </div>
                                                 </div>
                                             )}
 
                                             {!challengesLoading && activeChallengeCount === 0 && availableChallengeCount === 0 && (
                                                 <div className="rounded-2xl border border-white/80 bg-white/80 px-3 py-3 text-xs text-neutral-500">
-                                                    No challenges active right now. Check back soon.
+                                                    {t('profilePage.challenges.none')}
                                                 </div>
                                             )}
                                         </>
@@ -978,11 +998,11 @@ const ProfilesPage = () => {
                                         <div className="rounded-2xl border border-dashed border-amber-200/70 bg-amber-50/70 px-3 py-3">
                                             <div className="flex items-center justify-between gap-3">
                                                 <div>
-                                                    <div className="text-sm font-semibold text-amber-700">Locked until Level 5</div>
+                                                    <div className="text-sm font-semibold text-amber-700">{t('profilePage.challenges.locked')}</div>
                                                     <p className="text-xs text-amber-600 mt-1">{unlockHint}</p>
                                                 </div>
                                                 <div className="text-xs font-bold text-amber-700 bg-white/70 px-2.5 py-1 rounded-full">
-                                                    Lv {level}
+                                                    {t('profilePage.challenges.levelShort', { level })}
                                                 </div>
                                             </div>
                                         </div>
@@ -1009,8 +1029,8 @@ const ProfilesPage = () => {
                                                 <Sparkles className="w-4 h-4 text-sky-600" />
                                             </div>
                                             <div>
-                                                <h3 className="font-display font-bold text-neutral-800">AI Insights</h3>
-                                                <p className="text-xs text-neutral-500">Gentle patterns, not advice.</p>
+                                                <h3 className="font-display font-bold text-neutral-800">{t('profilePage.insights.title')}</h3>
+                                                <p className="text-xs text-neutral-500">{t('profilePage.insights.subtitle')}</p>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
@@ -1020,7 +1040,7 @@ const ProfilesPage = () => {
                                                     onClick={() => navigate('/insights')}
                                                     className="text-xs font-bold text-sky-700 rounded-full border border-sky-200/70 bg-sky-100/70 px-3 py-1"
                                                 >
-                                                    View all
+                                                    {t('profilePage.insights.viewAll')}
                                                 </motion.button>
                                             )}
                                             {needsGoldForInsights && (
@@ -1029,7 +1049,7 @@ const ProfilesPage = () => {
                                                     onClick={() => setShowPaywall(true)}
                                                     className="text-xs font-bold text-sky-700 rounded-full border border-sky-200/70 bg-sky-100/70 px-3 py-1"
                                                 >
-                                                    Unlock Gold
+                                                    {t('profilePage.insights.unlockGold')}
                                                 </motion.button>
                                             )}
                                             {insightsUnlocked && (
@@ -1038,7 +1058,7 @@ const ProfilesPage = () => {
                                                     onClick={() => updateConsent(!selfConsent)}
                                                     className="text-xs font-bold text-sky-700 bg-sky-100/70 px-2.5 py-1 rounded-full"
                                                 >
-                                                    {selfConsent ? 'Opt out' : 'Turn on'}
+                                                    {selfConsent ? t('profilePage.insights.optOut') : t('profilePage.insights.turnOn')}
                                                 </motion.button>
                                             )}
                                         </div>
@@ -1048,11 +1068,11 @@ const ProfilesPage = () => {
                                         <div className="rounded-2xl border border-dashed border-sky-200/70 bg-sky-50/70 px-3 py-3">
                                             <div className="flex items-center justify-between gap-3">
                                                 <div>
-                                                    <div className="text-sm font-semibold text-sky-700">Locked until Level 10 + Pause Gold</div>
+                                                    <div className="text-sm font-semibold text-sky-700">{t('profilePage.insights.locked')}</div>
                                                     <p className="text-xs text-sky-600 mt-1">{unlockHint}</p>
                                                 </div>
                                                 <div className="text-xs font-bold text-sky-700 bg-white/70 px-2.5 py-1 rounded-full">
-                                                    Lv {level}
+                                                    {t('profilePage.insights.levelShort', { level })}
                                                 </div>
                                             </div>
                                         </div>
@@ -1062,8 +1082,8 @@ const ProfilesPage = () => {
                                         <div className="rounded-2xl border border-dashed border-sky-200/70 bg-sky-50/70 px-3 py-3">
                                             <div className="flex items-center justify-between gap-3">
                                                 <div>
-                                                    <div className="text-sm font-semibold text-sky-700">Pause Gold required</div>
-                                                    <p className="text-xs text-sky-600 mt-1">AI insights are a Gold feature at Level 10+.</p>
+                                                    <div className="text-sm font-semibold text-sky-700">{t('profilePage.insights.goldRequiredTitle')}</div>
+                                                    <p className="text-xs text-sky-600 mt-1">{t('profilePage.insights.goldRequiredSubtitle')}</p>
                                                 </div>
                                                 <Crown className="w-5 h-5 text-sky-500" />
                                             </div>
@@ -1072,19 +1092,19 @@ const ProfilesPage = () => {
 
                                     {insightsUnlocked && !selfConsent && (
                                         <div className="rounded-2xl border border-sky-200/70 bg-sky-50/70 p-3 text-xs text-sky-700">
-                                            AI insights are off. Turn them back on anytime.
+                                            {t('profilePage.insights.off')}
                                         </div>
                                     )}
 
                                     {insightsUnlocked && selfConsent && !partnerConsent && (
                                         <div className="rounded-2xl border border-sky-200/70 bg-sky-50/70 p-3 text-xs text-sky-700">
-                                            Waiting for your partner to opt in.
+                                            {t('profilePage.insights.waitingPartner')}
                                         </div>
                                     )}
 
                                     {insightsUnlocked && bothConsented && insightsPaused && (
                                         <div className="rounded-2xl border border-sky-200/70 bg-sky-50/70 p-3 text-xs text-sky-700">
-                                            Insights are paused. Resume anytime from the insights page.
+                                            {t('profilePage.insights.paused')}
                                         </div>
                                     )}
 
@@ -1104,7 +1124,7 @@ const ProfilesPage = () => {
                                                 </>
                                             ) : (
                                                 <p className="text-xs text-neutral-500">
-                                                    No insights yet. Keep using the app together and check back soon.
+                                                    {t('profilePage.insights.empty')}
                                                 </p>
                                             )}
                                         </div>
@@ -1117,47 +1137,47 @@ const ProfilesPage = () => {
                         <div className="glass-card p-4 space-y-3">
                             <h3 className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
                                 <Award className="w-4 h-4 text-amber-600" />
-                                Milestones
+                                {t('profilePage.milestones.title')}
                             </h3>
                             <div className="grid grid-cols-3 gap-2">
                                 <AchievementBadge
                                     emoji="🌟"
-                                    label="First Case"
+                                    label={t('profilePage.milestones.firstCase')}
                                     unlocked={totalCases >= 1}
                                 />
                                 <AchievementBadge
                                     emoji="💕"
-                                    label="Appreciation"
+                                    label={t('profilePage.milestones.appreciation')}
                                     unlocked={totalAppreciations >= 1}
                                 />
                                 <AchievementBadge
                                     emoji="⚖️"
-                                    label="5 Cases"
+                                    label={t('profilePage.milestones.fiveCases')}
                                     unlocked={totalCases >= 5}
                                 />
                                 <AchievementBadge
                                     emoji="🎁"
-                                    label="Gift Giver"
+                                    label={t('profilePage.milestones.giftGiver')}
                                     unlocked={currentUser?.kibbleBalance > 0}
                                 />
                                 <AchievementBadge
                                     emoji="🏆"
-                                    label="10 Cases"
+                                    label={t('profilePage.milestones.tenCases')}
                                     unlocked={totalCases >= 10}
                                 />
                                 <AchievementBadge
                                     emoji="💎"
-                                    label="Super Fan"
+                                    label={t('profilePage.milestones.superFan')}
                                     unlocked={totalAppreciations >= 10}
                                 />
                                 <AchievementBadge
                                     emoji="💬"
-                                    label="Deep Talks"
+                                    label={t('profilePage.milestones.deepTalks')}
                                     unlocked={(questionsAnswered + partnerQuestionsAnswered) >= 7}
                                 />
                                 <AchievementBadge
                                     emoji="📖"
-                                    label="Story Tellers"
+                                    label={t('profilePage.milestones.storyTellers')}
                                     unlocked={(questionsAnswered + partnerQuestionsAnswered) >= 30}
                                 />
                             </div>
@@ -1172,6 +1192,7 @@ const ProfilesPage = () => {
                 {showEditModal && (
                     <EditProfileModal
                         profileData={profileData}
+                        loveLanguages={loveLanguages}
                         onSave={async (data) => {
                             await saveProfile(data);
                             setShowEditModal(false);
@@ -1242,17 +1263,25 @@ const AchievementBadge = ({ emoji, label, unlocked }) => (
     </div>
 );
 
-const EditProfileModal = ({ profileData, onSave, onClose }) => {
+const EditProfileModal = ({ profileData, loveLanguages, onSave, onClose }) => {
+    const { t, supportedLanguages } = useI18n();
     const [formData, setFormData] = useState({ ...profileData });
     const [birthdayError, setBirthdayError] = useState(null);
     const [uploading, setUploading] = useState(false);
     const fileInputRef = React.useRef(null);
+    const translateValidationError = (validation) => {
+        if (!validation?.error) return null;
+        if (validation.errorCode) {
+            return t(`validation.${validation.errorCode}`, validation.meta);
+        }
+        return validation.error;
+    };
 
     const handleBirthdayChange = (value) => {
         setFormData({ ...formData, birthday: value });
         if (value) {
             const validation = validateBirthdayDate(value);
-            setBirthdayError(validation.isValid ? null : validation.error);
+            setBirthdayError(validation.isValid ? null : translateValidationError(validation));
         } else {
             setBirthdayError(null);
         }
@@ -1263,13 +1292,13 @@ const EditProfileModal = ({ profileData, onSave, onClose }) => {
 
         // Validate file type
         if (!file.type.startsWith('image/')) {
-            alert('Please select an image file');
+            alert(t('errors.IMAGE_INVALID'));
             return;
         }
 
         // Validate file size (max 5MB)
         if (file.size > 5 * 1024 * 1024) {
-            alert('Image must be less than 5MB');
+            alert(t('errors.IMAGE_TOO_LARGE'));
             return;
         }
 
@@ -1282,7 +1311,7 @@ const EditProfileModal = ({ profileData, onSave, onClose }) => {
                 setUploading(false);
             };
             reader.onerror = () => {
-                alert('Failed to read image');
+                alert(t('errors.IMAGE_READ_FAILED'));
                 setUploading(false);
             };
             reader.readAsDataURL(file);
@@ -1324,7 +1353,7 @@ const EditProfileModal = ({ profileData, onSave, onClose }) => {
                 className="bg-white/95 rounded-[32px] w-full max-w-md p-5 space-y-4 shadow-soft-lg border border-white/80 max-h-[70vh] overflow-y-auto"
             >
                 <div className="flex items-center justify-between">
-                    <h3 className="font-bold text-neutral-800 text-lg">Edit Profile ✨</h3>
+                    <h3 className="font-bold text-neutral-800 text-lg">{t('profilePage.edit.title')}</h3>
                     <button
                         onClick={onClose}
                         className="w-8 h-8 bg-white/80 border border-neutral-200/70 rounded-full flex items-center justify-center"
@@ -1335,13 +1364,13 @@ const EditProfileModal = ({ profileData, onSave, onClose }) => {
 
                 {/* Profile Picture */}
                 <div>
-                    <label className="text-xs font-bold text-neutral-500 mb-2 block">Profile Picture 📸</label>
+                    <label className="text-xs font-bold text-neutral-500 mb-2 block">{t('profilePage.edit.photoLabel')}</label>
                     <div className="flex items-center gap-4">
                         <div className="w-20 h-24 rounded-2xl bg-gradient-to-br from-amber-100 to-rose-100 flex items-center justify-center overflow-hidden shadow-soft">
                             {formData.avatarUrl ? (
                                 <img
                                     src={formData.avatarUrl}
-                                    alt="Profile"
+                                    alt={t('profilePage.edit.profileAlt')}
                                     className="w-full h-full object-cover"
                                 />
                             ) : (
@@ -1357,7 +1386,7 @@ const EditProfileModal = ({ profileData, onSave, onClose }) => {
                                 disabled={uploading}
                                 className="w-full py-2.5 bg-amber-50 text-amber-700 rounded-xl text-sm font-bold flex items-center justify-center gap-2 border border-amber-200"
                             >
-                                📷 Take Photo
+                                {t('profilePage.edit.takePhoto')}
                             </motion.button>
                             <motion.button
                                 whileTap={{ scale: 0.95 }}
@@ -1365,7 +1394,7 @@ const EditProfileModal = ({ profileData, onSave, onClose }) => {
                                 disabled={uploading}
                                 className="w-full py-2.5 bg-rose-50 text-rose-600 rounded-xl text-sm font-bold flex items-center justify-center gap-2 border border-rose-200"
                             >
-                                {uploading ? 'Uploading...' : '🖼️ Upload Photo'}
+                                {uploading ? t('profilePage.edit.uploading') : t('profilePage.edit.uploadPhoto')}
                             </motion.button>
                             <input
                                 ref={fileInputRef}
@@ -1380,7 +1409,7 @@ const EditProfileModal = ({ profileData, onSave, onClose }) => {
 
                 {/* Avatar Selection */}
                 <div>
-                    <label className="text-xs font-bold text-neutral-500 mb-2 block">Or Choose an Avatar</label>
+                    <label className="text-xs font-bold text-neutral-500 mb-2 block">{t('profilePage.edit.chooseAvatar')}</label>
                     <div className="grid grid-cols-4 gap-2">
                         {PRESET_AVATARS.map((avatar) => (
                             <button
@@ -1391,7 +1420,11 @@ const EditProfileModal = ({ profileData, onSave, onClose }) => {
                                     : 'bg-neutral-50 hover:bg-neutral-100'
                                     }`}
                             >
-                                <img src={avatar.path} alt={avatar.label} className="w-full h-16 object-contain" />
+                                <img
+                                    src={avatar.path}
+                                    alt={t('profilePage.edit.avatarAlt', { name: avatar.labelKey ? t(avatar.labelKey) : avatar.label })}
+                                    className="w-full h-16 object-contain"
+                                />
                             </button>
                         ))}
                     </div>
@@ -1399,19 +1432,19 @@ const EditProfileModal = ({ profileData, onSave, onClose }) => {
 
                 {/* Nickname */}
                 <div>
-                    <label className="text-xs font-bold text-neutral-500 mb-1 block">Nickname</label>
+                    <label className="text-xs font-bold text-neutral-500 mb-1 block">{t('profilePage.edit.nicknameLabel')}</label>
                     <input
                         type="text"
                         value={formData.nickname}
                         onChange={(e) => setFormData({ ...formData, nickname: e.target.value })}
-                        placeholder="Your cute nickname"
+                        placeholder={t('profilePage.edit.nicknamePlaceholder')}
                         className="w-full bg-neutral-50 border-2 border-neutral-100 rounded-xl p-3 text-neutral-700 focus:ring-2 focus:ring-amber-200 focus:border-amber-300 focus:outline-none text-sm"
                     />
                 </div>
 
                 {/* Birthday */}
                 <div>
-                    <label className="text-xs font-bold text-neutral-500 mb-1 block">Birthday 🎂</label>
+                    <label className="text-xs font-bold text-neutral-500 mb-1 block">{t('profilePage.edit.birthdayLabel')}</label>
                     <input
                         type="date"
                         value={formData.birthday}
@@ -1431,9 +1464,9 @@ const EditProfileModal = ({ profileData, onSave, onClose }) => {
 
                 {/* Love Language */}
                 <div>
-                    <label className="text-xs font-bold text-neutral-500 mb-2 block">Love Language 💝</label>
+                    <label className="text-xs font-bold text-neutral-500 mb-2 block">{t('profile.loveLanguageLabel')}</label>
                     <div className="space-y-2">
-                        {LOVE_LANGUAGES.map((lang) => (
+                        {loveLanguages.map((lang) => (
                             <button
                                 key={lang.id}
                                 onClick={() => setFormData({ ...formData, loveLanguage: lang.id })}
@@ -1452,6 +1485,22 @@ const EditProfileModal = ({ profileData, onSave, onClose }) => {
                     </div>
                 </div>
 
+                {/* Preferred Language */}
+                <div>
+                    <label className="text-xs font-bold text-neutral-500 mb-1 block">{t('profile.languageLabel')}</label>
+                    <select
+                        value={formData.preferredLanguage || DEFAULT_LANGUAGE}
+                        onChange={(e) => setFormData({ ...formData, preferredLanguage: e.target.value })}
+                        className="w-full bg-neutral-50 border-2 border-neutral-100 rounded-xl p-3 text-neutral-700 focus:ring-2 focus:ring-amber-200 focus:border-amber-300 focus:outline-none text-sm"
+                    >
+                        {supportedLanguages.map((lang) => (
+                            <option key={lang.code} value={lang.code}>
+                                {lang.labelKey ? t(lang.labelKey) : (lang.label || lang.code)}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+
                 <button
                     onClick={handleSave}
                     disabled={birthdayError || uploading}
@@ -1461,7 +1510,7 @@ const EditProfileModal = ({ profileData, onSave, onClose }) => {
                         }`}
                 >
                     <Check className="w-4 h-4" />
-                    Save Profile
+                    {t('profile.saveProfile')}
                 </button>
             </motion.div>
         </motion.div>

@@ -7,9 +7,11 @@ import useAuthStore from '../store/useAuthStore';
 import useCacheStore, { CACHE_TTL, CACHE_KEYS } from '../store/useCacheStore';
 import api from '../services/api';
 import ProfilePicture from '../components/ProfilePicture';
+import { useI18n } from '../i18n';
 
 const DashboardPage = () => {
     const navigate = useNavigate();
+    const { t, language } = useI18n();
     const { currentUser, logGoodDeed } = useAppStore();
     const { hasPartner, profile, partner: connectedPartner, user: authUser } = useAuthStore();
     const [showGoodDeedModal, setShowGoodDeedModal] = useState(false);
@@ -18,9 +20,9 @@ const DashboardPage = () => {
     const [questionLoading, setQuestionLoading] = useState(true);
 
     // Get partner name - prefer connected partner from auth store
-    const partnerName = connectedPartner?.display_name || 'Partner';
+    const partnerName = connectedPartner?.display_name || t('common.partner');
     // Get current user's display name
-    const myName = profile?.display_name || currentUser?.display_name || currentUser?.name || 'Me';
+    const myName = profile?.display_name || currentUser?.display_name || currentUser?.name || t('common.you');
     // Get profile pictures
 
     const [goodDeedText, setGoodDeedText] = useState('');
@@ -74,7 +76,7 @@ const DashboardPage = () => {
             }
         };
         fetchStreak();
-    }, [authUser?.id, connectedPartner?.id]);
+    }, [authUser?.id, connectedPartner?.id, language]);
 
     // Fetch today's question for dashboard preview (with caching)
     useEffect(() => {
@@ -84,7 +86,7 @@ const DashboardPage = () => {
                 return;
             }
 
-            const cacheKey = `${CACHE_KEYS.DAILY_QUESTION}:${authUser.id}:${connectedPartner.id}`;
+            const cacheKey = `${CACHE_KEYS.DAILY_QUESTION}:${authUser.id}:${connectedPartner.id}:${language}`;
 
             // Check cache first
             const cached = useCacheStore.getState().getCached(cacheKey);
@@ -109,7 +111,7 @@ const DashboardPage = () => {
             }
         };
         fetchTodaysQuestion();
-    }, [authUser?.id, connectedPartner?.id]);
+    }, [authUser?.id, connectedPartner?.id, language]);
 
     // Calculate actual days together from anniversary date (prefer Supabase profile)
     const getDaysTogether = () => {
@@ -153,13 +155,8 @@ const DashboardPage = () => {
         setIsSubmitting(false);
     };
 
-    const goodDeedSuggestions = [
-        "Made me breakfast ☕",
-        "Did the dishes 🍽️",
-        "Gave me a massage 💆",
-        "Said something sweet 💕",
-        "Surprised me 🎁",
-    ];
+    const goodDeedSuggestions = t('dashboard.goodDeedSuggestions');
+    const suggestionList = Array.isArray(goodDeedSuggestions) ? goodDeedSuggestions : [];
 
     // Derive answer states
     const hasAnswered = !!todaysQuestion?.my_answer;
@@ -171,7 +168,7 @@ const DashboardPage = () => {
     const myAvatarUrl = profile?.avatar_url;
     const partnerAvatarUrl = connectedPartner?.avatar_url;
     const showPartnerPrompt = !hasPartner;
-    const todayLabel = new Date().toLocaleDateString('en-US', {
+    const todayLabel = new Date().toLocaleDateString(language, {
         weekday: 'long',
         month: 'short',
         day: 'numeric',
@@ -179,8 +176,8 @@ const DashboardPage = () => {
     const quickActions = [
         {
             key: 'appreciate',
-            label: 'Appreciate',
-            detail: 'Send kibble',
+            label: t('dashboard.quickActions.appreciate.label'),
+            detail: t('dashboard.quickActions.appreciate.detail'),
             icon: '/assets/icons/appreicate.png',
             onClick: () => hasPartner ? setShowGoodDeedModal(true) : navigate('/connect'),
             locked: !hasPartner,
@@ -188,8 +185,8 @@ const DashboardPage = () => {
         },
         {
             key: 'love-notes',
-            label: 'Love Notes',
-            detail: 'Your ledger',
+            label: t('dashboard.quickActions.loveNotes.label'),
+            detail: t('dashboard.quickActions.loveNotes.detail'),
             icon: '/assets/icons/love_notes.png',
             onClick: () => navigate('/appreciations'),
             locked: false,
@@ -197,8 +194,8 @@ const DashboardPage = () => {
         },
         {
             key: 'cases',
-            label: 'Cases',
-            detail: 'Trial history',
+            label: t('dashboard.quickActions.cases.label'),
+            detail: t('dashboard.quickActions.cases.detail'),
             icon: '/assets/icons/cases.png',
             onClick: () => navigate('/history'),
             locked: false,
@@ -206,8 +203,8 @@ const DashboardPage = () => {
         },
         {
             key: 'redeem',
-            label: 'Redeem',
-            detail: 'Spend kibble',
+            label: t('dashboard.quickActions.redeem.label'),
+            detail: t('dashboard.quickActions.redeem.detail'),
             icon: '/assets/icons/redeem.png',
             onClick: () => navigate('/economy'),
             locked: false,
@@ -241,10 +238,12 @@ const DashboardPage = () => {
                                     {todayLabel}
                                 </div>
                                 <h1 className="text-2xl font-display font-bold text-neutral-800">
-                                    Welcome back, {myName}
+                                    {t('dashboard.header.title', { name: myName })}
                                 </h1>
                                 <p className="text-xs text-neutral-500 mt-1">
-                                    Your story with {showPartnerPrompt ? 'your partner' : partnerName} keeps growing.
+                                    {t('dashboard.header.subtitle', {
+                                        name: showPartnerPrompt ? t('common.yourPartner') : partnerName
+                                    })}
                                 </p>
                             </div>
                         </div>
@@ -260,13 +259,13 @@ const DashboardPage = () => {
                                     <div className="flex items-center justify-between">
                                         <Heart className="w-4 h-4 text-rose-500 fill-current" />
                                         <span className="text-[10px] font-semibold uppercase tracking-[0.3em] text-neutral-400">
-                                            Days
+                                            {t('dashboard.stats.daysLabel')}
                                         </span>
                                     </div>
                                     <div className="text-2xl font-display font-bold text-neutral-800 mt-2">
                                         {daysTogether !== null ? daysTogether : '?'}
                                     </div>
-                                    <div className="text-[11px] text-neutral-500">Days together</div>
+                                    <div className="text-[11px] text-neutral-500">{t('dashboard.stats.daysTogether')}</div>
                                 </div>
                             </Motion.button>
 
@@ -280,20 +279,20 @@ const DashboardPage = () => {
                                     <div className="flex items-center justify-between">
                                         <Flame className="w-4 h-4 text-amber-500 fill-current" />
                                         <span className="text-[10px] font-semibold uppercase tracking-[0.3em] text-neutral-400">
-                                            Streak
+                                            {t('dashboard.stats.streakLabel')}
                                         </span>
                                     </div>
                                     <div className="text-2xl font-display font-bold text-neutral-800 mt-2">
                                         {questionStreak}
                                     </div>
-                                    <div className="text-[11px] text-neutral-500">Question streak</div>
+                                    <div className="text-[11px] text-neutral-500">{t('dashboard.stats.questionStreak')}</div>
                                 </div>
                             </Motion.button>
                         </div>
 
                         {showPartnerPrompt && (
                             <div className="rounded-2xl border border-dashed border-neutral-200 bg-white/70 px-3 py-2 text-xs text-neutral-500">
-                                Connect with your partner to unlock shared streaks and story milestones.
+                                {t('dashboard.connectPrompt')}
                             </div>
                         )}
                     </div>
@@ -335,11 +334,11 @@ const DashboardPage = () => {
                             <>
                                 <div className="mb-4">
                                     <span className="px-3 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase bg-white/80 text-[#8B6F47] backdrop-blur-sm border border-white/60">
-                                        Connect to unlock
+                                        {t('dashboard.dailyQuestion.connectBadge')}
                                     </span>
                                 </div>
                                 <h3 className="text-xl font-bold text-[#4A3728] mb-5 leading-snug max-w-sm mx-auto" style={{ fontFamily: 'var(--font-display), Quicksand, sans-serif' }}>
-                                    Connect with your partner now to access this feature!
+                                    {t('dashboard.dailyQuestion.connectTitle')}
                                 </h3>
                                 <div className="flex items-center justify-center">
                                     <div className="flex items-center gap-2 pl-2 pr-4 py-2 rounded-full bg-white/80 border border-white/70 shadow-sm translate-x-3">
@@ -350,8 +349,8 @@ const DashboardPage = () => {
                                             className="rounded-full"
                                         />
                                         <div className="text-left">
-                                            <p className="text-[10px] font-bold leading-tight text-neutral-700">You</p>
-                                            <p className="text-[9px] leading-tight text-neutral-400">Ready</p>
+                                            <p className="text-[10px] font-bold leading-tight text-neutral-700">{t('common.you')}</p>
+                                            <p className="text-[9px] leading-tight text-neutral-400">{t('dashboard.dailyQuestion.ready')}</p>
                                         </div>
                                     </div>
                                     <div className="relative z-20 mx-[-6px]">
@@ -362,25 +361,31 @@ const DashboardPage = () => {
                                     <div className="flex items-center gap-2 pl-4 pr-2 py-2 rounded-full bg-white/60 border border-white/70 shadow-sm -translate-x-3">
                                         <div className="w-8 h-8 rounded-full border-2 border-dashed border-neutral-300 bg-white/70" />
                                         <div className="text-left">
-                                            <p className="text-[10px] font-bold leading-tight text-neutral-600">Partner</p>
-                                            <p className="text-[9px] leading-tight text-neutral-400">Not connected</p>
+                                            <p className="text-[10px] font-bold leading-tight text-neutral-600">{t('common.partner')}</p>
+                                            <p className="text-[9px] leading-tight text-neutral-400">{t('dashboard.dailyQuestion.notConnected')}</p>
                                         </div>
                                     </div>
                                 </div>
-                                <p className="mt-4 text-xs text-neutral-500">Tap to connect</p>
+                                <p className="mt-4 text-xs text-neutral-500">{t('dashboard.dailyQuestion.tapToConnect')}</p>
                             </>
                         ) : (
                             <>
                                 {/* Header Badge */}
                                 <div className="mb-4">
                                     <span className={`px-3 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase bg-[#8B6F47]/80 text-white backdrop-blur-sm border border-[#6B5635]/30`}>
-                                        {bothAnswered ? 'Completed' : hasAnswered ? 'Waiting for Partner' : 'Daily Question'}
+                                        {bothAnswered
+                                            ? t('dashboard.dailyQuestion.badge.completed')
+                                            : hasAnswered
+                                                ? t('dashboard.dailyQuestion.badge.waiting')
+                                                : t('dashboard.dailyQuestion.badge.daily')}
                                     </span>
                                 </div>
 
                                 {/* Question Text */}
                                 <h3 className="text-2xl font-bold text-[#4A3728] mb-6 leading-tight max-w-sm mx-auto" style={{ fontFamily: 'var(--font-display), Quicksand, sans-serif' }}>
-                                    {questionLoading ? 'Loading...' : (todaysQuestion?.question || "What's on your mind today?")}
+                                    {questionLoading
+                                        ? t('dashboard.dailyQuestion.loading')
+                                        : (todaysQuestion?.question || t('dashboard.dailyQuestion.fallbackQuestion'))}
                                 </h3>
 
                                 {/* Status Indicators - Fully Rounded Capsule Pills with Overlapping Heart */}
@@ -396,10 +401,10 @@ const DashboardPage = () => {
                                         />
                                         <div className="text-left">
                                             <p className={`text-[10px] font-bold leading-tight ${hasAnswered ? 'text-neutral-800' : 'text-white'}`}>
-                                                You: {hasAnswered ? '✓' : ''}
+                                                {t('dashboard.dailyQuestion.youLabel', { status: hasAnswered ? '✓' : '' })}
                                             </p>
                                             <p className={`text-[9px] leading-tight ${hasAnswered ? 'text-neutral-500' : 'text-white/70'}`}>
-                                                {hasAnswered ? 'Answered' : 'Waiting...'}
+                                                {hasAnswered ? t('dashboard.dailyQuestion.answered') : t('dashboard.dailyQuestion.waiting')}
                                             </p>
                                         </div>
                                     </div>
@@ -415,12 +420,15 @@ const DashboardPage = () => {
                                     <div className={`flex items-center gap-2 pl-5 pr-2 py-2 rounded-full relative z-0 -translate-x-3 ${partnerHasAnswered ? 'bg-white' : 'bg-[#8B6F47]'}`}>
                                         <div className="text-right">
                                             <p className={`text-[10px] font-bold leading-tight ${partnerHasAnswered ? 'text-neutral-800' : 'text-white'}`}>
-                                                {partnerName?.split(' ')[0]}: {partnerHasAnswered ? '✓' : ''}
+                                                {t('dashboard.dailyQuestion.partnerLabel', {
+                                                    name: partnerName?.split(' ')[0] || t('common.partner'),
+                                                    status: partnerHasAnswered ? '✓' : ''
+                                                })}
                                             </p>
                                             <p className={`text-[9px] leading-tight ${partnerHasAnswered ? 'text-neutral-500' : 'text-white/70'}`}>
-                                                {partnerHasAnswered ? 'Answered' : (
+                                                {partnerHasAnswered ? t('dashboard.dailyQuestion.answered') : (
                                                     <span className="inline-flex items-center">
-                                                        Waiting
+                                                        {t('dashboard.dailyQuestion.waiting')}
                                                         <Motion.span
                                                             animate={{ opacity: [0, 1, 0] }}
                                                             transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
@@ -453,9 +461,8 @@ const DashboardPage = () => {
 
                 {/* Quick Actions - Story Shelf */}
                 <div className="space-y-3">
-                    <div className="flex items-center justify-between px-1">
-                        <h3 className="font-bold text-neutral-700 text-sm">Quick Actions</h3>
-                        <span className="text-[10px] uppercase tracking-[0.3em] text-neutral-400">Shortcuts</span>
+                    <div className="px-1">
+                        <h3 className="font-bold text-neutral-700 text-sm">{t('dashboard.quickActions.title')}</h3>
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
@@ -496,10 +503,10 @@ const DashboardPage = () => {
                         </div>
                         <div className="flex-1">
                             <div className="text-[10px] uppercase tracking-[0.35em] text-neutral-400 font-semibold">
-                                Question Archives
+                                {t('dashboard.archive.kicker')}
                             </div>
-                            <h3 className="font-bold text-neutral-800 text-sm">Relive your best answers</h3>
-                            <p className="text-neutral-500 text-xs mt-0.5">Time travel to your shared memories.</p>
+                            <h3 className="font-bold text-neutral-800 text-sm">{t('dashboard.archive.title')}</h3>
+                            <p className="text-neutral-500 text-xs mt-0.5">{t('dashboard.archive.subtitle')}</p>
                         </div>
                         {!hasPartner && (
                             <div className="w-7 h-7 rounded-full bg-neutral-100 border border-neutral-200 flex items-center justify-center">
@@ -551,8 +558,10 @@ const DashboardPage = () => {
                                         >
                                             <Check className="w-8 h-8 text-emerald-500" />
                                         </Motion.div>
-                                        <h3 className="font-bold text-neutral-800 text-lg">{partnerName} got +10 Kibble! 🎉</h3>
-                                        <p className="text-neutral-500 text-sm">Thanks for recognizing their effort!</p>
+                                        <h3 className="font-bold text-neutral-800 text-lg">
+                                            {t('dashboard.goodDeed.successTitle', { name: partnerName })}
+                                        </h3>
+                                        <p className="text-neutral-500 text-sm">{t('dashboard.goodDeed.successSubtitle')}</p>
                                     </Motion.div>
                                 ) : (
                                     <>
@@ -563,10 +572,10 @@ const DashboardPage = () => {
                                                 </div>
                                                 <div>
                                                     <div className="text-[10px] uppercase tracking-[0.35em] text-neutral-400 font-semibold">
-                                                        Appreciation
+                                                        {t('dashboard.goodDeed.kicker')}
                                                     </div>
                                                     <h3 className="font-display font-bold text-neutral-800 text-lg">
-                                                        Appreciate {partnerName}
+                                                        {t('dashboard.goodDeed.title', { name: partnerName })}
                                                     </h3>
                                                 </div>
                                             </div>
@@ -579,7 +588,7 @@ const DashboardPage = () => {
                                         </div>
 
                                         <div className="relative flex items-center justify-between rounded-2xl border border-rose-200/60 bg-rose-50/70 px-3 py-2 text-xs text-rose-700">
-                                            <span>Share a sweet moment and send +10 kibble.</span>
+                                            <span>{t('dashboard.goodDeed.hint')}</span>
                                             <span className="rounded-full bg-white/80 px-2 py-1 text-[10px] font-semibold text-rose-600">
                                                 +10
                                             </span>
@@ -589,18 +598,18 @@ const DashboardPage = () => {
                                             <textarea
                                                 value={goodDeedText}
                                                 onChange={(e) => setGoodDeedText(e.target.value)}
-                                                placeholder={`${partnerName} did something nice...`}
+                                                placeholder={t('dashboard.goodDeed.placeholder', { name: partnerName })}
                                                 className="w-full h-28 bg-white/80 border border-rose-100 rounded-2xl p-3 text-neutral-700 placeholder:text-neutral-400 focus:ring-2 focus:ring-rose-200 focus:border-rose-300 focus:outline-none resize-none text-sm shadow-inner-soft"
                                             />
                                             <div className="flex items-center justify-between text-[11px] text-neutral-400">
-                                                <span>Keep it short and heartfelt.</span>
+                                                <span>{t('dashboard.goodDeed.helper')}</span>
                                                 <span>{goodDeedText.length} / 120</span>
                                             </div>
                                         </div>
 
                                         {/* Quick Suggestions */}
                                         <div className="flex flex-wrap gap-2">
-                                            {goodDeedSuggestions.map((suggestion) => (
+                                            {suggestionList.map((suggestion) => (
                                                 <button
                                                     key={suggestion}
                                                     onClick={() => setGoodDeedText(suggestion)}
@@ -625,7 +634,7 @@ const DashboardPage = () => {
                                             ) : (
                                                 <>
                                                     <Heart className="w-4 h-4" />
-                                                    Send Appreciation
+                                                    {t('dashboard.goodDeed.submit')}
                                                 </>
                                             )}
                                         </button>
@@ -680,31 +689,37 @@ const ActionTile = ({ icon, label, detail, locked, accent, onClick }) => {
 
     return (
         <Motion.button
-            whileTap={{ scale: 0.98 }}
+            whileTap={{ scale: 0.97 }}
             onClick={onClick}
-            className={`relative overflow-hidden rounded-[26px] border ${palette.border} bg-gradient-to-br ${palette.bg} p-4 text-left shadow-soft transition`}
+            className={`relative overflow-hidden rounded-[24px] border ${palette.border} bg-gradient-to-br ${palette.bg} p-4 text-left shadow-soft transition min-h-[120px]`}
         >
-            <div className={`absolute -top-8 -right-6 h-16 w-16 rounded-full blur-2xl ${palette.glow}`} />
+            {/* Decorative glow */}
+            <div className={`absolute -top-10 -right-8 h-20 w-20 rounded-full blur-2xl ${palette.glow}`} />
+            <div className={`absolute -bottom-6 -left-4 h-12 w-12 rounded-full blur-xl ${palette.glow} opacity-50`} />
+
+            {/* Lock indicator */}
             {locked && (
-                <div className="absolute top-3 right-3 flex h-6 w-6 items-center justify-center rounded-full bg-white/90 border border-neutral-200">
-                    <Lock className="w-3.5 h-3.5 text-neutral-400" />
+                <div className="absolute top-3 right-3 flex h-6 w-6 items-center justify-center rounded-full bg-white/90 border border-neutral-200 shadow-sm">
+                    <Lock className="w-3 h-3 text-neutral-400" />
                 </div>
             )}
-            <div className="relative flex items-center gap-3">
-                <div className={`h-11 w-11 rounded-2xl border ${palette.iconBorder} ${palette.iconBg} flex items-center justify-center shadow-inner-soft`}>
+
+            {/* Content */}
+            <div className="relative flex flex-col h-full">
+                {/* Icon container - consistent 48x48 */}
+                <div className={`h-12 w-12 rounded-2xl border ${palette.iconBorder} ${palette.iconBg} flex items-center justify-center shadow-inner-soft mb-3 flex-shrink-0`}>
                     <img
                         src={icon}
                         alt={label}
                         className={`w-7 h-7 object-contain ${locked ? 'grayscale opacity-50' : ''}`}
                     />
                 </div>
-                <div className="flex-1">
-                    <div className="text-sm font-bold text-neutral-800">{label}</div>
-                    <div className="text-[11px] text-neutral-500">{detail}</div>
+
+                {/* Text content */}
+                <div className="flex-1 flex flex-col justify-center">
+                    <div className="text-sm font-bold text-neutral-800 leading-tight">{label}</div>
+                    <div className="text-[11px] text-neutral-500 mt-0.5 leading-snug">{detail}</div>
                 </div>
-                <span className={`text-[10px] font-semibold uppercase tracking-[0.3em] ${palette.text}`}>
-                    Go
-                </span>
             </div>
         </Motion.button>
     );

@@ -13,6 +13,7 @@ const {
     isSupabaseConfigured,
     checkUserHasMemories
 } = require('./supabase');
+const { normalizeLanguage } = require('./language');
 
 // Configuration
 const CONFIG = {
@@ -70,6 +71,7 @@ async function retrieveHistoricalContext(caseData) {
         const { participants, submissions } = caseData;
         const userAId = participants.userA.id;
         const userBId = participants.userB.id;
+        const defaultLanguage = normalizeLanguage(caseData?.language) || 'en';
 
         // Step 1: Fetch static profiles for both users (in parallel)
         // Also check if any memories exist before generating embeddings
@@ -80,6 +82,12 @@ async function retrieveHistoricalContext(caseData) {
             checkUserHasMemories(userAId),
             checkUserHasMemories(userBId),
         ]);
+        const userALanguage = normalizeLanguage(profileA?.preferredLanguage)
+            || normalizeLanguage(participants?.userA?.language)
+            || defaultLanguage;
+        const userBLanguage = normalizeLanguage(profileB?.preferredLanguage)
+            || normalizeLanguage(participants?.userB?.language)
+            || defaultLanguage;
 
         // Skip embedding generation and RAG if no memories exist for either user
         if (userAMemoryCount === 0 && userBMemoryCount === 0) {
@@ -102,19 +110,41 @@ async function retrieveHistoricalContext(caseData) {
             });
 
             console.log('[Memory Retrieval] Searching for relevant memories...');
-            const relevantMemories = await retrieveRelevantMemories(
-                queryEmbedding,
-                [userAId, userBId],
-                CONFIG.maxMemoriesToRetrieve
-            );
+            const retrieveForUser = async (userId, language) => {
+                if (!userId) return [];
+                const normalizedLanguage = normalizeLanguage(language) || 'en';
+                let results = await retrieveRelevantMemories(
+                    queryEmbedding,
+                    [userId],
+                    CONFIG.maxMemoriesPerUser,
+                    normalizedLanguage
+                );
+                if (results.length === 0 && normalizedLanguage !== 'en') {
+                    results = await retrieveRelevantMemories(
+                        queryEmbedding,
+                        [userId],
+                        CONFIG.maxMemoriesPerUser,
+                        'en'
+                    );
+                }
+                return results;
+            };
 
-            const filteredMemories = relevantMemories.filter(
+            const [memoriesA, memoriesB] = await Promise.all([
+                userAMemoryCount > 0 ? retrieveForUser(userAId, userALanguage) : [],
+                userBMemoryCount > 0 ? retrieveForUser(userBId, userBLanguage) : [],
+            ]);
+
+            const combined = [...memoriesA, ...memoriesB];
+            const filteredMemories = combined.filter(
                 m => m.similarity >= CONFIG.minSimilarityScore
             );
 
+            filteredMemories.sort((a, b) => (b.similarity || 0) - (a.similarity || 0));
+
             console.log(`[Memory Retrieval] Found ${filteredMemories.length} relevant memories`);
 
-            return filteredMemories.map(memory => ({
+            return filteredMemories.slice(0, CONFIG.maxMemoriesToRetrieve).map(memory => ({
                 userId: memory.user_id,
                 userName: memory.user_id === userAId
                     ? participants.userA.name
@@ -142,12 +172,32 @@ async function retrieveHistoricalContext(caseData) {
                     : null;
 
                 console.log('[Memory Retrieval] Searching for relevant memories (v2)...');
+                const retrieveForUser = async (embedding, userId, language) => {
+                    const normalizedLanguage = normalizeLanguage(language) || 'en';
+                    let results = await retrieveRelevantMemoriesV2(
+                        embedding,
+                        [userId],
+                        CONFIG.maxMemoriesPerUser,
+                        CONFIG.candidateMultiplier,
+                        normalizedLanguage
+                    );
+                    if (results.length === 0 && normalizedLanguage !== 'en') {
+                        results = await retrieveRelevantMemoriesV2(
+                            embedding,
+                            [userId],
+                            CONFIG.maxMemoriesPerUser,
+                            CONFIG.candidateMultiplier,
+                            'en'
+                        );
+                    }
+                    return results;
+                };
                 const [memoriesA, memoriesB] = await Promise.all([
                     userAEmbedding
-                        ? retrieveRelevantMemoriesV2(userAEmbedding, [userAId], CONFIG.maxMemoriesPerUser, CONFIG.candidateMultiplier)
+                        ? retrieveForUser(userAEmbedding, userAId, userALanguage)
                         : [],
                     userBEmbedding
-                        ? retrieveRelevantMemoriesV2(userBEmbedding, [userBId], CONFIG.maxMemoriesPerUser, CONFIG.candidateMultiplier)
+                        ? retrieveForUser(userBEmbedding, userBId, userBLanguage)
                         : [],
                 ]);
 

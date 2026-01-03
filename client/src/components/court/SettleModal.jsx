@@ -1,11 +1,13 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Handshake, Heart } from 'lucide-react';
+import { useI18n } from '../../i18n';
 
 /**
  * SettleModal - Confirmation modal for settling out of court
  */
 const SettleModal = ({ onConfirm, onCancel, partnerName, partnerWantsToSettle }) => {
+    const { t } = useI18n();
     return (
         <motion.div
             initial={{ opacity: 0 }}
@@ -35,20 +37,21 @@ const SettleModal = ({ onConfirm, onCancel, partnerName, partnerWantsToSettle })
 
                 {/* Title */}
                 <h2 className="text-xl font-bold text-neutral-800 mb-2">
-                    {partnerWantsToSettle ? 'Accept Settlement?' : 'Settle Out of Court?'}
+                    {partnerWantsToSettle ? t('court.settleModal.title.accept') : t('court.settleModal.title.request')}
                 </h2>
 
                 {/* Description */}
                 <p className="text-neutral-500 text-sm mb-6">
                     {partnerWantsToSettle ? (
                         <>
-                            <span className="font-bold text-pink-500">{partnerName}</span> wants to settle this peacefully.
-                            Choose love over winning?
+                            <span className="font-bold text-pink-500">{partnerName}</span>{' '}
+                            {t('court.settleModal.body.accept')}
                         </>
                     ) : (
                         <>
-                            Request to end this case without a verdict.
-                            Both you and <span className="font-bold text-pink-500">{partnerName}</span> must agree.
+                            {t('court.settleModal.body.requestIntro')}{' '}
+                            <span className="font-bold text-pink-500">{partnerName}</span>{' '}
+                            {t('court.settleModal.body.requestOutro')}
                         </>
                     )}
                 </p>
@@ -56,9 +59,9 @@ const SettleModal = ({ onConfirm, onCancel, partnerName, partnerWantsToSettle })
                 {/* Love Quote */}
                 <div className="bg-gradient-to-r from-pink-50 to-rose-50 rounded-2xl p-4 mb-6">
                     <p className="text-sm text-pink-700 italic">
-                        "Sometimes the bravest thing is choosing connection over being right."
+                        {t('court.settleModal.quote')}
                     </p>
-                    <p className="text-xs text-pink-400 mt-1">— Judge Whiskers 🐱</p>
+                    <p className="text-xs text-pink-400 mt-1">{t('court.settleModal.signature')}</p>
                 </div>
 
                 {/* Buttons */}
@@ -68,7 +71,7 @@ const SettleModal = ({ onConfirm, onCancel, partnerName, partnerWantsToSettle })
                         onClick={onCancel}
                         className="flex-1 py-3 px-4 bg-neutral-100 text-neutral-600 rounded-2xl font-medium text-sm"
                     >
-                        Keep Case Open
+                        {t('court.settleModal.keep')}
                     </motion.button>
                     <motion.button
                         whileTap={{ scale: 0.97 }}
@@ -76,7 +79,7 @@ const SettleModal = ({ onConfirm, onCancel, partnerName, partnerWantsToSettle })
                         className="flex-1 py-3 px-4 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-2xl font-bold text-sm shadow-lg flex items-center justify-center gap-2"
                     >
                         <Heart className="w-4 h-4" />
-                        {partnerWantsToSettle ? 'Accept' : 'Request'}
+                        {partnerWantsToSettle ? t('court.settleModal.accept') : t('court.settleModal.request')}
                     </motion.button>
                 </div>
             </motion.div>

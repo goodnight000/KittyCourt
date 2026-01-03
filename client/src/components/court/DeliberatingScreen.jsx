@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Scale, BookOpen, Heart, Feather, Sparkles, Gavel } from 'lucide-react';
+import { useI18n } from '../../i18n';
 
 /**
  * DeliberatingScreen
@@ -10,32 +11,37 @@ import { Scale, BookOpen, Heart, Feather, Sparkles, Gavel } from 'lucide-react';
 
 const STEPS = [
     {
-        title: 'Reviewing the facts',
-        subtitle: 'Separating what happened from assumptions.',
+        titleKey: 'court.deliberating.steps.review.title',
+        subtitleKey: 'court.deliberating.steps.review.subtitle',
         Icon: BookOpen,
     },
     {
-        title: 'Honoring the feelings',
-        subtitle: 'Naming emotions without blame.',
+        titleKey: 'court.deliberating.steps.honor.title',
+        subtitleKey: 'court.deliberating.steps.honor.subtitle',
         Icon: Heart,
     },
     {
-        title: 'Drafting the ruling',
-        subtitle: 'Clear next steps for both partners.',
+        titleKey: 'court.deliberating.steps.draft.title',
+        subtitleKey: 'court.deliberating.steps.draft.subtitle',
         Icon: Feather,
     },
 ];
 
-const QUOTES = [
+const FALLBACK_QUOTES = [
     'Cat Court Principle: Validate first, solve second.',
     'Whisker Wisdom: Curiosity beats defensiveness.',
     'Court Note: A fair ruling protects both hearts.',
 ];
 
 const DeliberatingScreen = ({ isLoading = true }) => {
+    const { t } = useI18n();
     const [stepIndex, setStepIndex] = useState(0);
     const [quoteIndex, setQuoteIndex] = useState(0);
     const [pulse, setPulse] = useState(0);
+    const localizedQuotes = t('court.deliberating.quotes');
+    const quotes = Array.isArray(localizedQuotes) && localizedQuotes.length
+        ? localizedQuotes
+        : FALLBACK_QUOTES;
 
     useEffect(() => {
         if (!isLoading) return;
@@ -48,10 +54,10 @@ const DeliberatingScreen = ({ isLoading = true }) => {
     useEffect(() => {
         if (!isLoading) return;
         const t = setInterval(() => {
-            setQuoteIndex((prev) => (prev + 1) % QUOTES.length);
+            setQuoteIndex((prev) => (prev + 1) % quotes.length);
         }, 6000);
         return () => clearInterval(t);
-    }, [isLoading]);
+    }, [isLoading, quotes.length]);
 
     useEffect(() => {
         if (!isLoading) return;
@@ -114,7 +120,7 @@ const DeliberatingScreen = ({ isLoading = true }) => {
                                 </motion.div>
                                 <div className="flex-1">
                                     <div className="flex items-center gap-2">
-                                        <h2 className="text-lg font-extrabold text-court-brown">Judge Whiskers is deliberating</h2>
+                                        <h2 className="text-lg font-extrabold text-court-brown">{t('court.deliberating.title')}</h2>
                                         <motion.div
                                             animate={{ rotate: [0, 12, -12, 0] }}
                                             transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
@@ -123,7 +129,7 @@ const DeliberatingScreen = ({ isLoading = true }) => {
                                             <Sparkles className="w-4 h-4" />
                                         </motion.div>
                                     </div>
-                                    <p className="text-sm text-court-brownLight">A fair ruling is being prepared — you’ll see it soon.</p>
+                                    <p className="text-sm text-court-brownLight">{t('court.deliberating.subtitle')}</p>
                                 </div>
                             </div>
 
@@ -136,7 +142,7 @@ const DeliberatingScreen = ({ isLoading = true }) => {
                                 >
                                     <img
                                         src="/assets/avatars/judge_whiskers.png"
-                                        alt="Judge Whiskers"
+                                        alt={t('court.deliberating.judgeAlt')}
                                         className="w-full h-full object-cover"
                                     />
                                 </motion.div>
@@ -157,8 +163,8 @@ const DeliberatingScreen = ({ isLoading = true }) => {
                                             <Gavel className="w-5 h-5 text-court-brown" />
                                         </motion.div>
                                         <div>
-                                            <p className="text-xs font-bold text-court-brown">Analyzing your case…</p>
-                                            <p className="text-[10px] text-court-brownLight">Balancing care + accountability</p>
+                                            <p className="text-xs font-bold text-court-brown">{t('court.deliberating.analyzingTitle')}</p>
+                                            <p className="text-[10px] text-court-brownLight">{t('court.deliberating.analyzingSubtitle')}</p>
                                         </div>
                                     </div>
 
@@ -193,8 +199,8 @@ const DeliberatingScreen = ({ isLoading = true }) => {
                                                 <activeStep.Icon className="w-5 h-5 text-court-brown" />
                                             </motion.div>
                                             <div className="flex-1">
-                                                <p className="text-sm font-extrabold text-court-brown">{activeStep.title}</p>
-                                                <p className="text-xs text-court-brownLight mt-0.5">{activeStep.subtitle}</p>
+                                                <p className="text-sm font-extrabold text-court-brown">{t(activeStep.titleKey)}</p>
+                                                <p className="text-xs text-court-brownLight mt-0.5">{t(activeStep.subtitleKey)}</p>
                                             </div>
                                         </div>
 
@@ -214,7 +220,7 @@ const DeliberatingScreen = ({ isLoading = true }) => {
                                                     transition={{ duration: 1.2, repeat: Infinity }}
                                                     className="text-[10px] font-bold text-court-brownLight"
                                                 >
-                                                    working…
+                                                    {t('court.deliberating.working')}
                                                 </motion.div>
                                             </div>
                                         </div>
@@ -231,7 +237,7 @@ const DeliberatingScreen = ({ isLoading = true }) => {
                                         exit={{ opacity: 0, y: -6 }}
                                         className="text-xs text-court-brownLight italic text-center"
                                     >
-                                        “{QUOTES[quoteIndex]}”
+                                        {quotes[quoteIndex % quotes.length]}
                                     </motion.p>
                                 </AnimatePresence>
                             </div>
@@ -251,7 +257,7 @@ const DeliberatingScreen = ({ isLoading = true }) => {
                 </div>
 
                 <p className="text-center text-xs text-court-brownLight mt-3">
-                    Court note: you can keep using the app while I deliberate.
+                    {t('court.deliberating.note')}
                 </p>
             </div>
         </motion.div>

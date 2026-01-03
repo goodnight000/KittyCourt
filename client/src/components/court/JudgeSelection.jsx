@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Gavel, Zap, Scale, Sparkles, Lock, Crown } from 'lucide-react';
 import useSubscriptionStore from '../../store/useSubscriptionStore';
 import Paywall from '../Paywall';
+import { useI18n } from '../../i18n';
 
 /**
  * Judge Selection Modal
@@ -13,9 +14,9 @@ import Paywall from '../Paywall';
 const JUDGES = [
     {
         id: 'fast',
-        name: 'Judge Lightning',
-        subtitle: 'Quick Verdicts',
-        description: 'Swift and efficient. Perfect for timely resolutions.',
+        nameKey: 'court.judges.fast.name',
+        subtitleKey: 'court.judges.fast.subtitle',
+        descriptionKey: 'court.judges.fast.description',
         model: 'DeepSeek v3.2',
         avatar: '/assets/avatars/judge_fast.png',
         accentColor: 'bg-blue-500',
@@ -24,9 +25,9 @@ const JUDGES = [
     },
     {
         id: 'logical',
-        name: 'Judge Mittens',
-        subtitle: 'The Logical Judge',
-        description: 'Balanced and methodical. Works for any case size.',
+        nameKey: 'court.judges.logical.name',
+        subtitleKey: 'court.judges.logical.subtitle',
+        descriptionKey: 'court.judges.logical.description',
         model: 'Kimi K2',
         avatar: '/assets/avatars/judge_logical.png',
         accentColor: 'bg-emerald-500',
@@ -35,9 +36,9 @@ const JUDGES = [
     },
     {
         id: 'best',
-        name: 'Judge Whiskers',
-        subtitle: 'The Best Judge',
-        description: 'Empathic, logical, and experienced. Only for the most heated cases.',
+        nameKey: 'court.judges.best.name',
+        subtitleKey: 'court.judges.best.subtitle',
+        descriptionKey: 'court.judges.best.description',
         model: 'Opus 4.5',
         avatar: '/assets/avatars/judge_whiskers.png',
         accentColor: 'bg-amber-500',
@@ -51,6 +52,7 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
     const [selectedJudge, setSelectedJudge] = useState(null);
     const [showPaywall, setShowPaywall] = useState(false);
     const [paywallReason, setPaywallReason] = useState(null);
+    const { t } = useI18n();
 
     const { canUseJudge, getUsageDisplay, isGold, isLoading, fetchUsage } = useSubscriptionStore();
 
@@ -63,10 +65,10 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
 
     const getPaywallReason = useCallback((judge) => {
         if (judge.id === 'best' && !isGold) {
-            return 'Judge Whiskers is exclusive to Pause Gold members';
+            return t('court.judgeSelection.paywall.bestLocked');
         }
-        return `You've used all your ${judge.name} rulings this month`;
-    }, [isGold]);
+        return t('court.judgeSelection.paywall.limitReached', { judge: t(judge.nameKey) });
+    }, [isGold, t]);
 
     const handleJudgeClick = (judge) => {
         const status = canUseJudge(judge.id);
@@ -164,18 +166,18 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
                             <div className="text-center mb-6">
                                 <div className="inline-flex items-center gap-2 mb-2">
                                     <h2 className="text-xl font-bold text-court-brown">
-                                        Choose Your Judge!
+                                        {t('court.judgeSelection.title')}
                                     </h2>
                                 </div>
                                 <p className="text-sm text-court-brownLight">
-                                    Select a judge to preside over your case
+                                    {t('court.judgeSelection.subtitle')}
                                 </p>
 
                                 {/* Gold badge */}
                                 {isGold && (
                                     <div className="inline-flex items-center gap-1 mt-2 px-2 py-1 bg-gradient-to-r from-court-gold/20 to-amber-500/20 rounded-full">
                                         <Crown className="w-3 h-3 text-court-gold" />
-                                        <span className="text-xs font-medium text-court-gold">Pause Gold</span>
+                                        <span className="text-xs font-medium text-court-gold">{t('court.judgeSelection.goldBadge')}</span>
                                     </div>
                                 )}
                             </div>
@@ -187,7 +189,8 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
                                     const IconComponent = judge.icon;
                                     const status = canUseJudge(judge.id);
                                     const isLocked = !status.allowed;
-                                    const usageText = getUsageDisplay(judge.id);
+                                    const usageText = getUsageDisplay(judge.id, t);
+                                    const judgeName = t(judge.nameKey);
 
                                     return (
                                         <motion.button
@@ -211,7 +214,7 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
                                                     }`}>
                                                     <img
                                                         src={judge.avatar}
-                                                        alt={judge.name}
+                                                        alt={t('court.judgeSelection.judgeAlt', { name: judgeName })}
                                                         className="w-full h-full object-cover"
                                                         onError={(e) => {
                                                             e.target.src = '/assets/avatars/judge_whiskers.png';
@@ -237,7 +240,7 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex items-center gap-2">
                                                         <h3 className={`font-bold truncate ${isLocked ? 'text-court-brownLight' : 'text-court-brown'}`}>
-                                                            {judge.name}
+                                                            {judgeName}
                                                         </h3>
                                                         <IconComponent className={`w-4 h-4 ${isLocked
                                                             ? 'text-court-brownLight/50'
@@ -247,7 +250,7 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
                                                             }`} />
                                                     </div>
                                                     <p className="text-xs text-court-brownLight mb-1">
-                                                        {judge.subtitle}
+                                                        {t(judge.subtitleKey)}
                                                     </p>
 
                                                     {/* Usage indicator */}
@@ -288,7 +291,7 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
                                                 <div className="mt-2 pt-2 border-t border-court-tan/30 flex items-center justify-center gap-1">
                                                     <Crown className="w-3 h-3 text-court-gold" />
                                                     <span className="text-xs text-court-gold font-medium">
-                                                        Upgrade to Pause Gold
+                                                        {t('court.judgeSelection.upgrade')}
                                                     </span>
                                                 </div>
                                             )}
@@ -308,7 +311,7 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
                                     }`}
                             >
                                 <Gavel className="w-5 h-5" />
-                                {canServe ? 'Serve Your Partner' : 'Select a Judge'}
+                                {canServe ? t('court.judgeSelection.serve') : t('court.judgeSelection.selectPrompt')}
                             </motion.button>
 
                             {/* Cancel link */}
@@ -316,7 +319,7 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
                                 onClick={handleClose}
                                 className="w-full mt-3 py-2 text-sm text-court-brownLight hover:text-court-brown transition-colors"
                             >
-                                Cancel
+                                {t('common.cancel')}
                             </button>
                         </motion.div>
                     </motion.div>

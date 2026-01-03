@@ -1,12 +1,14 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Handshake, Heart } from 'lucide-react';
+import { useI18n } from '../../i18n';
 
 /**
  * SettleSuccessAnimation - Shows when both partners agree to settle
  * Floating hearts and case dismissed message
  */
 const SettleSuccessAnimation = ({ partnerName }) => {
+    const { t } = useI18n();
     return (
         <motion.div
             initial={{ opacity: 0 }}
@@ -58,7 +60,7 @@ const SettleSuccessAnimation = ({ partnerName }) => {
                     transition={{ delay: 0.5 }}
                     className="text-3xl font-bold text-pink-600 mb-3"
                 >
-                    Case Dismissed! 🕊️
+                    {t('court.settleSuccess.title')}
                 </motion.h1>
 
                 {/* Subtitle */}
@@ -68,7 +70,7 @@ const SettleSuccessAnimation = ({ partnerName }) => {
                     transition={{ delay: 0.7 }}
                     className="text-neutral-600 text-lg mb-6"
                 >
-                    You both chose love over winning
+                    {t('court.settleSuccess.subtitle')}
                 </motion.p>
 
                 {/* Card */}
@@ -88,10 +90,9 @@ const SettleSuccessAnimation = ({ partnerName }) => {
                         </div>
                     </div>
                     <p className="text-sm text-neutral-600 italic">
-                        "The strongest couples know when to put down their swords
-                        and pick up each other's hearts."
+                        {t('court.settleSuccess.quote')}
                     </p>
-                    <p className="text-xs text-neutral-400 mt-2">— Judge Whiskers</p>
+                    <p className="text-xs text-neutral-400 mt-2">{t('court.settleSuccess.signature')}</p>
                 </motion.div>
 
                 {/* Redirect notice */}
@@ -101,7 +102,7 @@ const SettleSuccessAnimation = ({ partnerName }) => {
                     transition={{ delay: 1.5 }}
                     className="text-neutral-400 text-sm mt-6"
                 >
-                    Returning to home...
+                    {t('court.settleSuccess.returning')}
                 </motion.p>
             </div>
         </motion.div>

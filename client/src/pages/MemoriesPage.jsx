@@ -8,29 +8,36 @@ import { useNavigate } from 'react-router-dom'
 import useAuthStore from '../store/useAuthStore'
 import useMemoryStore from '../store/useMemoryStore'
 import MemoryCard from '../components/MemoryCard'
+import { useI18n } from '../i18n'
 
 const REACTION_OPTIONS = ['❤️', '😍', '😂', '🥰']
 
-const DeletedMemoryCard = ({ deletedAt, onRestore }) => (
-  <div className="relative overflow-hidden rounded-3xl border border-rose-200/70 bg-rose-50/70 p-4">
-    <div className="absolute -top-10 -right-6 h-20 w-20 rounded-full bg-rose-200/40 blur-2xl" />
-    <div className="relative space-y-2 text-center">
-      <div className="text-sm font-semibold text-rose-700">Memory moved to the archive</div>
-      {deletedAt && (
-        <div className="text-xs text-rose-500">
-          Deleted {new Date(deletedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-        </div>
-      )}
-      <motion.button
-        whileTap={{ scale: 0.96 }}
-        onClick={onRestore}
-        className="inline-flex items-center justify-center rounded-full border border-rose-200/80 bg-white/80 px-4 py-2 text-xs font-bold text-rose-700 shadow-soft"
-      >
-        Restore memory
-      </motion.button>
+const DeletedMemoryCard = ({ deletedAt, onRestore }) => {
+  const { t, language } = useI18n()
+
+  return (
+    <div className="relative overflow-hidden rounded-3xl border border-rose-200/70 bg-rose-50/70 p-4">
+      <div className="absolute -top-10 -right-6 h-20 w-20 rounded-full bg-rose-200/40 blur-2xl" />
+      <div className="relative space-y-2 text-center">
+        <div className="text-sm font-semibold text-rose-700">{t('memories.deleted.title')}</div>
+        {deletedAt && (
+          <div className="text-xs text-rose-500">
+            {t('memories.deleted.deletedOn', {
+              date: new Date(deletedAt).toLocaleDateString(language, { month: 'short', day: 'numeric' })
+            })}
+          </div>
+        )}
+        <motion.button
+          whileTap={{ scale: 0.96 }}
+          onClick={onRestore}
+          className="inline-flex items-center justify-center rounded-full border border-rose-200/80 bg-white/80 px-4 py-2 text-xs font-bold text-rose-700 shadow-soft"
+        >
+          {t('memories.deleted.restore')}
+        </motion.button>
+      </div>
     </div>
-  </div>
-)
+  )
+}
 
 const MemoryBackdrop = () => (
   <div className="absolute inset-0 pointer-events-none">
@@ -49,6 +56,7 @@ const MemoryBackdrop = () => (
 
 const MemoriesPage = () => {
   const navigate = useNavigate()
+  const { t, language } = useI18n()
   const handleBack = () => navigate('/profile', { state: { tab: 'us' } })
   const { hasPartner, user } = useAuthStore()
   const {
@@ -119,7 +127,21 @@ const MemoriesPage = () => {
     }
   }, [memories])
 
-  const memoryCountLabel = memoryStats.total === 1 ? 'moment' : 'moments'
+  const memoryCountLabel = memoryStats.total === 1
+    ? t('memories.stats.momentOne')
+    : t('memories.stats.momentOther')
+  const errorMap = {
+    'Failed to load memories': 'memories.errors.loadFailed',
+    'Failed to upload memory': 'memories.errors.uploadFailed',
+    'Failed to delete memory': 'memories.errors.deleteFailed',
+    'Failed to restore memory': 'memories.errors.restoreFailed',
+    'Failed to react to memory': 'memories.errors.reactFailed',
+    'Failed to remove reaction': 'memories.errors.removeReactFailed',
+    'Failed to load comments': 'memories.errors.commentsLoadFailed',
+    'Failed to add comment': 'memories.errors.commentAddFailed',
+    'Failed to delete comment': 'memories.errors.commentDeleteFailed'
+  }
+  const translatedError = errorMap[error] ? t(errorMap[error]) : error
 
   const handleFileChange = (event) => {
     const nextFile = event.target.files?.[0]
@@ -168,7 +190,7 @@ const MemoriesPage = () => {
             className="flex items-center gap-2 text-sm font-semibold text-neutral-600"
           >
             <ArrowLeft className="w-5 h-5" />
-            <span>Back</span>
+            <span>{t('common.back')}</span>
           </motion.button>
 
           <motion.div
@@ -180,17 +202,17 @@ const MemoriesPage = () => {
               <ImagePlus className="w-8 h-8 text-rose-500" />
             </div>
             <h2 className="mt-4 text-xl font-display font-bold text-neutral-800">
-              Memories unlock with your partner
+              {t('memories.locked.title')}
             </h2>
             <p className="mt-2 text-sm text-neutral-500">
-              Connect profiles to start building your shared archive.
+              {t('memories.locked.subtitle')}
             </p>
             <motion.button
               whileTap={{ scale: 0.98 }}
               onClick={handleBack}
               className="mt-5 w-full rounded-2xl bg-gradient-to-r from-rose-500 to-amber-500 py-3 text-sm font-bold text-white shadow-soft"
             >
-              Go to Profile
+              {t('memories.locked.cta')}
             </motion.button>
           </motion.div>
         </div>
@@ -209,7 +231,7 @@ const MemoriesPage = () => {
             className="flex items-center gap-2 text-sm font-semibold text-neutral-600"
           >
             <ArrowLeft className="w-5 h-5" />
-            <span>Back</span>
+            <span>{t('common.back')}</span>
           </motion.button>
 
           <motion.div
@@ -221,17 +243,17 @@ const MemoriesPage = () => {
               <ImagePlus className="w-8 h-8 text-rose-500" />
             </div>
             <h2 className="mt-4 text-xl font-display font-bold text-neutral-800">
-              Memories are taking a nap
+              {t('memories.unavailable.title')}
             </h2>
             <p className="mt-2 text-sm text-neutral-500">
-              We&apos;re having trouble loading the gallery right now. Please try again soon.
+              {t('memories.unavailable.subtitle')}
             </p>
             <motion.button
               whileTap={{ scale: 0.98 }}
               onClick={handleBack}
               className="mt-5 w-full rounded-2xl bg-gradient-to-r from-rose-500 to-amber-500 py-3 text-sm font-bold text-white shadow-soft"
             >
-              Back to Profile
+              {t('memories.unavailable.cta')}
             </motion.button>
           </motion.div>
         </div>
@@ -253,10 +275,10 @@ const MemoriesPage = () => {
           </motion.button>
           <div className="flex-1">
             <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-amber-600">
-              Our Story
+              {t('memories.header.kicker')}
             </p>
-            <h1 className="text-2xl font-display font-bold text-neutral-800">Memory Album</h1>
-            <p className="text-sm text-neutral-500">Your shared photo timeline</p>
+            <h1 className="text-2xl font-display font-bold text-neutral-800">{t('memories.header.title')}</h1>
+            <p className="text-sm text-neutral-500">{t('memories.header.subtitle')}</p>
           </div>
           <motion.button
             whileTap={{ scale: 0.95 }}
@@ -264,7 +286,7 @@ const MemoriesPage = () => {
             className="flex items-center gap-2 rounded-full bg-gradient-to-r from-[#C9A227] to-[#8B7019] px-4 py-2 text-xs font-bold text-white shadow-soft"
           >
             <ImagePlus className="w-4 h-4" />
-            Add memory
+            {t('memories.header.add')}
           </motion.button>
         </header>
 
@@ -280,13 +302,13 @@ const MemoriesPage = () => {
           <div className="relative flex flex-wrap items-center justify-between gap-4">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-neutral-400">
-                Shared archive
+                {t('memories.overview.kicker')}
               </p>
               <h2 className="mt-1 text-lg font-display font-bold text-neutral-800">
-                A timeline of your favorite days
+                {t('memories.overview.title')}
               </h2>
               <p className="mt-1 text-xs text-neutral-500">
-                Every photo becomes a chapter in the story you write together.
+                {t('memories.overview.subtitle')}
               </p>
             </div>
             <div className="flex flex-wrap justify-end gap-2 text-[11px] font-semibold">
@@ -294,24 +316,24 @@ const MemoriesPage = () => {
                 {memoryStats.total} {memoryCountLabel}
               </div>
               <div className="rounded-full border border-white/80 bg-white/85 px-3 py-1 text-rose-600">
-                {memoryStats.reactions} hearts
+                {t('memories.stats.hearts', { count: memoryStats.reactions })}
               </div>
               <div className="rounded-full border border-white/80 bg-white/85 px-3 py-1 text-amber-700">
-                {memoryStats.comments} notes
+                {t('memories.stats.notes', { count: memoryStats.comments })}
               </div>
             </div>
           </div>
         </motion.section>
 
-        {error && (
+        {translatedError && (
           <div className="rounded-2xl border border-rose-100/80 bg-rose-50/80 p-3 text-sm text-rose-600">
-            {error}
+            {translatedError}
             <button
               type="button"
               onClick={clearError}
               className="ml-2 text-xs font-bold text-rose-700"
             >
-              Dismiss
+              {t('memories.actions.dismiss')}
             </button>
           </div>
         )}
@@ -319,9 +341,9 @@ const MemoriesPage = () => {
         {deletedMemories?.length > 0 && (
           <div className="glass-card space-y-3">
             <div className="flex items-center justify-between text-sm font-semibold text-rose-700">
-              <span>Restore shelf</span>
+              <span>{t('memories.deleted.shelfTitle')}</span>
               <span className="text-xs font-bold text-rose-500">
-                {deletedMemories.length} waiting
+                {t('memories.deleted.waiting', { count: deletedMemories.length })}
               </span>
             </div>
             <div className="grid gap-3">
@@ -357,17 +379,17 @@ const MemoriesPage = () => {
               <ImagePlus className="w-8 h-8 text-rose-500" />
             </div>
             <h3 className="mt-4 text-lg font-display font-bold text-neutral-800">
-              Start your memory album
+              {t('memories.empty.title')}
             </h3>
             <p className="mt-2 text-sm text-neutral-500">
-              Capture a moment, add a note, and watch your timeline grow.
+              {t('memories.empty.subtitle')}
             </p>
             <motion.button
               whileTap={{ scale: 0.98 }}
               onClick={() => setShowUploader(true)}
               className="mt-5 rounded-full bg-gradient-to-r from-[#C9A227] to-[#8B7019] px-6 py-3 text-sm font-bold text-white shadow-soft"
             >
-              Add your first memory
+              {t('memories.empty.cta')}
             </motion.button>
           </motion.div>
         )}
@@ -408,9 +430,9 @@ const MemoriesPage = () => {
               <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-neutral-200" />
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h2 className="text-lg font-display font-bold text-neutral-800">Add Memory</h2>
+                  <h2 className="text-lg font-display font-bold text-neutral-800">{t('memories.uploader.title')}</h2>
                   <p className="text-xs text-neutral-500">
-                    Drop in a photo, a caption, and the date.
+                    {t('memories.uploader.subtitle')}
                   </p>
                 </div>
                 <button type="button" onClick={resetUploader}>
@@ -431,18 +453,18 @@ const MemoriesPage = () => {
                       <div className="space-y-3">
                         <img
                           src={filePreview}
-                          alt="Preview"
+                          alt={t('memories.uploader.previewAlt')}
                           className="w-full rounded-2xl object-cover aspect-[4/3]"
                         />
-                        <div className="text-[11px] font-semibold text-rose-600">Tap to replace</div>
+                        <div className="text-[11px] font-semibold text-rose-600">{t('memories.uploader.replace')}</div>
                       </div>
                     ) : (
                       <div className="space-y-2">
                         <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-rose-200/70 bg-white/90">
                           <ImagePlus className="w-5 h-5 text-rose-500" />
                         </div>
-                        <div className="text-sm font-semibold text-rose-700">Choose a photo</div>
-                        <div className="text-xs text-rose-500">JPG, PNG, or HEIC</div>
+                        <div className="text-sm font-semibold text-rose-700">{t('memories.uploader.chooseTitle')}</div>
+                        <div className="text-xs text-rose-500">{t('memories.uploader.chooseHint')}</div>
                       </div>
                     )}
                   </div>
@@ -450,17 +472,17 @@ const MemoriesPage = () => {
 
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div>
-                    <label className="text-xs font-semibold text-neutral-500">Caption</label>
+                    <label className="text-xs font-semibold text-neutral-500">{t('memories.uploader.captionLabel')}</label>
                     <input
                       value={caption}
                       onChange={(event) => setCaption(event.target.value)}
                       className="mt-2 w-full rounded-2xl border border-white/80 bg-white/80 px-3 py-2 text-sm shadow-inner-soft"
-                      placeholder="Add a sweet note..."
+                      placeholder={t('memories.uploader.captionPlaceholder')}
                     />
                   </div>
 
                   <div>
-                    <label className="text-xs font-semibold text-neutral-500">Memory date</label>
+                    <label className="text-xs font-semibold text-neutral-500">{t('memories.uploader.dateLabel')}</label>
                     <input
                       type="date"
                       value={memoryDate}
@@ -476,7 +498,7 @@ const MemoriesPage = () => {
                   disabled={!file || isUploading}
                   className="w-full rounded-2xl bg-gradient-to-r from-rose-500 to-amber-500 py-3 text-sm font-bold text-white shadow-soft disabled:opacity-60"
                 >
-                  {isUploading ? 'Uploading...' : 'Save Memory'}
+                  {isUploading ? t('memories.uploader.uploading') : t('memories.uploader.save')}
                 </motion.button>
               </div>
             </motion.div>
@@ -501,10 +523,10 @@ const MemoriesPage = () => {
               <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-neutral-200" />
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h2 className="text-lg font-display font-bold text-neutral-800">Memory</h2>
+                  <h2 className="text-lg font-display font-bold text-neutral-800">{t('memories.viewer.title')}</h2>
                   {selectedMemory.memoryDate && (
                     <div className="text-xs text-neutral-500">
-                      {new Date(selectedMemory.memoryDate).toLocaleDateString('en-US', {
+                      {new Date(selectedMemory.memoryDate).toLocaleDateString(language, {
                         month: 'long',
                         day: 'numeric',
                         year: 'numeric'
@@ -521,12 +543,12 @@ const MemoriesPage = () => {
                 {selectedMemory.url ? (
                   <img
                     src={selectedMemory.url}
-                    alt={selectedMemory.caption || 'Memory'}
+                    alt={selectedMemory.caption || t('memories.viewer.altFallback')}
                     className="w-full max-h-[360px] object-cover"
                   />
                 ) : (
                   <div className="flex h-56 items-center justify-center text-sm text-neutral-400">
-                    Processing photo...
+                    {t('memories.viewer.processing')}
                   </div>
                 )}
               </div>
@@ -537,7 +559,7 @@ const MemoriesPage = () => {
 
               <div className="mt-4 space-y-3">
                 <div className="text-[11px] font-semibold uppercase tracking-[0.3em] text-neutral-400">
-                  Reactions
+                  {t('memories.viewer.reactions')}
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {REACTION_OPTIONS.map((emoji) => (
@@ -570,11 +592,13 @@ const MemoriesPage = () => {
 
               <div className="mt-5 space-y-3">
                 <div className="flex items-center justify-between">
-                  <div className="text-sm font-semibold text-neutral-700">Comments</div>
-                  <div className="text-[11px] text-neutral-400">{comments.length} total</div>
+                  <div className="text-sm font-semibold text-neutral-700">{t('memories.viewer.comments')}</div>
+                  <div className="text-[11px] text-neutral-400">
+                    {t('memories.viewer.commentCount', { count: comments.length })}
+                  </div>
                 </div>
                 {comments.length === 0 && (
-                  <div className="text-xs text-neutral-400">Be the first to comment.</div>
+                  <div className="text-xs text-neutral-400">{t('memories.viewer.emptyComments')}</div>
                 )}
                 {comments.map((comment) => (
                   <div
@@ -599,14 +623,14 @@ const MemoriesPage = () => {
                     value={commentText}
                     onChange={(event) => setCommentText(event.target.value)}
                     className="flex-1 rounded-2xl border border-white/80 bg-white/80 px-3 py-2 text-sm shadow-inner-soft"
-                    placeholder="Add a comment"
+                    placeholder={t('memories.viewer.commentPlaceholder')}
                   />
                   <motion.button
                     whileTap={{ scale: 0.95 }}
                     onClick={handleComment}
                     className="rounded-2xl bg-neutral-900 px-3 py-2 text-xs font-bold text-white shadow-soft"
                   >
-                    Send
+                    {t('memories.viewer.send')}
                   </motion.button>
                 </div>
               </div>
@@ -617,7 +641,7 @@ const MemoriesPage = () => {
                   onClick={handleDelete}
                   className="mt-6 w-full rounded-2xl border border-rose-200/80 bg-rose-50/70 py-2.5 text-sm font-bold text-rose-700"
                 >
-                  Delete Memory
+                  {t('memories.viewer.delete')}
                 </motion.button>
               )}
             </motion.div>

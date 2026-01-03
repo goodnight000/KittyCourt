@@ -297,6 +297,9 @@ async function deliberatePhase1(rawInput, options = {}) {
     if (options.userReportedIntensity) {
         input.userReportedIntensity = options.userReportedIntensity;
     }
+    if (options.language && !input.language) {
+        input.language = options.language;
+    }
 
     // Step 1: Moderation
     console.log('[Judge Engine v2] Running moderation...');

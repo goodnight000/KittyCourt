@@ -17,6 +17,7 @@ const {
     checkUserHasMemories,
 } = require('./supabase');
 const { repairAndParseJSON } = require('./jsonRepair');
+const { normalizeLanguage, getLanguageLabel } = require('./language');
 
 const PLANNER_MODEL = 'deepseek/deepseek-v3.2';
 const PLANNER_REASONING_EFFORT = 'medium';
@@ -229,11 +230,15 @@ function getStyleGuidance(style) {
     }
 }
 
-function buildFallbackPlan({ style = 'cozy' }) {
-    return {
-        vibe: getStyleGuidance(style),
+const FALLBACK_PLAN_COPY = {
+    en: {
+        vibeByStyle: {
+            cozy: 'Cozy, warm, premium-feeling, intimate; avoid anything cheesy or cringey.',
+            playful: 'Playful, flirty, a little silly, but still thoughtful and premium.',
+            fancy: 'Elevated and romantic: a little luxe, polished, candlelight energy.',
+            low_key: 'Low-key and cozy: minimal effort, maximum warmth, no big logistics.',
+        },
         oneLiner: 'A simple, cozy plan with a personal touch.',
-        memoryHighlights: [],
         mainPlan: {
             title: 'Cozy night + small surprise',
             whyItFits: 'Low pressure, warm, and easy to personalize.',
@@ -269,10 +274,72 @@ function buildFallbackPlan({ style = 'cozy' }) {
                 { title: 'Reschedule the big part', details: 'Lock in a new date immediately so it still feels cared for.' },
             ],
         },
+    },
+    'zh-Hans': {
+        vibeByStyle: {
+            cozy: '温暖、亲密、有质感；避免油腻或尴尬的表达。',
+            playful: '俏皮、暧昧、带点小调皮，但依然体贴有质感。',
+            fancy: '更精致浪漫：一点奢华、精心布置、烛光氛围。',
+            low_key: '低调又舒适：少折腾、温暖就好。',
+        },
+        oneLiner: '一个简单又温暖的小计划，带点专属心意。',
+        mainPlan: {
+            title: '温馨夜晚 + 小惊喜',
+            whyItFits: '压力小、温暖且容易个性化。',
+            budgetTier: 'medium',
+            budgetNote: '约 $25–$75，视餐食与小礼物而定。',
+            prepChecklist: [
+                { item: '一份最爱的小吃或甜点', optional: false },
+                { item: '一张手写小卡片', optional: false },
+                { item: '温暖的播放列表', optional: true },
+            ],
+            timeline: [
+                { time: '之前', title: '布置氛围', details: '整理空间、调暗灯光、准备播放列表。' },
+                { time: '期间', title: '共享时刻', details: '一起做一件有仪式感的小事（电影、游戏、散步）。' },
+                { time: '之后', title: '温柔收尾', details: '说一句具体的欣赏，并约好明天的小计划。' },
+            ],
+        },
+        littleTouches: [
+            { emoji: '🕯️', title: '温柔光线', details: '柔和的灯光能立刻变得特别。' },
+            { emoji: '📝', title: '一句具体夸赞', details: '说出你最近真心欣赏的一个点。' },
+        ],
+        giftIdeas: [
+            { emoji: '🍫', title: '最爱的小点心', details: '他们一直喜欢的小小甜头。', budgetTier: 'low' },
+            { emoji: '💐', title: '花（或他们的等价物）', details: '只有在他们真的喜欢时才送，否则换成更私人的小心意。', budgetTier: 'medium' },
+        ],
+        alternatives: [
+            { emoji: '🌙', title: '夜晚散步 + 甜点', oneLiner: '慢慢走一段，再来点甜，再聊一会儿。' },
+            { emoji: '🎮', title: '轻松游戏之夜', oneLiner: '小小比赛配上零食和可爱小奖品。' },
+        ],
+        backupPlan: {
+            title: '如果计划有变',
+            steps: [
+                { title: '缩小到最简单', details: '哪怕忙，也留出 20 分钟“甜点 + 聊天”的小片刻。' },
+                { title: '立刻改期', details: '马上约好新的时间，让这份心意不被搁置。' },
+            ],
+        },
+    },
+};
+
+function buildFallbackPlan({ style = 'cozy', language } = {}) {
+    const normalizedLanguage = normalizeLanguage(language) || 'en';
+    const copy = FALLBACK_PLAN_COPY[normalizedLanguage] || FALLBACK_PLAN_COPY.en;
+    const vibeByStyle = copy.vibeByStyle || {};
+    const vibe = vibeByStyle[style] || vibeByStyle.cozy || getStyleGuidance(style);
+
+    return {
+        vibe,
+        oneLiner: copy.oneLiner,
+        memoryHighlights: [],
+        mainPlan: copy.mainPlan,
+        littleTouches: copy.littleTouches,
+        giftIdeas: copy.giftIdeas,
+        alternatives: copy.alternatives,
+        backupPlan: copy.backupPlan,
     };
 }
 
-async function retrievePartnerRagContext({ partnerId, event }) {
+async function retrievePartnerRagContext({ partnerId, event, language }) {
     let partnerProfile = {};
     if (isSupabaseConfigured()) {
         partnerProfile = await getUserProfile(partnerId);
@@ -293,10 +360,17 @@ async function retrievePartnerRagContext({ partnerId, event }) {
         return { partnerProfile, rag: { ...rag, enabled: true } };
     }
 
+    const normalizedLanguage = normalizeLanguage(language) || 'en';
     const queryEmbedding = await generateEmbedding(buildQueryText({ event }));
-    const retrieved = USE_V2
-        ? await retrieveRelevantMemoriesV2(queryEmbedding, [partnerId], CONFIG.maxMemoriesToRetrieve, 5)
-        : await retrieveRelevantMemories(queryEmbedding, [partnerId], CONFIG.maxMemoriesToRetrieve);
+    let retrieved = USE_V2
+        ? await retrieveRelevantMemoriesV2(queryEmbedding, [partnerId], CONFIG.maxMemoriesToRetrieve, 5, normalizedLanguage)
+        : await retrieveRelevantMemories(queryEmbedding, [partnerId], CONFIG.maxMemoriesToRetrieve, normalizedLanguage);
+
+    if ((!retrieved || retrieved.length === 0) && normalizedLanguage !== 'en') {
+        retrieved = USE_V2
+            ? await retrieveRelevantMemoriesV2(queryEmbedding, [partnerId], CONFIG.maxMemoriesToRetrieve, 5, 'en')
+            : await retrieveRelevantMemories(queryEmbedding, [partnerId], CONFIG.maxMemoriesToRetrieve, 'en');
+    }
 
     const filtered = (retrieved || [])
         .filter((m) => (m.similarity || 0) >= CONFIG.minSimilarityScore)
@@ -325,6 +399,7 @@ async function generateEventPlan({
     partnerDisplayName = 'your partner',
     currentUserName = 'you',
     style = 'cozy',
+    language,
 }) {
     if (!event?.title) {
         throw new Error('event.title is required');
@@ -343,15 +418,19 @@ async function generateEventPlan({
 
     const dUntil = daysUntil(normalizedEvent.date);
     const styleGuidance = getStyleGuidance(style);
+    const normalizedLanguage = normalizeLanguage(language) || 'en';
+    const languageLabel = getLanguageLabel(normalizedLanguage);
+    const languageInstruction = `Respond in ${languageLabel} (${normalizedLanguage}) for all narrative fields. Keep enum values in English.`;
 
     const { partnerProfile, rag } = await retrievePartnerRagContext({
         partnerId,
         event: normalizedEvent,
+        language: normalizedLanguage,
     });
 
     if (!isOpenRouterConfigured()) {
         return {
-            plan: buildFallbackPlan({ style }),
+            plan: buildFallbackPlan({ style, language: normalizedLanguage }),
             meta: {
                 model: null,
                 reasoningEffort: PLANNER_REASONING_EFFORT,
@@ -369,6 +448,7 @@ async function generateEventPlan({
         'You must output ONLY valid JSON that matches the provided schema exactly.',
         'Do not include markdown, code fences, or extra keys.',
         'Do not invent personal facts. If preferences are unknown, give options (e.g., “If they like X…”).',
+        languageInstruction,
     ].join('\n');
 
     const userPrompt = [
@@ -463,7 +543,7 @@ async function generateEventPlan({
     }
 
     return {
-        plan: buildFallbackPlan({ style }),
+        plan: buildFallbackPlan({ style, language: normalizedLanguage }),
         meta: {
             model: PLANNER_MODEL,
             reasoningEffort: PLANNER_REASONING_EFFORT,

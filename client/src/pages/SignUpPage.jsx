@@ -3,9 +3,11 @@ import { motion as Motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, Sparkles, Check } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
+import { useI18n } from '../i18n';
 
 const SignUpPage = () => {
     const navigate = useNavigate();
+    const { t } = useI18n();
     const { signUp, signInWithGoogle } = useAuthStore();
 
     const [email, setEmail] = useState('');
@@ -17,7 +19,7 @@ const SignUpPage = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const passwordRequirements = [
-        { text: 'At least 8 characters', met: password.length >= 8 },
+        { text: t('signUp.requirements.length'), met: password.length >= 8 },
     ];
 
     const allRequirementsMet = passwordRequirements.every(req => req.met);
@@ -28,19 +30,19 @@ const SignUpPage = () => {
         setIsSubmitting(true);
 
         if (!email || !password || !confirmPassword) {
-            setError('Please fill in all fields');
+            setError(t('signUp.errors.missingFields'));
             setIsSubmitting(false);
             return;
         }
 
         if (password !== confirmPassword) {
-            setError('Passwords do not match');
+            setError(t('signUp.errors.mismatch'));
             setIsSubmitting(false);
             return;
         }
 
         if (!allRequirementsMet) {
-            setError('Password does not meet requirements');
+            setError(t('signUp.errors.requirements'));
             setIsSubmitting(false);
             return;
         }
@@ -49,9 +51,9 @@ const SignUpPage = () => {
         setIsSubmitting(false);
         if (error) {
             if (error.message.includes('already registered') || error.status === 422) {
-                setError('This email is already registered. Please sign in instead.');
+                setError(t('signUp.errors.alreadyRegistered'));
             } else {
-                setError(error.message);
+                setError(error.message || t('signUp.errors.generic'));
             }
         } else {
             setSuccess(true);
@@ -66,7 +68,7 @@ const SignUpPage = () => {
         const { error } = await signInWithGoogle();
         setIsSubmitting(false);
         if (error) {
-            setError(error.message);
+            setError(error.message || t('signUp.errors.generic'));
         }
     };
 
@@ -87,8 +89,8 @@ const SignUpPage = () => {
                     >
                         <Check className="w-12 h-12 text-white" />
                     </Motion.div>
-                    <h2 className="text-2xl font-bold text-neutral-800 mb-2">Account Created! 🎉</h2>
-                    <p className="text-neutral-500">Let's set up your profile...</p>
+                    <h2 className="text-2xl font-bold text-neutral-800 mb-2">{t('signUp.success.title')}</h2>
+                    <p className="text-neutral-500">{t('signUp.success.subtitle')}</p>
                     <Motion.div
                         animate={{ rotate: 360 }}
                         transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
@@ -135,8 +137,8 @@ const SignUpPage = () => {
                 >
                     <span className="text-4xl">🐱</span>
                 </Motion.div>
-                <h1 className="text-3xl font-bold text-gradient font-display">Join Pause</h1>
-                <p className="text-neutral-500 mt-2">Create your account to get started</p>
+                <h1 className="text-3xl font-bold text-gradient font-display">{t('signUp.header.title')}</h1>
+                <p className="text-neutral-500 mt-2">{t('signUp.header.subtitle')}</p>
             </Motion.div>
 
             {/* Sign Up Card */}
@@ -172,13 +174,13 @@ const SignUpPage = () => {
                             <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
                             <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                         </svg>
-                        Continue with Google
+                        {t('signUp.google')}
                     </Motion.button>
 
                     {/* Divider */}
                     <div className="flex items-center gap-4 my-6">
                         <div className="flex-1 h-px bg-neutral-200"></div>
-                        <span className="text-neutral-400 text-sm">or</span>
+                        <span className="text-neutral-400 text-sm">{t('common.or')}</span>
                         <div className="flex-1 h-px bg-neutral-200"></div>
                     </div>
 
@@ -191,7 +193,7 @@ const SignUpPage = () => {
                                 type="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                placeholder="Email address"
+                                placeholder={t('signUp.emailPlaceholder')}
                                 className="w-full pl-12 pr-4 py-3.5 bg-neutral-50 border border-neutral-200 rounded-2xl text-neutral-700 placeholder:text-neutral-400 focus:outline-none focus:border-court-gold focus:ring-2 focus:ring-court-gold/20 transition-all"
                             />
                         </div>
@@ -203,7 +205,7 @@ const SignUpPage = () => {
                                 type={showPassword ? 'text' : 'password'}
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                placeholder="Create password"
+                                placeholder={t('signUp.passwordPlaceholder')}
                                 className="w-full pl-12 pr-12 py-3.5 bg-neutral-50 border border-neutral-200 rounded-2xl text-neutral-700 placeholder:text-neutral-400 focus:outline-none focus:border-court-gold focus:ring-2 focus:ring-court-gold/20 transition-all"
                             />
                             <button
@@ -240,7 +242,7 @@ const SignUpPage = () => {
                                 type={showPassword ? 'text' : 'password'}
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
-                                placeholder="Confirm password"
+                                placeholder={t('signUp.confirmPlaceholder')}
                                 className={`w-full pl-12 pr-4 py-3.5 bg-neutral-50 border rounded-2xl text-neutral-700 placeholder:text-neutral-400 focus:outline-none focus:ring-2 transition-all ${confirmPassword && password !== confirmPassword
                                     ? 'border-red-300 focus:border-red-400 focus:ring-red-100'
                                     : 'border-neutral-200 focus:border-court-gold focus:ring-court-gold/20'
@@ -266,7 +268,7 @@ const SignUpPage = () => {
                                 </Motion.div>
                             ) : (
                                 <>
-                                    Create Account
+                                    {t('signUp.submit')}
                                     <ArrowRight className="w-5 h-5" />
                                 </>
                             )}
@@ -275,7 +277,7 @@ const SignUpPage = () => {
 
                     {/* Terms */}
                     <p className="mt-4 text-xs text-neutral-400 text-center">
-                        By signing up, you agree to our Terms of Service and Privacy Policy
+                        {t('signUp.terms')}
                     </p>
                 </div>
 
@@ -284,16 +286,16 @@ const SignUpPage = () => {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.3 }}
-                    className="mt-6 text-center text-neutral-600"
+                className="mt-6 text-center text-neutral-600"
+            >
+                {t('signUp.alreadyHave')}{' '}
+                <Link
+                    to="/signin"
+                    className="font-bold text-court-gold hover:text-court-goldDark transition-colors"
                 >
-                    Already have an account?{' '}
-                    <Link
-                        to="/signin"
-                        className="font-bold text-court-gold hover:text-court-goldDark transition-colors"
-                    >
-                        Sign in
-                    </Link>
-                </Motion.p>
+                    {t('signUp.signIn')}
+                </Link>
+            </Motion.p>
             </Motion.div>
         </div>
     );

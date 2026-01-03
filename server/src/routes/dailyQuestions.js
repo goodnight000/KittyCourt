@@ -15,6 +15,8 @@ const { awardXP, ACTION_TYPES, isXPSystemEnabled } = require('../lib/xpService')
 const { recordChallengeAction, CHALLENGE_ACTIONS } = require('../lib/challengeService');
 const { checkMemoriesBySource } = require('../lib/supabase');
 const { triggerDailyQuestionExtraction } = require('../lib/stenographer');
+const { resolveRequestLanguage, normalizeLanguage } = require('../lib/language');
+const { sendError, createHttpError } = require('../lib/http');
 
 const normalizeLimit = (limit) => {
     const parsed = parseInt(limit, 10);
@@ -33,18 +35,41 @@ const normalizeMoods = (mood, moods) => {
     return Array.from(new Set(merged)).slice(0, 3);
 };
 
+const loadQuestionTranslations = async (supabase, questionIds, language) => {
+    const ids = Array.isArray(questionIds) ? questionIds.filter(Boolean) : [];
+    if (!ids.length) return new Map();
+    const { data, error } = await supabase
+        .from('question_bank_translations')
+        .select('question_id, language, question, emoji, category')
+        .in('question_id', ids)
+        .in('language', [language, 'en']);
+    if (error) {
+        console.warn('[Daily Questions] Failed to fetch translations:', error);
+        return new Map();
+    }
+    const map = new Map();
+    for (const row of data || []) {
+        if (!map.has(row.question_id)) {
+            map.set(row.question_id, {});
+        }
+        map.get(row.question_id)[row.language] = row;
+    }
+    return map;
+};
+
+const resolveQuestionTranslation = (translationMap, questionId, language) => {
+    const entry = translationMap.get(questionId) || {};
+    return entry[language] || entry.en || null;
+};
+
 const requirePartnerForAuthUser = async (supabase, authUserId, partnerIdFromClient) => {
     const partnerId = await getPartnerIdForUser(supabase, authUserId);
     if (!partnerId) {
-        const error = new Error('No partner connected');
-        error.statusCode = 400;
-        throw error;
+        throw createHttpError('No partner connected', 400, 'NO_PARTNER');
     }
 
     if (partnerIdFromClient && partnerIdFromClient !== partnerId) {
-        const error = new Error('Invalid partnerId for current user');
-        error.statusCode = 400;
-        throw error;
+        throw createHttpError('Invalid partnerId for current user', 400, 'INVALID_PARTNER');
     }
 
     return partnerId;
@@ -61,9 +86,10 @@ router.get('/today', async (req, res) => {
 
         const supabase = requireSupabase();
         const authUserId = await requireAuthUserId(req);
+        const language = await resolveRequestLanguage(req, supabase, authUserId);
 
         if (userId && userId !== authUserId) {
-            return res.status(403).json({ error: 'userId does not match authenticated user' });
+            return sendError(res, 403, 'USER_ID_MISMATCH', 'userId does not match authenticated user');
         }
 
         const resolvedPartnerId = await requirePartnerForAuthUser(supabase, authUserId, partnerId);
@@ -71,16 +97,22 @@ router.get('/today', async (req, res) => {
         // Call the database function to get/create today's question
         const { data, error } = await supabase.rpc('get_todays_question', {
             p_user_id: authUserId,
-            p_partner_id: resolvedPartnerId
+            p_partner_id: resolvedPartnerId,
+            p_language: language || 'en'
         });
 
         if (error) {
             console.error('Error getting today\'s question:', error);
-            return res.status(500).json({ error: error.message });
+            return sendError(res, 500, 'DAILY_QUESTION_FETCH_FAILED', error.message);
         }
 
         if (!data || data.length === 0) {
-            return res.status(404).json({ error: 'No questions available. Please ensure the question_bank table has data.' });
+            return sendError(
+                res,
+                404,
+                'NO_QUESTIONS_AVAILABLE',
+                'No questions available. Please ensure the question_bank table has data.'
+            );
         }
 
         // Map the out_ prefixed columns to expected format (handles both old and new column names)
@@ -127,7 +159,10 @@ router.get('/today', async (req, res) => {
         });
     } catch (error) {
         console.error('Error in /today:', error);
-        res.status(error.statusCode || 500).json({ error: error.message });
+        res.status(error.statusCode || 500).json({
+            errorCode: error.errorCode || 'DAILY_QUESTION_ERROR',
+            error: error.message,
+        });
     }
 });
 
@@ -142,17 +177,18 @@ router.post('/answer', async (req, res) => {
 
         const supabase = requireSupabase();
         const authUserId = await requireAuthUserId(req);
+        const language = await resolveRequestLanguage(req, supabase, authUserId);
 
         if (userId && userId !== authUserId) {
-            return res.status(403).json({ error: 'userId does not match authenticated user' });
+            return sendError(res, 403, 'USER_ID_MISMATCH', 'userId does not match authenticated user');
         }
 
         const trimmedAnswer = typeof answer === 'string' ? answer.trim() : '';
         if (!assignmentId || trimmedAnswer.length === 0) {
-            return res.status(400).json({ error: 'assignmentId and non-empty answer are required' });
+            return sendError(res, 400, 'ANSWER_REQUIRED', 'assignmentId and non-empty answer are required');
         }
         if (trimmedAnswer.length > 2000) {
-            return res.status(400).json({ error: 'Answer is too long (max 2000 characters)' });
+            return sendError(res, 400, 'ANSWER_TOO_LONG', 'Answer is too long (max 2000 characters)');
         }
 
         const normalizedMoods = normalizeMoods(mood, moods);
@@ -165,13 +201,13 @@ router.post('/answer', async (req, res) => {
             .single();
 
         if (assignmentError || !assignment) {
-            return res.status(404).json({ error: 'Assignment not found' });
+            return sendError(res, 404, 'ASSIGNMENT_NOT_FOUND', 'Assignment not found');
         }
 
         const isUserA = assignment.user_a_id === authUserId;
         const isUserB = assignment.user_b_id === authUserId;
         if (!isUserA && !isUserB) {
-            return res.status(403).json({ error: 'You do not have access to this assignment' });
+            return sendError(res, 403, 'ASSIGNMENT_FORBIDDEN', 'You do not have access to this assignment');
         }
         const partnerId = isUserA ? assignment.user_b_id : assignment.user_a_id;
 
@@ -324,19 +360,33 @@ router.post('/answer', async (req, res) => {
                     if (!gateRow) {
                         console.log('[Daily Questions] Extraction already claimed for assignment:', assignmentId);
                     } else {
-                        const { data: questionRow, error: questionError } = await supabase
-                            .from('question_bank')
-                            .select('question, emoji, category')
-                            .eq('id', assignment.question_id)
-                            .single();
+                        const { data: questionRow } = await supabase
+                            .from('question_bank_translations')
+                            .select('question, emoji, category, language')
+                            .eq('question_id', assignment.question_id)
+                            .in('language', [language, 'en']);
 
-                        if (questionError || !questionRow?.question) {
-                            throw new Error('Daily question text unavailable for extraction');
+                        let questionTranslation = (questionRow || [])
+                            .find(row => row.language === language)
+                            || (questionRow || []).find(row => row.language === 'en');
+
+                        if (!questionTranslation) {
+                            const { data: fallbackRow, error: fallbackError } = await supabase
+                                .from('question_bank')
+                                .select('question, emoji, category')
+                                .eq('id', assignment.question_id)
+                                .single();
+
+                            if (fallbackError || !fallbackRow?.question) {
+                                throw new Error('Daily question text unavailable for extraction');
+                            }
+
+                            questionTranslation = fallbackRow;
                         }
 
                         const { data: profiles, error: profileError } = await supabase
                             .from('profiles')
-                            .select('id, display_name')
+                            .select('id, display_name, preferred_language')
                             .in('id', [assignment.user_a_id, assignment.user_b_id]);
 
                         if (profileError) {
@@ -344,22 +394,30 @@ router.post('/answer', async (req, res) => {
                         }
 
                         const nameById = new Map((profiles || []).map(profile => [profile.id, profile.display_name || 'Partner']));
+                        const languageById = new Map((profiles || []).map(profile => [
+                            profile.id,
+                            normalizeLanguage(profile.preferred_language) || 'en'
+                        ]));
                         const userAName = nameById.get(assignment.user_a_id) || 'User A';
                         const userBName = nameById.get(assignment.user_b_id) || 'User B';
                         const userAAnswer = isUserA ? savedAnswer.answer : partnerAnswer.answer;
                         const userBAnswer = isUserA ? partnerAnswer.answer : savedAnswer.answer;
+                        const userALanguage = languageById.get(assignment.user_a_id) || 'en';
+                        const userBLanguage = languageById.get(assignment.user_b_id) || 'en';
 
                         triggerDailyQuestionExtraction({
                             assignmentId,
-                            question: questionRow?.question || '',
-                            emoji: questionRow?.emoji || null,
-                            category: questionRow?.category || null,
+                            question: questionTranslation?.question || '',
+                            emoji: questionTranslation?.emoji || null,
+                            category: questionTranslation?.category || null,
                             userAId: assignment.user_a_id,
                             userBId: assignment.user_b_id,
                             userAName,
                             userBName,
                             userAAnswer,
                             userBAnswer,
+                            userALanguage,
+                            userBLanguage,
                             observedAt: new Date().toISOString(),
                         });
                     }
@@ -378,7 +436,10 @@ router.post('/answer', async (req, res) => {
         });
     } catch (error) {
         console.error('Error submitting answer:', error);
-        res.status(error.statusCode || 500).json({ error: error.message });
+        res.status(error.statusCode || 500).json({
+            errorCode: error.errorCode || 'ANSWER_SUBMIT_FAILED',
+            error: error.message,
+        });
     }
 });
 
@@ -392,9 +453,10 @@ router.get('/history', async (req, res) => {
         const { userId, partnerId, limit } = req.query;
         const supabase = requireSupabase();
         const authUserId = await requireAuthUserId(req);
+        const language = await resolveRequestLanguage(req, supabase, authUserId);
 
         if (userId && userId !== authUserId) {
-            return res.status(403).json({ error: 'userId does not match authenticated user' });
+            return sendError(res, 403, 'USER_ID_MISMATCH', 'userId does not match authenticated user');
         }
 
         const resolvedPartnerId = await requirePartnerForAuthUser(supabase, authUserId, partnerId);
@@ -426,7 +488,7 @@ router.get('/history', async (req, res) => {
 
         if (error) {
             console.error('Error fetching history:', error);
-            return res.status(500).json({ error: error.message });
+            return sendError(res, 500, 'HISTORY_FETCH_FAILED', error.message);
         }
 
         if (!assignments || assignments.length === 0) {
@@ -435,6 +497,8 @@ router.get('/history', async (req, res) => {
 
         // Fetch all answers for these assignments
         const assignmentIds = assignments.map(a => a.id);
+        const questionIds = assignments.map(a => a.question_id);
+        const translationMap = await loadQuestionTranslations(supabase, questionIds, language || 'en');
 
         const { data: answers, error: answersError } = await supabase
             .from('daily_answers')
@@ -454,9 +518,12 @@ router.get('/history', async (req, res) => {
             return {
                 id: a.id,
                 question_id: a.question_id,
-                question: a.question_bank?.question,
-                emoji: a.question_bank?.emoji,
-                category: a.question_bank?.category,
+                question: resolveQuestionTranslation(translationMap, a.question_id, language || 'en')?.question
+                    || a.question_bank?.question,
+                emoji: resolveQuestionTranslation(translationMap, a.question_id, language || 'en')?.emoji
+                    || a.question_bank?.emoji,
+                category: resolveQuestionTranslation(translationMap, a.question_id, language || 'en')?.category
+                    || a.question_bank?.category,
                 assigned_date: a.assigned_date,
                 completed_at: a.completed_at,
                 my_answer: myAnswer ? {
@@ -479,7 +546,10 @@ router.get('/history', async (req, res) => {
         res.json(history);
     } catch (error) {
         console.error('Error in /history:', error);
-        res.status(error.statusCode || 500).json({ error: error.message });
+        res.status(error.statusCode || 500).json({
+            errorCode: error.errorCode || 'HISTORY_FETCH_FAILED',
+            error: error.message,
+        });
     }
 });
 
@@ -498,10 +568,10 @@ router.put('/answer/:id', async (req, res) => {
 
         const trimmedAnswer = typeof answer === 'string' ? answer.trim() : '';
         if (!trimmedAnswer) {
-            return res.status(400).json({ error: 'answer is required' });
+            return sendError(res, 400, 'ANSWER_REQUIRED', 'answer is required');
         }
         if (trimmedAnswer.length > 2000) {
-            return res.status(400).json({ error: 'Answer is too long (max 2000 characters)' });
+            return sendError(res, 400, 'ANSWER_TOO_LONG', 'Answer is too long (max 2000 characters)');
         }
 
         const { data: existing, error: existingError } = await supabase
@@ -511,11 +581,11 @@ router.put('/answer/:id', async (req, res) => {
             .single();
 
         if (existingError || !existing) {
-            return res.status(404).json({ error: 'Answer not found' });
+            return sendError(res, 404, 'ANSWER_NOT_FOUND', 'Answer not found');
         }
 
         if (existing.user_id !== authUserId) {
-            return res.status(403).json({ error: 'You do not have permission to edit this answer' });
+            return sendError(res, 403, 'ANSWER_FORBIDDEN', 'You do not have permission to edit this answer');
         }
 
         // Update the answer (trigger will set edited_at)
@@ -528,13 +598,16 @@ router.put('/answer/:id', async (req, res) => {
 
         if (error) {
             console.error('Error updating answer:', error);
-            return res.status(500).json({ error: error.message });
+            return sendError(res, 500, 'ANSWER_UPDATE_FAILED', error.message);
         }
 
         res.json({ success: true, answer: data });
     } catch (error) {
         console.error('Error in PUT /answer/:id:', error);
-        res.status(error.statusCode || 500).json({ error: error.message });
+        res.status(error.statusCode || 500).json({
+            errorCode: error.errorCode || 'ANSWER_UPDATE_FAILED',
+            error: error.message,
+        });
     }
 });
 
@@ -548,9 +621,10 @@ router.get('/pending', async (req, res) => {
         const { userId, partnerId } = req.query;
         const supabase = requireSupabase();
         const authUserId = await requireAuthUserId(req);
+        const language = await resolveRequestLanguage(req, supabase, authUserId);
 
         if (userId && userId !== authUserId) {
-            return res.status(403).json({ error: 'userId does not match authenticated user' });
+            return sendError(res, 403, 'USER_ID_MISMATCH', 'userId does not match authenticated user');
         }
 
         const resolvedPartnerId = await requirePartnerForAuthUser(supabase, authUserId, partnerId);
@@ -564,6 +638,7 @@ router.get('/pending', async (req, res) => {
             .from('couple_question_assignments')
             .select(`
                 id,
+                question_id,
                 assigned_date,
                 question_bank (
                     question,
@@ -578,16 +653,35 @@ router.get('/pending', async (req, res) => {
 
         if (error) {
             console.error('Error checking pending:', error);
-            return res.status(500).json({ error: error.message });
+            return sendError(res, 500, 'PENDING_FETCH_FAILED', error.message);
         }
 
-        res.json({
-            has_pending: data && data.length > 0,
-            pending_question: data?.[0] || null
+        if (!data || data.length === 0) {
+            return res.json({ has_pending: false, pending_question: null });
+        }
+
+        const questionIds = data.map(row => row.question_bank?.id || row.question_id).filter(Boolean);
+        const translationMap = await loadQuestionTranslations(supabase, questionIds, language || 'en');
+        const pending = data?.[0];
+        const translation = resolveQuestionTranslation(translationMap, pending.question_id, language || 'en');
+
+        return res.json({
+            has_pending: true,
+            pending_question: {
+                ...pending,
+                question_bank: {
+                    ...(pending.question_bank || {}),
+                    question: translation?.question || pending.question_bank?.question,
+                    emoji: translation?.emoji || pending.question_bank?.emoji,
+                }
+            }
         });
     } catch (error) {
         console.error('Error in /pending:', error);
-        res.status(error.statusCode || 500).json({ error: error.message });
+        res.status(error.statusCode || 500).json({
+            errorCode: error.errorCode || 'PENDING_FETCH_FAILED',
+            error: error.message,
+        });
     }
 });
 

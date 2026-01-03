@@ -3,9 +3,11 @@ import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { Lock, Eye, EyeOff, CheckCircle, AlertCircle, ArrowLeft, Shield } from 'lucide-react';
 import { updatePassword, supabase } from '../services/supabase';
+import { useI18n } from '../i18n';
 
 const ResetPasswordPage = () => {
     const navigate = useNavigate();
+    const { t } = useI18n();
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -42,7 +44,7 @@ const ResetPasswordPage = () => {
 
     const validatePassword = (pwd) => {
         if (pwd.length < 8) {
-            return 'Password must be at least 8 characters long';
+            return t('resetPassword.errors.tooShort');
         }
         return null;
     };
@@ -60,7 +62,7 @@ const ResetPasswordPage = () => {
 
         // Check passwords match
         if (password !== confirmPassword) {
-            setError('Passwords do not match');
+            setError(t('resetPassword.errors.mismatch'));
             return;
         }
 
@@ -70,9 +72,9 @@ const ResetPasswordPage = () => {
             const { error } = await updatePassword(password);
             if (error) {
                 if (error.message?.includes('same as')) {
-                    setError('New password must be different from your current password');
+                    setError(t('resetPassword.errors.sameAsCurrent'));
                 } else {
-                    setError(error.message || 'Failed to update password');
+                    setError(error.message || t('resetPassword.errors.updateFailed'));
                 }
             } else {
                 setSuccess(true);
@@ -82,7 +84,7 @@ const ResetPasswordPage = () => {
                 }, 3000);
             }
         } catch (err) {
-            setError('An error occurred. Please try again.');
+            setError(t('resetPassword.errors.generic'));
         } finally {
             setIsLoading(false);
         }
@@ -113,16 +115,16 @@ const ResetPasswordPage = () => {
                             <AlertCircle className="w-10 h-10 text-amber-600" />
                         </div>
 
-                        <h1 className="text-2xl font-bold text-neutral-800 mb-3">Invalid or Expired Link</h1>
+                        <h1 className="text-2xl font-bold text-neutral-800 mb-3">{t('resetPassword.invalid.title')}</h1>
                         <p className="text-neutral-600 mb-6">
-                            This password reset link is invalid or has expired. Please request a new one.
+                            {t('resetPassword.invalid.subtitle')}
                         </p>
 
                         <Link
                             to="/forgot-password"
                             className="inline-flex items-center justify-center gap-2 w-full py-3 bg-gradient-to-r from-court-gold to-court-brown rounded-2xl font-bold text-white transition-all hover:shadow-lg"
                         >
-                            Request New Link
+                            {t('resetPassword.invalid.requestNew')}
                         </Link>
 
                         <Link
@@ -130,7 +132,7 @@ const ResetPasswordPage = () => {
                             className="inline-flex items-center justify-center gap-2 text-court-brown hover:text-court-gold transition-colors font-medium mt-4"
                         >
                             <ArrowLeft className="w-4 h-4" />
-                            Back to Sign In
+                            {t('resetPassword.invalid.backToSignIn')}
                         </Link>
                     </div>
                 </motion.div>
@@ -156,9 +158,9 @@ const ResetPasswordPage = () => {
                             <CheckCircle className="w-10 h-10 text-green-600" />
                         </motion.div>
 
-                        <h1 className="text-2xl font-bold text-neutral-800 mb-3">Password Updated!</h1>
+                        <h1 className="text-2xl font-bold text-neutral-800 mb-3">{t('resetPassword.success.title')}</h1>
                         <p className="text-neutral-600 mb-6">
-                            Your password has been successfully changed. You'll be redirected to sign in...
+                            {t('resetPassword.success.subtitle')}
                         </p>
 
                         <motion.div
@@ -172,7 +174,7 @@ const ResetPasswordPage = () => {
                             to="/signin"
                             className="inline-flex items-center justify-center gap-2 text-court-brown hover:text-court-gold transition-colors font-medium mt-6"
                         >
-                            Sign in now
+                            {t('resetPassword.success.signInNow')}
                         </Link>
                     </div>
                 </motion.div>
@@ -214,8 +216,8 @@ const ResetPasswordPage = () => {
                 >
                     <Shield className="w-10 h-10 text-white" />
                 </motion.div>
-                <h1 className="text-3xl font-bold text-gradient font-display">New Password</h1>
-                <p className="text-neutral-500 mt-2">Create a strong, secure password</p>
+                <h1 className="text-3xl font-bold text-gradient font-display">{t('resetPassword.header.title')}</h1>
+                <p className="text-neutral-500 mt-2">{t('resetPassword.header.subtitle')}</p>
             </motion.div>
 
             {/* Reset Form */}
@@ -244,7 +246,7 @@ const ResetPasswordPage = () => {
                         {/* New Password Field */}
                         <div>
                             <label className="block text-sm font-medium text-neutral-700 mb-2">
-                                New Password
+                                {t('resetPassword.form.passwordLabel')}
                             </label>
                             <div className="relative">
                                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
@@ -252,7 +254,7 @@ const ResetPasswordPage = () => {
                                     type={showPassword ? 'text' : 'password'}
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    placeholder="Enter new password"
+                                    placeholder={t('resetPassword.form.passwordPlaceholder')}
                                     className="w-full pl-12 pr-12 py-3.5 bg-neutral-50 border-2 border-neutral-200 rounded-2xl focus:border-court-gold focus:bg-white transition-all outline-none"
                                     autoComplete="new-password"
                                     autoFocus
@@ -266,14 +268,14 @@ const ResetPasswordPage = () => {
                                 </button>
                             </div>
                             <p className="text-xs text-neutral-500 mt-1.5">
-                                Must be at least 8 characters long
+                                {t('resetPassword.form.passwordHint')}
                             </p>
                         </div>
 
                         {/* Confirm Password Field */}
                         <div>
                             <label className="block text-sm font-medium text-neutral-700 mb-2">
-                                Confirm Password
+                                {t('resetPassword.form.confirmLabel')}
                             </label>
                             <div className="relative">
                                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
@@ -281,7 +283,7 @@ const ResetPasswordPage = () => {
                                     type={showConfirmPassword ? 'text' : 'password'}
                                     value={confirmPassword}
                                     onChange={(e) => setConfirmPassword(e.target.value)}
-                                    placeholder="Confirm new password"
+                                    placeholder={t('resetPassword.form.confirmPlaceholder')}
                                     className="w-full pl-12 pr-12 py-3.5 bg-neutral-50 border-2 border-neutral-200 rounded-2xl focus:border-court-gold focus:bg-white transition-all outline-none"
                                     autoComplete="new-password"
                                 />
@@ -310,12 +312,12 @@ const ResetPasswordPage = () => {
                                         transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                                         className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
                                     />
-                                    Updating...
+                                    {t('resetPassword.form.updating')}
                                 </>
                             ) : (
                                 <>
                                     <Shield className="w-5 h-5" />
-                                    Update Password
+                                    {t('resetPassword.form.submit')}
                                 </>
                             )}
                         </motion.button>

@@ -11,45 +11,42 @@ import useSubscriptionStore from '../store/useSubscriptionStore';
 import api from '../services/api';
 import { validateDate } from '../utils/helpers';
 import Paywall from '../components/Paywall';
+import { useI18n } from '../i18n';
 
 const EVENT_TYPES = [
-    { id: 'birthday', label: 'Birthday', emoji: '🎂', color: 'pink' },
-    { id: 'anniversary', label: 'Anniversary', emoji: '💕', color: 'red' },
-    { id: 'holiday', label: 'Holiday', emoji: '🎉', color: 'amber' },
-    { id: 'date_night', label: 'Date Night', emoji: '🌙', color: 'violet' },
-    { id: 'custom', label: 'Custom', emoji: '📅', color: 'blue' },
+    { id: 'birthday', labelKey: 'calendar.eventTypes.birthday', emoji: '🎂', color: 'pink' },
+    { id: 'anniversary', labelKey: 'calendar.eventTypes.anniversary', emoji: '💕', color: 'red' },
+    { id: 'holiday', labelKey: 'calendar.eventTypes.holiday', emoji: '🎉', color: 'amber' },
+    { id: 'date_night', labelKey: 'calendar.eventTypes.dateNight', emoji: '🌙', color: 'violet' },
+    { id: 'custom', labelKey: 'calendar.eventTypes.custom', emoji: '📅', color: 'blue' },
 ];
 
 const EMOJI_OPTIONS = ['🎂', '💕', '🎉', '🌙', '📅', '🎁', '💐', '🍰', '🎊', '✨', '🌸', '🌈'];
 
-const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'];
-
-// Default holidays that couples typically celebrate
-const getDefaultHolidays = (year) => [
-    { title: "Valentine's Day", date: `${year}-02-14`, type: 'holiday', emoji: '💕', isRecurring: true, isDefault: true, isSecret: false },
-    { title: "International Women's Day", date: `${year}-03-08`, type: 'holiday', emoji: '🌸', isRecurring: true, isDefault: true, isSecret: false },
-    { title: "Mother's Day", date: `${year}-05-11`, type: 'holiday', emoji: '💐', isRecurring: true, isDefault: true, isSecret: false },
-    { title: "Father's Day", date: `${year}-06-15`, type: 'holiday', emoji: '👔', isRecurring: true, isDefault: true, isSecret: false },
-    { title: "Halloween", date: `${year}-10-31`, type: 'holiday', emoji: '🎃', isRecurring: true, isDefault: true, isSecret: false },
-    { title: "Thanksgiving", date: `${year}-11-27`, type: 'holiday', emoji: '🦃', isRecurring: true, isDefault: true, isSecret: false },
-    { title: "Christmas Eve", date: `${year}-12-24`, type: 'holiday', emoji: '🎄', isRecurring: true, isDefault: true, isSecret: false },
-    { title: "Christmas Day", date: `${year}-12-25`, type: 'holiday', emoji: '🎅', isRecurring: true, isDefault: true, isSecret: false },
-    { title: "New Year's Eve", date: `${year}-12-31`, type: 'holiday', emoji: '🥂', isRecurring: true, isDefault: true, isSecret: false },
-    { title: "New Year's Day", date: `${year + 1}-01-01`, type: 'holiday', emoji: '🎊', isRecurring: true, isDefault: true, isSecret: false },
+const getDefaultHolidays = (year, t) => [
+    { title: t('calendar.holidays.valentinesDay'), date: `${year}-02-14`, type: 'holiday', emoji: '💕', isRecurring: true, isDefault: true, isSecret: false },
+    { title: t('calendar.holidays.internationalWomensDay'), date: `${year}-03-08`, type: 'holiday', emoji: '🌸', isRecurring: true, isDefault: true, isSecret: false },
+    { title: t('calendar.holidays.mothersDay'), date: `${year}-05-11`, type: 'holiday', emoji: '💐', isRecurring: true, isDefault: true, isSecret: false },
+    { title: t('calendar.holidays.fathersDay'), date: `${year}-06-15`, type: 'holiday', emoji: '👔', isRecurring: true, isDefault: true, isSecret: false },
+    { title: t('calendar.holidays.halloween'), date: `${year}-10-31`, type: 'holiday', emoji: '🎃', isRecurring: true, isDefault: true, isSecret: false },
+    { title: t('calendar.holidays.thanksgiving'), date: `${year}-11-27`, type: 'holiday', emoji: '🦃', isRecurring: true, isDefault: true, isSecret: false },
+    { title: t('calendar.holidays.christmasEve'), date: `${year}-12-24`, type: 'holiday', emoji: '🎄', isRecurring: true, isDefault: true, isSecret: false },
+    { title: t('calendar.holidays.christmasDay'), date: `${year}-12-25`, type: 'holiday', emoji: '🎅', isRecurring: true, isDefault: true, isSecret: false },
+    { title: t('calendar.holidays.newYearsEve'), date: `${year}-12-31`, type: 'holiday', emoji: '🥂', isRecurring: true, isDefault: true, isSecret: false },
+    { title: t('calendar.holidays.newYearsDay'), date: `${year + 1}-01-01`, type: 'holiday', emoji: '🎊', isRecurring: true, isDefault: true, isSecret: false },
 ];
 
 const CalendarPage = () => {
     const { currentUser } = useAppStore();
     const { user: authUser, profile, partner: connectedPartner } = useAuthStore();
     const { canUsePlanFeature, isGold } = useSubscriptionStore();
+    const { t, language } = useI18n();
 
     // Build users array from auth store
     const myId = authUser?.id || currentUser?.id;
-    const myDisplayName = profile?.display_name || profile?.name || 'You';
+    const myDisplayName = profile?.display_name || profile?.name || t('common.you');
     const partnerId = connectedPartner?.id;
-    const partnerDisplayName = connectedPartner?.display_name || connectedPartner?.name || 'Partner';
+    const partnerDisplayName = connectedPartner?.display_name || connectedPartner?.name || t('common.partner');
 
     const [currentDate, setCurrentDate] = useState(new Date());
     const [events, setEvents] = useState([]);
@@ -60,6 +57,19 @@ const CalendarPage = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [plannedEventKeys, setPlannedEventKeys] = useState(() => new Set());
     const [showPaywall, setShowPaywall] = useState(false);
+    const weekdayLabels = useMemo(() => {
+        const formatter = new Intl.DateTimeFormat(language, { weekday: 'short' });
+        const base = new Date(Date.UTC(2023, 0, 1));
+        return Array.from({ length: 7 }, (_, idx) => (
+            formatter.format(new Date(base.getTime() + idx * 86400000))
+        ));
+    }, [language]);
+    const monthLabels = useMemo(() => {
+        const formatter = new Intl.DateTimeFormat(language, { month: 'long' });
+        return Array.from({ length: 12 }, (_, idx) => (
+            formatter.format(new Date(Date.UTC(2023, idx, 1)))
+        ));
+    }, [language]);
 
     const fetchEvents = useCallback(async () => {
         try {
@@ -69,8 +79,8 @@ const CalendarPage = () => {
 
             const currentYear = new Date().getFullYear();
             const defaultEvents = [
-                ...getDefaultHolidays(currentYear),
-                ...getDefaultHolidays(currentYear + 1)
+                ...getDefaultHolidays(currentYear, t),
+                ...getDefaultHolidays(currentYear + 1, t)
             ];
 
             const personalEvents = getPersonalEvents();
@@ -86,7 +96,7 @@ const CalendarPage = () => {
         } catch (error) {
             console.error('Failed to fetch events:', error);
             const currentYear = new Date().getFullYear();
-            const defaultEvents = getDefaultHolidays(currentYear);
+            const defaultEvents = getDefaultHolidays(currentYear, t);
             const personalEvents = getPersonalEvents();
             setEvents([
                 ...defaultEvents.map(d => ({ ...d, id: `default_${d.title}` })),
@@ -95,7 +105,7 @@ const CalendarPage = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [myId, partnerId, profile, connectedPartner]);
+    }, [myId, partnerId, profile, connectedPartner, t]);
 
     useEffect(() => {
         fetchEvents();
@@ -116,7 +126,7 @@ const CalendarPage = () => {
         }
 
         users.forEach(user => {
-            const displayName = user.display_name || user.name || 'User';
+            const displayName = user.display_name || user.name || t('common.user');
 
             // Add birthday events (from profile data if available)
             const birthday = user.birthday || user.birth_date;
@@ -125,7 +135,7 @@ const CalendarPage = () => {
                 // This year's birthday
                 personalEvents.push({
                     id: `birthday_${user.id}_${currentYear}`,
-                    title: `${displayName}'s Birthday`,
+                    title: t('calendar.birthdayFor', { name: displayName }),
                     date: `${currentYear}-${String(bday.getMonth() + 1).padStart(2, '0')}-${String(bday.getDate()).padStart(2, '0')}`,
                     type: 'birthday',
                     emoji: '🎂',
@@ -135,7 +145,7 @@ const CalendarPage = () => {
                 // Next year's birthday
                 personalEvents.push({
                     id: `birthday_${user.id}_${currentYear + 1}`,
-                    title: `${displayName}'s Birthday`,
+                    title: t('calendar.birthdayFor', { name: displayName }),
                     date: `${currentYear + 1}-${String(bday.getMonth() + 1).padStart(2, '0')}-${String(bday.getDate()).padStart(2, '0')}`,
                     type: 'birthday',
                     emoji: '🎂',
@@ -153,7 +163,7 @@ const CalendarPage = () => {
                     : new Date(anniversaryDate + 'T00:00:00');
                 personalEvents.push({
                     id: `anniversary_${currentYear}`,
-                    title: `Our Anniversary 💕`,
+                    title: t('calendar.anniversaryTitle'),
                     date: `${currentYear}-${String(anniv.getMonth() + 1).padStart(2, '0')}-${String(anniv.getDate()).padStart(2, '0')}`,
                     type: 'anniversary',
                     emoji: '💕',
@@ -162,7 +172,7 @@ const CalendarPage = () => {
                 });
                 personalEvents.push({
                     id: `anniversary_${currentYear + 1}`,
-                    title: `Our Anniversary 💕`,
+                    title: t('calendar.anniversaryTitle'),
                     date: `${currentYear + 1}-${String(anniv.getMonth() + 1).padStart(2, '0')}-${String(anniv.getDate()).padStart(2, '0')}`,
                     type: 'anniversary',
                     emoji: '💕',
@@ -286,6 +296,9 @@ const CalendarPage = () => {
             return eventDate >= today && eventDate <= weekFromNow;
         })
         .sort((a, b) => parseLocalDate(a.date) - parseLocalDate(b.date)), [events]);
+    const upcomingCountLabel = upcomingEvents.length === 1
+        ? t('calendar.upcoming.countOne')
+        : t('calendar.upcoming.countOther', { count: upcomingEvents.length });
 
     // Fetch whether upcoming events already have a saved plan (for "View my plan")
     useEffect(() => {
@@ -317,13 +330,13 @@ const CalendarPage = () => {
             <div className="flex items-center gap-3">
                 <img
                     src="/assets/icons/calendar.png"
-                    alt="Calendar"
+                    alt={t('calendar.iconAlt')}
                     className="w-12 h-12 object-contain drop-shadow-sm"
                     draggable={false}
                 />
                 <div className="flex-1">
-                    <h1 className="text-xl font-bold text-gradient">Our Calendar</h1>
-                    <p className="text-neutral-500 text-sm">Important dates & memories 💕</p>
+                    <h1 className="text-xl font-bold text-gradient">{t('calendar.title')}</h1>
+                    <p className="text-neutral-500 text-sm">{t('calendar.subtitle')}</p>
                 </div>
                 <Motion.button
                     whileTap={{ scale: 0.97 }}
@@ -333,7 +346,7 @@ const CalendarPage = () => {
                     }}
                     disabled={isLoading}
                     className="w-12 h-12 relative"
-                    aria-label="Add event"
+                    aria-label={t('calendar.addEventAria')}
                 >
                     <img
                         src="/assets/icons/plus.png"
@@ -378,7 +391,7 @@ const CalendarPage = () => {
                         </Motion.button>
                         <div className="text-center">
                             <h2 className="font-extrabold text-neutral-800 text-lg tracking-tight">
-                                {MONTHS[currentDate.getMonth()]}
+                                {monthLabels[currentDate.getMonth()]}
                             </h2>
                             <p className="text-neutral-500 text-sm">{currentDate.getFullYear()}</p>
                         </div>
@@ -393,7 +406,7 @@ const CalendarPage = () => {
 
                     {/* Day Headers */}
                     <div className="grid grid-cols-7 gap-2 mb-2 px-0.5">
-                        {DAYS.map(day => (
+                        {weekdayLabels.map(day => (
                             <div
                                 key={day}
                                 className="text-center text-[11px] font-extrabold text-neutral-500 py-1.5 rounded-xl bg-white/45 border border-white/50 shadow-inner-soft"
@@ -414,6 +427,14 @@ const CalendarPage = () => {
                             const hasSecretEvents = secretCount > 0;
                             const today = isToday(dayInfo.date);
                             const isOutsideMonth = !dayInfo.currentMonth;
+                            const dateLabel = dayInfo.date.toLocaleDateString(language, {
+                                month: 'long',
+                                day: 'numeric',
+                                year: 'numeric'
+                            });
+                            const eventCountLabel = dayEvents.length === 1
+                                ? t('calendar.eventCount.one')
+                                : t('calendar.eventCount.other', { count: dayEvents.length });
 
                             const frameClass = today
                                 ? 'bg-gradient-to-br from-court-gold/60 via-rose-200/40 to-court-goldLight/50 shadow-glow-cream'
@@ -448,7 +469,7 @@ const CalendarPage = () => {
                                         }
                                     }}
                                     className={`group relative aspect-square rounded-2xl p-[2px] transition-all duration-200 active:scale-[0.98] ${frameClass} ${isOutsideMonth ? 'opacity-55' : ''}`}
-                                    aria-label={`${dayInfo.date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}${hasEvents ? `, ${dayEvents.length} event${dayEvents.length === 1 ? '' : 's'}` : ''}`}
+                                    aria-label={`${dateLabel}${hasEvents ? `, ${eventCountLabel}` : ''}`}
                                 >
                                     {today && (
                                         <div aria-hidden="true" className="absolute -inset-1 rounded-3xl bg-gradient-to-br from-court-gold/25 via-transparent to-rose-200/20 blur-md animate-pulse-soft" />
@@ -510,12 +531,12 @@ const CalendarPage = () => {
                                 <Calendar className="w-5 h-5 text-[#B85C6B]" />
                             </div>
                             <div>
-                                <h3 className="text-lg font-extrabold text-neutral-700">Upcoming</h3>
-                                <p className="text-sm text-neutral-500">Next 7 days</p>
+                                <h3 className="text-lg font-extrabold text-neutral-700">{t('calendar.upcoming.title')}</h3>
+                                <p className="text-sm text-neutral-500">{t('calendar.upcoming.subtitle')}</p>
                             </div>
                         </div>
                         <div className="px-2.5 py-1 rounded-full bg-white/70 border border-white/60 shadow-soft text-[11px] font-extrabold text-neutral-600 tabular-nums">
-                            {upcomingEvents.length} {upcomingEvents.length === 1 ? 'event' : 'events'}
+                            {upcomingCountLabel}
                         </div>
                     </div>
 
@@ -525,8 +546,8 @@ const CalendarPage = () => {
                                 <div className="w-16 h-16 mx-auto rounded-3xl bg-gradient-to-br from-violet-100/70 to-pink-100/70 border border-white/70 shadow-soft flex items-center justify-center text-3xl">
                                     📅
                                 </div>
-                                <p className="text-neutral-700 text-sm font-extrabold mt-3">No upcoming events</p>
-                                <p className="text-neutral-500 text-xs mt-1">Tap + to add a special date.</p>
+                                <p className="text-neutral-700 text-sm font-extrabold mt-3">{t('calendar.upcoming.emptyTitle')}</p>
+                                <p className="text-neutral-500 text-xs mt-1">{t('calendar.upcoming.emptyHint')}</p>
                             </div>
                         </div>
                     ) : (
@@ -622,14 +643,15 @@ const CalendarPage = () => {
             <Paywall
                 isOpen={showPaywall}
                 onClose={() => setShowPaywall(false)}
-                triggerReason="Help Me Plan is a Pause Gold feature"
+                triggerReason={t('calendar.paywall.planFeature')}
             />
         </div>
     );
 };
 
 const EventCard = ({ event, delay, onClick, onPlanClick, showPlanButton, hasSavedPlan }) => {
-    const eventType = EVENT_TYPES.find(t => t.id === event.type) || EVENT_TYPES[4];
+    const { t, language } = useI18n();
+    const eventType = EVENT_TYPES.find((item) => item.id === event.type) || EVENT_TYPES[4];
     // Parse date string as local date to prevent timezone shift
     const dateStr = event?.date || '';
     // Guard against missing date
@@ -642,17 +664,17 @@ const EventCard = ({ event, delay, onClick, onPlanClick, showPlanButton, hasSave
 
     const daysAway = Math.round((eventStart.getTime() - today.getTime()) / (24 * 60 * 60 * 1000));
     const timingLabel = daysAway === 0
-        ? 'Today'
+        ? t('calendar.timing.today')
         : daysAway === 1
-            ? 'Tomorrow'
+            ? t('calendar.timing.tomorrow')
             : daysAway > 1
-                ? `In ${daysAway} days`
+                ? t('calendar.timing.inDays', { count: daysAway })
                 : null;
     const isToday = daysAway === 0;
     const isSoon = daysAway >= 0 && daysAway <= 7;
 
-    const monthLabel = eventDate.toLocaleDateString('en-US', { month: 'short' });
-    const weekdayLabel = eventDate.toLocaleDateString('en-US', { weekday: 'short' });
+    const monthLabel = eventDate.toLocaleDateString(language, { month: 'short' });
+    const weekdayLabel = eventDate.toLocaleDateString(language, { weekday: 'short' });
     const dayNumber = eventDate.getDate();
 
     const cardFrame = event.isSecret
@@ -665,7 +687,8 @@ const EventCard = ({ event, delay, onClick, onPlanClick, showPlanButton, hasSave
             ? 'from-indigo-200/70 via-white/40 to-violet-200/60'
             : 'from-rose-200/70 via-white/40 to-amber-200/60';
 
-    const planLabel = hasSavedPlan ? 'View my plan' : 'Help me plan';
+    const planLabel = hasSavedPlan ? t('calendar.plan.view') : t('calendar.plan.help');
+    const eventTypeLabel = t(eventType.labelKey);
     const planBorder = isSoon
         ? event.isSecret
             ? 'from-indigo-300/55 via-court-goldLight/35 to-violet-300/55'
@@ -736,16 +759,16 @@ const EventCard = ({ event, delay, onClick, onPlanClick, showPlanButton, hasSave
 
                                     <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-neutral-600">
                                         <span className="px-2 py-0.5 rounded-full bg-white/70 border border-white/60 text-[10px] font-extrabold text-neutral-700">
-                                            {eventType.label}
+                                            {eventTypeLabel}
                                         </span>
                                         {event.isSecret ? (
                                             <span className="px-2 py-0.5 rounded-full bg-indigo-100/70 text-indigo-800 border border-indigo-200/50 text-[10px] font-extrabold inline-flex items-center gap-1">
                                                 <Lock className="w-3 h-3" />
-                                                Secret
+                                                {t('calendar.visibility.secret')}
                                             </span>
                                         ) : (
                                             <span className="px-2 py-0.5 rounded-full bg-rose-100/80 text-rose-800 border border-rose-200/50 text-[10px] font-extrabold">
-                                                Shared
+                                                {t('calendar.visibility.shared')}
                                             </span>
                                         )}
                                     </div>
@@ -800,6 +823,7 @@ const EventCard = ({ event, delay, onClick, onPlanClick, showPlanButton, hasSave
 };
 
 const AddEventModal = ({ selectedDate, onAdd, onClose }) => {
+    const { t } = useI18n();
     const [title, setTitle] = useState('');
     const [type, setType] = useState('custom');
     const [emoji, setEmoji] = useState('📅');
@@ -843,13 +867,18 @@ const AddEventModal = ({ selectedDate, onAdd, onClose }) => {
     const [dateError, setDateError] = useState(null);
     const [isRecurring, setIsRecurring] = useState(false);
     const [notes, setNotes] = useState('');
+    const translateValidationError = (validation) => {
+        if (!validation?.error) return null;
+        if (validation.errorCode) return t(`validation.${validation.errorCode}`, validation.meta);
+        return validation.error;
+    };
 
     const handleDateChange = (value) => {
         setDate(value);
         if (value) {
             // For calendar events, allow future dates
             const validation = validateDate(value, { allowFuture: true });
-            setDateError(validation.isValid ? null : validation.error);
+            setDateError(validation.isValid ? null : translateValidationError(validation));
         } else {
             setDateError(null);
         }
@@ -885,7 +914,7 @@ const AddEventModal = ({ selectedDate, onAdd, onClose }) => {
                 className="bg-white rounded-3xl w-full max-w-md p-5 space-y-4 shadow-xl max-h-[75vh] overflow-y-auto"
             >
                 <div className="flex items-center justify-between">
-                    <h3 className="font-bold text-neutral-800 text-lg">Add Event ✨</h3>
+                    <h3 className="font-bold text-neutral-800 text-lg">{t('calendar.addEvent.title')}</h3>
                     <button onClick={onClose} className="w-8 h-8 bg-neutral-100 rounded-full flex items-center justify-center">
                         <X className="w-4 h-4 text-neutral-500" />
                     </button>
@@ -893,7 +922,7 @@ const AddEventModal = ({ selectedDate, onAdd, onClose }) => {
 
                 {/* Sharing */}
                 <div className="space-y-2">
-                    <p className="text-xs font-bold text-neutral-500">Visibility</p>
+                    <p className="text-xs font-bold text-neutral-500">{t('calendar.addEvent.visibilityLabel')}</p>
                     <div className="rounded-2xl bg-neutral-50 border-2 border-neutral-100 p-1 flex gap-1">
                         <button
                             type="button"
@@ -904,7 +933,7 @@ const AddEventModal = ({ selectedDate, onAdd, onClose }) => {
                                 }`}
                         >
                             <span>🤝</span>
-                            Shared
+                            {t('calendar.visibility.shared')}
                         </button>
                         <button
                             type="button"
@@ -915,32 +944,32 @@ const AddEventModal = ({ selectedDate, onAdd, onClose }) => {
                                 }`}
                         >
                             <Lock className="w-4 h-4" />
-                            Secret
+                            {t('calendar.visibility.secret')}
                         </button>
                     </div>
                     <p className="text-[11px] text-neutral-500">
-                        {isSecret ? 'Secret events are only visible to you.' : 'Shared events are visible to you and your partner.'}
+                        {isSecret ? t('calendar.addEvent.secretHint') : t('calendar.addEvent.sharedHint')}
                     </p>
                 </div>
 
                 {/* Event Type */}
                 <div>
-                    <label className="text-xs font-bold text-neutral-500 mb-2 block">Event Type</label>
+                    <label className="text-xs font-bold text-neutral-500 mb-2 block">{t('calendar.addEvent.typeLabel')}</label>
                     <div className="flex flex-wrap gap-2">
-                        {EVENT_TYPES.map((t) => (
+                        {EVENT_TYPES.map((option) => (
                             <button
-                                key={t.id}
+                                key={option.id}
                                 onClick={() => {
-                                    setType(t.id);
-                                    setEmoji(t.emoji);
+                                    setType(option.id);
+                                    setEmoji(option.emoji);
                                 }}
-                                className={`px-3 py-2 rounded-xl text-sm font-medium flex items-center gap-1.5 transition-all ${type === t.id
+                                className={`px-3 py-2 rounded-xl text-sm font-medium flex items-center gap-1.5 transition-all ${type === option.id
                                     ? 'bg-violet-100 ring-2 ring-violet-400 text-violet-700'
                                     : 'bg-neutral-50 text-neutral-600'
                                     }`}
                             >
-                                <span>{t.emoji}</span>
-                                {t.label}
+                                <span>{option.emoji}</span>
+                                {t(option.labelKey)}
                             </button>
                         ))}
                     </div>
@@ -948,19 +977,19 @@ const AddEventModal = ({ selectedDate, onAdd, onClose }) => {
 
                 {/* Title */}
                 <div>
-                    <label className="text-xs font-bold text-neutral-500 mb-1 block">Event Title</label>
+                    <label className="text-xs font-bold text-neutral-500 mb-1 block">{t('calendar.addEvent.titleLabel')}</label>
                     <input
                         type="text"
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
-                        placeholder="e.g., Our Anniversary 💕"
+                        placeholder={t('calendar.addEvent.titlePlaceholder')}
                         className="w-full bg-neutral-50 border-2 border-neutral-100 rounded-xl p-3 text-neutral-700 focus:ring-2 focus:ring-violet-200 focus:border-violet-300 focus:outline-none text-sm"
                     />
                 </div>
 
                 {/* Date */}
                 <div>
-                    <label className="text-xs font-bold text-neutral-500 mb-1 block">Date</label>
+                    <label className="text-xs font-bold text-neutral-500 mb-1 block">{t('calendar.addEvent.dateLabel')}</label>
                     <input
                         type="date"
                         value={date}
@@ -980,7 +1009,7 @@ const AddEventModal = ({ selectedDate, onAdd, onClose }) => {
 
                 {/* Emoji */}
                 <div>
-                    <label className="text-xs font-bold text-neutral-500 mb-2 block">Choose Emoji</label>
+                    <label className="text-xs font-bold text-neutral-500 mb-2 block">{t('calendar.addEvent.emojiLabel')}</label>
                     <div className="flex flex-wrap gap-2">
                         {EMOJI_OPTIONS.map((e) => (
                             <button
@@ -1001,7 +1030,7 @@ const AddEventModal = ({ selectedDate, onAdd, onClose }) => {
                     className={`w-full p-3 rounded-xl flex items-center justify-between transition-all ${isRecurring ? 'bg-pink-50 ring-2 ring-pink-300' : 'bg-neutral-50'
                         }`}
                 >
-                    <span className="text-sm font-medium text-neutral-700">🔄 Repeat yearly</span>
+                    <span className="text-sm font-medium text-neutral-700">{t('calendar.addEvent.repeatYearly')}</span>
                     <div className={`w-5 h-5 rounded-full flex items-center justify-center ${isRecurring ? 'bg-pink-400' : 'bg-neutral-200'
                         }`}>
                         {isRecurring && <Check className="w-3 h-3 text-white" />}
@@ -1010,11 +1039,11 @@ const AddEventModal = ({ selectedDate, onAdd, onClose }) => {
 
                 {/* Notes */}
                 <div>
-                    <label className="text-xs font-bold text-neutral-500 mb-1 block">Notes (optional)</label>
+                    <label className="text-xs font-bold text-neutral-500 mb-1 block">{t('calendar.addEvent.notesLabel')}</label>
                     <textarea
                         value={notes}
                         onChange={(e) => setNotes(e.target.value)}
-                        placeholder="Add any special notes..."
+                        placeholder={t('calendar.addEvent.notesPlaceholder')}
                         rows={2}
                         className="w-full bg-neutral-50 border-2 border-neutral-100 rounded-xl p-3 text-neutral-700 focus:ring-2 focus:ring-violet-200 focus:border-violet-300 focus:outline-none text-sm resize-none"
                     />
@@ -1026,7 +1055,7 @@ const AddEventModal = ({ selectedDate, onAdd, onClose }) => {
                     className="btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                     <Plus className="w-4 h-4" />
-                    Add Event
+                    {t('calendar.addEvent.submit')}
                 </button>
             </Motion.div>
         </Motion.div>
@@ -1034,9 +1063,13 @@ const AddEventModal = ({ selectedDate, onAdd, onClose }) => {
 };
 
 const EventDetailsModal = ({ events, onDelete, onClose, onAddMore, currentUserId, myDisplayName, partnerDisplayName }) => {
+    const { t, language } = useI18n();
     // Parse date string as local date to prevent timezone shift
     const dateStr = events[0].date;
     const eventDate = dateStr?.includes('T') ? new Date(dateStr) : new Date(dateStr + 'T00:00:00');
+    const eventCountLabel = events.length === 1
+        ? t('calendar.details.eventsOnDayOne')
+        : t('calendar.details.eventsOnDayOther', { count: events.length });
 
     return (
         <Motion.div
@@ -1056,10 +1089,10 @@ const EventDetailsModal = ({ events, onDelete, onClose, onAddMore, currentUserId
                 <div className="flex items-center justify-between sticky top-0 bg-white pb-2">
                     <div>
                         <h3 className="font-bold text-neutral-800 text-lg">
-                            {eventDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                            {eventDate.toLocaleDateString(language, { month: 'short', day: 'numeric' })}
                         </h3>
                         <p className="text-neutral-500 text-xs">
-                            {events.length} event{events.length > 1 ? 's' : ''} on this day
+                            {eventCountLabel}
                         </p>
                     </div>
                     <button onClick={onClose} className="w-8 h-8 bg-neutral-100 rounded-full flex items-center justify-center">
@@ -1069,11 +1102,12 @@ const EventDetailsModal = ({ events, onDelete, onClose, onAddMore, currentUserId
 
                 <div className="space-y-3">
                     {events.map((event, index) => {
-                        const eventType = EVENT_TYPES.find(t => t.id === event.type) || EVENT_TYPES[4];
+                        const eventType = EVENT_TYPES.find((item) => item.id === event.type) || EVENT_TYPES[4];
                         // Determine who created this event
                         const isCreatedByMe = event.createdBy === currentUserId;
                         const creatorName = isCreatedByMe ? myDisplayName : partnerDisplayName;
                         const canDelete = isCreatedByMe && !event.isDefault && !event.isPersonal;
+                        const eventTypeLabel = t(eventType.labelKey);
 
                         return (
                             <Motion.div
@@ -1095,25 +1129,25 @@ const EventDetailsModal = ({ events, onDelete, onClose, onAddMore, currentUserId
                                         <h4 className="font-bold text-neutral-800">{event.title}</h4>
                                         <div className="flex items-center gap-2 mt-1 flex-wrap">
                                             <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-neutral-100 text-neutral-600">
-                                                {eventType.label}
+                                                {eventTypeLabel}
                                             </span>
                                             {event.isSecret ? (
                                                 <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-[#1c1c84]/10 text-[#1c1c84]">
-                                                    🔒 Secret
+                                                    🔒 {t('calendar.visibility.secret')}
                                                 </span>
                                             ) : (
                                                 <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-pink-100 text-pink-700">
-                                                    🤝 Shared
+                                                    🤝 {t('calendar.visibility.shared')}
                                                 </span>
                                             )}
                                             {event.isRecurring && (
                                                 <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-violet-100 text-violet-600">
-                                                    🔄 Yearly
+                                                    🔄 {t('calendar.details.yearly')}
                                                 </span>
                                             )}
                                             {event.isPersonal && (
                                                 <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-pink-100 text-pink-600">
-                                                    💕 Personal
+                                                    💕 {t('calendar.details.personal')}
                                                 </span>
                                             )}
                                         </div>
@@ -1121,9 +1155,11 @@ const EventDetailsModal = ({ events, onDelete, onClose, onAddMore, currentUserId
                                             <p className="text-neutral-500 text-xs mt-2">{event.notes}</p>
                                         )}
                                         <p className="text-neutral-400 text-xs mt-2">
-                                            {event.isDefault ? '📅 Default Holiday' :
-                                                event.isPersonal ? '💕 From Profile' :
-                                                    `Added by ${creatorName || 'Unknown'}`}
+                                            {event.isDefault
+                                                ? t('calendar.details.defaultHoliday')
+                                                : event.isPersonal
+                                                    ? t('calendar.details.fromProfile')
+                                                    : t('calendar.details.addedBy', { name: creatorName || t('common.unknown') })}
                                         </p>
                                     </div>
                                     {canDelete && (
@@ -1146,7 +1182,7 @@ const EventDetailsModal = ({ events, onDelete, onClose, onAddMore, currentUserId
                     className="w-full py-3 bg-gradient-to-r from-court-cream to-court-tan text-court-brown rounded-xl font-bold text-sm flex items-center justify-center gap-2"
                 >
                     <Plus className="w-4 h-4" />
-                    Add Another Event
+                    {t('calendar.details.addAnother')}
                 </button>
             </Motion.div>
         </Motion.div>
@@ -1155,11 +1191,12 @@ const EventDetailsModal = ({ events, onDelete, onClose, onAddMore, currentUserId
 
 // AI Planning Modal - RAG + DeepSeek plan in JSON (for premium UI)
 const PlanningModal = ({ event, eventKey, myId, partnerId, partnerDisplayName, myDisplayName, onClose, onSaved }) => {
+    const { t, language } = useI18n();
     const STYLE_OPTIONS = [
-        { id: 'cozy', label: 'Cozy', emoji: '🕯️' },
-        { id: 'playful', label: 'Playful', emoji: '🎈' },
-        { id: 'fancy', label: 'Fancy', emoji: '🥂' },
-        { id: 'low_key', label: 'Low-key', emoji: '🏡' },
+        { id: 'cozy', labelKey: 'calendar.planning.styles.cozy', emoji: '🕯️' },
+        { id: 'playful', labelKey: 'calendar.planning.styles.playful', emoji: '🎈' },
+        { id: 'fancy', labelKey: 'calendar.planning.styles.fancy', emoji: '🥂' },
+        { id: 'low_key', labelKey: 'calendar.planning.styles.lowKey', emoji: '🏡' },
     ];
 
     const dateStr = event?.date;
@@ -1231,7 +1268,7 @@ const PlanningModal = ({ event, eventKey, myId, partnerId, partnerDisplayName, m
     const generatePlan = useCallback(async () => {
         const requestSeq = ++requestSeqRef.current;
         if (!partnerId) {
-            setError('Connect a partner to get personalized planning.');
+            setError(t('calendar.planning.errors.partnerRequired'));
             setIsLoading(false);
             return;
         }
@@ -1274,7 +1311,7 @@ const PlanningModal = ({ event, eventKey, myId, partnerId, partnerDisplayName, m
         } catch (err) {
             console.error('Failed to generate plan:', err);
             if (requestSeq !== requestSeqRef.current) return;
-            setError(err?.response?.data?.error || err?.message || 'Failed to generate a plan');
+            setError(err?.response?.data?.error || err?.message || t('calendar.planning.errors.generateFailed'));
             // Preserve the last successful plan; show error without wiping content.
         } finally {
             if (requestSeq === requestSeqRef.current) setIsLoading(false);
@@ -1293,6 +1330,7 @@ const PlanningModal = ({ event, eventKey, myId, partnerId, partnerDisplayName, m
         event.notes,
         event.isSecret,
         onSaved,
+        t,
     ]);
 
     useEffect(() => {
@@ -1371,11 +1409,14 @@ const PlanningModal = ({ event, eventKey, myId, partnerId, partnerDisplayName, m
                                 <div className="flex items-center gap-2">
                                     <Wand2 className="w-4 h-4 text-violet-500" />
                                     <h3 className="font-extrabold text-neutral-800 text-lg truncate">
-                                        Plan {event.title}
+                                        {t('calendar.planning.title', { title: event.title })}
                                     </h3>
                                 </div>
                                 <p className="text-xs text-neutral-500 mt-0.5 truncate">
-                                    {eventDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} • for {partnerDisplayName || 'your partner'}
+                                    {t('calendar.planning.subtitle', {
+                                        date: eventDate.toLocaleDateString(language, { weekday: 'short', month: 'short', day: 'numeric' }),
+                                        name: partnerDisplayName || t('common.partner')
+                                    })}
                                 </p>
                             </div>
                         </div>
@@ -1398,7 +1439,7 @@ const PlanningModal = ({ event, eventKey, myId, partnerId, partnerDisplayName, m
                                         }`}
                                 >
                                     <span className="mr-1">{opt.emoji}</span>
-                                    {opt.label}
+                                    {t(opt.labelKey)}
                                 </button>
                             );
                         })}
@@ -1409,28 +1450,28 @@ const PlanningModal = ({ event, eventKey, myId, partnerId, partnerDisplayName, m
                 <div className="p-5 pt-4 overflow-y-auto space-y-4">
                     {error && !plan ? (
                         <div className="rounded-3xl p-4 bg-red-50 border border-red-100">
-                            <div className="flex items-start gap-3">
-                                <div className="w-10 h-10 rounded-2xl bg-red-100 flex items-center justify-center">
-                                    <AlertTriangle className="w-5 h-5 text-red-600" />
-                                </div>
-                                <div className="flex-1">
-                                    <p className="font-bold text-red-700 text-sm">Couldn’t generate a plan</p>
-                                    <p className="text-red-600 text-xs mt-1">{error}</p>
-                                    <button
-                                        onClick={generatePlan}
-                                        className="mt-3 px-4 py-2 rounded-full bg-white text-red-700 border border-red-200 text-xs font-bold"
-                                    >
-                                        Try again
-                                    </button>
+                                <div className="flex items-start gap-3">
+                                    <div className="w-10 h-10 rounded-2xl bg-red-100 flex items-center justify-center">
+                                        <AlertTriangle className="w-5 h-5 text-red-600" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="font-bold text-red-700 text-sm">{t('calendar.planning.errors.generateFailedTitle')}</p>
+                                        <p className="text-red-600 text-xs mt-1">{error}</p>
+                                        <button
+                                            onClick={generatePlan}
+                                            className="mt-3 px-4 py-2 rounded-full bg-white text-red-700 border border-red-200 text-xs font-bold"
+                                        >
+                                            {t('common.tryAgain')}
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    ) : plan ? (
+                        ) : plan ? (
                         <>
                             {error && (
                                 <div className="rounded-3xl p-3 bg-amber-50 border border-amber-100">
                                     <p className="text-[11px] font-bold text-amber-800">
-                                        Planning hiccup — showing your last plan.
+                                        {t('calendar.planning.errors.showingCached')}
                                     </p>
                                     <p className="text-[11px] text-amber-700 mt-1">{error}</p>
                                 </div>
@@ -1485,7 +1526,7 @@ const PlanningModal = ({ event, eventKey, myId, partnerId, partnerDisplayName, m
 
                             <div className="rounded-3xl p-4 bg-white/70 border border-white/60 shadow-soft">
                                 <div className="flex items-center justify-between">
-                                    <p className="text-sm font-extrabold text-neutral-800">Prep checklist</p>
+                                    <p className="text-sm font-extrabold text-neutral-800">{t('calendar.planning.sections.prepChecklist')}</p>
                                     <span className="text-[11px] text-neutral-400">{Object.values(checked).filter(Boolean).length}/{plan.mainPlan.prepChecklist.length}</span>
                                 </div>
                                 <div className="mt-3 space-y-2">
@@ -1507,7 +1548,7 @@ const PlanningModal = ({ event, eventKey, myId, partnerId, partnerDisplayName, m
                                                 </span>
                                                 <span className="text-sm font-semibold text-neutral-700">{item.item}</span>
                                                 {item.optional && (
-                                                    <span className="ml-auto text-[10px] font-bold text-neutral-400">Optional</span>
+                                                    <span className="ml-auto text-[10px] font-bold text-neutral-400">{t('calendar.planning.optional')}</span>
                                                 )}
                                             </button>
                                         );
@@ -1517,7 +1558,7 @@ const PlanningModal = ({ event, eventKey, myId, partnerId, partnerDisplayName, m
 
                             <div className="grid grid-cols-2 gap-3">
                                 <div className="rounded-3xl p-4 bg-white/70 border border-white/60 shadow-soft">
-                                    <p className="text-sm font-extrabold text-neutral-800 mb-2">Little touches</p>
+                                    <p className="text-sm font-extrabold text-neutral-800 mb-2">{t('calendar.planning.sections.littleTouches')}</p>
                                     <div className="space-y-2">
                                         {plan.littleTouches.slice(0, 4).map((t, idx) => (
                                             <div key={idx} className="flex gap-2">
@@ -1532,7 +1573,7 @@ const PlanningModal = ({ event, eventKey, myId, partnerId, partnerDisplayName, m
                                 </div>
 
                                 <div className="rounded-3xl p-4 bg-white/70 border border-white/60 shadow-soft">
-                                    <p className="text-sm font-extrabold text-neutral-800 mb-2">Gift ideas</p>
+                                    <p className="text-sm font-extrabold text-neutral-800 mb-2">{t('calendar.planning.sections.giftIdeas')}</p>
                                     <div className="space-y-2">
                                         {plan.giftIdeas.slice(0, 4).map((g, idx) => (
                                             <div key={idx} className="flex gap-2">
@@ -1548,7 +1589,7 @@ const PlanningModal = ({ event, eventKey, myId, partnerId, partnerDisplayName, m
                             </div>
 
                             <div className="rounded-3xl p-4 bg-white/70 border border-white/60 shadow-soft">
-                                <p className="text-sm font-extrabold text-neutral-800 mb-2">Alternatives</p>
+                                <p className="text-sm font-extrabold text-neutral-800 mb-2">{t('calendar.planning.sections.alternatives')}</p>
                                 <div className="flex gap-2 overflow-x-auto pb-1">
                                     {plan.alternatives.map((alt, idx) => (
                                         <div key={idx} className="shrink-0 w-56 rounded-3xl bg-gradient-to-br from-violet-50/70 via-white/70 to-amber-50/50 border border-white/60 p-3 shadow-soft">
@@ -1564,7 +1605,7 @@ const PlanningModal = ({ event, eventKey, myId, partnerId, partnerDisplayName, m
 
                             <details className="rounded-3xl p-4 bg-white/70 border border-white/60 shadow-soft">
                                 <summary className="text-sm font-extrabold text-neutral-800 cursor-pointer select-none">
-                                    Backup plan
+                                    {t('calendar.planning.sections.backupPlan')}
                                 </summary>
                                 <div className="mt-3 space-y-2">
                                     {plan.backupPlan.steps.map((s, idx) => (
@@ -1593,11 +1634,13 @@ const PlanningModal = ({ event, eventKey, myId, partnerId, partnerDisplayName, m
                         ) : (
                             <Sparkles className="w-4 h-4" />
                         )}
-                        Generate a new plan
+                        {t('calendar.planning.generateNew')}
                     </button>
                     {meta?.rag?.memoriesUsed !== undefined && (
                         <p className="mt-2 text-[11px] text-neutral-400 text-center">
-                            Personalized with {meta.rag.memoriesUsed} memory insight{meta.rag.memoriesUsed === 1 ? '' : 's'}.
+                            {meta.rag.memoriesUsed === 1
+                                ? t('calendar.planning.memoriesOne')
+                                : t('calendar.planning.memoriesOther', { count: meta.rag.memoriesUsed })}
                         </p>
                     )}
                 </div>

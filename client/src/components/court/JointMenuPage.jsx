@@ -1,18 +1,25 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Users, Sparkles, Heart, Leaf, ArrowRight, Clock } from 'lucide-react';
+import { useI18n } from '../../i18n';
 
 const JointMenuPage = ({ jointMenu, myName, partnerName, isCreator, onReady, isSubmitting }) => {
-    const displayPartnerName = partnerName || 'Partner';
-    const displayMyName = myName || 'You';
-    const journeySteps = ['Priming', 'Joint', 'Resolution', 'Verdict'];
+    const { t } = useI18n();
+    const displayPartnerName = partnerName || t('common.partner');
+    const displayMyName = myName || t('common.you');
+    const journeySteps = [
+        t('court.journey.priming'),
+        t('court.journey.joint'),
+        t('court.journey.resolution'),
+        t('court.journey.verdict')
+    ];
     const currentStepIndex = 2;
 
     if (!jointMenu) {
         return (
             <div className="max-w-md mx-auto glass-card p-4 text-center">
-                <p className="text-sm text-court-brown">Joint menu is still preparing.</p>
-                <p className="text-xs text-court-brownLight mt-1">Please check back in a moment.</p>
+                <p className="text-sm text-court-brown">{t('court.jointMenu.loadingTitle')}</p>
+                <p className="text-xs text-court-brownLight mt-1">{t('court.jointMenu.loadingSubtitle')}</p>
             </div>
         );
     }
@@ -25,7 +32,7 @@ const JointMenuPage = ({ jointMenu, myName, partnerName, isCreator, onReady, isS
             <div className="sticky top-3 z-10">
                 <div className="glass-card p-3 bg-white/70 border border-court-tan/30">
                     <div className="text-[12px] uppercase tracking-[0.2em] text-court-brownLight">
-                        Journey map
+                        {t('court.journey.title')}
                     </div>
                     <div className="mt-2 flex items-center gap-3 overflow-x-auto">
                         {journeySteps.map((step, index) => {
@@ -59,22 +66,22 @@ const JointMenuPage = ({ jointMenu, myName, partnerName, isCreator, onReady, isS
                         <Users className="w-6 h-6 text-court-gold" />
                     </div>
                     <div className="flex-1">
-                        <h2 className="text-lg font-bold text-court-brown">Joint Menu</h2>
+                        <h2 className="text-lg font-bold text-court-brown">{t('court.jointMenu.header.title')}</h2>
                         <p className="text-sm text-court-brownLight">
-                            Read together and align on the next step.
+                            {t('court.jointMenu.header.subtitle')}
                         </p>
                         <div className="mt-3 flex flex-wrap gap-2 text-[10px] text-court-brownLight">
                             <span className="inline-flex items-center gap-1 rounded-full border border-court-tan/40 bg-white/60 px-2 py-1">
                                 <Users className="w-3 h-3 text-court-gold" />
-                                Together
+                                {t('court.jointMenu.header.badges.together')}
                             </span>
                             <span className="inline-flex items-center gap-1 rounded-full border border-court-tan/40 bg-white/60 px-2 py-1">
                                 <Clock className="w-3 h-3 text-court-brown" />
-                                3-5 min read
+                                {t('court.jointMenu.header.badges.readTime')}
                             </span>
                             <span className="inline-flex items-center gap-1 rounded-full border border-court-tan/40 bg-white/60 px-2 py-1">
                                 <Sparkles className="w-3 h-3 text-court-gold" />
-                                Shared view
+                                {t('court.jointMenu.header.badges.shared')}
                             </span>
                         </div>
                     </div>
@@ -93,8 +100,8 @@ const JointMenuPage = ({ jointMenu, myName, partnerName, isCreator, onReady, isS
                         <Sparkles className="w-4 h-4 text-court-gold" />
                     </div>
                     <div>
-                        <h3 className="text-sm font-bold text-court-brown">The Real Issue</h3>
-                        <p className="text-[10px] text-court-brownLight">What you are really fighting about</p>
+                        <h3 className="text-sm font-bold text-court-brown">{t('court.jointMenu.realIssue.title')}</h3>
+                        <p className="text-[10px] text-court-brownLight">{t('court.jointMenu.realIssue.subtitle')}</p>
                     </div>
                 </div>
                 <div className="rounded-2xl border border-court-tan/30 bg-white/70 p-3 text-sm text-court-brown leading-relaxed">
@@ -114,8 +121,8 @@ const JointMenuPage = ({ jointMenu, myName, partnerName, isCreator, onReady, isS
                         <Heart className="w-4 h-4 text-green-600" />
                     </div>
                     <div>
-                        <h3 className="text-sm font-bold text-court-brown">The Good Stuff</h3>
-                        <p className="text-[10px] text-court-brownLight">What each of you did well</p>
+                        <h3 className="text-sm font-bold text-court-brown">{t('court.jointMenu.goodStuff.title')}</h3>
+                        <p className="text-[10px] text-court-brownLight">{t('court.jointMenu.goodStuff.subtitle')}</p>
                     </div>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -142,8 +149,8 @@ const JointMenuPage = ({ jointMenu, myName, partnerName, isCreator, onReady, isS
                         <Leaf className="w-4 h-4 text-court-brown" />
                     </div>
                     <div>
-                        <h3 className="text-sm font-bold text-court-brown">Growth Edges</h3>
-                        <p className="text-[10px] text-court-brownLight">Areas to improve</p>
+                        <h3 className="text-sm font-bold text-court-brown">{t('court.jointMenu.growthEdges.title')}</h3>
+                        <p className="text-[10px] text-court-brownLight">{t('court.jointMenu.growthEdges.subtitle')}</p>
                     </div>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -170,8 +177,8 @@ const JointMenuPage = ({ jointMenu, myName, partnerName, isCreator, onReady, isS
                         <Sparkles className="w-4 h-4 text-court-gold" />
                     </div>
                     <div>
-                        <h3 className="text-sm font-bold text-court-brown">Resolution Preview</h3>
-                        <p className="text-[10px] text-court-brownLight">What is about to happen</p>
+                        <h3 className="text-sm font-bold text-court-brown">{t('court.jointMenu.resolutionPreview.title')}</h3>
+                        <p className="text-[10px] text-court-brownLight">{t('court.jointMenu.resolutionPreview.subtitle')}</p>
                     </div>
                 </div>
                 <div className="rounded-2xl border border-court-gold/20 bg-court-cream/60 p-3 text-sm text-court-brown leading-relaxed">
@@ -187,7 +194,7 @@ const JointMenuPage = ({ jointMenu, myName, partnerName, isCreator, onReady, isS
             >
                 <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-court-tan/60 to-transparent" />
                 <div className="text-[10px] uppercase font-bold text-court-brownLight tracking-wide mb-2">
-                    Closing Wisdom
+                    {t('court.jointMenu.closing.label')}
                 </div>
                 <p className="text-sm text-court-brown italic">"{jointMenu.closingWisdom}"</p>
             </motion.div>
@@ -210,7 +217,7 @@ const JointMenuPage = ({ jointMenu, myName, partnerName, isCreator, onReady, isS
                 ) : (
                     <>
                         <ArrowRight className="w-5 h-5" />
-                        Continue to resolutions
+                        {t('court.jointMenu.actions.continue')}
                     </>
                 )}
             </motion.button>

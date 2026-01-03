@@ -1,14 +1,16 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Bell, Users, Check, Clock, X } from 'lucide-react';
+import { useI18n } from '../../i18n';
 
 /**
  * WaitingForPartner - Shows when waiting for partner to join court
  * Displays court attendance status and waiting animation
  */
 const WaitingForPartner = ({ session, partnerName, myName, isCreator, onCancel }) => {
-    const displayPartnerName = partnerName || 'your partner';
-    const displayMyName = myName || 'You';
+    const { t } = useI18n();
+    const displayPartnerName = partnerName || t('common.yourPartner');
+    const displayMyName = myName || t('common.you');
 
     return (
         <div className="max-w-md mx-auto space-y-6">
@@ -28,10 +30,10 @@ const WaitingForPartner = ({ session, partnerName, myName, isCreator, onCancel }
                         <span className="text-4xl">📜</span>
                     </motion.div>
                     <h2 className="text-xl font-bold text-white mt-2">
-                        Summons Delivered!
+                        {t('court.waitingPartner.title')}
                     </h2>
                     <p className="text-court-cream/80 text-sm">
-                        The court awaits {displayPartnerName}'s presence
+                        {t('court.waitingPartner.subtitle', { name: displayPartnerName })}
                     </p>
                 </div>
 
@@ -58,14 +60,16 @@ const WaitingForPartner = ({ session, partnerName, myName, isCreator, onCancel }
 
                     {/* Status Message */}
                     <p className="text-court-brown font-medium mb-6">
-                        Waiting for <span className="text-court-gold font-bold">{displayPartnerName}</span> to join...
+                        {t('court.waitingPartner.statusIntro')}{' '}
+                        <span className="text-court-gold font-bold">{displayPartnerName}</span>
+                        {t('court.waitingPartner.statusOutro')}
                     </p>
 
                     {/* Court Status Panel */}
                     <div className="bg-gradient-to-br from-court-cream to-court-tan/30 rounded-2xl p-4 mb-6">
                         <div className="flex items-center justify-center gap-2 mb-3">
                             <Users className="w-4 h-4 text-court-gold" />
-                            <span className="text-sm font-bold text-court-brown">Court Attendance</span>
+                            <span className="text-sm font-bold text-court-brown">{t('court.waitingPartner.panelTitle')}</span>
                         </div>
 
                         <div className="flex justify-center gap-8">
@@ -79,7 +83,7 @@ const WaitingForPartner = ({ session, partnerName, myName, isCreator, onCancel }
                                     <Check className="w-6 h-6 text-green-600" />
                                 </motion.div>
                                 <span className="text-xs font-medium text-court-brown">{displayMyName}</span>
-                                <div className="text-[10px] text-green-600 font-medium mt-0.5">Present</div>
+                                <div className="text-[10px] text-green-600 font-medium mt-0.5">{t('court.waitingPartner.present')}</div>
                             </div>
 
                             {/* Divider */}
@@ -111,7 +115,7 @@ const WaitingForPartner = ({ session, partnerName, myName, isCreator, onCancel }
                                     <Clock className="w-5 h-5 text-court-gold" />
                                 </motion.div>
                                 <span className="text-xs font-medium text-court-brown">{displayPartnerName}</span>
-                                <div className="text-[10px] text-court-gold font-medium mt-0.5">Awaiting...</div>
+                                <div className="text-[10px] text-court-gold font-medium mt-0.5">{t('court.waitingPartner.awaiting')}</div>
                             </div>
                         </div>
                     </div>
@@ -135,7 +139,7 @@ const WaitingForPartner = ({ session, partnerName, myName, isCreator, onCancel }
                         className="text-court-brownLight hover:text-court-maroon transition-colors text-sm font-medium flex items-center gap-2 mx-auto"
                     >
                         <X className="w-4 h-4" />
-                        Cancel Summons
+                        {t('court.waitingPartner.cancel')}
                     </motion.button>
                 </div>
             </motion.div>
@@ -152,9 +156,9 @@ const WaitingForPartner = ({ session, partnerName, myName, isCreator, onCancel }
                         <span className="text-xl">💡</span>
                     </div>
                     <div>
-                        <p className="text-sm text-court-brown font-medium">While you wait...</p>
+                        <p className="text-sm text-court-brown font-medium">{t('court.waitingPartner.tipTitle')}</p>
                         <p className="text-xs text-court-brownLight mt-1">
-                            Take a deep breath. Remember, you're here to understand each other, not to win.
+                            {t('court.waitingPartner.tipBody')}
                         </p>
                     </div>
                 </div>

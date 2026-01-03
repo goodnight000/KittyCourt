@@ -3,12 +3,14 @@
  */
 import React from 'react'
 import { Heart, MessageCircle, ImageOff } from 'lucide-react'
+import { useI18n } from '../i18n'
 
 const MemoryCard = ({
   memory,
   onClick,
   showMeta = true
 }) => {
+  const { t, language } = useI18n()
   const {
     url,
     caption,
@@ -19,11 +21,11 @@ const MemoryCard = ({
   } = memory || {}
 
   const formattedDate = memoryDate
-    ? new Date(memoryDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    ? new Date(memoryDate).toLocaleDateString(language, { month: 'short', day: 'numeric' })
     : null
 
   const isPending = moderationStatus === 'pending'
-  const title = caption?.trim() || 'Shared memory'
+  const title = caption?.trim() || t('memories.card.defaultTitle')
 
   return (
     <button
@@ -40,7 +42,7 @@ const MemoryCard = ({
         {url ? (
           <img
             src={url}
-            alt={caption || 'Memory'}
+            alt={caption || t('memories.card.altFallback')}
             className={`h-full w-full object-cover transition duration-700 group-hover:scale-105 ${
               isPending ? 'opacity-85' : ''
             }`}
@@ -48,7 +50,7 @@ const MemoryCard = ({
         ) : (
           <div className="flex h-full w-full flex-col items-center justify-center bg-neutral-100 text-neutral-400">
             <ImageOff className="w-6 h-6" />
-            <span className="text-xs mt-2">Processing</span>
+            <span className="text-xs mt-2">{t('memories.card.processing')}</span>
           </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-transparent opacity-0 transition duration-500 group-hover:opacity-100" />
@@ -80,7 +82,7 @@ const MemoryCard = ({
 
       {isPending && (
         <span className="absolute top-3 right-3 px-2 py-1 rounded-full border border-white/70 bg-white/90 text-[10px] font-semibold text-neutral-500">
-          Processing
+          {t('memories.card.processing')}
         </span>
       )}
     </button>

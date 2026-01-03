@@ -6,23 +6,24 @@ import useAuthStore from '../store/useAuthStore';
 import RequirePartner from '../components/RequirePartner';
 import { supabase } from '../services/supabase';
 import { useNavigate } from 'react-router-dom';
+import { useI18n } from '../i18n';
 
-const DEFAULT_REWARDS = [
-    { id: 1, title: "Foot Massage", subtitle: "10 minutes", cost: 50, icon: "🦶", color: "pink" },
-    { id: 2, title: "Dish Duty Pass", subtitle: "Skip once", cost: 100, icon: "🍽️", color: "violet" },
-    { id: 3, title: "Movie Choice", subtitle: "You pick", cost: 75, icon: "🎬", color: "amber" },
-    { id: 4, title: "Breakfast in Bed", subtitle: "Weekend only", cost: 150, icon: "🥞", color: "green" },
-    { id: 5, title: "Cuddle Session", subtitle: "1 hour", cost: 25, icon: "🤗", color: "orange" },
-    { id: 6, title: "Date Night", subtitle: "Plan everything", cost: 200, icon: "💕", color: "pink" },
-];
+const getDefaultRewards = (t) => ([
+    { id: 1, title: t('economy.defaults.footMassage.title'), subtitle: t('economy.defaults.footMassage.subtitle'), cost: 50, icon: "🦶", color: "pink" },
+    { id: 2, title: t('economy.defaults.dishDuty.title'), subtitle: t('economy.defaults.dishDuty.subtitle'), cost: 100, icon: "🍽️", color: "violet" },
+    { id: 3, title: t('economy.defaults.movieChoice.title'), subtitle: t('economy.defaults.movieChoice.subtitle'), cost: 75, icon: "🎬", color: "amber" },
+    { id: 4, title: t('economy.defaults.breakfast.title'), subtitle: t('economy.defaults.breakfast.subtitle'), cost: 150, icon: "🥞", color: "green" },
+    { id: 5, title: t('economy.defaults.cuddle.title'), subtitle: t('economy.defaults.cuddle.subtitle'), cost: 25, icon: "🤗", color: "orange" },
+    { id: 6, title: t('economy.defaults.dateNight.title'), subtitle: t('economy.defaults.dateNight.subtitle'), cost: 200, icon: "💕", color: "pink" },
+]);
 
 const EMOJI_OPTIONS = ["🦶", "🍽️", "🎬", "🥞", "🤗", "💕", "☕", "🎁", "💆", "🧹", "🚗", "🎮", "📺", "🍕", "🛁"];
 const COLOR_OPTIONS = ["pink", "violet", "amber", "green", "orange"];
 
-const getStoredRewards = (userId) => {
+const getStoredRewards = (userId, fallbackRewards) => {
     const key = `catjudge_rewards_${userId}`;
     const stored = localStorage.getItem(key);
-    return stored ? JSON.parse(stored) : DEFAULT_REWARDS;
+    return stored ? JSON.parse(stored) : fallbackRewards;
 };
 
 const storeRewards = (userId, rewards) => {
@@ -32,15 +33,18 @@ const storeRewards = (userId, rewards) => {
 
 export default function EconomyPage() {
     const navigate = useNavigate();
+    const { t, language } = useI18n();
     const { currentUser, redeemCoupon } = useAppStore();
     const { hasPartner, user: authUser, profile, partner: connectedPartner } = useAuthStore();
     
     // Use auth store for user/partner info
     const myId = authUser?.id || currentUser?.id;
     const partnerId = connectedPartner?.id;
-    const myDisplayName = profile?.display_name || profile?.name || 'You';
-    const partnerDisplayName = connectedPartner?.display_name || connectedPartner?.name || 'Your Partner';
+    const myDisplayName = profile?.display_name || profile?.name || t('common.you');
+    const partnerDisplayName = connectedPartner?.display_name || connectedPartner?.name || t('common.yourPartner');
     const myKibbleBalance = currentUser?.kibbleBalance || 0;
+
+    const defaultRewards = React.useMemo(() => getDefaultRewards(t), [t]);
     
     const [showAddModal, setShowAddModal] = useState(false);
     const [editingReward, setEditingReward] = useState(null);
@@ -54,8 +58,8 @@ export default function EconomyPage() {
 
     // Load rewards and pending redemptions
     useEffect(() => {
-        if (partnerId) setPartnerRewards(getStoredRewards(partnerId));
-        if (myId) setMyRewards(getStoredRewards(myId));
+        if (partnerId) setPartnerRewards(getStoredRewards(partnerId, defaultRewards));
+        if (myId) setMyRewards(getStoredRewards(myId, defaultRewards));
         
         // Load pending redemptions (rewards partner redeemed from you)
         const loadPendingRedemptions = async () => {
@@ -80,21 +84,21 @@ export default function EconomyPage() {
             }
         };
         loadPendingRedemptions();
-    }, [myId, partnerId]);
+    }, [defaultRewards, myId, partnerId]);
 
     // Require partner for economy/shop
     if (!hasPartner) {
         return (
             <RequirePartner
-                feature="Kibble Market"
-                description="The Kibble Market lets you and your partner create custom rewards! Earn kibble through appreciations and cases, then redeem for special treats from your partner."
+                feature={t('economy.feature')}
+                description={t('economy.requirePartnerDescription')}
             >
                 {/* Preview content */}
                 <div className="space-y-4">
                     <div className="glass-card p-5 text-center">
                         <ShoppingBag className="w-12 h-12 mx-auto text-amber-500 mb-3" />
-                        <h2 className="text-lg font-bold text-neutral-800">Kibble Market</h2>
-                        <p className="text-sm text-neutral-500">Earn and redeem rewards</p>
+                        <h2 className="text-lg font-bold text-neutral-800">{t('economy.preview.title')}</h2>
+                        <p className="text-sm text-neutral-500">{t('economy.preview.subtitle')}</p>
                     </div>
                 </div>
             </RequirePartner>
@@ -102,7 +106,7 @@ export default function EconomyPage() {
     }
 
     const handleRedeem = async (coupon) => {
-        if (myKibbleBalance < coupon.cost) { alert("Not enough kibble!"); return; }
+        if (myKibbleBalance < coupon.cost) { alert(t('economy.errors.notEnoughKibble')); return; }
         setRedeemingId(coupon.id);
         try {
             await redeemCoupon(coupon);
@@ -117,7 +121,7 @@ export default function EconomyPage() {
                 status: 'pending'
             });
             
-            setSuccessMessage(`Redeemed: ${coupon.title}! ${partnerDisplayName} will be notified 🔔`);
+            setSuccessMessage(t('economy.success.redeem', { title: coupon.title, name: partnerDisplayName }));
             setShowSuccess(true);
             setTimeout(() => setShowSuccess(false), 3000);
         } catch (e) { console.error(e); }
@@ -133,7 +137,7 @@ export default function EconomyPage() {
                 .eq('id', redemption.id);
             
             setPendingRedemptions(prev => prev.filter(r => r.id !== redemption.id));
-            setSuccessMessage(`Marked "${redemption.reward_name}" as done! 🎉`);
+            setSuccessMessage(t('economy.success.fulfilled', { title: redemption.reward_name }));
             setShowSuccess(true);
             setTimeout(() => setShowSuccess(false), 2000);
         } catch (e) { console.error(e); }
@@ -165,16 +169,16 @@ export default function EconomyPage() {
                         whileTap={{ scale: 0.95 }}
                         onClick={() => navigate(-1)}
                         className="rounded-2xl border border-white/80 bg-white/80 p-2 shadow-soft"
-                        aria-label="Back"
+                        aria-label={t('common.back')}
                     >
                         <ArrowLeft className="w-5 h-5 text-neutral-600" />
                     </motion.button>
                     <div className="flex-1">
                         <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-amber-600">
-                            Kibble Market
+                            {t('economy.header.kicker')}
                         </p>
-                        <h1 className="text-2xl font-display font-bold text-neutral-800">Reward Boutique</h1>
-                        <p className="text-sm text-neutral-500">Spend kibble on sweet little rituals</p>
+                        <h1 className="text-2xl font-display font-bold text-neutral-800">{t('economy.header.title')}</h1>
+                        <p className="text-sm text-neutral-500">{t('economy.header.subtitle')}</p>
                     </div>
                 </header>
                 <AnimatePresence>
@@ -205,9 +209,9 @@ export default function EconomyPage() {
                     </div>
                     <div className="relative flex items-start justify-between gap-4">
                         <div>
-                            <div className="text-[10px] uppercase tracking-[0.4em] text-neutral-400 font-semibold">Balance</div>
-                            <h2 className="text-xl font-display font-bold text-neutral-800 mt-2">Your Kibble</h2>
-                            <p className="text-xs text-neutral-500 mt-1">Ready to spend on sweet surprises.</p>
+                            <div className="text-[10px] uppercase tracking-[0.4em] text-neutral-400 font-semibold">{t('economy.balance.kicker')}</div>
+                            <h2 className="text-xl font-display font-bold text-neutral-800 mt-2">{t('economy.balance.title')}</h2>
+                            <p className="text-xs text-neutral-500 mt-1">{t('economy.balance.subtitle')}</p>
                         </div>
                         <motion.div
                             animate={{ rotate: [0, 8, -8, 0] }}
@@ -219,14 +223,14 @@ export default function EconomyPage() {
                     </div>
                     <div className="relative mt-4 grid grid-cols-2 gap-3">
                         <div className="rounded-2xl border border-amber-200/70 bg-white/85 px-3 py-3 text-left shadow-inner-soft">
-                            <div className="text-[10px] uppercase tracking-[0.3em] text-neutral-400 font-semibold">Balance</div>
+                            <div className="text-[10px] uppercase tracking-[0.3em] text-neutral-400 font-semibold">{t('economy.balance.label')}</div>
                             <div className="text-3xl font-display font-bold text-neutral-800 mt-2">{myKibbleBalance}</div>
-                            <div className="text-[11px] text-neutral-500">Kibble coins</div>
+                            <div className="text-[11px] text-neutral-500">{t('economy.balance.coins')}</div>
                         </div>
                         <div className="rounded-2xl border border-rose-200/70 bg-white/85 px-3 py-3 text-left shadow-inner-soft">
-                            <div className="text-[10px] uppercase tracking-[0.3em] text-neutral-400 font-semibold">Partner</div>
+                            <div className="text-[10px] uppercase tracking-[0.3em] text-neutral-400 font-semibold">{t('economy.partner.label')}</div>
                             <div className="text-sm font-semibold text-neutral-800 mt-2">{partnerDisplayName}</div>
-                            <div className="text-[11px] text-neutral-500">Redeem their rewards</div>
+                            <div className="text-[11px] text-neutral-500">{t('economy.partner.subtitle')}</div>
                         </div>
                     </div>
                 </motion.div>
@@ -248,7 +252,7 @@ export default function EconomyPage() {
                                     <Bell className="w-4 h-4 text-amber-500" />
                                 </motion.div>
                                 <h2 className="text-sm font-bold text-neutral-700">
-                                    {partnerDisplayName} redeemed rewards
+                                    {t('economy.pending.title', { name: partnerDisplayName })}
                                 </h2>
                             </div>
                             <span className="bg-amber-100 text-amber-700 text-xs font-bold px-2 py-0.5 rounded-full">
@@ -274,7 +278,9 @@ export default function EconomyPage() {
                                                 <p className="text-neutral-500 text-xs mt-1 ml-7">{redemption.reward_description}</p>
                                             )}
                                             <p className="text-neutral-400 text-xs mt-1 ml-7">
-                                                Redeemed {new Date(redemption.redeemed_at).toLocaleDateString()}
+                                                {t('economy.pending.redeemedOn', {
+                                                    date: new Date(redemption.redeemed_at).toLocaleDateString(language)
+                                                })}
                                             </p>
                                         </div>
                                         <motion.button
@@ -292,7 +298,7 @@ export default function EconomyPage() {
                                             ) : (
                                                 <>
                                                     <CheckCircle2 className="w-4 h-4" />
-                                                    Done
+                                                    {t('economy.pending.done')}
                                                 </>
                                             )}
                                         </motion.button>
@@ -306,17 +312,21 @@ export default function EconomyPage() {
                 <div className="space-y-3">
                     <div className="flex items-center justify-between">
                         <div>
-                            <div className="text-[10px] uppercase tracking-[0.35em] text-neutral-400 font-semibold">Redeem</div>
-                            <h2 className="text-base font-display font-bold text-neutral-800">Rewards from {partnerDisplayName}</h2>
+                            <div className="text-[10px] uppercase tracking-[0.35em] text-neutral-400 font-semibold">{t('economy.redeem.kicker')}</div>
+                            <h2 className="text-base font-display font-bold text-neutral-800">
+                                {t('economy.redeem.title', { name: partnerDisplayName })}
+                            </h2>
                         </div>
                         <span className="text-[11px] font-semibold text-amber-700 bg-amber-100/70 px-3 py-1 rounded-full">
-                            {partnerRewards.length} offers
+                            {t('economy.redeem.count', { count: partnerRewards.length })}
                         </span>
                     </div>
                     {partnerRewards.length === 0 ? (
                         <div className="glass-card p-6 text-center border border-amber-200/60">
                             <span className="text-2xl mb-2 block">😿</span>
-                            <p className="text-neutral-600 text-sm font-medium">{partnerDisplayName} has not set up rewards yet</p>
+                            <p className="text-neutral-600 text-sm font-medium">
+                                {t('economy.redeem.empty', { name: partnerDisplayName })}
+                            </p>
                         </div>
                     ) : (
                         <div className="grid grid-cols-2 gap-3">
@@ -337,9 +347,9 @@ export default function EconomyPage() {
                 <div className="space-y-3">
                     <div className="flex items-center justify-between">
                         <div>
-                            <div className="text-[10px] uppercase tracking-[0.35em] text-neutral-400 font-semibold">Your menu</div>
+                            <div className="text-[10px] uppercase tracking-[0.35em] text-neutral-400 font-semibold">{t('economy.myMenu.kicker')}</div>
                             <h2 className="text-base font-display font-bold text-neutral-800">
-                                Rewards you offer {partnerDisplayName}
+                                {t('economy.myMenu.title', { name: partnerDisplayName })}
                             </h2>
                         </div>
                         <button
@@ -347,13 +357,15 @@ export default function EconomyPage() {
                             className="flex items-center gap-1 px-3 py-1.5 bg-violet-100 text-violet-600 rounded-full text-xs font-bold border border-violet-200/70"
                         >
                             <Plus className="w-3 h-3" />
-                            Add
+                            {t('economy.myMenu.add')}
                         </button>
                     </div>
                     {myRewards.length === 0 ? (
                         <div className="glass-card p-6 text-center border border-violet-200/60">
                             <span className="text-2xl mb-2 block">🎁</span>
-                            <p className="text-neutral-600 text-sm font-medium">Add rewards for {partnerDisplayName} to redeem!</p>
+                            <p className="text-neutral-600 text-sm font-medium">
+                                {t('economy.myMenu.empty', { name: partnerDisplayName })}
+                            </p>
                         </div>
                     ) : (
                         <div className="space-y-2">
@@ -396,6 +408,7 @@ export default function EconomyPage() {
 }
 
 function CouponCard({ coupon, delay, onRedeem, isRedeeming, canAfford }) {
+    const { t } = useI18n();
     const colorMap = {
         pink: {
             bg: 'from-rose-50 via-white to-amber-50/60',
@@ -459,7 +472,7 @@ function CouponCard({ coupon, delay, onRedeem, isRedeeming, canAfford }) {
                 <div className="flex items-center justify-between">
                     <span className="text-2xl">{coupon.icon}</span>
                     <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${colors.chip}`}>
-                        {coupon.cost} kibble
+                        {t('economy.coupon.cost', { count: coupon.cost })}
                     </span>
                 </div>
                 <div>
@@ -469,10 +482,10 @@ function CouponCard({ coupon, delay, onRedeem, isRedeeming, canAfford }) {
                 <div className="flex items-center justify-between text-[11px] text-neutral-500">
                     <div className={`flex items-center gap-1 ${colors.text}`}>
                         <Star className="w-3 h-3 fill-current" />
-                        <span className="font-semibold">Treat</span>
+                        <span className="font-semibold">{t('economy.coupon.treat')}</span>
                     </div>
                     <span className={`text-xs font-semibold ${canAfford ? colors.text : 'text-neutral-400'}`}>
-                        {canAfford ? 'Redeem' : 'Need more'}
+                        {canAfford ? t('economy.coupon.redeem') : t('economy.coupon.needMore')}
                     </span>
                 </div>
             </div>
@@ -481,6 +494,7 @@ function CouponCard({ coupon, delay, onRedeem, isRedeeming, canAfford }) {
 }
 
 function RewardModal({ reward, onSave, onClose }) {
+    const { t } = useI18n();
     const [title, setTitle] = useState(reward?.title || '');
     const [subtitle, setSubtitle] = useState(reward?.subtitle || '');
     const [cost, setCost] = useState(reward?.cost || 50);
@@ -521,10 +535,10 @@ function RewardModal({ reward, onSave, onClose }) {
                 <div className="relative flex items-center justify-between">
                     <div>
                         <div className="text-[10px] uppercase tracking-[0.35em] text-neutral-400 font-semibold">
-                            Reward Builder
+                            {t('economy.rewardModal.kicker')}
                         </div>
                         <h3 className="font-display font-bold text-neutral-800 text-lg">
-                            {reward ? 'Edit Reward' : 'Add Reward'} 🎁
+                            {reward ? t('economy.rewardModal.editTitle') : t('economy.rewardModal.addTitle')} 🎁
                         </h3>
                     </div>
                     <button onClick={onClose} className="w-8 h-8 bg-white/80 border border-neutral-200/70 rounded-full flex items-center justify-center shadow-soft">
@@ -533,25 +547,25 @@ function RewardModal({ reward, onSave, onClose }) {
                 </div>
                 <div className="relative space-y-3">
                     <div>
-                        <label className="text-xs font-bold text-neutral-500 mb-1 block">Title</label>
+                        <label className="text-xs font-bold text-neutral-500 mb-1 block">{t('economy.rewardModal.fields.title')}</label>
                         <input
                             value={title}
                             onChange={(e) => setTitle(e.target.value)}
-                            placeholder="e.g., Foot Massage"
+                            placeholder={t('economy.rewardModal.placeholders.title')}
                             className="w-full bg-white/80 border border-neutral-200/70 rounded-2xl p-3 text-neutral-700 focus:ring-2 focus:ring-violet-200 focus:border-violet-300 focus:outline-none text-sm shadow-inner-soft"
                         />
                     </div>
                     <div>
-                        <label className="text-xs font-bold text-neutral-500 mb-1 block">Description</label>
+                        <label className="text-xs font-bold text-neutral-500 mb-1 block">{t('economy.rewardModal.fields.description')}</label>
                         <input
                             value={subtitle}
                             onChange={(e) => setSubtitle(e.target.value)}
-                            placeholder="e.g., 10 minutes"
+                            placeholder={t('economy.rewardModal.placeholders.description')}
                             className="w-full bg-white/80 border border-neutral-200/70 rounded-2xl p-3 text-neutral-700 focus:ring-2 focus:ring-violet-200 focus:border-violet-300 focus:outline-none text-sm shadow-inner-soft"
                         />
                     </div>
                     <div>
-                        <label className="text-xs font-bold text-neutral-500 mb-1 block">Kibble Cost</label>
+                        <label className="text-xs font-bold text-neutral-500 mb-1 block">{t('economy.rewardModal.fields.cost')}</label>
                         <input
                             type="number"
                             value={cost}
@@ -561,7 +575,7 @@ function RewardModal({ reward, onSave, onClose }) {
                         />
                     </div>
                     <div>
-                        <label className="text-xs font-bold text-neutral-500 mb-1 block">Icon</label>
+                        <label className="text-xs font-bold text-neutral-500 mb-1 block">{t('economy.rewardModal.fields.icon')}</label>
                         <div className="flex flex-wrap gap-2">
                             {EMOJI_OPTIONS.map((e) => (
                                 <button
@@ -575,7 +589,7 @@ function RewardModal({ reward, onSave, onClose }) {
                         </div>
                     </div>
                     <div>
-                        <label className="text-xs font-bold text-neutral-500 mb-1 block">Color</label>
+                        <label className="text-xs font-bold text-neutral-500 mb-1 block">{t('economy.rewardModal.fields.color')}</label>
                         <div className="flex gap-2">
                             {COLOR_OPTIONS.map((c) => (
                                 <button
@@ -593,7 +607,7 @@ function RewardModal({ reward, onSave, onClose }) {
                     className="w-full rounded-2xl bg-gradient-to-r from-violet-500 to-amber-400 py-3 text-sm font-bold text-white shadow-soft flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                     <Check className="w-4 h-4" />
-                    {reward ? 'Save Changes' : 'Add Reward'}
+                    {reward ? t('economy.rewardModal.save') : t('economy.rewardModal.add')}
                 </button>
             </motion.div>
         </motion.div>

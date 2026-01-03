@@ -1,0 +1,1941 @@
+{
+  "common": {
+    "loadingPause": "Loading Pause...",
+    "you": "You",
+    "partner": "Partner",
+    "yourPartner": "your partner",
+    "user": "User",
+    "profileAlt": "Profile",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "tryAgain": "Try again",
+    "refresh": "Refresh",
+    "continue": "Continue",
+    "change": "Change",
+    "waiting": "Waiting",
+    "edit": "Edit",
+    "cancel": "Cancel",
+    "saveChanges": "Save changes",
+    "or": "or",
+    "back": "Back",
+    "unknown": "Unknown",
+    "justNow": "Just now",
+    "minutesAgo": "{count} minutes ago",
+    "hoursAgo": "{count} hours ago",
+    "daysAgo": "{count} days ago",
+    "catMessages": [
+      "Purr-fectly acceptable! 🐱",
+      "The judge approves... for now. 👁️",
+      "Meow-gnificent work! ✨",
+      "You've earned my respect (and maybe some kibble) 🪙",
+      "The court is pleased! ⚖️",
+      "Excellent submission, human! 📜",
+      "*approving purr* 😺",
+      "Justice has been served! 🎉"
+    ],
+    "streakMessages": {
+      "legendary": "Legendary lovers! 👑",
+      "pawSome": "Paw-some duo! 🌟",
+      "steady": "Keeping the love alive! 💕",
+      "start": "Great start! 🐾",
+      "new": "Just getting started! ✨"
+    }
+  },
+  "nav": {
+    "home": "Home",
+    "court": "Court",
+    "calendar": "Calendar",
+    "profile": "Profile"
+  },
+  "language": {
+    "en": "English",
+    "zhHans": "Simplified Chinese"
+  },
+  "profile": {
+    "languageLabel": "Preferred language",
+    "loveLanguageLabel": "Love Language 💝",
+    "saveProfile": "Save Profile",
+    "unlockHint": "Earn XP together by answering Daily Meow, sending appreciations, and resolving cases."
+  },
+  "options": {
+    "loveLanguage": {
+      "words": "Words of Affirmation",
+      "wordsDesc": "Sweet messages & compliments",
+      "acts": "Acts of Service",
+      "actsDesc": "Helpful gestures & tasks",
+      "gifts": "Receiving Gifts",
+      "giftsDesc": "Thoughtful presents & surprises",
+      "time": "Quality Time",
+      "timeDesc": "Undivided attention & presence",
+      "touch": "Physical Touch",
+      "touchDesc": "Hugs, cuddles & closeness"
+    },
+    "communicationStyle": {
+      "direct": "Direct & Honest",
+      "directDesc": "I say what I mean right away",
+      "processing": "Need Time to Process",
+      "processingDesc": "I like to think before responding",
+      "emotional": "Emotional Expresser",
+      "emotionalDesc": "I lead with feelings first",
+      "logical": "Logical Analyzer",
+      "logicalDesc": "I focus on facts and solutions",
+      "avoidant": "Conflict-Avoidant",
+      "avoidantDesc": "I prefer to keep the peace"
+    },
+    "conflictStyle": {
+      "talk": "Want to talk it out",
+      "talkDesc": "Right here, right now",
+      "space": "Need space first",
+      "spaceDesc": "I cool down then discuss",
+      "write": "Express through writing",
+      "writeDesc": "Texts, notes, letters",
+      "physical": "Get physical energy out",
+      "physicalDesc": "Walk, exercise, move",
+      "distract": "Need a distraction",
+      "distractDesc": "Reset before engaging"
+    },
+    "dateActivities": {
+      "dining": "Dining Out",
+      "cooking": "Cooking Together",
+      "movies": "Movies/Shows",
+      "outdoors": "Outdoor Adventures",
+      "travel": "Traveling",
+      "gaming": "Gaming",
+      "music": "Concerts/Music",
+      "arts": "Arts & Culture",
+      "sports": "Sports",
+      "relaxing": "Relaxing at Home",
+      "fitness": "Working Out",
+      "shopping": "Shopping"
+    },
+    "petPeeves": {
+      "lateness": "Being late",
+      "phone": "Phone during quality time",
+      "mess": "Messiness",
+      "interrupting": "Being interrupted",
+      "forgetful": "Forgetfulness",
+      "passive": "Passive aggression",
+      "plans": "Last-minute plan changes",
+      "chewing": "Loud chewing",
+      "dishes": "Dishes in the sink",
+      "silent": "Silent treatment"
+    },
+    "appreciationStyle": {
+      "public": "Public recognition",
+      "publicDesc": "Tell the world!",
+      "private": "Private thanks",
+      "privateDesc": "Just between us",
+      "reciprocate": "Reciprocal action",
+      "reciprocateDesc": "Do something nice back",
+      "none": "Just knowing is enough",
+      "noneDesc": "No fuss needed"
+    },
+    "animals": {
+      "bear": "Bear",
+      "bunny": "Bunny",
+      "capybara": "Capybara",
+      "cat": "Cat",
+      "dog": "Dog",
+      "fox": "Fox",
+      "panda": "Panda",
+      "penguin": "Penguin"
+    }
+  },
+  "moods": {
+    "happy": "Happy",
+    "loved": "Loved",
+    "grateful": "Grateful",
+    "excited": "Excited",
+    "peaceful": "Peaceful",
+    "playful": "Playful",
+    "cozy": "Cozy",
+    "romantic": "Romantic",
+    "silly": "Silly",
+    "hopeful": "Hopeful",
+    "tired": "Tired",
+    "stressed": "Stressed",
+    "anxious": "Anxious",
+    "sad": "Sad",
+    "frustrated": "Frustrated",
+    "overwhelmed": "Overwhelmed",
+    "lonely": "Lonely",
+    "confused": "Confused",
+    "meh": "Meh",
+    "hangry": "Hangry"
+  },
+  "validation": {
+    "DATE_REQUIRED": "Date is required",
+    "INVALID_DATE_FORMAT": "Invalid date format",
+    "INVALID_DATE": "Invalid date",
+    "YEAR_TOO_EARLY": "Year must be {minYear} or later",
+    "YEAR_TOO_LATE": "Year must be {maxYear} or earlier",
+    "DATE_IN_FUTURE": "Date cannot be in the future",
+    "AGE_TOO_YOUNG": "You must be at least 13 years old",
+    "AGE_TOO_OLD": "Please enter a valid birth year"
+  },
+  "errors": {
+    "NO_PARTNER": "No partner connected",
+    "PARTNER_REQUIRED": "Partner required",
+    "INVALID_PARTNER": "Invalid partner",
+    "EVIDENCE_REQUIRED": "Evidence is required",
+    "XP_DISABLED": "XP system is disabled",
+    "CHALLENGES_FETCH_FAILED": "Couldn't load challenges",
+    "CHALLENGE_START_FAILED": "Couldn't start the challenge",
+    "CHALLENGE_SKIP_FAILED": "Couldn't skip the challenge",
+    "CHALLENGE_COMPLETE_FAILED": "Couldn't complete the challenge",
+    "CHALLENGE_CONFIRM_FAILED": "Couldn't confirm the challenge",
+    "USER_ID_MISMATCH": "User mismatch",
+    "DAILY_QUESTION_FETCH_FAILED": "Couldn't load today's question",
+    "DAILY_QUESTION_ERROR": "Daily question error",
+    "ANSWER_REQUIRED": "Answer is required",
+    "ANSWER_TOO_LONG": "Answer is too long",
+    "ASSIGNMENT_NOT_FOUND": "Assignment not found",
+    "ASSIGNMENT_FORBIDDEN": "You do not have access to this assignment",
+    "ANSWER_SUBMIT_FAILED": "Failed to submit answer",
+    "HISTORY_FETCH_FAILED": "Couldn't load history",
+    "ANSWER_NOT_FOUND": "Answer not found",
+    "ANSWER_FORBIDDEN": "You do not have permission to edit this answer",
+    "ANSWER_UPDATE_FAILED": "Failed to update answer",
+    "PENDING_FETCH_FAILED": "Couldn't load pending answers",
+    "VERDICT_NOT_ALLOWED": "Client-supplied verdicts are not allowed",
+    "CASE_NOT_FOUND": "Case not found",
+    "CASE_FORBIDDEN": "You do not have access to this case",
+    "IMAGE_INVALID": "Please select an image file",
+    "IMAGE_TOO_LARGE": "Image must be less than 5MB",
+    "IMAGE_READ_FAILED": "Failed to read image"
+  },
+  "dailyMeow": {
+    "feature": "Daily Meow",
+    "requirePartnerDescription": "Connect with a partner to unlock Daily Meow.",
+    "tagline": "A shared ritual for small check-ins.",
+    "errors": {
+      "userDataUnavailable": "We couldn't load your profile yet. Please try again.",
+      "noData": "No question found for today.",
+      "invalidQuestion": "Invalid question format.",
+      "loadFailed": "Couldn't load today's question.",
+      "submitFailed": "Couldn't submit your answer.",
+      "updateFailed": "Couldn't update your answer."
+    },
+    "step": {
+      "shared": "Shared",
+      "mood": "Mood",
+      "answer": "Answer"
+    },
+    "moodsSelected": "{count} mood{suffix} selected",
+    "toast": {
+      "saved": "Saved"
+    },
+    "loading": "Loading today's question...",
+    "noQuestions": {
+      "title": "No questions today",
+      "body": "Check back tomorrow for a new prompt."
+    },
+    "title": "Daily Meow",
+    "questionTitle": "Today's Question",
+    "badge": {
+      "catchUp": "Catch-up"
+    },
+    "stepBadge": {
+      "mood": "Mood check",
+      "answer": "Your answer",
+      "shared": "Shared"
+    },
+    "moodPrompt": "How are you feeling?",
+    "moodHint": "Selected {count} of 3",
+    "moodLockHint": "Your mood locks once you continue.",
+    "pickMood": "Pick a mood to continue",
+    "privateUntilBoth": "Private until both answer",
+    "answerPlaceholder": "Write your answer...",
+    "answerHint": "Keep it short and honest.",
+    "submitAnswer": "Submit answer",
+    "youFelt": "You felt",
+    "partnerFelt": "{name} felt",
+    "yourAnswer": "Your answer",
+    "partnerAnswer": "{name}'s answer",
+    "partnerAnswerLocked": "{name} will unlock after you answer",
+    "editedAt": "Edited {date}",
+    "bothAnsweredReward": "Both answered! You've earned +10 XP.",
+    "continueNext": "Continue to the next question",
+    "moodLocked": "Mood locked",
+    "questionArchives": "Question archives",
+    "dailyReset": "Resets daily at midnight"
+  },
+  "dailyMeowHistory": {
+    "feature": "Daily Meow History",
+    "requirePartnerDescription": "Connect with a partner to view your shared history.",
+    "headerLabel": "Daily archives",
+    "title": "Daily Meow",
+    "subtitle": "Revisit the questions you answered together.",
+    "journeyTitle": "Your journey",
+    "journeySubtitle": "Track your shared streaks and answers",
+    "answeredCount": "{count} answered",
+    "streakCount": "{count}-day streak",
+    "searchPlaceholder": "Search questions or answers...",
+    "backToArchives": "Back to archives",
+    "dailyQuestionTitle": "Daily question",
+    "felt": "{name} felt",
+    "answerLabel": "{name}'s answer",
+    "emptySearchTitle": "No matches",
+    "emptyTitle": "No answers yet",
+    "emptySearchHint": "Try a different keyword.",
+    "emptyHint": "Answer a Daily Meow together to start your archive."
+  },
+  "calendar": {
+    "iconAlt": "Calendar",
+    "title": "Our Calendar",
+    "subtitle": "Important dates & memories",
+    "addEventAria": "Add event",
+    "eventCount": {
+      "one": "1 event",
+      "other": "{count} events"
+    },
+    "upcoming": {
+      "title": "Upcoming",
+      "subtitle": "Next 7 days",
+      "countOne": "1 event",
+      "countOther": "{count} events",
+      "emptyTitle": "No upcoming events",
+      "emptyHint": "Tap + to add a special date."
+    },
+    "paywall": {
+      "planFeature": "Help Me Plan is a Pause Gold feature"
+    },
+    "timing": {
+      "today": "Today",
+      "tomorrow": "Tomorrow",
+      "inDays": "In {count} days"
+    },
+    "plan": {
+      "view": "View my plan",
+      "help": "Help me plan"
+    },
+    "visibility": {
+      "shared": "Shared",
+      "secret": "Secret"
+    },
+    "addEvent": {
+      "title": "Add Event ✨",
+      "visibilityLabel": "Visibility",
+      "secretHint": "Secret events are only visible to you.",
+      "sharedHint": "Shared events are visible to you and your partner.",
+      "typeLabel": "Event Type",
+      "titleLabel": "Event Title",
+      "titlePlaceholder": "e.g., Our Anniversary 💕",
+      "dateLabel": "Date",
+      "emojiLabel": "Choose Emoji",
+      "repeatYearly": "🔄 Repeat yearly",
+      "notesLabel": "Notes (optional)",
+      "notesPlaceholder": "Add any special notes...",
+      "submit": "Add Event"
+    },
+    "details": {
+      "eventsOnDayOne": "1 event on this day",
+      "eventsOnDayOther": "{count} events on this day",
+      "yearly": "Yearly",
+      "personal": "Personal",
+      "defaultHoliday": "📅 Default Holiday",
+      "fromProfile": "💕 From Profile",
+      "addedBy": "Added by {name}",
+      "addAnother": "Add Another Event"
+    },
+    "birthdayFor": "{name}'s birthday",
+    "anniversaryTitle": "Anniversary",
+    "holidays": {
+      "valentinesDay": "Valentine's Day",
+      "internationalWomensDay": "International Women's Day",
+      "mothersDay": "Mother's Day",
+      "fathersDay": "Father's Day",
+      "halloween": "Halloween",
+      "thanksgiving": "Thanksgiving",
+      "christmasEve": "Christmas Eve",
+      "christmasDay": "Christmas Day",
+      "newYearsEve": "New Year's Eve",
+      "newYearsDay": "New Year's Day"
+    },
+    "eventTypes": {
+      "birthday": "Birthday",
+      "anniversary": "Anniversary",
+      "holiday": "Holiday",
+      "dateNight": "Date night",
+      "custom": "Custom"
+    },
+    "planning": {
+      "errors": {
+        "partnerRequired": "Connect a partner to get personalized planning.",
+        "generateFailed": "Failed to generate a plan",
+        "generateFailedTitle": "Couldn't generate a plan",
+        "showingCached": "Planning hiccup - showing your last plan."
+      },
+      "title": "Plan {title}",
+      "subtitle": "{date} • for {name}",
+      "styles": {
+        "cozy": "Cozy",
+        "playful": "Playful",
+        "fancy": "Fancy",
+        "lowKey": "Low-key"
+      },
+      "sections": {
+        "prepChecklist": "Prep checklist",
+        "littleTouches": "Little touches",
+        "giftIdeas": "Gift ideas",
+        "alternatives": "Alternatives",
+        "backupPlan": "Backup plan"
+      },
+      "optional": "Optional",
+      "generateNew": "Generate a new plan",
+      "memoriesOne": "Personalized with 1 memory insight.",
+      "memoriesOther": "Personalized with {count} memory insights."
+    }
+  },
+  "appreciations": {
+    "feature": "Appreciations",
+    "partnerFallback": "Your partner",
+    "requirePartnerDescription": "Show gratitude to your partner! Send appreciation messages and earn kibble together. This feature works best with a connected partner.",
+    "preview": {
+      "title": "Appreciations",
+      "subtitle": "Send love to your partner"
+    },
+    "header": {
+      "kicker": "Appreciation log",
+      "title": "Your Love Ledger",
+      "subtitle": "Things {name} appreciates about you 💕"
+    },
+    "summary": {
+      "title": "Total Appreciations",
+      "from": "from {name}"
+    },
+    "empty": {
+      "title": "No Appreciations Yet",
+      "line1": "When {name} shows appreciation for something you did,",
+      "line2": "it will appear here! 💕"
+    },
+    "kibbleReward": "+{count} kibble"
+  },
+  "challenges": {
+    "locked": {
+      "title": "Challenges unlock at Level {level}",
+      "subtitle": "You are currently Level {level}. Keep earning XP together.",
+      "cta": "View your progress"
+    },
+    "header": {
+      "kicker": "Court docket",
+      "title": "Challenges",
+      "subtitle": "Earn XP together as a couple",
+      "level": "Level {level}"
+    },
+    "section": {
+      "dropKicker": "Challenge drops",
+      "dropTitle": "Daily & weekly quests auto-start",
+      "dropSubtitle": "A fresh docket lands at midnight ET.",
+      "activeCount": "{count} active quests",
+      "dailyTitle": "Daily docket",
+      "dailyBadge": "Refreshes nightly",
+      "dailyActive": "Daily challenges live",
+      "dailyXp": "+{xp} XP",
+      "dailyXpLabel": "On the line today",
+      "weeklyTitle": "Weekly docket",
+      "weeklyBadge": "Resets Monday",
+      "weeklyActive": "Weekly challenges live",
+      "weeklyXp": "+{xp} XP",
+      "weeklyXpLabel": "This week's stakes"
+    },
+    "active": {
+      "kicker": "In progress",
+      "title": "Active challenges",
+      "count": "{count} live"
+    },
+    "actions": {
+      "markDone": "Mark done",
+      "confirm": "Confirm",
+      "waiting": "Waiting",
+      "skip": "Skip"
+    },
+    "completed": {
+      "kicker": "Completed archive",
+      "title": "Completed ({count})"
+    },
+    "empty": {
+      "title": "No challenges right now",
+      "subtitle": "Check back tomorrow for a fresh docket."
+    },
+    "errors": {
+      "LOAD_FAILED": "Couldn't load challenges",
+      "SKIP_FAILED": "Couldn't skip the challenge",
+      "COMPLETE_FAILED": "Couldn't complete the challenge",
+      "CONFIRM_FAILED": "Couldn't confirm the challenge"
+    },
+    "card": {
+      "status": {
+        "expired": "Expired",
+        "completed": "Completed"
+      },
+      "cadence": {
+        "daily": "Daily",
+        "weekly": "Weekly"
+      },
+      "difficulty": {
+        "easy": "Easy",
+        "medium": "Medium",
+        "hard": "Hard"
+      },
+      "completedReward": "Completed! +{xp} XP earned together.",
+      "progress": "{current} / {total} steps",
+      "reward": "+{xp} XP",
+      "daysLeft": "{count} days left"
+    }
+  },
+  "court": {
+    "journey": {
+      "title": "Journey map",
+      "priming": "Priming",
+      "joint": "Joint",
+      "resolution": "Resolution",
+      "verdict": "Verdict"
+    },
+    "resolution": {
+      "optionLabel": "Option {label}",
+      "optionNumber": "Option {count}",
+      "loadingTitle": "Resolutions are still loading.",
+      "loadingSubtitle": "Please wait a moment.",
+      "confirm": {
+        "waiting": "Waiting for {name} to confirm",
+        "selectShared": "Select a shared resolution",
+        "confirmShared": "Confirm this resolution",
+        "selectPlan": "Select a plan to continue",
+        "confirmMine": "Confirm my selection"
+      },
+      "selected": "Selected",
+      "waiting": {
+        "title": "Choice Recorded",
+        "subtitle": "Waiting for {name} to choose.",
+        "badge": "Your pick"
+      },
+      "header": {
+        "title": "Pick a Resolution",
+        "subtitle": "Choose the option that feels most workable to you.",
+        "mismatchTitle": "Find a shared resolution",
+        "mismatchSubtitle": "You chose different paths. Select one option together to move forward.",
+        "alignTogether": "Align together",
+        "pickConfirm": "Pick + confirm"
+      },
+      "mismatch": {
+        "intro": "Your first pick and {name}'s first pick are listed below.",
+        "hint": "Choose the same resolution to continue. A blended option will appear if generated.",
+        "lockedTitle": "Choice locked in",
+        "lockedSubtitle": "Waiting for {name} to match it."
+      },
+      "badges": {
+        "picked": "{name} picked",
+        "blended": "Blended option"
+      },
+      "selectionLabel": "You are selecting: {title}",
+      "selectionHint": "Choose one option above to continue.",
+      "hybrid": {
+        "title": "Blended option in progress",
+        "description": "We are drafting a blended plan that honors both choices.",
+        "rationale": "This option will appear shortly.",
+        "duration": "10-20 minutes"
+      }
+    },
+    "verdict": {
+      "banner": "VERDICT DELIVERED",
+      "title": "Judge Whiskers Has Spoken",
+      "subtitle": "The Therapist Cat delivers wisdom",
+      "versionLabel": "Version:",
+      "patternDetected": "{pattern} Pattern Detected",
+      "sections": {
+        "summary": {
+          "title": "The Real Story",
+          "subtitle": "What you're really fighting about"
+        },
+        "purr": {
+          "title": "The Purr",
+          "subtitle": "Your feelings are valid"
+        },
+        "hiss": {
+          "title": "The Hiss",
+          "subtitle": "Behaviors to work on"
+        },
+        "repair": {
+          "title": "The Repair",
+          "subtitle": "Your path to reconnection"
+        }
+      },
+      "signature": "- Judge Whiskers",
+      "horsemenTitle": "Gottman's Four Horsemen Detected",
+      "addendumTitle": "File an Addendum",
+      "addendumHint": "Add more context for reconsideration",
+      "addendumLimitReached": "Addendum limit reached",
+      "addendumStatus": "{remaining} of {limit} addendums left",
+      "accept": "Accept Verdict",
+      "accepted": "You accepted!",
+      "waitingForPartner": "Waiting for {name}...",
+      "history": "History",
+      "judgeAlt": "Judge Whiskers"
+    },
+    "atRest": {
+      "avatarAlt": "Sleeping Judge Whiskers",
+      "sleepingPhrases": [
+        "Zzz... dreaming of justice...",
+        "Purrs softly...",
+        "No disputes? Purrfect..."
+      ],
+      "statusTitle": "Court at rest",
+      "statusSubtitle": "No open cases right now.",
+      "cta": {
+        "kicker": "New case",
+        "title": "Serve your partner",
+        "subtitle": "Start a new court session.",
+        "action": "Serve"
+      },
+      "history": {
+        "title": "Past cases",
+        "subtitle": "Review verdicts and addendums."
+      }
+    },
+    "opening": {
+      "title": "Court is now in session",
+      "subtitle": "All rise for Judge Whiskers",
+      "judgeAlt": "Judge Whiskers"
+    },
+    "deliberating": {
+      "title": "Deliberating...",
+      "subtitle": "Judge Whiskers is reviewing your case.",
+      "analyzingTitle": "Analyzing the facts",
+      "analyzingSubtitle": "Balancing both perspectives",
+      "working": "Working...",
+      "note": "This can take a few minutes.",
+      "quotes": [
+        "Cat Court Principle: Validate first, solve second.",
+        "Whisker Wisdom: Curiosity beats defensiveness.",
+        "Court Note: A fair ruling protects both hearts."
+      ],
+      "judgeAlt": "Judge Whiskers",
+      "steps": {
+        "review": {
+          "title": "Review the evidence",
+          "subtitle": "Reading both sides with care"
+        },
+        "honor": {
+          "title": "Honor the feelings",
+          "subtitle": "Validating what is underneath"
+        },
+        "draft": {
+          "title": "Draft the verdict",
+          "subtitle": "Shaping a path forward"
+        }
+      }
+    },
+    "priming": {
+      "loadingTitle": "Priming insights are on the way.",
+      "loadingSubtitle": "Please wait a moment.",
+      "header": {
+        "title": "Priming insights",
+        "subtitle": "A gentle mirror for {name}",
+        "badges": {
+          "private": "Private",
+          "readTime": "2-3 min read",
+          "gentle": "Gentle tone"
+        }
+      },
+      "feelings": {
+        "title": "Your feelings",
+        "subtitle": "Name what you are carrying"
+      },
+      "partnerPerspective": {
+        "title": "Partner perspective",
+        "subtitle": "What they might be feeling"
+      },
+      "reflection": {
+        "title": "Reflection questions",
+        "subtitle": "Look inward before you respond"
+      },
+      "questionsForPartner": {
+        "title": "Questions for {name}",
+        "subtitle": "Invite a calmer conversation"
+      },
+      "actions": {
+        "continue": "Continue"
+      }
+    },
+    "jointMenu": {
+      "loadingTitle": "Joint menu is loading.",
+      "loadingSubtitle": "One more moment.",
+      "header": {
+        "title": "Joint menu",
+        "subtitle": "Shared reflections for both of you.",
+        "badges": {
+          "together": "Together",
+          "readTime": "2-3 min read",
+          "shared": "Shared"
+        }
+      },
+      "realIssue": {
+        "title": "The real issue",
+        "subtitle": "What is underneath the conflict"
+      },
+      "goodStuff": {
+        "title": "The good stuff",
+        "subtitle": "What is working"
+      },
+      "growthEdges": {
+        "title": "Growth edges",
+        "subtitle": "Where you can grow"
+      },
+      "resolutionPreview": {
+        "title": "Resolution preview",
+        "subtitle": "A glimpse of the path forward"
+      },
+      "closing": {
+        "label": "Closing wisdom"
+      },
+      "actions": {
+        "continue": "Continue"
+      }
+    },
+    "judgeSelection": {
+      "title": "Choose your judge",
+      "subtitle": "Pick the style you want for this case.",
+      "goldBadge": "Gold",
+      "judgeAlt": "Judge {name}",
+      "selectPrompt": "Select a judge",
+      "serve": "Serve case",
+      "upgrade": "Upgrade to Gold",
+      "paywall": {
+        "bestLocked": "Gold unlocks Judge Whiskers.",
+        "limitReached": "You hit the limit for {judge}."
+      }
+    },
+    "judges": {
+      "fast": {
+        "name": "Judge Lightning",
+        "subtitle": "Fast and focused",
+        "description": "Quick, concise verdicts when you want speed."
+      },
+      "logical": {
+        "name": "Judge Mittens",
+        "subtitle": "Balanced and logical",
+        "description": "Thoughtful, structured guidance."
+      },
+      "best": {
+        "name": "Judge Whiskers",
+        "subtitle": "Deep and empathetic",
+        "description": "Our most nuanced, therapist-level ruling."
+      }
+    },
+    "celebration": {
+      "title": "Verdict accepted!",
+      "subtitle": "You both chose to receive the ruling.",
+      "kibbleIntro": "You earned",
+      "kibbleAmount": "{amount} kibble",
+      "kibbleOutro": "Nice work, team.",
+      "quote": "A little kindness goes a long way.",
+      "signature": "- Judge Whiskers",
+      "returning": "Returning to the court...",
+      "judgeAlt": "Judge Whiskers"
+    },
+    "settlement": {
+      "cta": "Settle out of court",
+      "waiting": "Waiting for {name} to settle...",
+      "declined": "Settlement request declined.",
+      "dismiss": "Dismiss",
+      "partnerRequest": {
+        "title": "{name} wants to settle",
+        "subtitle": "Agree to end this case peacefully.",
+        "accept": "Settle",
+        "reject": "Keep going",
+        "settling": "Settling..."
+      },
+      "modal": {
+        "title": "Settle out of court?",
+        "body": "Send a settlement request to {name}. If they accept, the case will be dismissed.",
+        "note": "You can still continue the case if you both want.",
+        "confirm": "Send request",
+        "requesting": "Sending..."
+      }
+    },
+    "settleModal": {
+      "title": {
+        "accept": "Accept settlement",
+        "request": "Request settlement"
+      },
+      "body": {
+        "accept": "asked to settle this case.",
+        "requestIntro": "Ask",
+        "requestOutro": "to settle and close the case."
+      },
+      "quote": "Choose peace over winning.",
+      "signature": "- Judge Whiskers",
+      "keep": "Keep going",
+      "request": "Request settlement",
+      "accept": "Accept settlement"
+    },
+    "settleSuccess": {
+      "title": "Case dismissed",
+      "subtitle": "You both agreed to settle peacefully.",
+      "quote": "Love wins when you both choose it.",
+      "signature": "- Judge Whiskers",
+      "returning": "Returning to the court..."
+    },
+    "summons": {
+      "title": "You have been summoned",
+      "body": "opened a case. Enter the court?",
+      "cta": "Join court",
+      "expiry": "Summons expires in 24 hours."
+    },
+    "waitingEvidence": {
+      "title": "Waiting for evidence",
+      "subtitle": "Waiting for {name} to submit their side.",
+      "statusIntro": "We are waiting on ",
+      "statusOutro": " to submit evidence.",
+      "panelTitle": "Evidence status",
+      "submitted": "Submitted",
+      "pending": "Pending",
+      "waiting": "Waiting",
+      "note": "You can settle out of court while you wait."
+    },
+    "waitingPartner": {
+      "title": "Waiting for partner",
+      "subtitle": "Waiting for {name} to join the court.",
+      "statusIntro": "We have notified ",
+      "statusOutro": " to join the court.",
+      "panelTitle": "Court attendance",
+      "present": "Present",
+      "awaiting": "Awaiting",
+      "cancel": "Cancel request",
+      "tipTitle": "Tip",
+      "tipBody": "Send a quick heads-up so they know to join."
+    },
+    "waitingStep": {
+      "statusIntro": "Waiting for ",
+      "panelTitle": "Court status",
+      "panelBody": "We will notify you when {name} is ready.",
+      "note": "Feel free to step away."
+    },
+    "rating": {
+      "title": "Rate the verdict",
+      "subtitle": "How helpful was this ruling?",
+      "descriptions": {
+        "one": "Not helpful",
+        "two": "Needs work",
+        "three": "It is okay",
+        "four": "Helpful",
+        "five": "Purr-fect"
+      },
+      "submit": "Submit",
+      "submitting": "Submitting...",
+      "skip": "Skip",
+      "saveError": "Could not save your rating.",
+      "footer": "Thanks for helping us improve."
+    },
+    "start": {
+      "title": "Start a new case",
+      "subtitle": "Serve your partner and begin the court flow.",
+      "card": {
+        "title": "How it works",
+        "subtitle": "Three quick steps to get started."
+      },
+      "steps": {
+        "serve": {
+          "title": "Serve your partner",
+          "subtitle": "Send the summons to begin."
+        },
+        "wait": {
+          "title": "Wait for them to join",
+          "subtitle": "Both partners must be present."
+        },
+        "present": {
+          "title": "Present your evidence",
+          "subtitle": "Share facts and feelings."
+        }
+      },
+      "cta": "Serve summons",
+      "history": "View past cases"
+    },
+    "timeout": {
+      "label": "Time remaining"
+    }
+  },
+  "onboarding": {
+    "steps": {
+      "welcome": {
+        "title": "Welcome to Pause",
+        "subtitle": "A playful, calming space to stay close through the hard moments."
+      },
+      "auth": {
+        "title": "Create your account",
+        "subtitle": "So your progress stays safely saved."
+      },
+      "name": {
+        "title": "What should we call you?",
+        "subtitle": "Pick a name that feels like you"
+      },
+      "avatar": {
+        "title": "Choose Your Avatar! 🐾",
+        "subtitle": "Pick a profile picture or upload your own"
+      },
+      "birthday": {
+        "title": "When's your birthday? 🎂",
+        "subtitle": "We'll remind your partner (once you're connected!)"
+      },
+      "loveLanguage": {
+        "title": "What's your love language?",
+        "subtitle": "How do you feel most loved?"
+      },
+      "communicationStyle": {
+        "title": "How do you communicate in disagreements?",
+        "subtitle": "No judgment here! Understanding this helps resolve disputes 🕊️"
+      },
+      "conflictStyle": {
+        "title": "When upset, you usually...",
+        "subtitle": "Self-awareness is a superpower! 🦸"
+      },
+      "dateActivities": {
+        "title": "Your ideal date activities?",
+        "subtitle": "Pick all that apply! 🌟"
+      },
+      "petPeeves": {
+        "title": "Any relationship pet peeves?",
+        "subtitle": "What little things bug you? (It's okay, we all have them!) 😅"
+      },
+      "appreciationStyle": {
+        "title": "When you do something nice...",
+        "subtitle": "What kind of recognition feels best? 🏆"
+      },
+      "complete": {
+        "title": "You're all set! 🎉",
+        "subtitle": "Your profile is ready. Now let's connect you with your partner!"
+      }
+    },
+    "language": {
+      "title": "Choose your language",
+      "subtitle": "Select the language you'd like to use in Pause.",
+      "helper": "You can change this later in settings.",
+      "cta": "Continue"
+    },
+    "welcome": {
+      "judgeAlt": "Judge Whiskers",
+      "description": "Resolve little disagreements with humor, warmth, and a gentle push toward understanding.",
+      "highlights": {
+        "fair": "Fair judgments",
+        "dailyCloseness": "Daily closeness",
+        "calmerVibe": "A calmer vibe"
+      },
+      "signInPrompt": "Already have an account? Log in",
+      "upgradeNote": "You can upgrade later - we'll offer Pause Gold at the end."
+    },
+    "auth": {
+      "continueWithGoogle": "Continue with Google",
+      "emailPlaceholder": "Email address",
+      "passwordPlaceholder": "Create password",
+      "confirmPasswordPlaceholder": "Confirm password",
+      "creating": "Creating...",
+      "createAccount": "Create account"
+    },
+    "name": {
+      "placeholder": "Your name or nickname",
+      "helper": "This is how you'll appear to your partner 💕"
+    },
+    "birthday": {
+      "helper": "Your partner will be reminded to wish you a happy birthday! 🎈"
+    },
+    "avatar": {
+      "selectedAlt": "Your avatar",
+      "selectedHint": "Looking good! ✨",
+      "requiredHint": "Please select a profile picture",
+      "presetLabel": "Pick an animal friend",
+      "presetAlt": "{name} avatar",
+      "upload": "Upload",
+      "camera": "Camera",
+      "changeLater": "You can change this later in your profile settings"
+    },
+    "complete": {
+      "connectTitle": "Ready to connect with your partner? 💕",
+      "connectSubtitle": "You can share your unique code or enter theirs to link your accounts.",
+      "partnerCodeLabel": "Your Partner Code",
+      "connectNow": "Connect with Partner Now",
+      "connectLater": "I'll connect later",
+      "connectNote": "Note: Some features like Court & Daily Questions require a partner connection.",
+      "summaryName": "Name",
+      "summaryLoveLanguage": "Love Language",
+      "oneMoreThing": "One more thing...",
+      "savedNotice": "Your profile is saved! 🎉"
+    },
+    "customOptionPlaceholder": "+ Add your own...",
+    "paywall": {
+      "reason": "Pause Gold unlocks more judges and planning features"
+    },
+    "progress": "Step {current} of {total}",
+    "badge": {
+      "saved": "Saved",
+      "step": "Step {current}"
+    },
+    "actions": {
+      "saveProfile": "Save Profile"
+    },
+    "errors": {
+      "saveFailed": "Failed to save profile. Please try again.",
+      "unexpected": "An unexpected error occurred. Please try again.",
+      "googleFailed": "Failed to continue with Google.",
+      "missingFields": "Please fill in all fields",
+      "passwordsMismatch": "Passwords do not match",
+      "passwordTooShort": "Password must be at least 8 characters",
+      "signUpFailed": "Failed to create account",
+      "invalidImage": "Please select an image file",
+      "imageTooLarge": "Image must be less than 5MB",
+      "imageReadFailed": "Failed to read image"
+    }
+  },
+  "authCallback": {
+    "signingIn": "Signing you in..."
+  },
+  "cases": {
+    "feature": "Cases",
+    "preview": {
+      "title": "Case history",
+      "subtitle": "Review past rulings and resolutions."
+    },
+    "requirePartnerDescription": "Connect your partner to view case history.",
+    "horsemen": {
+      "criticism": "Criticism",
+      "contempt": "Contempt",
+      "defensiveness": "Defensiveness",
+      "stonewalling": "Stonewalling"
+    },
+    "severity": {
+      "highTension": "High tension",
+      "friction": "Friction",
+      "disconnection": "Disconnection"
+    },
+    "history": {
+      "kicker": "Case history",
+      "title": "Past cases",
+      "subtitle": "See how your story has grown.",
+      "empty": {
+        "title": "No cases yet",
+        "subtitle": "Start a case to see your history here.",
+        "cta": "Start a case"
+      },
+      "caseNumber": "Case #{number}",
+      "resolutionFallback": "Resolution pending",
+      "resolutionDescriptionFallback": "Details will appear after the verdict.",
+      "addendumOne": "1 addendum",
+      "addendumOther": "{count} addendums",
+      "resolutionChosen": "Resolution chosen",
+      "flow": {
+        "analyze": "Analyze",
+        "prime": "Prime",
+        "resolve": "Resolve"
+      }
+    },
+    "detail": {
+      "notFound": "Case not found",
+      "titleFallback": "Untitled case",
+      "verdicts": {
+        "one": "1 verdict",
+        "other": "{count} verdicts"
+      },
+      "journey": {
+        "title": "Judging journey",
+        "subtitle": "A snapshot of the court flow",
+        "evidence": "Evidence",
+        "analysis": "Analysis",
+        "priming": "Priming",
+        "jointMenu": "Joint menu",
+        "resolution": "Resolution",
+        "missing": "This case was created before the new court flow."
+      },
+      "partnerStatements": {
+        "title": "Partner statements",
+        "partnerA": "Partner A",
+        "partnerB": "Partner B",
+        "noInput": "No statement provided"
+      },
+      "analysis": {
+        "title": "Analysis",
+        "intensity": "Intensity",
+        "notAssessed": "Not assessed",
+        "dynamic": "Dynamic",
+        "rootConflict": "Root conflict",
+        "partnerAVulnerable": "Partner A vulnerable emotion",
+        "partnerBVulnerable": "Partner B vulnerable emotion",
+        "partnerAPatterns": "Partner A patterns",
+        "partnerBPatterns": "Partner B patterns",
+        "none": "None"
+      },
+      "priming": {
+        "title": "Priming insights",
+        "partnerA": "Partner A",
+        "partnerB": "Partner B",
+        "yourFeelings": "Your feelings",
+        "partnerPerspective": "Partner perspective",
+        "reflectionQuestions": "Reflection questions",
+        "questionsForPartner": "Questions for your partner"
+      },
+      "jointMenu": {
+        "title": "Joint menu",
+        "summary": "Summary",
+        "goodStuff": "The good stuff",
+        "growthEdges": "Growth edges",
+        "resolutionPreview": "Resolution preview"
+      },
+      "resolutions": {
+        "title": "Resolution options",
+        "chosen": "Chosen",
+        "why": "Why: {reason}"
+      },
+      "timeline": {
+        "title": "Addendum timeline",
+        "originalVerdict": "Original verdict",
+        "addendumBy": "Addendum by {name}"
+      },
+      "verdict": {
+        "title": "Verdict",
+        "judgeName": "Judge Whiskers",
+        "judgeTitle": "Therapist Cat",
+        "originalLabel": "Original verdict",
+        "addendumLabel": "Addendum {number}",
+        "addendumBy": "Addendum by {name}",
+        "legacyRuling": "Ruling",
+        "legacySentence": "Sentence",
+        "repairLabel": "Repair: {title}",
+        "repairWhy": "Why this helps: {reason}"
+      }
+    }
+  },
+  "connectPartner": {
+    "header": {
+      "title": "Connect your partner",
+      "subtitle": "Link accounts to unlock shared features."
+    },
+    "pending": {
+      "title": "Request sent",
+      "waiting": "Waiting for {name} to accept...",
+      "cancel": "Cancel request"
+    },
+    "tabs": {
+      "share": "Share code",
+      "enter": "Enter code"
+    },
+    "share": {
+      "title": "Share your code",
+      "subtitle": "Send this code to your partner.",
+      "copied": "Copied to clipboard"
+    },
+    "enter": {
+      "title": "Enter partner code",
+      "subtitle": "Type the 12-character code they shared.",
+      "placeholder": "Enter code",
+      "submit": "Send request"
+    },
+    "howItWorks": {
+      "title": "How it works",
+      "body": "Share your code and enter theirs to link accounts."
+    },
+    "skip": "Skip for now",
+    "skipHint": "You can connect later from your profile.",
+    "signOut": "Sign out",
+    "success": "Request sent to {name}.",
+    "errors": {
+      "generic": "Something went wrong. Please try again.",
+      "notAuthenticated": "Please sign in again.",
+      "selfConnect": "You cannot connect with yourself.",
+      "codeNotFound": "Partner code not found.",
+      "alreadyConnected": "That user is already connected.",
+      "noSentRequest": "No pending request to cancel."
+    }
+  },
+  "courtroom": {
+    "feature": "Court",
+    "requirePartnerDescription": "Connect your partner to start court sessions.",
+    "waiting": {
+      "primingTitle": "Waiting for partner to read priming",
+      "primingSubtitle": "We will continue once they finish.",
+      "jointTitle": "Waiting for partner on joint menu",
+      "jointSubtitle": "Hang tight while they review."
+    },
+    "errors": {
+      "title": "Verdict failed",
+      "verdictFailed": "We could not generate the verdict.",
+      "return": "Return to court"
+    },
+    "evidence": {
+      "title": "Present your evidence",
+      "subtitle": "Share facts and feelings.",
+      "live": "Live",
+      "vs": "vs",
+      "factsLabel": "What happened?",
+      "factsPlaceholder": "Describe the situation...",
+      "factsHint": "Stick to the facts.",
+      "feelingsLabel": "How did you feel?",
+      "feelingsPlaceholder": "Share your feelings...",
+      "feelingsHint": "Use I statements.",
+      "submit": "Submit evidence",
+      "footer": "Your partner will see your evidence once they submit theirs."
+    },
+    "addendum": {
+      "title": "Add an addendum",
+      "subtitle": "Add more context to help the judge reconsider.",
+      "remaining": "{remaining} of {limit} addendums left",
+      "placeholder": "Add more context...",
+      "limitReached": "No addendums remaining",
+      "submit": "Submit addendum"
+    }
+  },
+  "dashboard": {
+    "header": {
+      "title": "Good to see you, {name}",
+      "subtitle": "Here is what is new with {name}."
+    },
+    "stats": {
+      "daysLabel": "Days",
+      "daysTogether": "Days together",
+      "streakLabel": "Streak",
+      "questionStreak": "Daily Meow streak"
+    },
+    "connectPrompt": "Connect your partner to unlock shared features.",
+    "dailyQuestion": {
+      "connectBadge": "Connect",
+      "connectTitle": "Connect your partner to unlock Daily Meow.",
+      "ready": "Ready",
+      "notConnected": "Not connected",
+      "tapToConnect": "Tap to connect",
+      "badge": {
+        "daily": "Daily",
+        "waiting": "Waiting",
+        "completed": "Completed"
+      },
+      "loading": "Loading today's question...",
+      "fallbackQuestion": "What made you smile today?",
+      "youLabel": "You {status}",
+      "partnerLabel": "{name} {status}",
+      "answered": "Answered",
+      "waiting": "Waiting"
+    },
+    "quickActions": {
+      "title": "Quick actions",
+      "subtitle": "Jump in",
+      "go": "Go",
+      "appreciate": {
+        "label": "Appreciate",
+        "detail": "Send a quick gratitude note."
+      },
+      "loveNotes": {
+        "label": "Love notes",
+        "detail": "Read past appreciations."
+      },
+      "cases": {
+        "label": "Case history",
+        "detail": "Review court verdicts."
+      },
+      "redeem": {
+        "label": "Redeem",
+        "detail": "Spend kibble on treats."
+      }
+    },
+    "archive": {
+      "kicker": "Daily Meow",
+      "title": "Question archive",
+      "subtitle": "See your past answers."
+    },
+    "goodDeed": {
+      "kicker": "Appreciation",
+      "title": "Tell {name} something sweet",
+      "hint": "Earn +10 XP together",
+      "placeholder": "I loved when you...",
+      "helper": "Keep it short and sincere.",
+      "submit": "Send appreciation",
+      "successTitle": "Sent to {name}.",
+      "successSubtitle": "Your appreciation was delivered."
+    },
+    "goodDeedSuggestions": [
+      "Thanks for making coffee today",
+      "I loved our walk together",
+      "Thank you for listening to me",
+      "I felt so supported today",
+      "Thanks for helping with chores"
+    ]
+  },
+  "economy": {
+    "feature": "Kibble shop",
+    "requirePartnerDescription": "Connect your partner to redeem rewards.",
+    "preview": {
+      "title": "Kibble shop",
+      "subtitle": "Redeem treats you design together."
+    },
+    "header": {
+      "kicker": "Kibble",
+      "title": "Reward shop",
+      "subtitle": "Turn good deeds into treats."
+    },
+    "balance": {
+      "kicker": "Balance",
+      "title": "Your kibble",
+      "subtitle": "Earned from appreciations.",
+      "label": "Balance",
+      "coins": "kibble"
+    },
+    "partner": {
+      "label": "Partner",
+      "subtitle": "Redeem from their menu."
+    },
+    "pending": {
+      "title": "{name} redeemed",
+      "redeemedOn": "Redeemed on {date}",
+      "done": "Mark fulfilled"
+    },
+    "redeem": {
+      "kicker": "Redeem",
+      "title": "Redeem from {name}",
+      "count": "{count} rewards",
+      "empty": "{name} has not added rewards yet."
+    },
+    "myMenu": {
+      "kicker": "Your menu",
+      "title": "Rewards for {name}",
+      "add": "Add reward",
+      "empty": "No rewards yet. Add one."
+    },
+    "coupon": {
+      "cost": "{count} kibble",
+      "treat": "Treat",
+      "redeem": "Redeem",
+      "needMore": "Need more"
+    },
+    "defaults": {
+      "footMassage": {
+        "title": "Foot massage",
+        "subtitle": "10 minutes of TLC"
+      },
+      "dishDuty": {
+        "title": "Dish duty",
+        "subtitle": "You do the dishes"
+      },
+      "movieChoice": {
+        "title": "Movie choice",
+        "subtitle": "You pick the film"
+      },
+      "breakfast": {
+        "title": "Breakfast in bed",
+        "subtitle": "A sweet morning surprise"
+      },
+      "cuddle": {
+        "title": "Cuddle session",
+        "subtitle": "15 minutes of cuddles"
+      },
+      "dateNight": {
+        "title": "Date night",
+        "subtitle": "Plan a special evening"
+      }
+    },
+    "rewardModal": {
+      "kicker": "Reward",
+      "addTitle": "Add a reward",
+      "editTitle": "Edit reward",
+      "fields": {
+        "title": "Title",
+        "description": "Description",
+        "cost": "Cost",
+        "icon": "Icon",
+        "color": "Color"
+      },
+      "placeholders": {
+        "title": "Movie night",
+        "description": "You pick the movie"
+      },
+      "add": "Add reward",
+      "save": "Save reward"
+    },
+    "errors": {
+      "notEnoughKibble": "Not enough kibble."
+    },
+    "success": {
+      "redeem": "Redeemed {title} for {name}.",
+      "fulfilled": "Marked {title} as fulfilled."
+    }
+  },
+  "forgotPassword": {
+    "title": "Forgot password?",
+    "subtitle": "We will email you a reset link.",
+    "description": "Enter your email and we will send a reset link.",
+    "emailLabel": "Email address",
+    "emailPlaceholder": "you@example.com",
+    "submit": "Send reset link",
+    "sending": "Sending...",
+    "remember": "Remember your password?",
+    "signIn": "Sign in",
+    "errors": {
+      "emailRequired": "Email is required.",
+      "emailInvalid": "Please enter a valid email.",
+      "rateLimit": "Too many requests. Try again later.",
+      "generic": "Something went wrong. Please try again."
+    },
+    "success": {
+      "title": "Check your inbox",
+      "subtitle": "We sent a reset link to",
+      "nextStepsTitle": "Next steps",
+      "step1": "Open the email from Pause.",
+      "step2": "Click the reset link.",
+      "step3": "Choose a new password.",
+      "resendPrompt": "Did not get the email?",
+      "resendLink": "Resend",
+      "backToSignIn": "Back to sign in"
+    }
+  },
+  "insights": {
+    "header": {
+      "kicker": "Insights",
+      "title": "Relationship insights",
+      "subtitle": "AI reflections to help you grow."
+    },
+    "observatory": {
+      "kicker": "Observatory",
+      "title": "Insight feed",
+      "subtitle": "Patterns and gentle nudges.",
+      "level": "Level {level}"
+    },
+    "countOne": "insight",
+    "countOther": "{count} insights",
+    "status": {
+      "syncing": "Syncing",
+      "off": "Off",
+      "waiting": "Waiting",
+      "paused": "Paused",
+      "active": "Active"
+    },
+    "locked": {
+      "title": "Insights locked",
+      "subtitle": "Reach level {level} to unlock insights.",
+      "cta": "Back to profile"
+    },
+    "gold": {
+      "title": "Gold required",
+      "subtitle": "Unlock insights at level {level} with Pause Gold.",
+      "cta": "Unlock Gold",
+      "checking": "Checking..."
+    },
+    "consent": {
+      "offTitle": "Insights are off",
+      "offSubtitle": "Turn them on to receive weekly insights.",
+      "turnOn": "Turn on insights",
+      "waitingPartner": "Waiting for your partner to opt in."
+    },
+    "paused": {
+      "title": "Insights paused",
+      "subtitle": "Paused for one week.",
+      "resume": "Resume"
+    },
+    "actions": {
+      "pause": "Pause for a week",
+      "dismiss": "Dismiss"
+    },
+    "empty": {
+      "title": "No insights yet",
+      "subtitle": "Check back after your next case."
+    },
+    "card": {
+      "categoryFallback": "General",
+      "insightLabel": "Insight",
+      "contextLabel": "Context",
+      "helpful": "Helpful",
+      "notQuite": "Not quite"
+    },
+    "errors": {
+      "loadFailed": "Could not load insights.",
+      "updateFailed": "Could not update consent.",
+      "pauseFailed": "Could not pause insights.",
+      "feedbackFailed": "Could not send feedback."
+    }
+  },
+  "levelProgress": {
+    "compact": {
+      "title": "Level {level} · {title}",
+      "xp": "{current}/{total} XP",
+      "toGo": "{remaining} XP to go"
+    },
+    "full": {
+      "kicker": "Our story",
+      "levelLabel": "Level {level}",
+      "nextLevelLabel": "Next level",
+      "nextLevelValue": "Level {level}",
+      "progressLabel": "Progress",
+      "xpToGo": "{remaining} XP to go",
+      "focusLabel": "Focus",
+      "focusValue": "Connection",
+      "togetherLabel": "Together"
+    }
+  },
+  "loadingScreen": {
+    "messages": [
+      {
+        "text": "Warming up the courtroom...",
+        "emoji": "🐾"
+      },
+      {
+        "text": "Brushing the whiskers...",
+        "emoji": "✨"
+      },
+      {
+        "text": "Almost ready...",
+        "emoji": "💫"
+      },
+      {
+        "text": "Loading Pause...",
+        "emoji": "⚖️"
+      }
+    ],
+    "reset": "Reset and sign in"
+  },
+  "memories": {
+    "header": {
+      "kicker": "Memories",
+      "title": "Shared memories",
+      "subtitle": "A gallery of your moments.",
+      "add": "Add memory"
+    },
+    "overview": {
+      "kicker": "Overview",
+      "title": "Memory shelf",
+      "subtitle": "Track what you have shared."
+    },
+    "stats": {
+      "momentOne": "moment",
+      "momentOther": "moments",
+      "hearts": "{count} hearts",
+      "notes": "{count} notes"
+    },
+    "actions": {
+      "dismiss": "Dismiss"
+    },
+    "deleted": {
+      "title": "Recently deleted",
+      "deletedOn": "Deleted on {date}",
+      "restore": "Restore",
+      "shelfTitle": "Trash",
+      "waiting": "{count} waiting"
+    },
+    "locked": {
+      "title": "Memories locked",
+      "subtitle": "Connect your partner to unlock memories.",
+      "cta": "Back to profile"
+    },
+    "unavailable": {
+      "title": "Memories unavailable",
+      "subtitle": "The memory service is offline right now.",
+      "cta": "Back to profile"
+    },
+    "empty": {
+      "title": "No memories yet",
+      "subtitle": "Upload your first memory together.",
+      "cta": "Add a memory"
+    },
+    "card": {
+      "defaultTitle": "Untitled memory",
+      "altFallback": "Memory",
+      "processing": "Processing"
+    },
+    "uploader": {
+      "title": "Add a memory",
+      "subtitle": "Share a photo with a caption.",
+      "chooseTitle": "Choose a photo",
+      "chooseHint": "Tap to upload from your device",
+      "previewAlt": "Memory preview",
+      "replace": "Replace photo",
+      "captionLabel": "Caption",
+      "captionPlaceholder": "Write a short note...",
+      "dateLabel": "Date",
+      "save": "Save memory",
+      "uploading": "Uploading..."
+    },
+    "viewer": {
+      "title": "Memory",
+      "altFallback": "Memory",
+      "processing": "Processing...",
+      "reactions": "Reactions",
+      "comments": "Comments",
+      "commentCount": "{count} comments",
+      "commentPlaceholder": "Add a comment...",
+      "emptyComments": "No comments yet",
+      "send": "Send",
+      "delete": "Delete memory"
+    },
+    "errors": {
+      "loadFailed": "Could not load memories.",
+      "uploadFailed": "Could not upload memory.",
+      "deleteFailed": "Could not delete memory.",
+      "restoreFailed": "Could not restore memory.",
+      "reactFailed": "Could not react to memory.",
+      "removeReactFailed": "Could not remove reaction.",
+      "commentsLoadFailed": "Could not load comments.",
+      "commentAddFailed": "Could not add comment.",
+      "commentDeleteFailed": "Could not delete comment."
+    }
+  },
+  "paywall": {
+    "title": "Pause Gold",
+    "subtitle": "Unlock deeper judges, planning, and insights.",
+    "trialBadge": "7-day free trial",
+    "bundleNotice": {
+      "prefix": "One membership for",
+      "emphasis": "both partners",
+      "suffix": "to use together"
+    },
+    "benefits": {
+      "title": "What you get",
+      "items": {
+        "resolve": {
+          "title": "More verdicts",
+          "description": "More judge sessions each month."
+        },
+        "judge": {
+          "title": "Unlock Judge Whiskers",
+          "description": "Our deepest, most empathetic verdicts."
+        },
+        "planning": {
+          "title": "Help Me Plan",
+          "description": "Actionable plans tailored to you."
+        },
+        "questions": {
+          "title": "Daily Meow archive",
+          "description": "Full history of your answers."
+        },
+        "insights": {
+          "title": "Relationship insights",
+          "description": "Weekly patterns and nudges."
+        }
+      }
+    },
+    "withoutGold": {
+      "title": "Without Gold",
+      "items": {
+        "limit": "Limited judge sessions",
+        "whiskersLocked": "Judge Whiskers locked",
+        "noPlanning": "No planning assistance",
+        "noInsights": "Insights are locked",
+        "risk": "Slower progress through tough moments"
+      }
+    },
+    "plans": {
+      "title": "Choose your plan",
+      "yearly": {
+        "label": "Yearly",
+        "badge": "Best value",
+        "trialNote": "7-day free trial, then billed yearly",
+        "billedNote": "Billed yearly",
+        "save": "Save 35%"
+      },
+      "monthly": {
+        "label": "Monthly",
+        "trialNote": "7-day free trial, then billed monthly",
+        "billedNote": "Billed monthly"
+      },
+      "perMonth": "per month"
+    },
+    "pricingNote": {
+      "yearly": "Yearly plan saves the most",
+      "monthly": "Monthly plan keeps things flexible"
+    },
+    "cancelAnytime": "Cancel anytime",
+    "social": {
+      "quote": "We resolve conflicts faster and feel closer.",
+      "author": "- Emma & Leo",
+      "count": "Over 1,000 couples upgraded"
+    },
+    "restore": {
+      "cta": "Restore purchases",
+      "restoring": "Restoring..."
+    },
+    "errors": {
+      "noPurchase": "No past purchase found.",
+      "unavailable": "Purchases are only available in the iOS/Android app.",
+      "restoreUnavailable": "Restore is only available in the iOS/Android app."
+    },
+    "cta": {
+      "processingTitle": "Processing...",
+      "processingSubtitle": "Hang tight while we confirm.",
+      "trial": "Start free trial",
+      "subscribe": "Subscribe now",
+      "subtitle": "One plan for both partners.",
+      "price": "{price} / month"
+    },
+    "trialFootnote": "Free trial available for new subscribers.",
+    "maybeLater": "Maybe later",
+    "settingsHint": "Manage your subscription in Settings.",
+    "usage": {
+      "used": "{used}/{limit} used",
+      "unlimited": "✨ Unlimited",
+      "locked": "🔒 Locked"
+    },
+    "remaining": {
+      "left": "{count} left",
+      "unlimited": "Unlimited",
+      "upgrade": "Upgrade to unlock"
+    }
+  },
+  "subscription": {
+    "usage": {
+      "used": "{used}/{limit} used",
+      "unlimited": "✨ Unlimited",
+      "locked": "🔒 Locked"
+    },
+    "remaining": {
+      "left": "{count} left",
+      "unlimited": "Unlimited",
+      "upgrade": "Upgrade to unlock"
+    }
+  },
+  "profilePage": {
+    "header": {
+      "kicker": "Profile",
+      "title": "Your profile",
+      "settingsAria": "Profile settings"
+    },
+    "tabs": {
+      "me": "Me",
+      "us": "Us"
+    },
+    "profile": {
+      "kicker": "My profile",
+      "anniversary": "Since {date}",
+      "edit": "Edit profile",
+      "signOut": "Sign out"
+    },
+    "stats": {
+      "kibble": "Kibble",
+      "appreciations": "Appreciations",
+      "cases": "Cases",
+      "questions": "Questions"
+    },
+    "subscription": {
+      "freePlan": "Free plan",
+      "freeSubtitle": "Basic access for both of you.",
+      "goldPlan": "Gold plan",
+      "goldSubtitle": "Unlimited judges and planning.",
+      "judgeLightning": "Judge Lightning",
+      "judgeMittens": "Judge Mittens",
+      "judgeWhiskers": "Judge Whiskers",
+      "goldOnly": "Gold only",
+      "helpMePlan": "Help Me Plan",
+      "unlimited": "Unlimited",
+      "upgradeKicker": "Upgrade",
+      "upgradeTitle": "Unlock Gold",
+      "upgradeSubtitle": "More judges and planning",
+      "price": "$7.77/mo",
+      "ctaHint": "7-day free trial",
+      "usage": {
+        "used": "{used}/{limit} used",
+        "unlimited": "✨ Unlimited",
+        "locked": "🔒 Locked"
+      },
+      "remaining": {
+        "left": "{count} left",
+        "unlimited": "Unlimited",
+        "upgrade": "Upgrade to unlock"
+      },
+      "thanks": "Thanks for supporting Pause Gold."
+    },
+    "connect": {
+      "title": "Connect your partner",
+      "subtitle": "Link accounts to unlock shared features.",
+      "partnerCode": "Your partner code",
+      "cta": "Connect now",
+      "connected": "Connected"
+    },
+    "relationship": {
+      "kicker": "Relationship",
+      "togetherSince": "Together since {date}",
+      "anniversaryMissing": "Add your anniversary date to see it here."
+    },
+    "devTools": {
+      "title": "Dev tools",
+      "subtitle": "Award XP for testing.",
+      "addXp": "Add {amount} XP",
+      "adding": "Adding...",
+      "success": "Awarded {amount} XP",
+      "error": "Failed to award XP."
+    },
+    "memories": {
+      "title": "Memories",
+      "subtitle": "Shared moments",
+      "viewAll": "View all",
+      "unavailable": "Memories are unavailable.",
+      "restoreOne": "1 memory in trash",
+      "restoreOther": "{count} memories in trash",
+      "emptyCta": "Add a memory"
+    },
+    "challenges": {
+      "title": "Challenges",
+      "subtitle": "Daily quests for two",
+      "view": "View all",
+      "loading": "Loading challenges...",
+      "activeNow": "Active now",
+      "swipe": "Swipe for more",
+      "liveCount": "{count} active",
+      "activeLabel": "Challenge {number}",
+      "fallbackTitle": "New challenge",
+      "fallbackDescription": "Complete this together.",
+      "progress": "{current}/{total} steps",
+      "reward": "+{xp} XP",
+      "daysLeft": "{count} days left",
+      "current": "Current",
+      "moreWaiting": "{count} more waiting",
+      "emptyActive": "No active challenges",
+      "readyOne": "1 new challenge ready",
+      "readyOther": "{count} new challenges ready",
+      "none": "Challenges unlock later.",
+      "locked": "Locked",
+      "levelShort": "Level {level}+"
+    },
+    "insights": {
+      "title": "Insights",
+      "subtitle": "AI observations",
+      "viewAll": "View all",
+      "unlockGold": "Unlock Gold",
+      "turnOn": "Turn on",
+      "optOut": "Turn off",
+      "locked": "Locked",
+      "levelShort": "Level {level}+",
+      "goldRequiredTitle": "Gold required",
+      "goldRequiredSubtitle": "Unlock with Pause Gold.",
+      "off": "Insights are off",
+      "waitingPartner": "Waiting for partner",
+      "paused": "Paused",
+      "empty": "No insights yet"
+    },
+    "milestones": {
+      "title": "Milestones",
+      "firstCase": "First case",
+      "appreciation": "First appreciation",
+      "fiveCases": "5 cases",
+      "giftGiver": "Gift giver",
+      "tenCases": "10 cases",
+      "superFan": "Super fan",
+      "deepTalks": "Deep talks",
+      "storyTellers": "Storytellers"
+    },
+    "edit": {
+      "title": "Edit profile",
+      "photoLabel": "Profile photo",
+      "profileAlt": "Profile preview",
+      "takePhoto": "Take photo",
+      "uploadPhoto": "Upload photo",
+      "uploading": "Uploading...",
+      "chooseAvatar": "Choose avatar",
+      "avatarAlt": "{name} avatar",
+      "nicknameLabel": "Nickname",
+      "nicknamePlaceholder": "Your nickname",
+      "birthdayLabel": "Birthday"
+    }
+  },
+  "requirePartner": {
+    "title": "Connect your partner",
+    "subtitle": "{feature} requires a partner connection.",
+    "description": "Connect your partner to unlock {feature}.",
+    "partnerCodeLabel": "Your partner code",
+    "cta": "Connect partner",
+    "hint": "You can link later in your profile."
+  },
+  "resetPassword": {
+    "header": {
+      "title": "Reset password",
+      "subtitle": "Choose a new password."
+    },
+    "form": {
+      "passwordLabel": "New password",
+      "passwordPlaceholder": "Enter new password",
+      "passwordHint": "Must be at least 8 characters.",
+      "confirmLabel": "Confirm password",
+      "confirmPlaceholder": "Re-enter new password",
+      "submit": "Update password",
+      "updating": "Updating..."
+    },
+    "errors": {
+      "tooShort": "Password must be at least 8 characters.",
+      "mismatch": "Passwords do not match.",
+      "sameAsCurrent": "New password must be different from the current one.",
+      "updateFailed": "Failed to update password.",
+      "generic": "Something went wrong. Please try again."
+    },
+    "invalid": {
+      "title": "Link expired",
+      "subtitle": "This reset link is invalid or expired.",
+      "requestNew": "Request a new link",
+      "backToSignIn": "Back to sign in"
+    },
+    "success": {
+      "title": "Password updated",
+      "subtitle": "You can sign in with your new password.",
+      "signInNow": "Sign in now"
+    }
+  },
+  "signIn": {
+    "brand": "Pause",
+    "subtitle": "Welcome back.",
+    "google": "Continue with Google",
+    "emailPlaceholder": "Email address",
+    "passwordPlaceholder": "Password",
+    "submit": "Sign in",
+    "forgotPassword": "Forgot password?",
+    "newHere": "New here?",
+    "actions": {
+      "createAccount": "Create an account",
+      "createAccountShort": "Create account",
+      "resetPassword": "Reset password"
+    },
+    "errors": {
+      "invalid": {
+        "title": "Invalid credentials",
+        "message": "Email or password is incorrect."
+      },
+      "noAccount": {
+        "title": "No account found",
+        "message": "We could not find an account with that email."
+      },
+      "unconfirmed": {
+        "title": "Email not confirmed",
+        "message": "Please confirm your email before signing in."
+      },
+      "rateLimit": {
+        "title": "Too many attempts",
+        "message": "Please wait and try again."
+      },
+      "validation": {
+        "title": "Missing info",
+        "message": "Enter both email and password."
+      },
+      "generic": {
+        "title": "Sign in failed",
+        "message": "Something went wrong. Please try again."
+      }
+    },
+    "footer": "By continuing, you agree to our terms and privacy policy."
+  },
+  "signUp": {
+    "header": {
+      "title": "Create your account",
+      "subtitle": "Start your Pause journey."
+    },
+    "emailPlaceholder": "Email address",
+    "passwordPlaceholder": "Create password",
+    "confirmPlaceholder": "Confirm password",
+    "submit": "Create account",
+    "google": "Continue with Google",
+    "requirements": {
+      "length": "At least 8 characters"
+    },
+    "errors": {
+      "missingFields": "Please fill in all fields.",
+      "mismatch": "Passwords do not match.",
+      "requirements": "Password does not meet requirements.",
+      "alreadyRegistered": "An account already exists with this email.",
+      "generic": "Sign up failed. Please try again."
+    },
+    "terms": "By signing up, you agree to our terms and privacy policy.",
+    "alreadyHave": "Already have an account?",
+    "signIn": "Sign in",
+    "success": {
+      "title": "Account created",
+      "subtitle": "Redirecting you to onboarding..."
+    }
+  }
+}

@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { FileCheck, Clock, Users } from 'lucide-react';
 import SettlementButton from './SettlementButton';
+import { useI18n } from '../../i18n';
 
 /**
  * WaitingForEvidence
@@ -9,8 +10,9 @@ import SettlementButton from './SettlementButton';
  * This is intentionally separate from WaitingForPartner (which is only for joining the session).
  */
 const WaitingForEvidence = ({ session, partnerName, myName }) => {
-    const displayPartnerName = partnerName || 'your partner';
-    const displayMyName = myName || 'You';
+    const { t } = useI18n();
+    const displayPartnerName = partnerName || t('common.yourPartner');
+    const displayMyName = myName || t('common.you');
 
     const creatorSubmitted = !!session?.evidence?.creator?.submitted;
     const partnerSubmitted = !!session?.evidence?.partner?.submitted;
@@ -31,8 +33,10 @@ const WaitingForEvidence = ({ session, partnerName, myName }) => {
                     >
                         <span className="text-4xl">🗂️</span>
                     </motion.div>
-                    <h2 className="text-xl font-bold text-white mt-2">Evidence Submitted</h2>
-                    <p className="text-court-cream/80 text-sm">Waiting for {displayPartnerName} to finish their submission</p>
+                    <h2 className="text-xl font-bold text-white mt-2">{t('court.waitingEvidence.title')}</h2>
+                    <p className="text-court-cream/80 text-sm">
+                        {t('court.waitingEvidence.subtitle', { name: displayPartnerName })}
+                    </p>
                 </div>
 
                 {/* Content */}
@@ -58,14 +62,16 @@ const WaitingForEvidence = ({ session, partnerName, myName }) => {
 
                     {/* Status Message */}
                     <p className="text-court-brown font-medium mb-6">
-                        You’ve submitted your side. Waiting on <span className="text-court-gold font-bold">{displayPartnerName}</span>…
+                        {t('court.waitingEvidence.statusIntro')}{' '}
+                        <span className="text-court-gold font-bold">{displayPartnerName}</span>
+                        {t('court.waitingEvidence.statusOutro')}
                     </p>
 
                     {/* Submission Status Panel */}
                     <div className="bg-gradient-to-br from-court-cream to-court-tan/30 rounded-2xl p-4 mb-6">
                         <div className="flex items-center justify-center gap-2 mb-3">
                             <Users className="w-4 h-4 text-court-gold" />
-                            <span className="text-sm font-bold text-court-brown">Evidence Status</span>
+                            <span className="text-sm font-bold text-court-brown">{t('court.waitingEvidence.panelTitle')}</span>
                         </div>
 
                         <div className="flex justify-center gap-8">
@@ -79,7 +85,7 @@ const WaitingForEvidence = ({ session, partnerName, myName }) => {
                                 </motion.div>
                                 <span className="text-xs font-medium text-court-brown">{displayMyName}</span>
                                 <div className={`text-[10px] font-medium mt-0.5 ${creatorSubmitted ? 'text-green-600' : 'text-court-gold'}`}>
-                                    {creatorSubmitted ? 'Submitted' : 'Pending'}
+                                    {creatorSubmitted ? t('court.waitingEvidence.submitted') : t('court.waitingEvidence.pending')}
                                 </div>
                             </div>
 
@@ -99,14 +105,14 @@ const WaitingForEvidence = ({ session, partnerName, myName }) => {
                                 </motion.div>
                                 <span className="text-xs font-medium text-court-brown">{displayPartnerName}</span>
                                 <div className={`text-[10px] font-medium mt-0.5 ${partnerSubmitted ? 'text-green-600' : 'text-court-gold'}`}>
-                                    {partnerSubmitted ? 'Submitted' : 'Waiting…'}
+                                    {partnerSubmitted ? t('court.waitingEvidence.submitted') : t('court.waitingEvidence.waiting')}
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <p className="text-xs text-court-brownLight italic">
-                        The court will begin deliberation once both sides are submitted.
+                        {t('court.waitingEvidence.note')}
                     </p>
 
                     <div className="mt-5">

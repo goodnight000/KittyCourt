@@ -414,19 +414,33 @@ const useSubscriptionStore = create((set, get) => ({
      * @param {string} judgeType - 'fast', 'logical', or 'best'
      * @returns {string} Display text like "2/3 used" or "✨ Unlimited"
      */
-    getUsageDisplay: (judgeType) => {
+    getUsageDisplay: (judgeType, t) => {
         const { canUseJudge, isGold } = get();
         const status = canUseJudge(judgeType);
+        const translate = typeof t === 'function'
+            ? t
+            : (key, params) => {
+                switch (key) {
+                    case 'subscription.usage.locked':
+                        return '🔒 Locked';
+                    case 'subscription.usage.unlimited':
+                        return '✨ Unlimited';
+                    case 'subscription.usage.used':
+                        return `${params?.used ?? 0}/${params?.limit ?? 0} used`;
+                    default:
+                        return key;
+                }
+            };
 
         if (judgeType === 'best' && !isGold) {
-            return '🔒 Locked';
+            return translate('subscription.usage.locked');
         }
 
         if (status.limit === Infinity) {
-            return '✨ Unlimited';
+            return translate('subscription.usage.unlimited');
         }
 
-        return `${status.used}/${status.limit} used`;
+        return translate('subscription.usage.used', { used: status.used, limit: status.limit });
     },
 
     /**
@@ -434,19 +448,33 @@ const useSubscriptionStore = create((set, get) => ({
      * @param {string} judgeType - 'fast', 'logical', or 'best'
      * @returns {string} Display text like "3 left" or "Unlimited"
      */
-    getRemainingDisplay: (judgeType) => {
+    getRemainingDisplay: (judgeType, t) => {
         const { canUseJudge, isGold } = get();
         const status = canUseJudge(judgeType);
+        const translate = typeof t === 'function'
+            ? t
+            : (key, params) => {
+                switch (key) {
+                    case 'subscription.remaining.upgrade':
+                        return 'Upgrade to unlock';
+                    case 'subscription.remaining.unlimited':
+                        return 'Unlimited';
+                    case 'subscription.remaining.left':
+                        return `${params?.count ?? 0} left`;
+                    default:
+                        return key;
+                }
+            };
 
         if (judgeType === 'best' && !isGold) {
-            return 'Upgrade to unlock';
+            return translate('subscription.remaining.upgrade');
         }
 
         if (status.remaining === Infinity) {
-            return 'Unlimited';
+            return translate('subscription.remaining.unlimited');
         }
 
-        return `${status.remaining} left`;
+        return translate('subscription.remaining.left', { count: status.remaining });
     },
 
     /**

@@ -10,40 +10,42 @@ import useCacheStore, { CACHE_KEYS } from '../store/useCacheStore';
 import RequirePartner from '../components/RequirePartner';
 import api from '../services/api';
 import { subscribeToDailyAnswers, supabase } from '../services/supabase';
+import { useI18n } from '../i18n';
 
 // 20 mood/feeling options with emojis - organized by positive/neutral/challenging
 const MOOD_OPTIONS = [
     // Positive moods
-    { id: 'happy', image: '/assets/emotions/happy.png', label: 'Happy', color: 'from-yellow-100 to-amber-100' },
-    { id: 'loved', image: '/assets/emotions/loved.png', label: 'Loved', color: 'from-pink-100 to-rose-100' },
-    { id: 'grateful', image: '/assets/emotions/grateful.png', label: 'Grateful', color: 'from-amber-100 to-orange-100' },
-    { id: 'excited', image: '/assets/emotions/excited.png', label: 'Excited', color: 'from-yellow-100 to-lime-100' },
-    { id: 'peaceful', image: '/assets/emotions/peaceful.png', label: 'Peaceful', color: 'from-cyan-100 to-teal-100' },
-    { id: 'playful', image: '/assets/emotions/playful.png', label: 'Playful', color: 'from-orange-100 to-amber-100' },
-    { id: 'cozy', image: '/assets/emotions/cozy.png', label: 'Cozy', color: 'from-amber-100 to-yellow-100' },
-    { id: 'romantic', image: '/assets/emotions/romantic.png', label: 'Romantic', color: 'from-rose-100 to-pink-100' },
-    { id: 'silly', image: '/assets/emotions/silly.png', label: 'Silly', color: 'from-lime-100 to-green-100' },
-    { id: 'hopeful', image: '/assets/emotions/hopeful.png', label: 'Hopeful', color: 'from-violet-100 to-purple-100' },
+    { id: 'happy', image: '/assets/emotions/happy.png', labelKey: 'moods.happy', color: 'from-yellow-100 to-amber-100' },
+    { id: 'loved', image: '/assets/emotions/loved.png', labelKey: 'moods.loved', color: 'from-pink-100 to-rose-100' },
+    { id: 'grateful', image: '/assets/emotions/grateful.png', labelKey: 'moods.grateful', color: 'from-amber-100 to-orange-100' },
+    { id: 'excited', image: '/assets/emotions/excited.png', labelKey: 'moods.excited', color: 'from-yellow-100 to-lime-100' },
+    { id: 'peaceful', image: '/assets/emotions/peaceful.png', labelKey: 'moods.peaceful', color: 'from-cyan-100 to-teal-100' },
+    { id: 'playful', image: '/assets/emotions/playful.png', labelKey: 'moods.playful', color: 'from-orange-100 to-amber-100' },
+    { id: 'cozy', image: '/assets/emotions/cozy.png', labelKey: 'moods.cozy', color: 'from-amber-100 to-yellow-100' },
+    { id: 'romantic', image: '/assets/emotions/romantic.png', labelKey: 'moods.romantic', color: 'from-rose-100 to-pink-100' },
+    { id: 'silly', image: '/assets/emotions/silly.png', labelKey: 'moods.silly', color: 'from-lime-100 to-green-100' },
+    { id: 'hopeful', image: '/assets/emotions/hopeful.png', labelKey: 'moods.hopeful', color: 'from-violet-100 to-purple-100' },
     // Neutral/Challenging moods
-    { id: 'tired', image: '/assets/emotions/tired.png', label: 'Tired', color: 'from-slate-100 to-gray-100' },
-    { id: 'stressed', image: '/assets/emotions/stressed.png', label: 'Stressed', color: 'from-orange-100 to-red-100' },
-    { id: 'anxious', image: '/assets/emotions/anxious.png', label: 'Anxious', color: 'from-blue-100 to-indigo-100' },
-    { id: 'sad', image: '/assets/emotions/sad.png', label: 'Sad', color: 'from-blue-100 to-slate-100' },
-    { id: 'frustrated', image: '/assets/emotions/frustrated.png', label: 'Frustrated', color: 'from-red-100 to-orange-100' },
-    { id: 'overwhelmed', image: '/assets/emotions/overwhelmed.png', label: 'Overwhelmed', color: 'from-purple-100 to-pink-100' },
-    { id: 'lonely', image: '/assets/emotions/lonely.png', label: 'Lonely', color: 'from-indigo-100 to-blue-100' },
-    { id: 'confused', image: '/assets/emotions/confused.png', label: 'Confused', color: 'from-violet-100 to-fuchsia-100' },
-    { id: 'meh', image: '/assets/emotions/meh.png', label: 'Meh', color: 'from-gray-100 to-slate-100' },
-    { id: 'hangry', image: '/assets/emotions/hangry.png', label: 'Hangry', color: 'from-orange-100 to-yellow-100' },
+    { id: 'tired', image: '/assets/emotions/tired.png', labelKey: 'moods.tired', color: 'from-slate-100 to-gray-100' },
+    { id: 'stressed', image: '/assets/emotions/stressed.png', labelKey: 'moods.stressed', color: 'from-orange-100 to-red-100' },
+    { id: 'anxious', image: '/assets/emotions/anxious.png', labelKey: 'moods.anxious', color: 'from-blue-100 to-indigo-100' },
+    { id: 'sad', image: '/assets/emotions/sad.png', labelKey: 'moods.sad', color: 'from-blue-100 to-slate-100' },
+    { id: 'frustrated', image: '/assets/emotions/frustrated.png', labelKey: 'moods.frustrated', color: 'from-red-100 to-orange-100' },
+    { id: 'overwhelmed', image: '/assets/emotions/overwhelmed.png', labelKey: 'moods.overwhelmed', color: 'from-purple-100 to-pink-100' },
+    { id: 'lonely', image: '/assets/emotions/lonely.png', labelKey: 'moods.lonely', color: 'from-indigo-100 to-blue-100' },
+    { id: 'confused', image: '/assets/emotions/confused.png', labelKey: 'moods.confused', color: 'from-violet-100 to-fuchsia-100' },
+    { id: 'meh', image: '/assets/emotions/meh.png', labelKey: 'moods.meh', color: 'from-gray-100 to-slate-100' },
+    { id: 'hangry', image: '/assets/emotions/hangry.png', labelKey: 'moods.hangry', color: 'from-orange-100 to-yellow-100' },
 ];
 
 const DailyMeowPage = () => {
     const navigate = useNavigate();
+    const { t, language } = useI18n();
     const { hasPartner, user: authUser, partner: connectedPartner } = useAuthStore();
 
     const myId = authUser?.id;
     const partnerId = connectedPartner?.id;
-    const partnerDisplayName = connectedPartner?.display_name || 'Your partner';
+    const partnerDisplayName = connectedPartner?.display_name || t('common.yourPartner');
 
     // Ref to prevent duplicate fetches per couple pair
     const fetchedKeyRef = useRef('');
@@ -68,7 +70,7 @@ const DailyMeowPage = () => {
         const timeout = setTimeout(() => {
             if (loading && hasPartner && (!myId || !partnerId)) {
                 setLoading(false);
-                setError('Unable to load user data. Please try refreshing the page.');
+                setError(t('dailyMeow.errors.userDataUnavailable'));
             }
         }, 5000); // 5 second timeout
         return () => clearTimeout(timeout);
@@ -89,7 +91,7 @@ const DailyMeowPage = () => {
 
             // Validate the response has the expected structure
             if (!response.data) {
-                setError('No data received from server');
+                setError(t('dailyMeow.errors.noData'));
                 return;
             }
 
@@ -98,7 +100,7 @@ const DailyMeowPage = () => {
 
             if (!questionData.assignment_id || !questionData.question) {
                 console.error('DailyMeow: Invalid response structure', questionData);
-                setError('Invalid question data received');
+                setError(t('dailyMeow.errors.invalidQuestion'));
                 return;
             }
 
@@ -122,16 +124,19 @@ const DailyMeowPage = () => {
             }
         } catch (err) {
             console.error('Error fetching today\'s question:', err);
-            const errorMessage = err.response?.data?.error || err.message || 'Failed to load today\'s question';
+            const errorCode = err.response?.data?.errorCode;
+            const errorMessage = errorCode
+                ? t(`errors.${errorCode}`)
+                : (err.response?.data?.error || err.message || t('dailyMeow.errors.loadFailed'));
             setError(errorMessage);
         } finally {
             setLoading(false);
         }
-    }, [myId, partnerId]);
+    }, [myId, partnerId, t, language]);
 
     useEffect(() => {
         if (myId && partnerId) {
-            const key = `${myId}:${partnerId}`;
+            const key = `${myId}:${partnerId}:${language}`;
             if (fetchedKeyRef.current !== key) {
                 fetchedKeyRef.current = key;
                 fetchTodaysQuestion();
@@ -141,7 +146,7 @@ const DailyMeowPage = () => {
         } else if (!hasPartner) {
             setLoading(false);
         }
-    }, [myId, partnerId, hasPartner, fetchTodaysQuestion]);
+    }, [myId, partnerId, hasPartner, fetchTodaysQuestion, language]);
 
     // Bug 1: Real-time subscription for partner answer updates
     useEffect(() => {
@@ -172,14 +177,14 @@ const DailyMeowPage = () => {
     if (!hasPartner) {
         return (
             <RequirePartner
-                feature="Daily Meow"
-                description="Daily Meow is where you and your partner answer a question together every day. It's a beautiful way to stay connected and learn more about each other!"
+                feature={t('dailyMeow.feature')}
+                description={t('dailyMeow.requirePartnerDescription')}
             >
                 <div className="space-y-4">
                     <div className="glass-card p-8 text-center">
                         <Cat className="w-16 h-16 mx-auto text-amber-500 mb-4" />
-                        <h2 className="text-xl font-bold text-neutral-800">Daily Meow</h2>
-                        <p className="text-neutral-500 mt-2">One question. Two hearts. Every day.</p>
+                        <h2 className="text-xl font-bold text-neutral-800">{t('dailyMeow.feature')}</h2>
+                        <p className="text-neutral-500 mt-2">{t('dailyMeow.tagline')}</p>
                     </div>
                 </div>
             </RequirePartner>
@@ -251,7 +256,7 @@ const DailyMeowPage = () => {
             }
         } catch (err) {
             console.error('Error submitting answer:', err);
-            setError('Failed to submit answer');
+            setError(t('dailyMeow.errors.submitFailed'));
         } finally {
             setSubmitting(false);
         }
@@ -274,7 +279,7 @@ const DailyMeowPage = () => {
             await fetchTodaysQuestion();
         } catch (err) {
             console.error('Error editing answer:', err);
-            setError('Failed to update answer');
+            setError(t('dailyMeow.errors.updateFailed'));
         } finally {
             setSubmitting(false);
         }
@@ -292,7 +297,7 @@ const DailyMeowPage = () => {
         if (!mood) return null
 
         if (mood.image) {
-            return <img src={mood.image} alt={mood.label} className={`${className} object-contain`} />
+            return <img src={mood.image} alt={t(mood.labelKey)} className={`${className} object-contain`} />
         }
 
         if (mood.emoji) {
@@ -304,7 +309,7 @@ const DailyMeowPage = () => {
 
     const formatDate = (dateStr) => {
         const date = new Date(dateStr);
-        return date.toLocaleDateString('en-US', {
+        return date.toLocaleDateString(language, {
             weekday: 'long',
             month: 'long',
             day: 'numeric'
@@ -314,7 +319,7 @@ const DailyMeowPage = () => {
     const formatEditedDate = (dateStr) => {
         if (!dateStr) return null;
         const date = new Date(dateStr);
-        return date.toLocaleDateString('en-US', {
+        return date.toLocaleDateString(language, {
             month: 'short',
             day: 'numeric'
         });
@@ -325,7 +330,17 @@ const DailyMeowPage = () => {
     const bothAnswered = hasAnswered && partnerHasAnswered;
     const isBacklog = todaysQuestion?.is_backlog;
 
-    const stepLabel = hasAnswered ? 'Shared' : step === 'mood' ? 'Mood' : step === 'answer' ? 'Answer' : 'Shared'
+    const stepLabel = hasAnswered
+        ? t('dailyMeow.step.shared')
+        : step === 'mood'
+            ? t('dailyMeow.step.mood')
+            : step === 'answer'
+                ? t('dailyMeow.step.answer')
+                : t('dailyMeow.step.shared')
+    const moodSelectedLabel = t('dailyMeow.moodsSelected', {
+        count: selectedMoods.length,
+        suffix: selectedMoods.length === 1 ? '' : 's'
+    })
 
     const partnerMoodIds = (todaysQuestion?.partner_answer?.moods || (todaysQuestion?.partner_answer?.mood ? [todaysQuestion.partner_answer.mood] : [])).slice(0, 3)
 
@@ -343,7 +358,7 @@ const DailyMeowPage = () => {
                         className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 glass-card px-5 py-3 text-emerald-700 font-semibold flex items-center gap-2"
                     >
                         <Check className="w-5 h-5" />
-                        <span className="font-medium">Answer saved!</span>
+                        <span className="font-medium">{t('dailyMeow.toast.saved')}</span>
                     </Motion.div>
                 )}
             </AnimatePresence>
@@ -357,7 +372,7 @@ const DailyMeowPage = () => {
                             transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                             className="w-10 h-10 border-3 border-amber-400 border-t-transparent rounded-full mx-auto"
                         />
-                        <p className="text-neutral-500 mt-4">Loading today's question...</p>
+                        <p className="text-neutral-500 mt-4">{t('dailyMeow.loading')}</p>
                     </div>
                 </div>
             )}
@@ -373,7 +388,7 @@ const DailyMeowPage = () => {
                             className="px-5 py-2.5 bg-white/80 text-neutral-600 rounded-xl font-medium flex items-center gap-2 mx-auto border border-neutral-200/70"
                         >
                             <RefreshCw className="w-4 h-4" />
-                            Try Again
+                            {t('common.tryAgain')}
                         </button>
                     </div>
                 </div>
@@ -384,16 +399,14 @@ const DailyMeowPage = () => {
                 <div className="flex-1 flex items-center justify-center p-4">
                     <div className="glass-card p-6 text-center max-w-sm border border-amber-200/60">
                         <Cat className="w-16 h-16 text-amber-400 mx-auto mb-3" />
-                        <h3 className="text-lg font-bold text-neutral-800 mb-2">No Questions Available</h3>
-                        <p className="text-neutral-500 text-sm mb-4">
-                            We couldn't load today's question. This might be a temporary issue.
-                        </p>
+                        <h3 className="text-lg font-bold text-neutral-800 mb-2">{t('dailyMeow.noQuestions.title')}</h3>
+                        <p className="text-neutral-500 text-sm mb-4">{t('dailyMeow.noQuestions.body')}</p>
                         <button
                             onClick={fetchTodaysQuestion}
                             className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-rose-400 text-white rounded-xl font-medium flex items-center gap-2 mx-auto shadow-soft"
                         >
                             <RefreshCw className="w-4 h-4" />
-                            Refresh
+                            {t('common.refresh')}
                         </button>
                     </div>
                 </div>
@@ -423,15 +436,15 @@ const DailyMeowPage = () => {
                         {/* Question Header */}
                         <div className="p-6 text-center border-b border-white/60">
                             <div className="text-[10px] uppercase tracking-[0.35em] text-neutral-400 font-semibold mb-2">
-                                Daily Meow
+                                {t('dailyMeow.title')}
                             </div>
                             <h1 className="text-lg font-bold text-neutral-800 tracking-tight mb-3">
-                                Daily Question
+                                {t('dailyMeow.questionTitle')}
                             </h1>
                             <div className="flex flex-wrap items-center justify-center gap-2 mb-4">
                                 <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/70 rounded-full text-xs font-bold text-amber-700 shadow-sm">
                                     <Heart className="w-3 h-3" />
-                                    {isBacklog ? 'Catch-up' : 'Today'}
+                                    {isBacklog ? t('dailyMeow.badge.catchUp') : t('common.today')}
                                 </span>
                                 {isBacklog && (
                                     <span className="inline-flex items-center px-3 py-1 bg-white/70 rounded-full text-xs font-bold text-neutral-700 shadow-sm">
@@ -466,15 +479,15 @@ const DailyMeowPage = () => {
                                     >
                                         <div className="text-center mb-4 space-y-2">
                                             <div className="inline-flex items-center gap-2 rounded-full border border-neutral-200/70 bg-white/70 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-neutral-400">
-                                                Step 1 • Mood
+                                                {t('dailyMeow.stepBadge.mood')}
                                             </div>
-                                            <h3 className="text-lg font-display font-bold text-neutral-800">How are you feeling today?</h3>
+                                            <h3 className="text-lg font-display font-bold text-neutral-800">{t('dailyMeow.moodPrompt')}</h3>
                                             <p className="text-sm text-neutral-500">
-                                                Pick up to 3 moods ({selectedMoods.length}/3)
+                                                {t('dailyMeow.moodHint', { count: selectedMoods.length })}
                                             </p>
                                             <div className="inline-flex items-center gap-1 rounded-full border border-amber-200/70 bg-amber-50/70 px-3 py-1 text-[11px] font-semibold text-amber-700">
                                                 <Lock className="w-3 h-3" />
-                                                Locked after you submit
+                                                {t('dailyMeow.moodLockHint')}
                                             </div>
                                         </div>
 
@@ -498,7 +511,7 @@ const DailyMeowPage = () => {
                                                     ) : (
                                                         <span className="text-2xl">{mood.emoji}</span>
                                                     )}
-                                                    <span className="text-[13px] text-neutral-600 font-semibold mt-0.5">{mood.label}</span>
+                                                    <span className="text-[13px] text-neutral-600 font-semibold mt-0.5">{t(mood.labelKey)}</span>
                                                 </Motion.button>
                                             ))}
                                         </div>
@@ -516,10 +529,10 @@ const DailyMeowPage = () => {
                                                             <MoodIcon key={m} moodId={m} className="w-6 h-6" />
                                                         ))}
                                                     </span>
-                                                    Continue
+                                                    {t('common.continue')}
                                                 </>
                                             ) : (
-                                                'Pick at least 1 mood'
+                                                t('dailyMeow.pickMood')
                                             )}
                                         </Motion.button>
                                     </Motion.div>
@@ -536,7 +549,7 @@ const DailyMeowPage = () => {
                                     >
                                         <div className="text-center mb-3">
                                             <div className="inline-flex items-center gap-2 rounded-full border border-neutral-200/70 bg-white/70 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-neutral-400">
-                                                Step 2 • Answer
+                                                {t('dailyMeow.stepBadge.answer')}
                                             </div>
                                         </div>
                                         {/* Selected Moods Display (can still change) */}
@@ -547,34 +560,34 @@ const DailyMeowPage = () => {
                                                 ))}
                                             </span>
                                             <span className="text-sm font-medium text-neutral-700">
-                                                {selectedMoods.length} mood{selectedMoods.length > 1 ? 's' : ''} selected
+                                                {moodSelectedLabel}
                                             </span>
                                             <button
                                                 onClick={() => setStep('mood')}
                                                 className="text-xs font-semibold text-amber-700 bg-amber-100/70 px-2 py-1 rounded-full ml-2"
                                             >
-                                                Change
+                                                {t('common.change')}
                                             </button>
                                         </div>
 
                                         <div className="flex items-center justify-between mb-2">
                                             <span className="text-xs text-neutral-500 flex items-center gap-1">
                                                 <Lock className="w-3 h-3" />
-                                                Private until both answer
+                                                {t('dailyMeow.privateUntilBoth')}
                                             </span>
                                         </div>
 
                                         <textarea
                                             value={answer}
                                             onChange={(e) => setAnswer(e.target.value)}
-                                            placeholder="Say the first thing that comes to mind…"
+                                            placeholder={t('dailyMeow.answerPlaceholder')}
                                             className="flex-1 min-h-[150px] bg-white/80 rounded-2xl p-4 text-neutral-700 border border-neutral-200/70 focus:border-amber-300 focus:ring-2 focus:ring-amber-100 outline-none resize-none text-base placeholder:text-neutral-400 shadow-inner-soft"
                                             maxLength={1000}
                                             autoFocus
                                         />
 
                                         <div className="flex items-center justify-between mt-2">
-                                            <span className="text-xs text-neutral-500">A few honest sentences is perfect</span>
+                                            <span className="text-xs text-neutral-500">{t('dailyMeow.answerHint')}</span>
                                             <span className="text-xs text-neutral-400">{answer.length}/1000</span>
                                         </div>
 
@@ -593,7 +606,7 @@ const DailyMeowPage = () => {
                                             ) : (
                                                 <>
                                                     <Send className="w-5 h-5" />
-                                                    Submit Answer
+                                                    {t('dailyMeow.submitAnswer')}
                                                 </>
                                             )}
                                         </Motion.button>
@@ -611,14 +624,14 @@ const DailyMeowPage = () => {
                                     >
                                         <div className="text-center">
                                             <div className="inline-flex items-center gap-2 rounded-full border border-neutral-200/70 bg-white/70 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-neutral-400">
-                                                Step 3 • Shared
+                                                {t('dailyMeow.stepBadge.shared')}
                                             </div>
                                         </div>
 
                                         {/* Emotions */}
                                         <div className="grid grid-cols-2 gap-3">
                                             <div className="rounded-3xl border border-white/80 bg-white/80 p-4 shadow-soft">
-                                                <div className="text-[10px] uppercase tracking-[0.3em] text-neutral-400 font-semibold mb-3">You felt</div>
+                                                <div className="text-[10px] uppercase tracking-[0.3em] text-neutral-400 font-semibold mb-3">{t('dailyMeow.youFelt')}</div>
                                                 {selectedMoods.length > 0 ? (
                                                     <div className="flex items-start gap-3 flex-wrap">
                                                         {selectedMoods.map(m => {
@@ -626,7 +639,7 @@ const DailyMeowPage = () => {
                                                             return (
                                                                 <div key={m} className="flex flex-col items-center gap-1">
                                                                     <MoodIcon moodId={m} className="w-10 h-10" />
-                                                                    <span className="text-[10px] font-medium text-neutral-500 text-center">{mood?.label || m}</span>
+                                                                    <span className="text-[10px] font-medium text-neutral-500 text-center">{mood ? t(mood.labelKey) : m}</span>
                                                                 </div>
                                                             );
                                                         })}
@@ -636,7 +649,7 @@ const DailyMeowPage = () => {
                                                 )}
                                             </div>
                                             <div className="rounded-3xl border border-white/80 bg-white/80 p-4 shadow-soft">
-                                                <div className="text-[10px] uppercase tracking-[0.3em] text-neutral-400 font-semibold mb-3">{partnerDisplayName} felt</div>
+                                                <div className="text-[10px] uppercase tracking-[0.3em] text-neutral-400 font-semibold mb-3">{t('dailyMeow.partnerFelt', { name: partnerDisplayName })}</div>
                                                 {partnerHasAnswered ? (
                                                     partnerMoodIds.length > 0 ? (
                                                         <div className="flex items-start gap-3 flex-wrap">
@@ -645,7 +658,7 @@ const DailyMeowPage = () => {
                                                                 return (
                                                                     <div key={m} className="flex flex-col items-center gap-1">
                                                                         <MoodIcon moodId={m} className="w-10 h-10" />
-                                                                        <span className="text-[10px] font-medium text-neutral-500 text-center">{mood?.label || m}</span>
+                                                                        <span className="text-[10px] font-medium text-neutral-500 text-center">{mood ? t(mood.labelKey) : m}</span>
                                                                     </div>
                                                                 );
                                                             })}
@@ -656,7 +669,7 @@ const DailyMeowPage = () => {
                                                 ) : (
                                                     <div className="flex items-center gap-2 text-xs text-neutral-500">
                                                         <Lock className="w-4 h-4 text-neutral-400" />
-                                                        Waiting…
+                                                        {t('common.waiting')}
                                                     </div>
                                                 )}
                                             </div>
@@ -665,20 +678,20 @@ const DailyMeowPage = () => {
                                         {/* My Answer */}
                                         <div className="rounded-3xl p-4 border border-amber-200/60 bg-amber-50/60 shadow-soft">
                                             <div className="flex items-center justify-between mb-2">
-                                                <span className="text-sm font-bold text-amber-700">Your answer</span>
+                                                <span className="text-sm font-bold text-amber-700">{t('dailyMeow.yourAnswer')}</span>
                                                 <button
                                                     onClick={startEditing}
                                                     className="flex items-center gap-1 text-xs text-amber-700 font-semibold px-2 py-1 rounded-full border border-amber-200/60 bg-white/80"
                                                 >
                                                     <Edit3 className="w-3 h-3" />
-                                                    Edit
+                                                    {t('common.edit')}
                                                 </button>
                                             </div>
                                             <p className="text-neutral-700 leading-relaxed">{answer}</p>
                                             {todaysQuestion.my_answer?.edited_at && (
                                                 <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
                                                     <Edit3 className="w-3 h-3" />
-                                                    Edited {formatEditedDate(todaysQuestion.my_answer.edited_at)}
+                                                    {t('dailyMeow.editedAt', { date: formatEditedDate(todaysQuestion.my_answer.edited_at) })}
                                                 </p>
                                             )}
                                         </div>
@@ -690,7 +703,7 @@ const DailyMeowPage = () => {
                                                 animate={{ opacity: 1, y: 0 }}
                                                 className="rounded-3xl p-4 border border-rose-200/60 bg-rose-50/60 shadow-soft"
                                             >
-                                                <span className="text-sm font-bold text-pink-700">{partnerDisplayName}'s answer</span>
+                                                <span className="text-sm font-bold text-pink-700">{t('dailyMeow.partnerAnswer', { name: partnerDisplayName })}</span>
                                                 <p className="text-neutral-700 leading-relaxed">
                                                     {todaysQuestion.partner_answer?.answer}
                                                 </p>
@@ -699,7 +712,7 @@ const DailyMeowPage = () => {
                                             <div className="bg-white/60 rounded-3xl p-6 border border-dashed border-neutral-200 text-center">
                                                 <Lock className="w-6 h-6 text-neutral-400 mx-auto mb-2" />
                                                 <p className="text-sm text-neutral-500">
-                                                    {partnerDisplayName}'s answer will appear once they respond
+                                                    {t('dailyMeow.partnerAnswerLocked', { name: partnerDisplayName })}
                                                 </p>
                                             </div>
                                         )}
@@ -713,7 +726,7 @@ const DailyMeowPage = () => {
                                                 className="flex flex-col items-center gap-3"
                                             >
                                                 <span className="px-5 py-2.5 bg-emerald-100/80 border border-emerald-200/70 rounded-full text-sm font-bold text-emerald-700 flex items-center gap-2 shadow-soft">
-                                                    ✨ You both answered! +5 Kibbles each
+                                                    {t('dailyMeow.bothAnsweredReward')}
                                                 </span>
 
                                                 {/* Bug 2: Continue button only shows when there's a backlog and completion view is active */}
@@ -735,7 +748,7 @@ const DailyMeowPage = () => {
                                                         className="px-6 py-3 bg-gradient-to-r from-amber-500 to-rose-400 text-white font-bold rounded-2xl shadow-soft flex items-center gap-2"
                                                     >
                                                         <ChevronRight className="w-5 h-5" />
-                                                        Continue to Next Question
+                                                        {t('dailyMeow.continueNext')}
                                                     </Motion.button>
                                                 )}
                                             </Motion.div>
@@ -759,7 +772,7 @@ const DailyMeowPage = () => {
                                                     <MoodIcon key={m} moodId={m} className="w-5 h-5" />
                                                 ))}
                                             </span>
-                                            <span className="text-sm font-medium text-neutral-700">Mood locked</span>
+                                            <span className="text-sm font-medium text-neutral-700">{t('dailyMeow.moodLocked')}</span>
                                             <Lock className="w-3 h-3 text-neutral-400 ml-1" />
                                         </div>
 
@@ -780,7 +793,7 @@ const DailyMeowPage = () => {
                                                 onClick={() => setIsEditing(false)}
                                                 className="flex-1 py-3.5 bg-white/80 text-neutral-600 font-bold rounded-2xl border border-neutral-200/70 shadow-soft"
                                             >
-                                                Cancel
+                                                {t('common.cancel')}
                                             </button>
                                             <Motion.button
                                                 whileTap={{ scale: 0.98 }}
@@ -796,11 +809,11 @@ const DailyMeowPage = () => {
                                                     />
                                                 ) : (
                                                     <>
-                                                        <Check className="w-5 h-5" />
-                                                        Save Changes
-                                                    </>
-                                                )}
-                                            </Motion.button>
+                                                    <Check className="w-5 h-5" />
+                                                    {t('common.saveChanges')}
+                                                </>
+                                            )}
+                                        </Motion.button>
                                         </div>
                                     </Motion.div>
                                 )}
@@ -814,11 +827,11 @@ const DailyMeowPage = () => {
                                 className="w-full py-3.5 bg-white/80 text-neutral-700 font-bold rounded-2xl shadow-soft border border-neutral-200/70 flex items-center justify-center gap-2"
                             >
                                 <BookOpen className="w-5 h-5 text-court-gold" />
-                                Question Archives
+                                {t('dailyMeow.questionArchives')}
                                 <ChevronRight className="w-4 h-4 text-neutral-400" />
                             </Motion.button>
                             <p className="text-center text-xs text-neutral-400 mt-3">
-                                New question every day at midnight ET
+                                {t('dailyMeow.dailyReset')}
                             </p>
                         </div>
                         </div>

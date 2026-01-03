@@ -12,6 +12,7 @@ const embeddings = require('./embeddings');
 const supabase = require('./supabase');
 const { createChatCompletion, isOpenRouterConfigured } = require('./openrouter');
 const { repairAndParseJSON } = require('./jsonRepair');
+const { getLanguageLabel, normalizeLanguage } = require('./language');
 
 // Configuration
 const CONFIG = {
@@ -182,6 +183,11 @@ const DAILY_QUESTION_JSON_SCHEMA = {
  */
 function buildExtractionPrompt(caseData) {
     const { participants, submissions, addendumHistory } = caseData;
+    const defaultLanguage = normalizeLanguage(caseData?.language) || 'en';
+    const userALanguage = normalizeLanguage(participants?.userA?.language) || defaultLanguage;
+    const userBLanguage = normalizeLanguage(participants?.userB?.language) || defaultLanguage;
+    const userALabel = getLanguageLabel(userALanguage);
+    const userBLabel = getLanguageLabel(userBLanguage);
     const addendumLines = Array.isArray(addendumHistory) && addendumHistory.length > 0
         ? addendumHistory.map((entry, index) => {
             const fromLabel = entry.fromUser === 'userA'
@@ -210,6 +216,11 @@ function buildExtractionPrompt(caseData) {
 ## Addendums
 ${addendumLines}
 
+## Output Language
+- Write User A insights in ${userALabel} (${userALanguage})
+- Write User B insights in ${userBLabel} (${userBLanguage})
+- Keep JSON keys and insight type values in English
+
 Extract lasting psychological insights about each person that would be relevant for understanding future conflicts.`;
 }
 
@@ -220,6 +231,10 @@ Extract lasting psychological insights about each person that would be relevant 
  * @returns {string} The formatted prompt
  */
 function buildDailyQuestionPrompt(payload) {
+    const userALanguage = normalizeLanguage(payload?.userALanguage) || 'en';
+    const userBLanguage = normalizeLanguage(payload?.userBLanguage) || 'en';
+    const userALabel = getLanguageLabel(userALanguage);
+    const userBLabel = getLanguageLabel(userBLanguage);
     return `Extract durable insights from these daily question answers.
 
 ## Question
@@ -232,7 +247,12 @@ Answer: "${payload.userAAnswer}"
 Answer: "${payload.userBAnswer}"
 
 ${payload.category ? `Category: ${payload.category}` : ''}
-${payload.emoji ? `Emoji: ${payload.emoji}` : ''}`.trim();
+${payload.emoji ? `Emoji: ${payload.emoji}` : ''}
+
+## Output Language
+- Write User A insights in ${userALabel} (${userALanguage})
+- Write User B insights in ${userBLabel} (${userBLanguage})
+- Keep JSON keys and insight type values in English`.trim();
 }
 
 /**
@@ -312,6 +332,7 @@ async function processUserInsights(userId, insights, sourceCaseIdOrOptions) {
     const sourceId = options.sourceId || options.sourceCaseId || null;
     const similarityThreshold = options.similarityThreshold || CONFIG.similarityThreshold;
     const observedAt = options.observedAt || new Date().toISOString();
+    const language = normalizeLanguage(options.language) || 'en';
 
     // Generate embeddings for all insights in batch
     const insightTexts = insights.map(i => (typeof i?.text === 'string' ? i.text : ''));
@@ -331,7 +352,8 @@ async function processUserInsights(userId, insights, sourceCaseIdOrOptions) {
                 embedding,
                 userId,
                 similarityThreshold,
-                1
+                1,
+                language
             );
 
             const matchingType = similar.find(entry => entry.memory_type === insight.type);
@@ -355,6 +377,7 @@ async function processUserInsights(userId, insights, sourceCaseIdOrOptions) {
                     confidenceScore: insight.confidence || 0.8,
                     observedAt,
                     lastObservedAt: observedAt,
+                    language,
                 });
                 stats.stored++;
                 console.log(`[Stenographer] Stored new memory: "${insight.text.slice(0, 50)}..."`);
@@ -420,9 +443,18 @@ async function extractAndStoreInsights(caseData, caseId) {
         const userAId = caseData.participants.userA.id;
         const userBId = caseData.participants.userB.id;
 
+        const defaultLanguage = normalizeLanguage(caseData?.language) || 'en';
+        const userALanguage = normalizeLanguage(caseData?.participants?.userA?.language) || defaultLanguage;
+        const userBLanguage = normalizeLanguage(caseData?.participants?.userB?.language) || defaultLanguage;
         const [userAStats, userBStats] = await Promise.all([
-            processUserInsights(userAId, extracted.userA?.insights || [], caseId),
-            processUserInsights(userBId, extracted.userB?.insights || [], caseId),
+            processUserInsights(userAId, extracted.userA?.insights || [], {
+                sourceCaseId: caseId,
+                language: userALanguage,
+            }),
+            processUserInsights(userBId, extracted.userB?.insights || [], {
+                sourceCaseId: caseId,
+                language: userBLanguage,
+            }),
         ]);
 
         console.log('[Stenographer] Processing complete:', { userA: userAStats, userB: userBStats });
@@ -494,8 +526,14 @@ async function extractAndStoreDailyQuestionInsights(payload) {
         };
 
         const [userAStats, userBStats] = await Promise.all([
-            processUserInsights(payload.userAId, extracted.userA?.insights || [], sourceOptions),
-            processUserInsights(payload.userBId, extracted.userB?.insights || [], sourceOptions),
+            processUserInsights(payload.userAId, extracted.userA?.insights || [], {
+                ...sourceOptions,
+                language: payload?.userALanguage,
+            }),
+            processUserInsights(payload.userBId, extracted.userB?.insights || [], {
+                ...sourceOptions,
+                language: payload?.userBLanguage,
+            }),
         ]);
 
         return {

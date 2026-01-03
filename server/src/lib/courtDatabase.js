@@ -33,6 +33,9 @@ const buildMinimalPayload = (session) => ({
     couple_id: normalizeUuid(session.coupleId),
     status: session.phase || 'EVIDENCE',
     phase: session.phase || 'EVIDENCE',
+    creator_language: session.creatorLanguage || 'en',
+    partner_language: session.partnerLanguage || 'en',
+    case_language: session.caseLanguage || session.creatorLanguage || 'en',
     created_at: new Date(session.createdAt).toISOString(),
     expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
 });
@@ -129,6 +132,9 @@ async function checkpoint(session, action) {
         partner_joined: session.phase !== 'PENDING',
         case_id: session.caseId || null,
         judge_type: session.judgeType || 'logical',
+        creator_language: session.creatorLanguage || 'en',
+        partner_language: session.partnerLanguage || 'en',
+        case_language: session.caseLanguage || session.creatorLanguage || 'en',
         evidence_submissions: evidence,
         user_a_evidence: session.creator.evidence || '',
         user_a_feelings: session.creator.feelings || '',
@@ -286,6 +292,7 @@ async function saveCaseFromSession(session) {
             user_b_input: bEvidence || '',
             user_b_feelings: bFeelings || '',
             status: 'RESOLVED',
+            case_language: session.caseLanguage || session.creatorLanguage || 'en',
             case_title: analysisMeta.caseTitle || analysisMeta.case_title || null,
             severity_level: analysisMeta.severityLevel || analysisMeta.severity_level || null,
             primary_hiss_tag: analysisMeta.primaryHissTag || null,

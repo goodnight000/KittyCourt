@@ -9,51 +9,53 @@ import useCacheStore, { CACHE_TTL, CACHE_KEYS } from '../store/useCacheStore';
 import api from '../services/api';
 import { ChevronLeft } from 'lucide-react';
 import RequirePartner from '../components/RequirePartner';
+import { useI18n } from '../i18n';
 
 // Mood options with custom images (matching DailyMeowPage.jsx)
 const MOOD_OPTIONS = [
     // Positive moods
-    { id: 'happy', image: '/assets/emotions/happy.png', label: 'Happy' },
-    { id: 'loved', image: '/assets/emotions/loved.png', label: 'Loved' },
-    { id: 'grateful', image: '/assets/emotions/grateful.png', label: 'Grateful' },
-    { id: 'excited', image: '/assets/emotions/excited.png', label: 'Excited' },
-    { id: 'peaceful', image: '/assets/emotions/peaceful.png', label: 'Peaceful' },
-    { id: 'playful', image: '/assets/emotions/playful.png', label: 'Playful' },
-    { id: 'cozy', image: '/assets/emotions/cozy.png', label: 'Cozy' },
-    { id: 'romantic', image: '/assets/emotions/romantic.png', label: 'Romantic' },
-    { id: 'silly', image: '/assets/emotions/silly.png', label: 'Silly' },
-    { id: 'hopeful', image: '/assets/emotions/hopeful.png', label: 'Hopeful' },
+    { id: 'happy', image: '/assets/emotions/happy.png', labelKey: 'moods.happy' },
+    { id: 'loved', image: '/assets/emotions/loved.png', labelKey: 'moods.loved' },
+    { id: 'grateful', image: '/assets/emotions/grateful.png', labelKey: 'moods.grateful' },
+    { id: 'excited', image: '/assets/emotions/excited.png', labelKey: 'moods.excited' },
+    { id: 'peaceful', image: '/assets/emotions/peaceful.png', labelKey: 'moods.peaceful' },
+    { id: 'playful', image: '/assets/emotions/playful.png', labelKey: 'moods.playful' },
+    { id: 'cozy', image: '/assets/emotions/cozy.png', labelKey: 'moods.cozy' },
+    { id: 'romantic', image: '/assets/emotions/romantic.png', labelKey: 'moods.romantic' },
+    { id: 'silly', image: '/assets/emotions/silly.png', labelKey: 'moods.silly' },
+    { id: 'hopeful', image: '/assets/emotions/hopeful.png', labelKey: 'moods.hopeful' },
     // Neutral/Challenging moods
-    { id: 'tired', image: '/assets/emotions/tired.png', label: 'Tired' },
-    { id: 'stressed', image: '/assets/emotions/stressed.png', label: 'Stressed' },
-    { id: 'anxious', image: '/assets/emotions/anxious.png', label: 'Anxious' },
-    { id: 'sad', image: '/assets/emotions/sad.png', label: 'Sad' },
-    { id: 'frustrated', image: '/assets/emotions/frustrated.png', label: 'Frustrated' },
-    { id: 'overwhelmed', image: '/assets/emotions/overwhelmed.png', label: 'Overwhelmed' },
-    { id: 'lonely', image: '/assets/emotions/lonely.png', label: 'Lonely' },
-    { id: 'confused', image: '/assets/emotions/confused.png', label: 'Confused' },
-    { id: 'meh', image: '/assets/emotions/meh.png', label: 'Meh' },
-    { id: 'hangry', image: '/assets/emotions/hangry.png', label: 'Hangry' },
+    { id: 'tired', image: '/assets/emotions/tired.png', labelKey: 'moods.tired' },
+    { id: 'stressed', image: '/assets/emotions/stressed.png', labelKey: 'moods.stressed' },
+    { id: 'anxious', image: '/assets/emotions/anxious.png', labelKey: 'moods.anxious' },
+    { id: 'sad', image: '/assets/emotions/sad.png', labelKey: 'moods.sad' },
+    { id: 'frustrated', image: '/assets/emotions/frustrated.png', labelKey: 'moods.frustrated' },
+    { id: 'overwhelmed', image: '/assets/emotions/overwhelmed.png', labelKey: 'moods.overwhelmed' },
+    { id: 'lonely', image: '/assets/emotions/lonely.png', labelKey: 'moods.lonely' },
+    { id: 'confused', image: '/assets/emotions/confused.png', labelKey: 'moods.confused' },
+    { id: 'meh', image: '/assets/emotions/meh.png', labelKey: 'moods.meh' },
+    { id: 'hangry', image: '/assets/emotions/hangry.png', labelKey: 'moods.hangry' },
 ];
 
 // MoodIcon component to render custom images
-const MoodIcon = ({ moodId, className = 'w-6 h-6' }) => {
+const MoodIcon = ({ moodId, label, className = 'w-6 h-6' }) => {
     const mood = MOOD_OPTIONS.find(m => m.id === moodId);
     if (!mood) return null;
     if (mood.image) {
-        return <img src={mood.image} alt={mood.label} className={`${className} object-contain`} />;
+        return <img src={mood.image} alt={label} className={`${className} object-contain`} />;
     }
     return null;
 };
 
 const DailyMeowHistoryPage = () => {
     const navigate = useNavigate();
+    const { t, language } = useI18n();
     const { user: authUser, profile, partner: connectedPartner } = useAuthStore();
 
     const myId = authUser?.id;
     const partnerId = connectedPartner?.id;
-    const partnerDisplayName = connectedPartner?.display_name || 'Your partner';
-    const myDisplayName = profile?.display_name || 'You';
+    const partnerDisplayName = connectedPartner?.display_name || t('common.yourPartner');
+    const myDisplayName = profile?.display_name || t('common.you');
 
     // State
     const [loading, setLoading] = useState(true);
@@ -65,7 +67,7 @@ const DailyMeowHistoryPage = () => {
     const fetchHistory = useCallback(async () => {
         if (!myId || !partnerId) return;
 
-        const cacheKey = `${CACHE_KEYS.DAILY_HISTORY}:${myId}:${partnerId}`;
+        const cacheKey = `${CACHE_KEYS.DAILY_HISTORY}:${myId}:${partnerId}:${language}`;
 
         // Check cache first
         const cached = useCacheStore.getState().getCached(cacheKey);
@@ -90,7 +92,7 @@ const DailyMeowHistoryPage = () => {
         } finally {
             setLoading(false);
         }
-    }, [myId, partnerId]);
+    }, [myId, partnerId, language]);
 
     useEffect(() => {
         if (myId && partnerId) {
@@ -98,7 +100,7 @@ const DailyMeowHistoryPage = () => {
         } else {
             setLoading(false);
         }
-    }, [fetchHistory, myId, partnerId]);
+    }, [fetchHistory, myId, partnerId, language]);
 
     const getMoodData = (moodId) => MOOD_OPTIONS.find(m => m.id === moodId);
     const getMoodList = (answer) => {
@@ -112,11 +114,11 @@ const DailyMeowHistoryPage = () => {
         const now = new Date();
         const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
 
-        if (diffDays === 0) return 'Today';
-        if (diffDays === 1) return 'Yesterday';
-        if (diffDays < 7) return date.toLocaleDateString('en-US', { weekday: 'long' });
+        if (diffDays === 0) return t('common.today');
+        if (diffDays === 1) return t('common.yesterday');
+        if (diffDays < 7) return date.toLocaleDateString(language, { weekday: 'long' });
 
-        return date.toLocaleDateString('en-US', {
+        return date.toLocaleDateString(language, {
             month: 'short',
             day: 'numeric',
             year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
@@ -125,7 +127,7 @@ const DailyMeowHistoryPage = () => {
 
     const formatFullDate = (dateStr) => {
         const date = new Date(dateStr);
-        return date.toLocaleDateString('en-US', {
+        return date.toLocaleDateString(language, {
             weekday: 'long',
             month: 'long',
             day: 'numeric',
@@ -154,7 +156,7 @@ const DailyMeowHistoryPage = () => {
     // Group by month
     const groupedHistory = filteredHistory.reduce((groups, item) => {
         const date = new Date(item.assigned_date);
-        const monthYear = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        const monthYear = date.toLocaleDateString(language, { month: 'long', year: 'numeric' });
 
         if (!groups[monthYear]) {
             groups[monthYear] = [];
@@ -203,8 +205,8 @@ const DailyMeowHistoryPage = () => {
 
     return (
         <RequirePartner
-            feature="Question Archives"
-            description="Connect with your partner to unlock your shared question history."
+            feature={t('dailyMeowHistory.feature')}
+            description={t('dailyMeowHistory.requirePartnerDescription')}
         >
             <div className="relative min-h-screen overflow-hidden pb-6">
             <QuestionBackdrop />
@@ -225,10 +227,10 @@ const DailyMeowHistoryPage = () => {
                     </Motion.button>
                     <div>
                         <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-amber-600">
-                            Question archives
+                            {t('dailyMeowHistory.headerLabel')}
                         </p>
-                        <h1 className="text-2xl font-display font-bold text-neutral-800">Shared Question Library</h1>
-                        <p className="text-neutral-500 text-sm">The deepest memories and secrets shared together</p>
+                        <h1 className="text-2xl font-display font-bold text-neutral-800">{t('dailyMeowHistory.title')}</h1>
+                        <p className="text-neutral-500 text-sm">{t('dailyMeowHistory.subtitle')}</p>
                     </div>
                 </div>
             </Motion.div>
@@ -247,16 +249,16 @@ const DailyMeowHistoryPage = () => {
                     <div className="min-w-0">
                         <div className="flex items-center gap-2">
                             <BookOpen className="w-4 h-4 text-amber-600" />
-                            <span className="text-sm font-bold text-neutral-800">Your Journey</span>
+                            <span className="text-sm font-bold text-neutral-800">{t('dailyMeowHistory.journeyTitle')}</span>
                         </div>
-                        <p className="text-xs text-neutral-500 mt-0.5">A tiny ritual you share together</p>
+                        <p className="text-xs text-neutral-500 mt-0.5">{t('dailyMeowHistory.journeySubtitle')}</p>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                         <div className="px-3 py-1.5 rounded-full bg-white/80 border border-white/80 text-[11px] font-bold text-neutral-700">
-                            {totalAnswered} answered
+                            {t('dailyMeowHistory.answeredCount', { count: totalAnswered })}
                         </div>
                         <div className="px-3 py-1.5 rounded-full bg-amber-100/70 border border-amber-200/70 text-[11px] font-bold text-amber-700">
-                            {streak} day streak
+                            {t('dailyMeowHistory.streakCount', { count: streak })}
                         </div>
                     </div>
                 </div>
@@ -275,7 +277,7 @@ const DailyMeowHistoryPage = () => {
                         type="text"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Search questions or answers..."
+                        placeholder={t('dailyMeowHistory.searchPlaceholder')}
                         className="w-full pl-11 pr-4 py-3 bg-white/85 rounded-2xl border border-white/80 text-sm focus:border-amber-300 focus:ring-2 focus:ring-amber-200/40 outline-none shadow-inner-soft"
                     />
                 </div>
@@ -290,7 +292,7 @@ const DailyMeowHistoryPage = () => {
                             onClick={() => setSelectedEntry(null)}
                             className="w-full py-3 bg-white/85 text-neutral-700 font-bold rounded-2xl shadow-soft border border-white/80"
                         >
-                            Back to Archives
+                            {t('dailyMeowHistory.backToArchives')}
                         </Motion.button>
 
                         <div className="glass-card relative overflow-hidden">
@@ -299,7 +301,7 @@ const DailyMeowHistoryPage = () => {
                                 <div className="absolute -bottom-12 -left-10 h-28 w-28 rounded-full bg-rose-200/25 blur-3xl" />
                             </div>
                             <div className="relative p-5 text-center border-b border-white/50">
-                                <h1 className="text-lg font-display font-bold text-neutral-800 tracking-tight mb-2">Daily Question</h1>
+                                <h1 className="text-lg font-display font-bold text-neutral-800 tracking-tight mb-2">{t('dailyMeowHistory.dailyQuestionTitle')}</h1>
                                 <div className="flex items-center justify-center gap-2 mb-3">
                                     {selectedEntry.category && (
                                         <span className="inline-flex items-center px-3 py-1 bg-white/80 rounded-full text-xs font-bold text-neutral-700 shadow-sm">
@@ -316,33 +318,37 @@ const DailyMeowHistoryPage = () => {
                             <div className="relative p-5 space-y-4">
                                 <div className="grid grid-cols-2 gap-3">
                                     <div className="bg-white/80 rounded-2xl border border-white/80 p-3 shadow-sm">
-                                        <div className="text-[11px] font-bold text-neutral-600 mb-2">{myDisplayName} felt</div>
+                                        <div className="text-[11px] font-bold text-neutral-600 mb-2">{t('dailyMeowHistory.felt', { name: myDisplayName })}</div>
                                         <div className="flex items-center gap-1.5 flex-wrap">
-                                            {getMoodList(selectedEntry.my_answer).map(id => (
-                                                <MoodIcon key={id} moodId={id} className="w-8 h-8" />
-                                            ))}
+                                            {getMoodList(selectedEntry.my_answer).map(id => {
+                                                const mood = getMoodData(id)
+                                                const label = mood ? t(mood.labelKey) : id
+                                                return <MoodIcon key={id} moodId={id} label={label} className="w-8 h-8" />
+                                            })}
                                         </div>
                                     </div>
                                     <div className="bg-white/80 rounded-2xl border border-white/80 p-3 shadow-sm">
-                                        <div className="text-[11px] font-bold text-neutral-600 mb-2">{partnerDisplayName} felt</div>
+                                        <div className="text-[11px] font-bold text-neutral-600 mb-2">{t('dailyMeowHistory.felt', { name: partnerDisplayName })}</div>
                                         <div className="flex items-center gap-1.5 flex-wrap">
-                                            {getMoodList(selectedEntry.partner_answer).map(id => (
-                                                <MoodIcon key={id} moodId={id} className="w-8 h-8" />
-                                            ))}
+                                            {getMoodList(selectedEntry.partner_answer).map(id => {
+                                                const mood = getMoodData(id)
+                                                const label = mood ? t(mood.labelKey) : id
+                                                return <MoodIcon key={id} moodId={id} label={label} className="w-8 h-8" />
+                                            })}
                                         </div>
                                     </div>
                                 </div>
 
                                 <div className="bg-white/80 rounded-2xl p-4 border border-white/80 shadow-sm">
                                     <div className="flex items-center justify-between mb-2">
-                                        <span className="text-sm font-bold text-amber-700">{myDisplayName}'s answer</span>
+                                        <span className="text-sm font-bold text-amber-700">{t('dailyMeowHistory.answerLabel', { name: myDisplayName })}</span>
                                     </div>
                                     <p className="text-neutral-700 leading-relaxed">{selectedEntry.my_answer?.answer}</p>
                                 </div>
 
                                 <div className="bg-white/80 rounded-2xl p-4 border border-rose-200/70 shadow-sm">
                                     <div className="flex items-center justify-between mb-2">
-                                        <span className="text-sm font-bold text-rose-700">{partnerDisplayName}'s answer</span>
+                                        <span className="text-sm font-bold text-rose-700">{t('dailyMeowHistory.answerLabel', { name: partnerDisplayName })}</span>
                                     </div>
                                     <p className="text-neutral-700 leading-relaxed">{selectedEntry.partner_answer?.answer}</p>
                                 </div>
@@ -364,12 +370,12 @@ const DailyMeowHistoryPage = () => {
                         className="text-center py-12"
                     >
                         <h3 className="text-lg font-bold text-neutral-700 mb-2">
-                            {searchQuery ? 'No matches found' : 'Your story begins here'}
+                            {searchQuery ? t('dailyMeowHistory.emptySearchTitle') : t('dailyMeowHistory.emptyTitle')}
                         </h3>
                         <p className="text-neutral-500 text-sm max-w-xs mx-auto">
                             {searchQuery
-                                ? 'Try a different search term'
-                                : 'Answer daily questions together to build your shared story'}
+                                ? t('dailyMeowHistory.emptySearchHint')
+                                : t('dailyMeowHistory.emptyHint')}
                         </p>
                     </Motion.div>
                 ) : (

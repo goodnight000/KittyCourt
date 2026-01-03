@@ -96,7 +96,7 @@ class CourtSessionManager {
     /**
      * Creator serves partner (creates pending session)
      */
-    async serve(creatorId, partnerId, coupleId, judgeType = 'logical') {
+    async serve(creatorId, partnerId, coupleId, judgeType = 'logical', languageOptions = {}) {
         // Check for existing session
         if (this.userToCouple.has(creatorId) || this.userToCouple.has(partnerId)) {
             throw new Error('One or both users already in a session');
@@ -111,6 +111,10 @@ class CourtSessionManager {
         const effectiveCoupleId = coupleId || `${creatorId}-${partnerId}`;
         const sessionId = uuidv4();
 
+        const creatorLanguage = languageOptions.creatorLanguage || 'en';
+        const partnerLanguage = languageOptions.partnerLanguage || 'en';
+        const caseLanguage = languageOptions.caseLanguage || creatorLanguage || 'en';
+
         const session = {
             id: sessionId,
             coupleId: effectiveCoupleId,
@@ -119,6 +123,9 @@ class CourtSessionManager {
             phase: PHASE.PENDING,
             caseId: null,
             judgeType, // Selected judge type for verdict generation
+            creatorLanguage,
+            partnerLanguage,
+            caseLanguage,
             creator: this._emptyUserState(),
             partner: this._emptyUserState(),
             verdict: null,
@@ -749,8 +756,16 @@ class CourtSessionManager {
     _buildCaseData(session) {
         const caseData = {
             participants: {
-                userA: { id: session.creatorId, name: 'Partner A' },
-                userB: { id: session.partnerId, name: 'Partner B' }
+                userA: {
+                    id: session.creatorId,
+                    name: 'Partner A',
+                    language: session.creatorLanguage || session.caseLanguage || 'en',
+                },
+                userB: {
+                    id: session.partnerId,
+                    name: 'Partner B',
+                    language: session.partnerLanguage || session.caseLanguage || 'en',
+                }
             },
             submissions: {
                 userA: {
@@ -762,7 +777,8 @@ class CourtSessionManager {
                     theStoryIamTellingMyself: session.partner.feelings
                 }
             },
-            addendumHistory: session.addendumHistory || []
+            addendumHistory: session.addendumHistory || [],
+            language: session.caseLanguage || session.creatorLanguage || 'en',
         };
 
         return caseData;
@@ -1100,6 +1116,10 @@ class CourtSessionManager {
             ? db.created_by
             : (settle.partner && !settle.creator ? db.partner_id : null);
 
+        const creatorLanguage = db.creator_language || 'en';
+        const partnerLanguage = db.partner_language || 'en';
+        const caseLanguage = db.case_language || creatorLanguage || 'en';
+
         const session = {
             id: db.id,
             coupleId: db.couple_id || `${db.created_by}-${db.partner_id}`,
@@ -1107,6 +1127,9 @@ class CourtSessionManager {
             partnerId: db.partner_id,
             phase: phaseFromStatus,
             caseId: db.case_id || null,
+            creatorLanguage,
+            partnerLanguage,
+            caseLanguage,
             creator: {
                 evidenceSubmitted: evidence.creator?.submitted || !!db.user_a_evidence,
                 evidence: evidence.creator?.evidence || db.user_a_evidence || null,

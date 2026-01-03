@@ -1,9 +1,11 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Clock, Users } from 'lucide-react';
+import { useI18n } from '../../i18n';
 
 const WaitingForPartnerStep = ({ title, subtitle, partnerName }) => {
-    const displayPartnerName = partnerName || 'your partner';
+    const { t } = useI18n();
+    const displayPartnerName = partnerName || t('common.yourPartner');
     return (
         <div className="max-w-md mx-auto space-y-6">
             <motion.div
@@ -43,21 +45,22 @@ const WaitingForPartnerStep = ({ title, subtitle, partnerName }) => {
                     </div>
 
                     <p className="text-court-brown font-medium">
-                        Waiting on <span className="text-court-gold font-bold">{displayPartnerName}</span>…
+                        {t('court.waitingStep.statusIntro')}{' '}
+                        <span className="text-court-gold font-bold">{displayPartnerName}</span>…
                     </p>
 
                     <div className="bg-gradient-to-br from-court-cream to-court-tan/30 rounded-2xl p-4">
                         <div className="flex items-center justify-center gap-2 mb-2">
                             <Users className="w-4 h-4 text-court-gold" />
-                            <span className="text-sm font-bold text-court-brown">Status</span>
+                            <span className="text-sm font-bold text-court-brown">{t('court.waitingStep.panelTitle')}</span>
                         </div>
                         <p className="text-xs text-court-brownLight">
-                            You are ready. {displayPartnerName} still needs a moment.
+                            {t('court.waitingStep.panelBody', { name: displayPartnerName })}
                         </p>
                     </div>
 
                     <p className="text-xs text-court-brownLight italic">
-                        This step will continue once both partners are ready.
+                        {t('court.waitingStep.note')}
                     </p>
                 </div>
             </motion.div>

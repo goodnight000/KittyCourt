@@ -28,9 +28,11 @@ import {
     ResolutionSelectPage,
     WaitingForPartnerStep
 } from '../components/court';
+import { useI18n } from '../i18n';
 
 export default function CourtroomPageV2() {
     const navigate = useNavigate();
+    const { t } = useI18n();
 
     const { user: authUser, profile, partner } = useAuthStore();
 
@@ -70,8 +72,8 @@ export default function CourtroomPageV2() {
 
     const { isConnected } = useCourtStore();
 
-    const myName = profile?.display_name || profile?.name || 'You';
-    const partnerName = partner?.display_name || partner?.name || 'Partner';
+    const myName = profile?.display_name || profile?.name || t('common.you');
+    const partnerName = partner?.display_name || partner?.name || t('common.partner');
 
     const isCreator = session?.creatorId === authUser?.id;
 
@@ -263,8 +265,8 @@ export default function CourtroomPageV2() {
             case VIEW_PHASE.WAITING_PRIMING:
                 return (
                     <WaitingForPartnerStep
-                        title="Priming complete"
-                        subtitle="Waiting for your partner to finish their reflection"
+                        title={t('courtroom.waiting.primingTitle')}
+                        subtitle={t('courtroom.waiting.primingSubtitle')}
                         partnerName={partnerName}
                     />
                 );
@@ -284,8 +286,8 @@ export default function CourtroomPageV2() {
             case VIEW_PHASE.WAITING_JOINT:
                 return (
                     <WaitingForPartnerStep
-                        title="Joint menu viewed"
-                        subtitle="Waiting for your partner to continue"
+                        title={t('courtroom.waiting.jointTitle')}
+                        subtitle={t('courtroom.waiting.jointSubtitle')}
                         partnerName={partnerName}
                     />
                 );
@@ -341,7 +343,7 @@ export default function CourtroomPageV2() {
                 if (verdictError) {
                     return (
                         <VerdictErrorCard
-                            message={verdictError.error || 'Verdict generation failed. Please try again.'}
+                            message={verdictError.error || t('courtroom.errors.verdictFailed')}
                             onReset={dismiss}
                         />
                     );
@@ -378,7 +380,10 @@ export default function CourtroomPageV2() {
     };
 
     return (
-        <RequirePartner>
+        <RequirePartner
+            feature={t('courtroom.feature')}
+            description={t('courtroom.requirePartnerDescription')}
+        >
             <div className="min-h-screen bg-gradient-to-b from-court-cream to-court-tan/20">
                 {showOpeningAnimation && (
                     <CourtOpeningAnimation onComplete={() => setShowOpeningAnimation(false)} />
@@ -432,6 +437,7 @@ function EvidenceForm({
     myName,
     partnerName
 }) {
+    const { t } = useI18n();
     const maxLen = 2000;
     const evidenceLen = localEvidence?.length || 0;
     const feelingsLen = localFeelings?.length || 0;
@@ -449,25 +455,25 @@ function EvidenceForm({
                             <Gavel className="w-5 h-5 text-court-gold" />
                         </div>
                         <div>
-                            <h1 className="text-lg font-bold text-court-brown">Court in Session</h1>
-                            <p className="text-xs text-court-brownLight">Present your evidence</p>
+                            <h1 className="text-lg font-bold text-court-brown">{t('courtroom.evidence.title')}</h1>
+                            <p className="text-xs text-court-brownLight">{t('courtroom.evidence.subtitle')}</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-1 bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded-full">
                         <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-                        LIVE
+                        {t('courtroom.evidence.live')}
                     </div>
                 </div>
 
                 <div className="flex items-center justify-center gap-4">
                     <div className="flex flex-col items-center text-center min-w-[80px]">
                         <p className="text-sm font-bold text-court-brown">{myName}</p>
-                        <p className="text-[10px] text-court-brownLight">You</p>
+                        <p className="text-[10px] text-court-brownLight">{t('common.you')}</p>
                     </div>
-                    <div className="text-court-tan font-bold text-lg">vs</div>
+                    <div className="text-court-tan font-bold text-lg">{t('courtroom.evidence.vs')}</div>
                     <div className="flex flex-col items-center text-center min-w-[80px]">
                         <p className="text-sm font-bold text-court-brown">{partnerName}</p>
-                        <p className="text-[10px] text-court-brownLight">Partner</p>
+                        <p className="text-[10px] text-court-brownLight">{t('common.partner')}</p>
                     </div>
                 </div>
             </Motion.div>
@@ -481,12 +487,12 @@ function EvidenceForm({
                 <div>
                     <label className="flex items-center gap-2 text-sm font-medium text-court-brown mb-2">
                         <MessageCircle className="w-4 h-4" />
-                        The Facts
+                        {t('courtroom.evidence.factsLabel')}
                     </label>
                     <textarea
                         value={localEvidence}
                         onChange={(e) => setLocalEvidence(e.target.value)}
-                        placeholder="What happened? Describe the situation objectively..."
+                        placeholder={t('courtroom.evidence.factsPlaceholder')}
                         maxLength={maxLen}
                         className="w-full h-32 px-4 py-3 rounded-xl border-2 border-court-tan/30 
                             focus:border-court-gold focus:ring-2 focus:ring-court-gold/20 
@@ -494,7 +500,7 @@ function EvidenceForm({
                             transition-all resize-none"
                     />
                     <div className="flex items-center justify-between mt-2">
-                        <span className="text-[11px] text-court-brownLight/80">Aim for clarity over completeness</span>
+                        <span className="text-[11px] text-court-brownLight/80">{t('courtroom.evidence.factsHint')}</span>
                         <span className="text-[11px] text-neutral-400">{evidenceLen}/{maxLen}</span>
                     </div>
                 </div>
@@ -502,12 +508,12 @@ function EvidenceForm({
                 <div>
                     <label className="flex items-center gap-2 text-sm font-medium text-court-brown mb-2">
                         <Heart className="w-4 h-4" />
-                        The Feelings
+                        {t('courtroom.evidence.feelingsLabel')}
                     </label>
                     <textarea
                         value={localFeelings}
                         onChange={(e) => setLocalFeelings(e.target.value)}
-                        placeholder="How did this make you feel? What story are you telling yourself?"
+                        placeholder={t('courtroom.evidence.feelingsPlaceholder')}
                         maxLength={maxLen}
                         className="w-full h-32 px-4 py-3 rounded-xl border-2 border-court-tan/30 
                             focus:border-court-gold focus:ring-2 focus:ring-court-gold/20 
@@ -515,7 +521,7 @@ function EvidenceForm({
                             transition-all resize-none"
                     />
                     <div className="flex items-center justify-between mt-2">
-                        <span className="text-[11px] text-court-brownLight/80">Name the emotion, not the verdict</span>
+                        <span className="text-[11px] text-court-brownLight/80">{t('courtroom.evidence.feelingsHint')}</span>
                         <span className="text-[11px] text-neutral-400">{feelingsLen}/{maxLen}</span>
                     </div>
                 </div>
@@ -539,7 +545,7 @@ function EvidenceForm({
                         ) : (
                             <>
                                 <Send className="w-5 h-5" />
-                                Submit Evidence
+                                {t('courtroom.evidence.submit')}
                             </>
                         )}
                     </Motion.button>
@@ -547,7 +553,7 @@ function EvidenceForm({
                     <SettlementButton className="w-full" />
 
                     <p className="text-center text-xs text-court-brownLight/80">
-                        ✨ Judge Whiskers values honesty and emotional vulnerability ✨
+                        {t('courtroom.evidence.footer')}
                     </p>
                 </div>
             </Motion.div>
@@ -556,6 +562,7 @@ function EvidenceForm({
 }
 
 function AddendumModal({ open, onClose, value, onChange, onSubmit, isSubmitting, addendumRemaining, addendumLimit }) {
+    const { t } = useI18n();
     const limitReached = addendumRemaining !== null && addendumRemaining <= 0;
     return (
         <AnimatePresence>
@@ -574,19 +581,19 @@ function AddendumModal({ open, onClose, value, onChange, onSubmit, isSubmitting,
                         className="glass-card p-5 max-w-md w-full max-h-[80dvh] overflow-y-auto"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <h3 className="text-lg font-bold text-court-brown mb-2">File an Addendum</h3>
+                        <h3 className="text-lg font-bold text-court-brown mb-2">{t('courtroom.addendum.title')}</h3>
                         <p className="text-sm text-court-brownLight mb-4">
-                            Add any missing context. The court will re-deliberate and replace the verdict.
+                            {t('courtroom.addendum.subtitle')}
                         </p>
                         {addendumLimit !== null && (
                             <div className="mb-4 rounded-xl border border-court-tan/40 bg-court-cream/60 px-3 py-2 text-xs text-court-brown">
-                                Shared addendums: {addendumRemaining} of {addendumLimit} remaining.
+                                {t('courtroom.addendum.remaining', { remaining: addendumRemaining, limit: addendumLimit })}
                             </div>
                         )}
                         <textarea
                             value={value}
                             onChange={(e) => onChange(e.target.value)}
-                            placeholder="What did Judge Whiskers not consider?"
+                            placeholder={t('courtroom.addendum.placeholder')}
                             className="w-full h-32 px-4 py-3 rounded-xl border-2 border-court-tan/30 
                                 focus:border-court-gold focus:ring-2 focus:ring-court-gold/20 
                                 bg-white/50 text-court-brown placeholder-court-brownLight/50
@@ -598,7 +605,7 @@ function AddendumModal({ open, onClose, value, onChange, onSubmit, isSubmitting,
                                 onClick={onClose}
                                 className="flex-1 py-2 px-4 rounded-lg border border-court-tan text-court-brown"
                             >
-                                Cancel
+                                {t('common.cancel')}
                             </button>
                             <button
                                 onClick={onSubmit}
@@ -606,7 +613,7 @@ function AddendumModal({ open, onClose, value, onChange, onSubmit, isSubmitting,
                                 className="flex-1 py-2 px-4 rounded-lg text-white font-extrabold disabled:opacity-50 shadow-lg"
                                 style={{ background: 'linear-gradient(135deg, #1c1c84 0%, #000035 100%)' }}
                             >
-                                {limitReached ? 'Limit reached' : 'Submit'}
+                                {limitReached ? t('courtroom.addendum.limitReached') : t('courtroom.addendum.submit')}
                             </button>
                         </div>
                     </Motion.div>
@@ -617,19 +624,20 @@ function AddendumModal({ open, onClose, value, onChange, onSubmit, isSubmitting,
 }
 
 function VerdictErrorCard({ message, onReset }) {
+    const { t } = useI18n();
     return (
         <div className="max-w-md mx-auto glass-card p-5 text-center space-y-3">
             <div className="w-12 h-12 rounded-2xl bg-red-100 mx-auto flex items-center justify-center">
                 <Gavel className="w-6 h-6 text-red-500" />
             </div>
-            <h2 className="text-lg font-bold text-court-brown">Unable to Generate Verdict</h2>
+            <h2 className="text-lg font-bold text-court-brown">{t('courtroom.errors.title')}</h2>
             <p className="text-sm text-court-brownLight">{message}</p>
             <button
                 onClick={onReset}
                 className="w-full py-2.5 px-4 rounded-xl text-white font-extrabold shadow-lg"
                 style={{ background: 'linear-gradient(135deg, #1c1c84 0%, #000035 100%)' }}
             >
-                Return to Court Lobby
+                {t('courtroom.errors.return')}
             </button>
         </div>
     );

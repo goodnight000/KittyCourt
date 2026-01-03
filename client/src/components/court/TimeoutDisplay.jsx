@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Clock, AlertTriangle } from 'lucide-react';
+import { useI18n } from '../../i18n';
 
 /**
  * Countdown Timer Display
@@ -15,10 +16,12 @@ import { Clock, AlertTriangle } from 'lucide-react';
 export default function TimeoutDisplay({
     timeFormatted,
     urgency = 'normal',
-    label = 'Time remaining',
+    label = null,
     className = ''
 }) {
+    const { t } = useI18n();
     if (!timeFormatted || timeFormatted === '00:00') return null;
+    const displayLabel = label || t('court.timeout.label');
 
     const urgencyStyles = {
         normal: {
@@ -72,7 +75,7 @@ export default function TimeoutDisplay({
             ) : (
                 <Clock className={`w-4 h-4 ${styles.icon}`} />
             )}
-            <span className="text-xs font-medium">{label}:</span>
+            <span className="text-xs font-medium">{displayLabel}:</span>
             <span className={`text-sm font-mono font-bold ${styles.time}`}>
                 {timeFormatted}
             </span>

@@ -3,9 +3,10 @@ import { motion as Motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, Sparkles, AlertCircle, UserX } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
+import { useI18n } from '../i18n';
 
 // Helper to get user-friendly error messages
-const getErrorMessage = (error) => {
+const getErrorMessage = (error, t) => {
     const message = error?.message?.toLowerCase() || '';
 
     // Supabase returns "Invalid login credentials" for both wrong password AND non-existent user
@@ -13,8 +14,8 @@ const getErrorMessage = (error) => {
     if (message.includes('invalid login credentials') || message.includes('invalid password') || message.includes('invalid email')) {
         return {
             type: 'invalid_credentials',
-            title: 'Invalid Credentials',
-            message: 'The email or password you entered is incorrect. Please check and try again.',
+            title: t('signIn.errors.invalid.title'),
+            message: t('signIn.errors.invalid.message'),
             icon: Lock
         };
     }
@@ -22,8 +23,8 @@ const getErrorMessage = (error) => {
     if (message.includes('user not found') || message.includes('no user found')) {
         return {
             type: 'no_account',
-            title: 'Account Not Found',
-            message: "We couldn't find an account with this email. Would you like to create one?",
+            title: t('signIn.errors.noAccount.title'),
+            message: t('signIn.errors.noAccount.message'),
             icon: UserX
         };
     }
@@ -31,8 +32,8 @@ const getErrorMessage = (error) => {
     if (message.includes('email not confirmed')) {
         return {
             type: 'unconfirmed',
-            title: 'Email Not Verified',
-            message: 'Please check your email and click the verification link to activate your account.',
+            title: t('signIn.errors.unconfirmed.title'),
+            message: t('signIn.errors.unconfirmed.message'),
             icon: Mail
         };
     }
@@ -40,8 +41,8 @@ const getErrorMessage = (error) => {
     if (message.includes('too many requests') || message.includes('rate limit')) {
         return {
             type: 'rate_limit',
-            title: 'Too Many Attempts',
-            message: 'Please wait a few minutes before trying again.',
+            title: t('signIn.errors.rateLimit.title'),
+            message: t('signIn.errors.rateLimit.message'),
             icon: AlertCircle
         };
     }
@@ -51,14 +52,15 @@ const getErrorMessage = (error) => {
 
     return {
         type: 'generic',
-        title: 'Sign In Failed',
-        message: error?.message || 'An error occurred. Please try again.',
+        title: t('signIn.errors.generic.title'),
+        message: t('signIn.errors.generic.message'),
         icon: AlertCircle
     };
 };
 
 const SignInPage = () => {
     const navigate = useNavigate();
+    const { t } = useI18n();
     const { signIn, signInWithGoogle } = useAuthStore();
 
     const [email, setEmail] = useState('');
@@ -73,7 +75,11 @@ const SignInPage = () => {
         setIsSubmitting(true);
 
         if (!email || !password) {
-            setError({ type: 'validation', title: 'Missing Fields', message: 'Please fill in all fields' });
+            setError({
+                type: 'validation',
+                title: t('signIn.errors.validation.title'),
+                message: t('signIn.errors.validation.message')
+            });
             setIsSubmitting(false);
             return;
         }
@@ -85,7 +91,7 @@ const SignInPage = () => {
 
         if (result.error) {
             console.error('[SignInPage] Error:', result.error);
-            setError(getErrorMessage(result.error));
+            setError(getErrorMessage(result.error, t));
         } else {
             console.log('[SignInPage] Success! Navigating to /');
             // Small delay to ensure state is fully propagated before navigation
@@ -102,7 +108,7 @@ const SignInPage = () => {
         const { error } = await signInWithGoogle();
         setIsSubmitting(false);
         if (error) {
-            setError(getErrorMessage(error));
+            setError(getErrorMessage(error, t));
         }
     };
 
@@ -149,8 +155,8 @@ const SignInPage = () => {
                 >
                     <span className="text-4xl">🐱</span>
                 </Motion.div>
-                <h1 className="text-3xl font-bold text-gradient font-display">Pause</h1>
-                <p className="text-neutral-500 mt-2">Welcome back, counselor!</p>
+                <h1 className="text-3xl font-bold text-gradient font-display">{t('signIn.brand')}</h1>
+                <p className="text-neutral-500 mt-2">{t('signIn.subtitle')}</p>
             </Motion.div>
 
             {/* Sign In Card */}
@@ -180,7 +186,7 @@ const SignInPage = () => {
                                             to="/signup"
                                             className="inline-flex items-center gap-1 text-sm font-medium text-court-brown hover:text-court-gold mt-2 transition-colors"
                                         >
-                                            Create an account <ArrowRight className="w-3.5 h-3.5" />
+                                            {t('signIn.actions.createAccount')} <ArrowRight className="w-3.5 h-3.5" />
                                         </Link>
                                     )}
                                     {error.type === 'invalid_credentials' && (
@@ -189,13 +195,13 @@ const SignInPage = () => {
                                                 to="/forgot-password"
                                                 className="inline-flex items-center gap-1 text-sm font-medium text-court-brown hover:text-court-gold transition-colors"
                                             >
-                                                Reset password <ArrowRight className="w-3.5 h-3.5" />
+                                                {t('signIn.actions.resetPassword')} <ArrowRight className="w-3.5 h-3.5" />
                                             </Link>
                                             <Link
                                                 to="/signup"
                                                 className="inline-flex items-center gap-1 text-sm font-medium text-court-brown hover:text-court-gold transition-colors"
                                             >
-                                                Create account <ArrowRight className="w-3.5 h-3.5" />
+                                                {t('signIn.actions.createAccountShort')} <ArrowRight className="w-3.5 h-3.5" />
                                             </Link>
                                         </div>
                                     )}
@@ -218,13 +224,13 @@ const SignInPage = () => {
                             <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
                             <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                         </svg>
-                        Continue with Google
+                        {t('signIn.google')}
                     </Motion.button>
 
                     {/* Divider */}
                     <div className="flex items-center gap-4 my-6">
                         <div className="flex-1 h-px bg-neutral-200"></div>
-                        <span className="text-neutral-400 text-sm">or</span>
+                        <span className="text-neutral-400 text-sm">{t('common.or')}</span>
                         <div className="flex-1 h-px bg-neutral-200"></div>
                     </div>
 
@@ -237,7 +243,7 @@ const SignInPage = () => {
                                 type="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                placeholder="Email address"
+                                placeholder={t('signIn.emailPlaceholder')}
                                 className="w-full pl-12 pr-4 py-3.5 bg-neutral-50 border border-neutral-200 rounded-2xl text-neutral-700 placeholder:text-neutral-400 focus:outline-none focus:border-court-gold focus:ring-2 focus:ring-court-gold/20 transition-all"
                             />
                         </div>
@@ -249,7 +255,7 @@ const SignInPage = () => {
                                 type={showPassword ? 'text' : 'password'}
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                placeholder="Password"
+                                placeholder={t('signIn.passwordPlaceholder')}
                                 className="w-full pl-12 pr-12 py-3.5 bg-neutral-50 border border-neutral-200 rounded-2xl text-neutral-700 placeholder:text-neutral-400 focus:outline-none focus:border-court-gold focus:ring-2 focus:ring-court-gold/20 transition-all"
                             />
                             <button
@@ -279,7 +285,7 @@ const SignInPage = () => {
                                 </Motion.div>
                             ) : (
                                 <>
-                                    Sign In
+                                    {t('signIn.submit')}
                                     <ArrowRight className="w-5 h-5" />
                                 </>
                             )}
@@ -292,7 +298,7 @@ const SignInPage = () => {
                             to="/forgot-password"
                             className="text-sm text-court-gold hover:text-court-goldDark transition-colors"
                         >
-                            Forgot your password?
+                            {t('signIn.forgotPassword')}
                         </Link>
                     </div>
                 </div>
@@ -302,16 +308,16 @@ const SignInPage = () => {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.3 }}
-                    className="mt-6 text-center text-neutral-600"
+                className="mt-6 text-center text-neutral-600"
+            >
+                {t('signIn.newHere')}{' '}
+                <Link
+                    to="/signup"
+                    className="font-bold text-court-gold hover:text-court-goldDark transition-colors"
                 >
-                    New to Pause?{' '}
-                    <Link
-                        to="/signup"
-                        className="font-bold text-court-gold hover:text-court-goldDark transition-colors"
-                    >
-                        Create an account
-                    </Link>
-                </Motion.p>
+                    {t('signIn.actions.createAccount')}
+                </Link>
+            </Motion.p>
             </Motion.div>
 
             {/* Footer */}
@@ -319,10 +325,10 @@ const SignInPage = () => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.4 }}
-                className="mt-8 text-neutral-400 text-sm"
-            >
-                Resolve disputes with love 💕
-            </Motion.p>
+            className="mt-8 text-neutral-400 text-sm"
+        >
+            {t('signIn.footer')}
+        </Motion.p>
         </div>
     );
 };

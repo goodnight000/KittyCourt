@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useParams } from 'react-router-dom';
 import useAppStore from '../store/useAppStore';
+import { useI18n } from '../i18n';
+import { formatDate } from '../utils/helpers';
 import { 
     ChevronLeft, MessageCircle, Heart, Calendar, Scale, 
     AlertTriangle, Zap, Cloud, FileText, Clock, User,
@@ -18,21 +20,21 @@ const SEVERITY_CONFIG = {
         bg: 'bg-red-50',
         text: 'text-red-600',
         icon: AlertTriangle,
-        label: 'High Tension'
+        labelKey: 'cases.severity.highTension'
     },
     friction: {
         stripe: 'bg-amber-400',
         bg: 'bg-amber-50',
         text: 'text-amber-600',
         icon: Zap,
-        label: 'Friction'
+        labelKey: 'cases.severity.friction'
     },
     disconnection: {
         stripe: 'bg-blue-400',
         bg: 'bg-blue-50',
         text: 'text-blue-600',
         icon: Cloud,
-        label: 'Disconnection'
+        labelKey: 'cases.severity.disconnection'
     }
 };
 
@@ -44,6 +46,12 @@ const HORSEMAN_COLORS = {
     'Contempt': 'bg-red-100 text-red-700',
     'Defensiveness': 'bg-amber-100 text-amber-700',
     'Stonewalling': 'bg-slate-100 text-slate-700',
+};
+const HORSEMAN_LABELS = {
+    'Criticism': 'cases.horsemen.criticism',
+    'Contempt': 'cases.horsemen.contempt',
+    'Defensiveness': 'cases.horsemen.defensiveness',
+    'Stonewalling': 'cases.horsemen.stonewalling'
 };
 
 const CaseDetailPage = () => {
@@ -60,6 +68,7 @@ const CaseDetailPage = () => {
         resolutions: true,
         verdict: true
     });
+    const { t, language } = useI18n();
 
     useEffect(() => {
         const fetchCase = async () => {
@@ -81,18 +90,6 @@ const CaseDetailPage = () => {
         } catch {
             return { summary: verdictString };
         }
-    };
-
-    const formatDate = (dateString) => {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('en-US', { 
-            weekday: 'short',
-            month: 'short', 
-            day: 'numeric',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
     };
 
     if (loading) {
@@ -118,7 +115,7 @@ const CaseDetailPage = () => {
                     >
                         <ChevronLeft className="w-5 h-5 text-neutral-600" />
                     </motion.button>
-                    <h1 className="text-xl font-bold text-gradient">Case Not Found</h1>
+                    <h1 className="text-xl font-bold text-gradient">{t('cases.detail.notFound')}</h1>
                 </div>
             </div>
         );
@@ -127,6 +124,9 @@ const CaseDetailPage = () => {
     const severity = SEVERITY_CONFIG[caseData.severityLevel] || SEVERITY_CONFIG.friction;
     const SeverityIcon = severity.icon;
     const horseBadgeClass = HORSEMAN_COLORS[caseData.primaryHissTag] || 'bg-neutral-100 text-neutral-600';
+    const horseLabel = HORSEMAN_LABELS[caseData.primaryHissTag]
+        ? t(HORSEMAN_LABELS[caseData.primaryHissTag])
+        : caseData.primaryHissTag;
     
     // Get all verdicts (sorted by version descending - newest first)
     const allVerdicts = caseData.allVerdicts || [];
@@ -175,11 +175,19 @@ const CaseDetailPage = () => {
                 </motion.button>
                 <div className="flex-1 min-w-0">
                     <h1 className="text-lg font-bold text-gradient truncate">
-                        {caseData.caseTitle || 'Case Details'}
+                        {caseData.caseTitle || t('cases.detail.titleFallback')}
                     </h1>
                     <div className="flex items-center gap-2 text-xs text-neutral-500">
                         <Calendar className="w-3 h-3" />
-                        {formatDate(caseData.createdAt)}
+                        {formatDate(caseData.createdAt, {
+                            locale: language,
+                            weekday: 'short',
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        })}
                     </div>
                 </div>
             </motion.div>
@@ -194,16 +202,18 @@ const CaseDetailPage = () => {
                 <div className="flex flex-wrap gap-2">
                     <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${severity.bg} ${severity.text}`}>
                         <SeverityIcon className="w-3.5 h-3.5" />
-                        {severity.label}
+                        {t(severity.labelKey)}
                     </span>
                     {caseData.primaryHissTag && caseData.primaryHissTag !== 'None' && (
                         <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${horseBadgeClass}`}>
-                            {caseData.primaryHissTag}
+                            {horseLabel}
                         </span>
                     )}
                     {allVerdicts.length > 1 && (
                         <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-violet-100 text-violet-700">
-                            {allVerdicts.length} Verdicts
+                            {allVerdicts.length === 1
+                                ? t('cases.detail.verdicts.one')
+                                : t('cases.detail.verdicts.other', { count: allVerdicts.length })}
                         </span>
                     )}
                 </div>
@@ -226,29 +236,29 @@ const CaseDetailPage = () => {
             >
                 <div className="flex items-center justify-between">
                     <div>
-                        <h2 className="text-sm font-bold text-neutral-700">Judging Journey</h2>
-                        <p className="text-xs text-neutral-500">Evidence → Analysis → Priming → Joint Menu → Resolution</p>
+                        <h2 className="text-sm font-bold text-neutral-700">{t('cases.detail.journey.title')}</h2>
+                        <p className="text-xs text-neutral-500">{t('cases.detail.journey.subtitle')}</p>
                     </div>
                     <Scale className="w-5 h-5 text-court-gold" />
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-[11px] font-medium">
-                    <div className="rounded-xl border border-court-tan/40 bg-white/70 px-3 py-2 text-court-brown">Evidence</div>
+                    <div className="rounded-xl border border-court-tan/40 bg-white/70 px-3 py-2 text-court-brown">{t('cases.detail.journey.evidence')}</div>
                     <div className={`rounded-xl border px-3 py-2 ${analysisData ? 'border-green-400/60 bg-green-50/60 text-green-700' : 'border-court-tan/40 bg-white/70 text-court-brownLight'}`}>
-                        Analysis
+                        {t('cases.detail.journey.analysis')}
                     </div>
                     <div className={`rounded-xl border px-3 py-2 ${primingContent ? 'border-green-400/60 bg-green-50/60 text-green-700' : 'border-court-tan/40 bg-white/70 text-court-brownLight'}`}>
-                        Priming
+                        {t('cases.detail.journey.priming')}
                     </div>
                     <div className={`rounded-xl border px-3 py-2 ${jointMenu ? 'border-green-400/60 bg-green-50/60 text-green-700' : 'border-court-tan/40 bg-white/70 text-court-brownLight'}`}>
-                        Joint Menu
+                        {t('cases.detail.journey.jointMenu')}
                     </div>
                     <div className={`rounded-xl border px-3 py-2 col-span-2 ${finalResolution ? 'border-green-400/60 bg-green-50/60 text-green-700' : 'border-court-tan/40 bg-white/70 text-court-brownLight'}`}>
-                        Resolution
+                        {t('cases.detail.journey.resolution')}
                     </div>
                 </div>
                 {!analysisData && !primingContent && !jointMenu && (
                     <p className="text-xs text-neutral-500">
-                        Priming and joint menu details were not stored for this case.
+                        {t('cases.detail.journey.missing')}
                     </p>
                 )}
             </motion.div>
@@ -262,7 +272,7 @@ const CaseDetailPage = () => {
             >
                 <h2 className="text-sm font-bold text-neutral-700 flex items-center gap-2">
                     <User className="w-4 h-4 text-court-gold" />
-                    What Each Partner Said
+                    {t('cases.detail.partnerStatements.title')}
                 </h2>
 
                 {/* Partner A */}
@@ -275,12 +285,14 @@ const CaseDetailPage = () => {
                                 className="w-full h-full object-cover"
                             />
                         </div>
-                        <span className="text-sm font-bold text-pink-600">Partner A</span>
+                        <span className="text-sm font-bold text-pink-600">{t('cases.detail.partnerStatements.partnerA')}</span>
                     </div>
                     <div className="space-y-2 pl-10">
                         <div className="flex items-start gap-2">
                             <MessageCircle className="w-4 h-4 text-pink-400 mt-0.5 flex-shrink-0" />
-                            <p className="text-neutral-700 text-sm">{caseData.userAInput || 'No input provided'}</p>
+                            <p className="text-neutral-700 text-sm">
+                                {caseData.userAInput || t('cases.detail.partnerStatements.noInput')}
+                            </p>
                         </div>
                         {caseData.userAFeelings && (
                             <div className="flex items-start gap-2">
@@ -301,12 +313,14 @@ const CaseDetailPage = () => {
                                 className="w-full h-full object-cover"
                             />
                         </div>
-                        <span className="text-sm font-bold text-violet-600">Partner B</span>
+                        <span className="text-sm font-bold text-violet-600">{t('cases.detail.partnerStatements.partnerB')}</span>
                     </div>
                     <div className="space-y-2 pl-10">
                         <div className="flex items-start gap-2">
                             <MessageCircle className="w-4 h-4 text-violet-400 mt-0.5 flex-shrink-0" />
-                            <p className="text-neutral-700 text-sm">{caseData.userBInput || 'No input provided'}</p>
+                            <p className="text-neutral-700 text-sm">
+                                {caseData.userBInput || t('cases.detail.partnerStatements.noInput')}
+                            </p>
                         </div>
                         {caseData.userBFeelings && (
                             <div className="flex items-start gap-2">
@@ -333,7 +347,7 @@ const CaseDetailPage = () => {
                     >
                         <span className="flex items-center gap-2">
                             <Scale className="w-4 h-4 text-court-gold" />
-                            Analysis & Intensity
+                            {t('cases.detail.analysis.title')}
                         </span>
                         {openSections.analysis ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                     </button>
@@ -348,15 +362,17 @@ const CaseDetailPage = () => {
                             >
                                 <div className="grid gap-3 md:grid-cols-2">
                                     <div className="glass-card p-3">
-                                        <p className="text-[11px] font-bold text-neutral-500 uppercase">Intensity</p>
-                                        <p className="text-sm font-semibold text-court-brown capitalize">{assessedIntensity || 'Not assessed'}</p>
+                                        <p className="text-[11px] font-bold text-neutral-500 uppercase">{t('cases.detail.analysis.intensity')}</p>
+                                        <p className="text-sm font-semibold text-court-brown capitalize">
+                                            {assessedIntensity || t('cases.detail.analysis.notAssessed')}
+                                        </p>
                                     </div>
                                     <div className="glass-card p-3">
-                                        <p className="text-[11px] font-bold text-neutral-500 uppercase">Dynamic</p>
+                                        <p className="text-[11px] font-bold text-neutral-500 uppercase">{t('cases.detail.analysis.dynamic')}</p>
                                         <p className="text-sm font-semibold text-court-brown">{analysisData.identifiedDynamic || '—'}</p>
                                     </div>
                                     <div className="glass-card p-3 md:col-span-2">
-                                        <p className="text-[11px] font-bold text-neutral-500 uppercase">Root Conflict Theme</p>
+                                        <p className="text-[11px] font-bold text-neutral-500 uppercase">{t('cases.detail.analysis.rootConflict')}</p>
                                         <p className="text-sm text-neutral-700">{analysisData.rootConflictTheme || '—'}</p>
                                     </div>
                                 </div>
@@ -364,11 +380,11 @@ const CaseDetailPage = () => {
                                 <div className="glass-card p-3 space-y-3">
                                     <div className="flex items-start gap-3">
                                         <div className="flex-1">
-                                            <p className="text-[11px] font-bold text-neutral-500 uppercase">Partner A Vulnerable Emotion</p>
+                                            <p className="text-[11px] font-bold text-neutral-500 uppercase">{t('cases.detail.analysis.partnerAVulnerable')}</p>
                                             <p className="text-sm text-neutral-700">{analysisData.userA_VulnerableEmotion || '—'}</p>
                                         </div>
                                         <div className="flex-1">
-                                            <p className="text-[11px] font-bold text-neutral-500 uppercase">Partner B Vulnerable Emotion</p>
+                                            <p className="text-[11px] font-bold text-neutral-500 uppercase">{t('cases.detail.analysis.partnerBVulnerable')}</p>
                                             <p className="text-sm text-neutral-700">{analysisData.userB_VulnerableEmotion || '—'}</p>
                                         </div>
                                     </div>
@@ -376,27 +392,31 @@ const CaseDetailPage = () => {
                                     {(analysisData.userA_Horsemen || analysisData.userB_Horsemen) && (
                                         <div className="grid gap-2 md:grid-cols-2">
                                             <div>
-                                                <p className="text-[11px] font-bold text-neutral-500 uppercase mb-1">Partner A Patterns</p>
+                                                <p className="text-[11px] font-bold text-neutral-500 uppercase mb-1">{t('cases.detail.analysis.partnerAPatterns')}</p>
                                                 <div className="flex flex-wrap gap-1">
                                                     {(analysisData.userA_Horsemen || ['None']).map((horse) => (
                                                         <span
                                                             key={`a-${horse}`}
                                                             className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${HORSEMAN_COLORS[horse] || 'bg-neutral-100 text-neutral-600'}`}
                                                         >
-                                                            {horse}
+                                                            {HORSEMAN_LABELS[horse]
+                                                                ? t(HORSEMAN_LABELS[horse])
+                                                                : (horse === 'None' ? t('cases.detail.analysis.none') : horse)}
                                                         </span>
                                                     ))}
                                                 </div>
                                             </div>
                                             <div>
-                                                <p className="text-[11px] font-bold text-neutral-500 uppercase mb-1">Partner B Patterns</p>
+                                                <p className="text-[11px] font-bold text-neutral-500 uppercase mb-1">{t('cases.detail.analysis.partnerBPatterns')}</p>
                                                 <div className="flex flex-wrap gap-1">
                                                     {(analysisData.userB_Horsemen || ['None']).map((horse) => (
                                                         <span
                                                             key={`b-${horse}`}
                                                             className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${HORSEMAN_COLORS[horse] || 'bg-neutral-100 text-neutral-600'}`}
                                                         >
-                                                            {horse}
+                                                            {HORSEMAN_LABELS[horse]
+                                                                ? t(HORSEMAN_LABELS[horse])
+                                                                : (horse === 'None' ? t('cases.detail.analysis.none') : horse)}
                                                         </span>
                                                     ))}
                                                 </div>
@@ -420,7 +440,7 @@ const CaseDetailPage = () => {
                 >
                     <h2 className="text-sm font-bold text-neutral-700 flex items-center gap-2">
                         <Heart className="w-4 h-4 text-court-gold" />
-                        Priming Insights
+                        {t('cases.detail.priming.title')}
                     </h2>
 
                     {(['userA', 'userB']).map((key) => {
@@ -434,7 +454,11 @@ const CaseDetailPage = () => {
                                     onClick={() => toggleSection(sectionKey)}
                                     className="w-full flex items-center justify-between text-sm font-bold text-neutral-700"
                                 >
-                                    <span>{key === 'userA' ? 'Partner A' : 'Partner B'} Priming</span>
+                                    <span>
+                                        {key === 'userA'
+                                            ? t('cases.detail.priming.partnerA')
+                                            : t('cases.detail.priming.partnerB')}
+                                    </span>
                                     {openSections[sectionKey] ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                                 </button>
 
@@ -447,16 +471,16 @@ const CaseDetailPage = () => {
                                             className="space-y-3 text-sm text-neutral-700"
                                         >
                                             <div>
-                                                <p className="text-[11px] font-bold text-neutral-500 uppercase mb-1">Your Feelings</p>
+                                                <p className="text-[11px] font-bold text-neutral-500 uppercase mb-1">{t('cases.detail.priming.yourFeelings')}</p>
                                                 <p className="text-sm text-neutral-700">{content.yourFeelings}</p>
                                             </div>
                                             <div>
-                                                <p className="text-[11px] font-bold text-neutral-500 uppercase mb-1">Partner's Perspective</p>
+                                                <p className="text-[11px] font-bold text-neutral-500 uppercase mb-1">{t('cases.detail.priming.partnerPerspective')}</p>
                                                 <p className="text-sm text-neutral-700">{content.partnerPerspective}</p>
                                             </div>
                                             <div className="grid gap-3 md:grid-cols-2">
                                                 <div>
-                                                    <p className="text-[11px] font-bold text-neutral-500 uppercase mb-1">Reflection Questions</p>
+                                                    <p className="text-[11px] font-bold text-neutral-500 uppercase mb-1">{t('cases.detail.priming.reflectionQuestions')}</p>
                                                     <ul className="list-disc list-inside text-xs text-neutral-600 space-y-1">
                                                         {content.reflectionQuestions?.map((q, idx) => (
                                                             <li key={`${key}-rq-${idx}`}>{q}</li>
@@ -464,7 +488,7 @@ const CaseDetailPage = () => {
                                                     </ul>
                                                 </div>
                                                 <div>
-                                                    <p className="text-[11px] font-bold text-neutral-500 uppercase mb-1">Questions for Partner</p>
+                                                    <p className="text-[11px] font-bold text-neutral-500 uppercase mb-1">{t('cases.detail.priming.questionsForPartner')}</p>
                                                     <ul className="list-disc list-inside text-xs text-neutral-600 space-y-1">
                                                         {content.questionsForPartner?.map((q, idx) => (
                                                             <li key={`${key}-qp-${idx}`}>{q}</li>
@@ -496,7 +520,7 @@ const CaseDetailPage = () => {
                     >
                         <span className="flex items-center gap-2">
                             <Scale className="w-4 h-4 text-court-gold" />
-                            Joint Menu
+                            {t('cases.detail.jointMenu.title')}
                         </span>
                         {openSections.jointMenu ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                     </button>
@@ -510,23 +534,23 @@ const CaseDetailPage = () => {
                                 className="glass-card p-4 space-y-3"
                             >
                                 <div>
-                                    <p className="text-[11px] font-bold text-neutral-500 uppercase mb-1">The Real Story</p>
+                                    <p className="text-[11px] font-bold text-neutral-500 uppercase mb-1">{t('cases.detail.jointMenu.summary')}</p>
                                     <p className="text-sm text-neutral-700">{jointMenu.theSummary}</p>
                                 </div>
                                 <div className="grid gap-3 md:grid-cols-2">
                                     <div className="rounded-xl border border-green-200/60 bg-green-50/60 p-3">
-                                        <p className="text-[11px] font-bold text-green-700 uppercase mb-1">The Good Stuff</p>
-                                        <p className="text-xs text-neutral-700"><strong>Partner A:</strong> {jointMenu.theGoodStuff?.userA}</p>
-                                        <p className="text-xs text-neutral-700 mt-1"><strong>Partner B:</strong> {jointMenu.theGoodStuff?.userB}</p>
+                                        <p className="text-[11px] font-bold text-green-700 uppercase mb-1">{t('cases.detail.jointMenu.goodStuff')}</p>
+                                        <p className="text-xs text-neutral-700"><strong>{t('cases.detail.partnerStatements.partnerA')}:</strong> {jointMenu.theGoodStuff?.userA}</p>
+                                        <p className="text-xs text-neutral-700 mt-1"><strong>{t('cases.detail.partnerStatements.partnerB')}:</strong> {jointMenu.theGoodStuff?.userB}</p>
                                     </div>
                                     <div className="rounded-xl border border-amber-200/60 bg-amber-50/60 p-3">
-                                        <p className="text-[11px] font-bold text-amber-700 uppercase mb-1">Growth Edges</p>
-                                        <p className="text-xs text-neutral-700"><strong>Partner A:</strong> {jointMenu.theGrowthEdges?.userA}</p>
-                                        <p className="text-xs text-neutral-700 mt-1"><strong>Partner B:</strong> {jointMenu.theGrowthEdges?.userB}</p>
+                                        <p className="text-[11px] font-bold text-amber-700 uppercase mb-1">{t('cases.detail.jointMenu.growthEdges')}</p>
+                                        <p className="text-xs text-neutral-700"><strong>{t('cases.detail.partnerStatements.partnerA')}:</strong> {jointMenu.theGrowthEdges?.userA}</p>
+                                        <p className="text-xs text-neutral-700 mt-1"><strong>{t('cases.detail.partnerStatements.partnerB')}:</strong> {jointMenu.theGrowthEdges?.userB}</p>
                                     </div>
                                 </div>
                                 <div>
-                                    <p className="text-[11px] font-bold text-neutral-500 uppercase mb-1">Resolution Preview</p>
+                                    <p className="text-[11px] font-bold text-neutral-500 uppercase mb-1">{t('cases.detail.jointMenu.resolutionPreview')}</p>
                                     <p className="text-sm text-neutral-700">{jointMenu.resolutionPreview}</p>
                                 </div>
                                 {jointMenu.closingWisdom && (
@@ -555,7 +579,7 @@ const CaseDetailPage = () => {
                     >
                         <span className="flex items-center gap-2">
                             <CheckCircle className="w-4 h-4 text-green-600" />
-                            Resolution Menu
+                            {t('cases.detail.resolutions.title')}
                         </span>
                         {openSections.resolutions ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                     </button>
@@ -581,12 +605,14 @@ const CaseDetailPage = () => {
                                                     <p className="text-xs text-neutral-500 mt-1">{option.estimatedDuration}</p>
                                                 </div>
                                                 {isFinal && (
-                                                    <span className="text-[10px] font-bold text-green-600 uppercase">Chosen</span>
+                                                    <span className="text-[10px] font-bold text-green-600 uppercase">{t('cases.detail.resolutions.chosen')}</span>
                                                 )}
                                             </div>
                                             <p className="text-sm text-neutral-700 mt-2">{option.combinedDescription}</p>
                                             {option.rationale && (
-                                                <p className="text-xs text-neutral-500 italic mt-2">Why: {option.rationale}</p>
+                                                <p className="text-xs text-neutral-500 italic mt-2">
+                                                    {t('cases.detail.resolutions.why', { reason: option.rationale })}
+                                                </p>
                                             )}
                                         </div>
                                     );
@@ -611,7 +637,7 @@ const CaseDetailPage = () => {
                 >
                     <span className="flex items-center gap-2">
                         <Scale className="w-4 h-4 text-court-gold" />
-                        Judge Whiskers' Ruling
+                        {t('cases.detail.verdict.title')}
                     </span>
                     {openSections.verdict ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                 </button>
@@ -634,12 +660,12 @@ const CaseDetailPage = () => {
                                     {v.addendumBy ? (
                                         <>
                                             <FileText className="w-3 h-3" />
-                                            <span>Addendum #{v.version}</span>
+                                            <span>{t('cases.detail.verdict.addendumLabel', { number: v.version })}</span>
                                         </>
                                     ) : (
                                         <>
                                             <Scale className="w-3 h-3" />
-                                            <span>Original</span>
+                                            <span>{t('cases.detail.verdict.originalLabel')}</span>
                                         </>
                                     )}
                                 </div>
@@ -659,14 +685,26 @@ const CaseDetailPage = () => {
                             <FileText className="w-4 h-4 text-violet-500 mt-0.5 flex-shrink-0" />
                             <div className="flex-1 min-w-0">
                                 <p className="text-xs font-bold text-violet-600 mb-1">
-                                    Addendum by {currentVerdictData.addendumBy === 'userA' ? 'Partner A' : 'Partner B'}
+                                    {t('cases.detail.verdict.addendumBy', {
+                                        name: currentVerdictData.addendumBy === 'userA'
+                                            ? t('cases.detail.partnerStatements.partnerA')
+                                            : t('cases.detail.partnerStatements.partnerB')
+                                    })}
                                 </p>
                                 <p className="text-sm text-neutral-700 italic">
                                     "{currentVerdictData.addendumText}"
                                 </p>
                                 <p className="text-[10px] text-neutral-400 mt-1 flex items-center gap-1">
                                     <Clock className="w-3 h-3" />
-                                    {formatDate(currentVerdictData.createdAt)}
+                                    {formatDate(currentVerdictData.createdAt, {
+                                        locale: language,
+                                        weekday: 'short',
+                                        month: 'short',
+                                        day: 'numeric',
+                                        year: 'numeric',
+                                        hour: '2-digit',
+                                        minute: '2-digit'
+                                    })}
                                 </p>
                             </div>
                         </div>
@@ -681,13 +719,13 @@ const CaseDetailPage = () => {
                             <div className="w-12 h-12 rounded-xl overflow-hidden shadow-md border-2 border-court-gold/30">
                                 <img 
                                     src="/assets/avatars/judge_whiskers.png" 
-                                    alt="Judge Whiskers" 
+                                    alt={t('court.verdict.judgeAlt')}
                                     className="w-full h-full object-cover"
                                 />
                             </div>
                             <div>
-                                <p className="font-bold text-court-brown">Judge Whiskers</p>
-                                <p className="text-xs text-neutral-500">The Honorable Therapist Cat</p>
+                                <p className="font-bold text-court-brown">{t('cases.detail.verdict.judgeName')}</p>
+                                <p className="text-xs text-neutral-500">{t('cases.detail.verdict.judgeTitle')}</p>
                             </div>
                         </div>
 
@@ -695,7 +733,7 @@ const CaseDetailPage = () => {
                         {(currentVerdict.theSummary || currentVerdict.summary) && (
                             <div>
                                 <p className="text-xs font-bold text-violet-500 mb-1.5 flex items-center gap-1">
-                                    💬 The Real Story
+                                    💬 {t('court.verdict.sections.summary.title')}
                                 </p>
                                 <p className="text-neutral-700 text-sm leading-relaxed">
                                     {currentVerdict.theSummary || currentVerdict.summary}
@@ -706,14 +744,14 @@ const CaseDetailPage = () => {
                         {/* The Purr (Validation) */}
                         {currentVerdict.theRuling_ThePurr && (
                             <div>
-                                <p className="text-xs font-bold text-green-500 mb-1.5">😻 The Purr (Validation)</p>
+                                <p className="text-xs font-bold text-green-500 mb-1.5">😻 {t('court.verdict.sections.purr.title')}</p>
                                 <div className="space-y-2 pl-2">
                                     <div className="bg-green-50/50 rounded-lg p-2.5">
-                                        <p className="text-xs font-medium text-green-600 mb-1">Partner A:</p>
+                                        <p className="text-xs font-medium text-green-600 mb-1">{t('cases.detail.partnerStatements.partnerA')}:</p>
                                         <p className="text-neutral-700 text-sm">{currentVerdict.theRuling_ThePurr.userA}</p>
                                     </div>
                                     <div className="bg-green-50/50 rounded-lg p-2.5">
-                                        <p className="text-xs font-medium text-green-600 mb-1">Partner B:</p>
+                                        <p className="text-xs font-medium text-green-600 mb-1">{t('cases.detail.partnerStatements.partnerB')}:</p>
                                         <p className="text-neutral-700 text-sm">{currentVerdict.theRuling_ThePurr.userB}</p>
                                     </div>
                                 </div>
@@ -723,7 +761,7 @@ const CaseDetailPage = () => {
                         {/* The Hiss (Growth Areas) */}
                         {currentVerdict.theRuling_TheHiss && currentVerdict.theRuling_TheHiss.length > 0 && (
                             <div>
-                                <p className="text-xs font-bold text-amber-500 mb-1.5">🙀 The Hiss (Growth Areas)</p>
+                                <p className="text-xs font-bold text-amber-500 mb-1.5">🙀 {t('court.verdict.sections.hiss.title')}</p>
                                 <ul className="space-y-1.5 pl-2">
                                     {currentVerdict.theRuling_TheHiss.map((hiss, i) => (
                                         <li key={i} className="text-neutral-700 text-sm flex items-start gap-2">
@@ -739,14 +777,14 @@ const CaseDetailPage = () => {
                         {currentVerdict.theSentence && (
                             <div className="bg-pink-50/70 rounded-xl p-3.5 border border-pink-100">
                                 <p className="text-xs font-bold text-pink-500 mb-1.5">
-                                    💕 The Repair: {currentVerdict.theSentence.title}
+                                    {t('cases.detail.verdict.repairLabel', { title: currentVerdict.theSentence.title })}
                                 </p>
                                 <p className="text-neutral-700 text-sm mb-2">
                                     {currentVerdict.theSentence.description}
                                 </p>
                                 {currentVerdict.theSentence.rationale && (
                                     <p className="text-neutral-500 text-xs italic">
-                                        Why this repair: {currentVerdict.theSentence.rationale}
+                                        {t('cases.detail.verdict.repairWhy', { reason: currentVerdict.theSentence.rationale })}
                                     </p>
                                 )}
                             </div>
@@ -766,13 +804,13 @@ const CaseDetailPage = () => {
                             <>
                                 {currentVerdict.ruling && (
                                     <div>
-                                        <p className="text-xs font-bold text-neutral-500 mb-1">⚖️ Ruling</p>
+                                        <p className="text-xs font-bold text-neutral-500 mb-1">⚖️ {t('cases.detail.verdict.legacyRuling')}</p>
                                         <p className="text-neutral-800 text-sm font-semibold">{currentVerdict.ruling}</p>
                                     </div>
                                 )}
                                 {currentVerdict.sentence && (
                                     <div>
-                                        <p className="text-xs font-bold text-neutral-500 mb-1">📜 Sentence</p>
+                                        <p className="text-xs font-bold text-neutral-500 mb-1">📜 {t('cases.detail.verdict.legacySentence')}</p>
                                         <p className="text-neutral-700 text-sm">{currentVerdict.sentence}</p>
                                     </div>
                                 )}
@@ -792,7 +830,7 @@ const CaseDetailPage = () => {
                 >
                     <h2 className="text-sm font-bold text-neutral-700 flex items-center gap-2">
                         <FileText className="w-4 h-4 text-court-gold" />
-                        Case Timeline
+                        {t('cases.detail.timeline.title')}
                     </h2>
                     
                     <div className="relative pl-4 border-l-2 border-neutral-200 space-y-4">
@@ -819,14 +857,25 @@ const CaseDetailPage = () => {
                                         <div className="flex items-center justify-between">
                                             <div>
                                                 <p className="text-sm font-medium text-neutral-700">
-                                                    {v.addendumBy 
-                                                        ? `Addendum by ${v.addendumBy === 'userA' ? 'Partner A' : 'Partner B'}`
-                                                        : 'Original Verdict'
-                                                    }
+                                                    {v.addendumBy
+                                                        ? t('cases.detail.timeline.addendumBy', {
+                                                            name: v.addendumBy === 'userA'
+                                                                ? t('cases.detail.partnerStatements.partnerA')
+                                                                : t('cases.detail.partnerStatements.partnerB')
+                                                        })
+                                                        : t('cases.detail.timeline.originalVerdict')}
                                                 </p>
                                                 <p className="text-[10px] text-neutral-400 flex items-center gap-1 mt-0.5">
                                                     <Clock className="w-3 h-3" />
-                                                    {formatDate(v.createdAt)}
+                                                    {formatDate(v.createdAt, {
+                                                        locale: language,
+                                                        weekday: 'short',
+                                                        month: 'short',
+                                                        day: 'numeric',
+                                                        year: 'numeric',
+                                                        hour: '2-digit',
+                                                        minute: '2-digit'
+                                                    })}
                                                 </p>
                                             </div>
                                             <ChevronRight className="w-4 h-4 text-neutral-400" />

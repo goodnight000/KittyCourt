@@ -9,14 +9,14 @@ import { supabase } from './supabase';
 
 // List of preset avatars with metadata
 export const PRESET_AVATARS = [
-    { id: 'bear', path: '/assets/profile-pic/bear.png', label: 'Bear' },
-    { id: 'bunny', path: '/assets/profile-pic/bunny.png', label: 'Bunny' },
-    { id: 'capybara', path: '/assets/profile-pic/capybara.png', label: 'Capybara' },
-    { id: 'cat', path: '/assets/profile-pic/cat.png', label: 'Cat' },
-    { id: 'dog', path: '/assets/profile-pic/dog.png', label: 'Dog' },
-    { id: 'fox', path: '/assets/profile-pic/fox.png', label: 'Fox' },
-    { id: 'panda', path: '/assets/profile-pic/panda.png', label: 'Panda' },
-    { id: 'penguin', path: '/assets/profile-pic/penguin.png', label: 'Penguin' },
+    { id: 'bear', path: '/assets/profile-pic/bear.png', label: 'Bear', labelKey: 'options.animals.bear' },
+    { id: 'bunny', path: '/assets/profile-pic/bunny.png', label: 'Bunny', labelKey: 'options.animals.bunny' },
+    { id: 'capybara', path: '/assets/profile-pic/capybara.png', label: 'Capybara', labelKey: 'options.animals.capybara' },
+    { id: 'cat', path: '/assets/profile-pic/cat.png', label: 'Cat', labelKey: 'options.animals.cat' },
+    { id: 'dog', path: '/assets/profile-pic/dog.png', label: 'Dog', labelKey: 'options.animals.dog' },
+    { id: 'fox', path: '/assets/profile-pic/fox.png', label: 'Fox', labelKey: 'options.animals.fox' },
+    { id: 'panda', path: '/assets/profile-pic/panda.png', label: 'Panda', labelKey: 'options.animals.panda' },
+    { id: 'penguin', path: '/assets/profile-pic/penguin.png', label: 'Penguin', labelKey: 'options.animals.penguin' },
 ];
 
 // Legacy: Array of just paths for backwards compatibility checks
