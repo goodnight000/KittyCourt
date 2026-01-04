@@ -6,22 +6,18 @@
 
 const express = require('express');
 const router = express.Router();
-const { requireSupabase, requireAuthUserId, getPartnerIdForUser } = require('../lib/auth');
+const { requireAuthUserId, requireSupabase } = require('../lib/auth');
+const { requirePartner } = require('../middleware/requirePartner.cjs');
 const { canUseFeature } = require('../lib/usageLimits');
 const { awardXP, ACTION_TYPES } = require('../lib/xpService');
 const { recordChallengeAction, CHALLENGE_ACTIONS } = require('../lib/challengeService');
 const { resolveRequestLanguage } = require('../lib/language');
-
-const isProd = process.env.NODE_ENV === 'production';
-const safeErrorMessage = (error) => (isProd ? 'Internal server error' : (error?.message || String(error)));
+const { safeErrorMessage } = require('../lib/shared/errorUtils');
 
 // Get calendar events
-router.get('/events', async (req, res) => {
+router.get('/events', requirePartner, async (req, res) => {
     try {
-        const viewerId = await requireAuthUserId(req);
-
-        const supabase = requireSupabase();
-        const partnerId = await getPartnerIdForUser(supabase, viewerId);
+        const { userId: viewerId, partnerId, supabase } = req;
 
         let query = supabase
             .from('calendar_events')
@@ -64,12 +60,10 @@ router.get('/events', async (req, res) => {
 });
 
 // Create calendar event
-router.post('/events', async (req, res) => {
+router.post('/events', requirePartner, async (req, res) => {
     try {
-        const viewerId = await requireAuthUserId(req);
+        const { userId: viewerId, partnerId, supabase } = req;
         const { title, date, type, emoji, isRecurring, notes, isSecret } = req.body;
-
-        const supabase = requireSupabase();
 
         const { data: event, error } = await supabase
             .from('calendar_events')
@@ -88,7 +82,6 @@ router.post('/events', async (req, res) => {
 
         if (error) throw error;
 
-        const partnerId = await getPartnerIdForUser(supabase, viewerId);
         if (partnerId) {
             try {
                 await awardXP({
@@ -132,13 +125,11 @@ router.post('/events', async (req, res) => {
 });
 
 // Update calendar event
-router.put('/events/:id', async (req, res) => {
+router.put('/events/:id', requirePartner, async (req, res) => {
     try {
         const { id } = req.params;
-        const viewerId = await requireAuthUserId(req);
+        const { userId: viewerId, partnerId, supabase } = req;
         const { title, date, type, emoji, isRecurring, notes, isSecret } = req.body;
-
-        const supabase = requireSupabase();
 
         const { data: existing, error: existingError } = await supabase
             .from('calendar_events')
@@ -148,7 +139,6 @@ router.put('/events/:id', async (req, res) => {
 
         if (existingError) throw existingError;
 
-        const partnerId = await getPartnerIdForUser(supabase, viewerId);
         const canEdit = existing.created_by === viewerId || (partnerId && existing.created_by === partnerId && existing.is_secret === false);
         if (!canEdit) return res.status(403).json({ error: 'Not allowed to update this event' });
 
@@ -187,12 +177,10 @@ router.put('/events/:id', async (req, res) => {
 });
 
 // Delete calendar event
-router.delete('/events/:id', async (req, res) => {
+router.delete('/events/:id', requirePartner, async (req, res) => {
     try {
         const { id } = req.params;
-        const viewerId = await requireAuthUserId(req);
-
-        const supabase = requireSupabase();
+        const { userId: viewerId, partnerId, supabase } = req;
 
         const { data: existing, error: existingError } = await supabase
             .from('calendar_events')
@@ -202,7 +190,6 @@ router.delete('/events/:id', async (req, res) => {
 
         if (existingError) throw existingError;
 
-        const partnerId = await getPartnerIdForUser(supabase, viewerId);
         const canDelete = existing.created_by === viewerId || (partnerId && existing.created_by === partnerId && existing.is_secret === false);
         if (!canDelete) return res.status(403).json({ error: 'Not allowed to delete this event' });
 
@@ -330,11 +317,11 @@ router.patch('/event-plans/:id', async (req, res) => {
 });
 
 // AI-powered event planning suggestions
-router.post('/plan-event', async (req, res) => {
+router.post('/plan-event', requirePartner, async (req, res) => {
     try {
         const {
             event,
-            partnerId,
+            partnerId: partnerIdFromClient,
             partnerDisplayName,
             currentUserName,
             style,
@@ -345,9 +332,7 @@ router.post('/plan-event', async (req, res) => {
             eventKey,
         } = req.body || {};
 
-        const viewerId = await requireAuthUserId(req);
-        const supabase = requireSupabase();
-        const resolvedPartnerId = await getPartnerIdForUser(supabase, viewerId);
+        const { userId: viewerId, partnerId, supabase } = req;
         const language = await resolveRequestLanguage(req, supabase, viewerId);
 
         const normalizedEvent = event || {
@@ -356,10 +341,7 @@ router.post('/plan-event', async (req, res) => {
             date: eventDate,
         };
 
-        if (!resolvedPartnerId) {
-            return res.status(400).json({ error: 'No partner connected' });
-        }
-        if (!partnerId || String(partnerId) !== String(resolvedPartnerId)) {
+        if (partnerIdFromClient && String(partnerIdFromClient) !== String(partnerId)) {
             return res.status(400).json({ error: 'Invalid partnerId for current user' });
         }
 
@@ -374,7 +356,7 @@ router.post('/plan-event', async (req, res) => {
         const result = await generateEventPlan({
             event: normalizedEvent,
             userId: viewerId,
-            partnerId: resolvedPartnerId,
+            partnerId,
             partnerDisplayName,
             currentUserName,
             style,
@@ -388,7 +370,7 @@ router.post('/plan-event', async (req, res) => {
                     .from('event_plans')
                     .upsert({
                         user_id: viewerId,
-                        partner_id: resolvedPartnerId,
+                        partner_id: partnerId,
                         event_key: eventKey,
                         event_snapshot: normalizedEvent,
                         style: style || 'cozy',

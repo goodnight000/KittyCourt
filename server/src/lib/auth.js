@@ -43,9 +43,24 @@ const getPartnerIdForUser = async (supabase, userId) => {
     return data?.partner_id || null;
 };
 
+/**
+ * Get authenticated user ID or return null if authentication fails.
+ * Non-throwing version of requireAuthUserId for optional auth scenarios.
+ * @param {Object} req - Express request object
+ * @returns {Promise<string|null>} User ID or null
+ */
+const getAuthUserIdOrNull = async (req) => {
+    try {
+        return await requireAuthUserId(req);
+    } catch (error) {
+        return null;
+    }
+};
+
 module.exports = {
     requireSupabase,
     requireAuthUserId,
-    getPartnerIdForUser
+    getPartnerIdForUser,
+    getAuthUserIdOrNull
 };
 

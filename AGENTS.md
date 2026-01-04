@@ -17,6 +17,7 @@
 - AI verdict flow lives in `server/src/lib/judgeEngine.js` (guardrail → analysis → verdict). Keep changes in `server/src/lib/prompts.js` and `server/src/lib/jsonSchemas.js` in sync.
 - Memory/RAG behavior is documented in `server/MEMORY_SYSTEM.md`; update/add Vitest coverage when changing extraction or retrieval.
 - Client state lives in Zustand stores under `client/src/store/`; avoid reintroducing legacy "User A/B" UI patterns.
+- Language config is centralized in `i18n.languages.json` and consumed by client/server. Client helpers live in `client/src/i18n/languageConfig.js`; server helpers live in `server/src/lib/language.js` (profile-first, header fallback).
 
 ## Build, Test, and Development Commands
 
@@ -41,6 +42,25 @@ cd server && npm test       # Vitest (run once)
 - Use Vitest on both client and server.
 - Client tests live in `client/src/test/` (setup: `client/src/test/setup.js`). Prefer `*.test.js` naming.
 - Server tests live alongside the code they cover (e.g., `server/src/lib/judgeEngine.test.js`).
+
+## Language System + Adding New Content
+
+- Shared config: `i18n.languages.json` defines `default`, `supported[]` (`code`, `labelKey`, `nativeLabel`, `aliases`). Add aliases for region codes (e.g. `pt-BR`) to keep normalization consistent.
+- Client i18n:
+  - Locale files: `client/src/i18n/locales/<code>.json`.
+  - Config + normalization: `client/src/i18n/languageConfig.js` (use `matchLanguage` for strict matching, `normalizeLanguage` for fallback-to-default).
+  - Use `useI18n().t()` in UI; use `translate()` in non-hook helpers (`client/src/utils/helpers.js`).
+  - Onboarding: language selection is the first step; selection immediately updates the UI and persists to onboarding data.
+- Server i18n:
+  - Use `resolveRequestLanguage` from `server/src/lib/language.js` (profile preferred language wins; header is fallback).
+  - For prompts/LLM output, use `normalizeLanguage` + `getLanguageLabel`.
+- Adding new localized content:
+  1) Add the language entry to `i18n.languages.json` (include `nativeLabel` and `aliases`).
+  2) Add `client/src/i18n/locales/<code>.json`.
+  3) Seed DB translations (`question_bank_translations`, `challenges_translations`) for new languages.
+  4) If server fallback copy exists (e.g. event planner), add the language there.
+  5) For new UI strings, add keys to locale JSON and replace literals with `t()` calls.
+  6) For new server/user-visible strings, pass `resolveRequestLanguage` through the API path and localize as needed.
 
 ## Security & Configuration Tips
 

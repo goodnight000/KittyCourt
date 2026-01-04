@@ -90,7 +90,7 @@ describe('Stenographer Agent', () => {
             const mockEmbedding = new Array(1536).fill(0.1);
             generateEmbeddings.mockResolvedValue([mockEmbedding]);
             searchSimilarMemories.mockResolvedValue([
-                { id: 'existing-mem', memory_text: 'Similar insight', similarity: 0.95 },
+                { id: 'existing-mem', memory_text: 'Similar insight', memory_type: 'trigger', similarity: 0.95 },
             ]);
             reinforceMemory.mockResolvedValue({ id: 'existing-mem' });
 

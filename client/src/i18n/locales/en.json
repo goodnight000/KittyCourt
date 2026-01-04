@@ -1937,5 +1937,45 @@
       "title": "Account created",
       "subtitle": "Redirecting you to onboarding..."
     }
+  },
+  "settings": {
+    "title": "Settings",
+    "account": {
+      "title": "Account",
+      "loginMethod": "Login method",
+      "google": "Google",
+      "email": "Email",
+      "changePassword": "Change password",
+      "disconnectCouple": "Disconnect from couple",
+      "disconnectWarning": "This will remove your partner connection. This action cannot be undone.",
+      "disconnectConfirm": "Yes, disconnect",
+      "disconnectCancel": "Cancel"
+    },
+    "notifications": {
+      "title": "Notifications",
+      "dailyMeow": "Daily Meow reminders",
+      "verdicts": "Verdict notifications",
+      "partnerActivity": "Partner activity"
+    },
+    "preferences": {
+      "title": "Preferences",
+      "language": "Language"
+    },
+    "support": {
+      "title": "Support & Feedback",
+      "contact": "Contact support",
+      "bug": "Report a bug",
+      "feature": "Suggest a feature"
+    },
+    "legal": {
+      "title": "Legal & About",
+      "terms": "Terms and Conditions",
+      "privacy": "Privacy Policy",
+      "version": "App version"
+    },
+    "howItWorks": {
+      "title": "How Judge Whiskers Works",
+      "description": "Both partners submit their perspective. Judge Whiskers reviews the evidence, identifies hidden feelings, and delivers a fair, empathetic verdict designed to help you reconnect."
+    }
   }
 }

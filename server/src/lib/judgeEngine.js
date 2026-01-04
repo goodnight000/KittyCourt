@@ -34,7 +34,7 @@ const {
     buildHybridResolutionUserPrompt,
 } = require('./prompts');
 const { retrieveHistoricalContext, formatContextForPrompt, hasHistoricalContext } = require('./memoryRetrieval');
-const { repairAndParseJSON } = require('./jsonRepair');
+const { callLLMWithRetry } = require('./shared/llmRetryHandler');
 
 const DEBUG_LOGS = process.env.NODE_ENV !== 'production';
 
@@ -75,13 +75,10 @@ const HYBRID_MODEL = 'x-ai/grok-4.1-fast';
 async function runAnalystRepair(input, historicalContext = '', judgeType = 'logical') {
     const model = JUDGE_MODELS[judgeType] || CONFIG.model;
     const userPrompt = buildAnalystRepairUserPrompt(input, historicalContext);
-    let lastError = null;
 
-    for (let attempt = 1; attempt <= CONFIG.maxRetries; attempt++) {
-        try {
-            console.log(`[Judge Engine v2] Analyst+Repair attempt ${attempt}/${CONFIG.maxRetries} using ${model}`);
-
-            const response = await createChatCompletion({
+    return callLLMWithRetry(
+        {
+            llmFunction: () => createChatCompletion({
                 model,
                 messages: [
                     { role: 'system', content: ANALYST_REPAIR_SYSTEM_PROMPT },
@@ -90,44 +87,21 @@ async function runAnalystRepair(input, historicalContext = '', judgeType = 'logi
                 temperature: CONFIG.analysisTemperature,
                 maxTokens: CONFIG.maxTokens,
                 jsonSchema: ANALYST_REPAIR_JSON_SCHEMA,
-            });
-
-            const content = response.choices[0].message.content;
-            const finishReason = response.choices[0].finish_reason;
-
-            console.log('[Judge Engine v2] Raw analyst response length:', content?.length);
-            if (finishReason === 'length') {
-                console.warn('[Judge Engine v2] WARNING: Response was truncated!');
-            }
-
-            let parsed;
-            try {
-                parsed = JSON.parse(content);
-            } catch (parseError) {
-                console.log('[Judge Engine v2] Direct parse failed, attempting repair...');
-                parsed = repairAndParseJSON(content);
-            }
-
-            // Validate against v2.0 schema
-            const validated = AnalystRepairOutputSchema.parse(parsed);
-
-            console.log('[Judge Engine v2] Analyst+Repair complete:', {
-                intensity: validated.assessedIntensity,
-                resolutionCount: validated.resolutions?.length,
-            });
-
-            return validated;
-        } catch (error) {
-            console.error(`[Judge Engine v2] Analyst attempt ${attempt} failed:`, error.message);
-            lastError = error;
-
-            if (attempt < CONFIG.maxRetries) {
-                await new Promise(resolve => setTimeout(resolve, 1000));
-            }
+            }),
+            schema: AnalystRepairOutputSchema,
+        },
+        {
+            maxRetries: CONFIG.maxRetries,
+            baseDelayMs: 1000,
+            operationName: `Analyst+Repair (${model})`,
+            onSuccess: (validated) => {
+                console.log('[Judge Engine v2] Analyst+Repair complete:', {
+                    intensity: validated.assessedIntensity,
+                    resolutionCount: validated.resolutions?.length,
+                });
+            },
         }
-    }
-
-    throw new Error(`Analyst+Repair failed after ${CONFIG.maxRetries} attempts: ${lastError?.message}`);
+    );
 }
 
 /**
@@ -150,13 +124,10 @@ async function runPrimingJoint(input, analysis, historicalContext = '', judgeTyp
         analysis.resolutions,
         historicalContext
     );
-    let lastError = null;
 
-    for (let attempt = 1; attempt <= CONFIG.maxRetries; attempt++) {
-        try {
-            console.log(`[Judge Engine v2] Priming+Joint attempt ${attempt}/${CONFIG.maxRetries} using ${model}`);
-
-            const response = await createChatCompletion({
+    return callLLMWithRetry(
+        {
+            llmFunction: () => createChatCompletion({
                 model,
                 messages: [
                     { role: 'system', content: PRIMING_JOINT_SYSTEM_PROMPT },
@@ -165,39 +136,23 @@ async function runPrimingJoint(input, analysis, historicalContext = '', judgeTyp
                 temperature: CONFIG.verdictTemperature,
                 maxTokens: CONFIG.maxTokens,
                 jsonSchema: PRIMING_JOINT_JSON_SCHEMA,
-            });
-
-            const content = response.choices[0].message.content;
-
-            let parsed;
-            try {
-                parsed = JSON.parse(content);
-            } catch (parseError) {
-                console.log('[Judge Engine v2] Direct parse failed, attempting repair...');
-                parsed = repairAndParseJSON(content);
-            }
-
-            const validated = PrimingJointOutputSchema.parse(parsed);
-
-            console.log('[Judge Engine v2] Priming+Joint complete:', {
-                voiceUsed: validated.voiceUsed,
-                hasUserAPriming: !!validated.individualPriming?.userA,
-                hasUserBPriming: !!validated.individualPriming?.userB,
-                hasJointMenu: !!validated.jointMenu,
-            });
-
-            return validated;
-        } catch (error) {
-            console.error(`[Judge Engine v2] Priming+Joint attempt ${attempt} failed:`, error.message);
-            lastError = error;
-
-            if (attempt < CONFIG.maxRetries) {
-                await new Promise(resolve => setTimeout(resolve, 1000));
-            }
+            }),
+            schema: PrimingJointOutputSchema,
+        },
+        {
+            maxRetries: CONFIG.maxRetries,
+            baseDelayMs: 1000,
+            operationName: `Priming+Joint (${model})`,
+            onSuccess: (validated) => {
+                console.log('[Judge Engine v2] Priming+Joint complete:', {
+                    voiceUsed: validated.voiceUsed,
+                    hasUserAPriming: !!validated.individualPriming?.userA,
+                    hasUserBPriming: !!validated.individualPriming?.userB,
+                    hasJointMenu: !!validated.jointMenu,
+                });
+            },
         }
-    }
-
-    throw new Error(`Priming+Joint failed after ${CONFIG.maxRetries} attempts: ${lastError?.message}`);
+    );
 }
 
 /**
@@ -223,13 +178,10 @@ async function runHybridResolution(input, analysis, userAChoice, userBChoice, hi
         userBChoice,
         historicalContext
     );
-    let lastError = null;
 
-    for (let attempt = 1; attempt <= CONFIG.maxRetries; attempt++) {
-        try {
-            console.log(`[Judge Engine v2] Hybrid attempt ${attempt}/${CONFIG.maxRetries} using ${HYBRID_MODEL}`);
-
-            const response = await createChatCompletion({
+    return callLLMWithRetry(
+        {
+            llmFunction: () => createChatCompletion({
                 model: HYBRID_MODEL,
                 messages: [
                     { role: 'system', content: HYBRID_RESOLUTION_SYSTEM_PROMPT },
@@ -238,34 +190,18 @@ async function runHybridResolution(input, analysis, userAChoice, userBChoice, hi
                 temperature: 0.5,
                 maxTokens: 2000,
                 jsonSchema: HYBRID_RESOLUTION_JSON_SCHEMA,
-            });
-
-            const content = response.choices[0].message.content;
-
-            let parsed;
-            try {
-                parsed = JSON.parse(content);
-            } catch (parseError) {
-                console.log('[Judge Engine v2] Direct parse failed, attempting repair...');
-                parsed = repairAndParseJSON(content);
-            }
-
-            const validated = HybridResolutionOutputSchema.parse(parsed);
-
-            console.log('[Judge Engine v2] Hybrid resolution generated:', validated.hybridResolution?.title);
-
-            return validated;
-        } catch (error) {
-            console.error(`[Judge Engine v2] Hybrid attempt ${attempt} failed:`, error.message);
-            lastError = error;
-
-            if (attempt < CONFIG.maxRetries) {
-                await new Promise(resolve => setTimeout(resolve, 500));
-            }
+            }),
+            schema: HybridResolutionOutputSchema,
+        },
+        {
+            maxRetries: CONFIG.maxRetries,
+            baseDelayMs: 500,
+            operationName: `Hybrid Resolution (${HYBRID_MODEL})`,
+            onSuccess: (validated) => {
+                console.log('[Judge Engine v2] Hybrid resolution generated:', validated.hybridResolution?.title);
+            },
         }
-    }
-
-    throw new Error(`Hybrid resolution failed after ${CONFIG.maxRetries} attempts: ${lastError?.message}`);
+    );
 }
 
 /**

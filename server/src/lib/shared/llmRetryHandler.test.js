@@ -1,0 +1,522 @@
+/**
+ * Tests for llmRetryHandler.js
+ *
+ * Tests:
+ * - Successful LLM calls
+ * - Retry logic with exponential backoff
+ * - JSON parsing with repair fallback
+ * - Zod validation errors
+ * - Max retry exhaustion
+ */
+
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { callLLMWithRetry, retryLLMCall } from './llmRetryHandler.js';
+import { z } from 'zod';
+
+// Mock jsonRepair module
+vi.mock('../jsonRepair.js', () => ({
+    repairAndParseJSON: vi.fn((content) => {
+        // Simple mock: if it starts with {, try to parse it
+        if (content.startsWith('{')) {
+            return JSON.parse(content);
+        }
+        throw new Error('Cannot repair JSON');
+    }),
+}));
+
+import { repairAndParseJSON } from '../jsonRepair.js';
+
+describe('llmRetryHandler', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
+        vi.useRealTimers();
+    });
+
+    describe('callLLMWithRetry - Success cases', () => {
+        it('should return validated result on first attempt', async () => {
+            const schema = z.object({
+                message: z.string(),
+                count: z.number(),
+            });
+
+            const mockResponse = {
+                choices: [{
+                    message: { content: JSON.stringify({ message: 'test', count: 42 }) },
+                    finish_reason: 'stop',
+                }],
+            };
+
+            const llmFunction = vi.fn().mockResolvedValue(mockResponse);
+
+            const result = await callLLMWithRetry(
+                { llmFunction, schema },
+                { operationName: 'Test call' }
+            );
+
+            expect(result).toEqual({ message: 'test', count: 42 });
+            expect(llmFunction).toHaveBeenCalledTimes(1);
+        });
+
+        it('should handle JSON repair when direct parse fails', async () => {
+            const schema = z.object({ data: z.string() });
+
+            const mockResponse = {
+                choices: [{
+                    message: { content: '{"data": "value"}' }, // Valid JSON that will "fail" first parse
+                    finish_reason: 'stop',
+                }],
+            };
+
+            const llmFunction = vi.fn().mockResolvedValue(mockResponse);
+
+            // Mock JSON.parse to fail once, then succeed via repair
+            const originalParse = JSON.parse;
+            let parseCount = 0;
+            vi.spyOn(JSON, 'parse').mockImplementation((text) => {
+                parseCount++;
+                if (parseCount === 1) {
+                    throw new Error('Parse error');
+                }
+                return originalParse(text);
+            });
+
+            const result = await callLLMWithRetry(
+                { llmFunction, schema },
+                { operationName: 'Test repair' }
+            );
+
+            expect(result).toEqual({ data: 'value' });
+            expect(repairAndParseJSON).toHaveBeenCalled();
+        });
+
+        it('should warn on truncated response but still return result', async () => {
+            const schema = z.object({ message: z.string() });
+
+            const mockResponse = {
+                choices: [{
+                    message: { content: JSON.stringify({ message: 'truncated' }) },
+                    finish_reason: 'length', // Indicates truncation
+                }],
+            };
+
+            const llmFunction = vi.fn().mockResolvedValue(mockResponse);
+            const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+            const result = await callLLMWithRetry(
+                { llmFunction, schema },
+                { operationName: 'Test truncation' }
+            );
+
+            expect(result).toEqual({ message: 'truncated' });
+            expect(consoleWarn).toHaveBeenCalledWith(
+                expect.stringContaining('response was truncated')
+            );
+        });
+
+        it('should call onSuccess callback when provided', async () => {
+            const schema = z.object({ value: z.number() });
+            const mockResponse = {
+                choices: [{
+                    message: { content: JSON.stringify({ value: 100 }) },
+                    finish_reason: 'stop',
+                }],
+            };
+
+            const llmFunction = vi.fn().mockResolvedValue(mockResponse);
+            const onSuccess = vi.fn();
+
+            await callLLMWithRetry(
+                { llmFunction, schema },
+                { onSuccess }
+            );
+
+            expect(onSuccess).toHaveBeenCalledWith({ value: 100 });
+        });
+    });
+
+    describe('callLLMWithRetry - Retry logic', () => {
+        it('should retry on failure with exponential backoff', async () => {
+            const schema = z.object({ data: z.string() });
+
+            const llmFunction = vi.fn()
+                .mockRejectedValueOnce(new Error('Network error'))
+                .mockRejectedValueOnce(new Error('Timeout'))
+                .mockResolvedValueOnce({
+                    choices: [{
+                        message: { content: JSON.stringify({ data: 'success' }) },
+                        finish_reason: 'stop',
+                    }],
+                });
+
+            const promise = callLLMWithRetry(
+                { llmFunction, schema },
+                { maxRetries: 3, baseDelayMs: 1000, operationName: 'Test retry' }
+            );
+
+            // First attempt fails immediately
+            await vi.advanceTimersByTimeAsync(0);
+
+            // Wait for first retry (2^0 * 1000 = 1000ms)
+            await vi.advanceTimersByTimeAsync(1000);
+
+            // Second attempt fails
+            await vi.advanceTimersByTimeAsync(0);
+
+            // Wait for second retry (2^1 * 1000 = 2000ms) - EXPONENTIAL!
+            await vi.advanceTimersByTimeAsync(2000);
+
+            // Third attempt succeeds
+            const result = await promise;
+
+            expect(result).toEqual({ data: 'success' });
+            expect(llmFunction).toHaveBeenCalledTimes(3);
+        });
+
+        it('should use correct exponential backoff delays', async () => {
+            const schema = z.object({ data: z.string() });
+
+            const llmFunction = vi.fn()
+                .mockRejectedValueOnce(new Error('Fail 1'))
+                .mockRejectedValueOnce(new Error('Fail 2'))
+                .mockRejectedValueOnce(new Error('Fail 3'))
+                .mockResolvedValueOnce({
+                    choices: [{
+                        message: { content: JSON.stringify({ data: 'success' }) },
+                        finish_reason: 'stop',
+                    }],
+                });
+
+            const baseDelayMs = 500;
+            const promise = callLLMWithRetry(
+                { llmFunction, schema },
+                { maxRetries: 4, baseDelayMs, operationName: 'Backoff test' }
+            );
+
+            // Attempt 1 fails
+            await vi.advanceTimersByTimeAsync(0);
+
+            // Delay before retry 2: 500 * 2^0 = 500ms
+            await vi.advanceTimersByTimeAsync(500);
+
+            // Attempt 2 fails
+            await vi.advanceTimersByTimeAsync(0);
+
+            // Delay before retry 3: 500 * 2^1 = 1000ms
+            await vi.advanceTimersByTimeAsync(1000);
+
+            // Attempt 3 fails
+            await vi.advanceTimersByTimeAsync(0);
+
+            // Delay before retry 4: 500 * 2^2 = 2000ms
+            await vi.advanceTimersByTimeAsync(2000);
+
+            // Attempt 4 succeeds
+            const result = await promise;
+
+            expect(result).toEqual({ data: 'success' });
+            expect(llmFunction).toHaveBeenCalledTimes(4);
+        });
+
+        it('should call onRetry callback before each retry', async () => {
+            const schema = z.object({ data: z.string() });
+
+            const llmFunction = vi.fn()
+                .mockRejectedValueOnce(new Error('Fail'))
+                .mockResolvedValueOnce({
+                    choices: [{
+                        message: { content: JSON.stringify({ data: 'success' }) },
+                        finish_reason: 'stop',
+                    }],
+                });
+
+            const onRetry = vi.fn();
+
+            const promise = callLLMWithRetry(
+                { llmFunction, schema },
+                { maxRetries: 2, baseDelayMs: 100, onRetry }
+            );
+
+            await vi.advanceTimersByTimeAsync(0);
+            await vi.advanceTimersByTimeAsync(100);
+
+            await promise;
+
+            // onRetry should be called for attempt 2 (not attempt 1)
+            expect(onRetry).toHaveBeenCalledTimes(1);
+            expect(onRetry).toHaveBeenCalledWith(2);
+        });
+
+        it('should call onError callback on each failure', async () => {
+            const schema = z.object({ data: z.string() });
+
+            const error1 = new Error('Error 1');
+            const error2 = new Error('Error 2');
+
+            const llmFunction = vi.fn()
+                .mockRejectedValueOnce(error1)
+                .mockRejectedValueOnce(error2)
+                .mockResolvedValueOnce({
+                    choices: [{
+                        message: { content: JSON.stringify({ data: 'success' }) },
+                        finish_reason: 'stop',
+                    }],
+                });
+
+            const onError = vi.fn();
+
+            const promise = callLLMWithRetry(
+                { llmFunction, schema },
+                { maxRetries: 3, baseDelayMs: 100, onError }
+            );
+
+            await vi.advanceTimersByTimeAsync(0);
+            await vi.advanceTimersByTimeAsync(100);
+            await vi.advanceTimersByTimeAsync(0);
+            await vi.advanceTimersByTimeAsync(200);
+
+            await promise;
+
+            expect(onError).toHaveBeenCalledTimes(2);
+            expect(onError).toHaveBeenNthCalledWith(1, error1, 1);
+            expect(onError).toHaveBeenNthCalledWith(2, error2, 2);
+        });
+    });
+
+    describe('callLLMWithRetry - Validation errors', () => {
+        it('should throw on Zod validation failure', async () => {
+            const schema = z.object({
+                requiredField: z.string(),
+                numberField: z.number(),
+            });
+
+            const mockResponse = {
+                choices: [{
+                    message: { content: JSON.stringify({ requiredField: 'test' }) }, // Missing numberField
+                    finish_reason: 'stop',
+                }],
+            };
+
+            const llmFunction = vi.fn().mockResolvedValue(mockResponse);
+
+            const promise = callLLMWithRetry(
+                { llmFunction, schema },
+                { maxRetries: 2, baseDelayMs: 100 }
+            );
+
+            await vi.advanceTimersByTimeAsync(0);
+            await vi.advanceTimersByTimeAsync(100);
+            await vi.advanceTimersByTimeAsync(0);
+            await vi.advanceTimersByTimeAsync(200);
+
+            await expect(promise).rejects.toThrow();
+            expect(llmFunction).toHaveBeenCalledTimes(2); // Should retry on validation errors
+        });
+
+        it('should retry on JSON parse failures', async () => {
+            const schema = z.object({ data: z.string() });
+
+            const llmFunction = vi.fn()
+                .mockResolvedValueOnce({
+                    choices: [{
+                        message: { content: 'invalid json' },
+                        finish_reason: 'stop',
+                    }],
+                })
+                .mockResolvedValueOnce({
+                    choices: [{
+                        message: { content: JSON.stringify({ data: 'valid' }) },
+                        finish_reason: 'stop',
+                    }],
+                });
+
+            // Mock repair to fail on first attempt
+            repairAndParseJSON.mockImplementationOnce(() => {
+                throw new Error('Cannot repair');
+            });
+
+            const promise = callLLMWithRetry(
+                { llmFunction, schema },
+                { maxRetries: 2, baseDelayMs: 100 }
+            );
+
+            await vi.advanceTimersByTimeAsync(0);
+            await vi.advanceTimersByTimeAsync(100);
+
+            const result = await promise;
+
+            expect(result).toEqual({ data: 'valid' });
+            expect(llmFunction).toHaveBeenCalledTimes(2);
+        });
+    });
+
+    describe('callLLMWithRetry - Max retries exhausted', () => {
+        it('should throw after max retries with last error message', async () => {
+            const schema = z.object({ data: z.string() });
+
+            const llmFunction = vi.fn()
+                .mockRejectedValueOnce(new Error('Error 1'))
+                .mockRejectedValueOnce(new Error('Error 2'))
+                .mockRejectedValueOnce(new Error('Final error'));
+
+            const promise = callLLMWithRetry(
+                { llmFunction, schema },
+                { maxRetries: 3, baseDelayMs: 100, operationName: 'Test operation' }
+            );
+
+            await vi.advanceTimersByTimeAsync(0);
+            await vi.advanceTimersByTimeAsync(100);
+            await vi.advanceTimersByTimeAsync(0);
+            await vi.advanceTimersByTimeAsync(200);
+            await vi.advanceTimersByTimeAsync(0);
+            await vi.advanceTimersByTimeAsync(400);
+
+            await expect(promise).rejects.toThrow('Test operation failed after 3 attempts: Final error');
+            expect(llmFunction).toHaveBeenCalledTimes(3);
+        });
+
+        it('should not delay after final attempt', async () => {
+            const schema = z.object({ data: z.string() });
+
+            const llmFunction = vi.fn()
+                .mockRejectedValue(new Error('Always fails'));
+
+            const startTime = Date.now();
+
+            const promise = callLLMWithRetry(
+                { llmFunction, schema },
+                { maxRetries: 2, baseDelayMs: 1000 }
+            );
+
+            await vi.advanceTimersByTimeAsync(0);
+            await vi.advanceTimersByTimeAsync(1000);
+            await vi.advanceTimersByTimeAsync(0);
+
+            await expect(promise).rejects.toThrow();
+
+            // Should not wait after second attempt
+            expect(vi.getTimerCount()).toBe(0);
+        });
+    });
+
+    describe('callLLMWithRetry - Edge cases', () => {
+        it('should handle missing content in response', async () => {
+            const schema = z.object({ data: z.string() });
+
+            const mockResponse = {
+                choices: [{
+                    message: {}, // No content
+                    finish_reason: 'stop',
+                }],
+            };
+
+            const llmFunction = vi.fn().mockResolvedValue(mockResponse);
+
+            const promise = callLLMWithRetry(
+                { llmFunction, schema },
+                { maxRetries: 1 }
+            );
+
+            await expect(promise).rejects.toThrow('No content in LLM response');
+        });
+
+        it('should handle empty choices array', async () => {
+            const schema = z.object({ data: z.string() });
+
+            const mockResponse = {
+                choices: [], // Empty
+            };
+
+            const llmFunction = vi.fn().mockResolvedValue(mockResponse);
+
+            const promise = callLLMWithRetry(
+                { llmFunction, schema },
+                { maxRetries: 1 }
+            );
+
+            await expect(promise).rejects.toThrow();
+        });
+
+        it('should use default options when not provided', async () => {
+            const schema = z.object({ data: z.string() });
+
+            const mockResponse = {
+                choices: [{
+                    message: { content: JSON.stringify({ data: 'test' }) },
+                    finish_reason: 'stop',
+                }],
+            };
+
+            const llmFunction = vi.fn().mockResolvedValue(mockResponse);
+
+            // No options provided - should use defaults
+            const result = await callLLMWithRetry({ llmFunction, schema });
+
+            expect(result).toEqual({ data: 'test' });
+        });
+    });
+
+    describe('retryLLMCall wrapper', () => {
+        it('should work as simplified wrapper', async () => {
+            const schema = z.object({ message: z.string() });
+
+            const mockResponse = {
+                choices: [{
+                    message: { content: JSON.stringify({ message: 'wrapper test' }) },
+                    finish_reason: 'stop',
+                }],
+            };
+
+            const createChatCompletion = vi.fn().mockResolvedValue(mockResponse);
+
+            const llmConfig = {
+                model: 'test-model',
+                messages: [{ role: 'user', content: 'test' }],
+            };
+
+            const result = await retryLLMCall(
+                createChatCompletion,
+                llmConfig,
+                schema,
+                { operationName: 'Wrapper test' }
+            );
+
+            expect(result).toEqual({ message: 'wrapper test' });
+            expect(createChatCompletion).toHaveBeenCalledWith(llmConfig);
+        });
+
+        it('should pass all options through wrapper', async () => {
+            const schema = z.object({ value: z.number() });
+
+            const createChatCompletion = vi.fn()
+                .mockRejectedValueOnce(new Error('Fail'))
+                .mockResolvedValueOnce({
+                    choices: [{
+                        message: { content: JSON.stringify({ value: 42 }) },
+                        finish_reason: 'stop',
+                    }],
+                });
+
+            const onRetry = vi.fn();
+
+            const promise = retryLLMCall(
+                createChatCompletion,
+                { model: 'test' },
+                schema,
+                { maxRetries: 2, baseDelayMs: 500, onRetry }
+            );
+
+            await vi.advanceTimersByTimeAsync(0);
+            await vi.advanceTimersByTimeAsync(500);
+
+            const result = await promise;
+
+            expect(result).toEqual({ value: 42 });
+            expect(onRetry).toHaveBeenCalled();
+        });
+    });
+});

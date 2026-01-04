@@ -10,11 +10,9 @@ const { v4: uuidv4 } = require('uuid');
 const { requireSupabase, requireAuthUserId, getPartnerIdForUser } = require('../lib/auth');
 const { getOrderedCoupleIds, awardXP, ACTION_TYPES } = require('../lib/xpService');
 const { recordChallengeAction, CHALLENGE_ACTIONS } = require('../lib/challengeService');
+const { safeErrorMessage } = require('../lib/shared/errorUtils');
 
 const router = express.Router();
-
-const isProd = process.env.NODE_ENV === 'production';
-const safeErrorMessage = (error) => (isProd ? 'Internal server error' : (error?.message || String(error)));
 
 const SUPPORTED_IMAGE_TYPES = new Set([
     'image/jpeg',

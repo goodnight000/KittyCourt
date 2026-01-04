@@ -7,6 +7,7 @@
 const express = require('express');
 const router = express.Router();
 const { getSupabase, isSupabaseConfigured } = require('../lib/supabase');
+const { getAuthUserIdOrNull } = require('../lib/auth');
 const { createRateLimiter } = require('../lib/rateLimit');
 
 const REVENUECAT_SECRET_KEY = process.env.REVENUECAT_SECRET_KEY || '';
@@ -33,27 +34,6 @@ const syncRateLimiter = createRateLimiter({
     max: 10,
     keyGenerator: (req) => req.headers.authorization || req.ip || 'unknown',
 });
-
-/**
- * Extract user ID from Authorization header
- */
-async function getUserIdFromAuth(req) {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return null;
-    }
-
-    const token = authHeader.split(' ')[1];
-
-    try {
-        const supabase = getSupabase();
-        const { data: { user }, error } = await supabase.auth.getUser(token);
-        if (error || !user) return null;
-        return user.id;
-    } catch (e) {
-        return null;
-    }
-}
 
 async function fetchRevenueCatSubscriber(appUserId) {
     if (!REVENUECAT_SECRET_KEY) {
@@ -138,7 +118,7 @@ router.get('/status', async (req, res) => {
             return res.status(503).json({ error: 'Supabase not configured' });
         }
 
-        const userId = await getUserIdFromAuth(req);
+        const userId = await getAuthUserIdOrNull(req);
         if (!userId) {
             return res.status(401).json({ error: 'Unauthorized' });
         }
@@ -186,7 +166,7 @@ router.post('/sync', syncRateLimiter, async (req, res) => {
             return res.status(503).json({ error: 'Supabase not configured' });
         }
 
-        const userId = await getUserIdFromAuth(req);
+        const userId = await getAuthUserIdOrNull(req);
         if (!userId) {
             return res.status(401).json({ error: 'Unauthorized' });
         }

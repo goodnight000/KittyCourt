@@ -4,13 +4,13 @@
 
 const express = require('express');
 const router = express.Router();
-const { requireSupabase, requireAuthUserId, getPartnerIdForUser } = require('../lib/auth');
+const { requireAuthUserId, requireSupabase } = require('../lib/auth');
+const { requirePartner } = require('../middleware/requirePartner.cjs');
 const { getOrderedCoupleIds, getLevelStatus } = require('../lib/xpService');
 const { generateInsightsForCouple } = require('../lib/insightService');
 const { getUserSubscriptionTier } = require('../lib/usageLimits');
+const { safeErrorMessage } = require('../lib/shared/errorUtils');
 
-const isProd = process.env.NODE_ENV === 'production';
-const safeErrorMessage = (error) => (isProd ? 'Internal server error' : (error?.message || String(error)));
 const INSIGHTS_MIN_LEVEL = 10;
 
 const buildConsentState = (profiles, userId, partnerId) => {
@@ -31,15 +31,9 @@ const buildConsentState = (profiles, userId, partnerId) => {
     };
 };
 
-router.get('/', async (req, res) => {
+router.get('/', requirePartner, async (req, res) => {
     try {
-        const supabase = requireSupabase();
-        const userId = await requireAuthUserId(req);
-        const partnerId = await getPartnerIdForUser(supabase, userId);
-
-        if (!partnerId) {
-            return res.status(400).json({ error: 'No partner connected' });
-        }
+        const { userId, partnerId, supabase } = req;
 
         const tier = await getUserSubscriptionTier(userId);
         if (tier !== 'pause_gold') {
@@ -196,19 +190,13 @@ router.post('/pause', async (req, res) => {
     }
 });
 
-router.post('/:id/feedback', async (req, res) => {
+router.post('/:id/feedback', requirePartner, async (req, res) => {
     try {
         const { id } = req.params;
         const { helpful } = req.body || {};
         const isHelpful = !!helpful;
 
-        const supabase = requireSupabase();
-        const userId = await requireAuthUserId(req);
-        const partnerId = await getPartnerIdForUser(supabase, userId);
-
-        if (!partnerId) {
-            return res.status(400).json({ error: 'No partner connected' });
-        }
+        const { userId, partnerId, supabase } = req;
 
         const { data: insight, error } = await supabase
             .from('insights')

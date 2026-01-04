@@ -1,0 +1,344 @@
+/**
+ * Phase Transition Controller
+ *
+ * Manages court session phase transitions and validations.
+ * Implements the state machine logic for session lifecycle.
+ *
+ * Phases: IDLE → PENDING → EVIDENCE → ANALYZING → PRIMING → JOINT_READY → RESOLUTION → VERDICT → CLOSED
+ *
+ * Responsibilities:
+ * - Validate phase transitions
+ * - Update session phase
+ * - Manage phase timeouts
+ * - Handle verdict acceptance and session closure
+ */
+
+const { PHASE } = require('./stateSerializer');
+const { TIMEOUT } = require('./timeoutHandlers');
+
+class PhaseTransitionController {
+    constructor(dependencies) {
+        this.dbService = dependencies.dbService;
+        this.wsService = dependencies.wsService;
+        this.judgeEngine = dependencies.judgeEngine;
+    }
+
+    // === PENDING → EVIDENCE ===
+
+    /**
+     * Accept pending session (partner accepts summons)
+     * Transition: PENDING → EVIDENCE
+     */
+    async acceptSession(session) {
+        if (session.phase !== PHASE.PENDING) {
+            throw new Error('Session not in PENDING phase');
+        }
+
+        // Clear pending timeout
+        if (session.timeoutId) {
+            clearTimeout(session.timeoutId);
+            session.timeoutId = null;
+        }
+
+        // Transition to EVIDENCE
+        session.phase = PHASE.EVIDENCE;
+
+        console.log(`[Court] Session ${session.id} accepted (EVIDENCE)`);
+
+        return session;
+    }
+
+    // === EVIDENCE → ANALYZING ===
+
+    /**
+     * Check if both users submitted evidence
+     */
+    bothUsersSubmittedEvidence(session) {
+        return session.creator.evidenceSubmitted && session.partner.evidenceSubmitted;
+    }
+
+    /**
+     * Transition to ANALYZING phase after both submit evidence
+     */
+    async transitionToAnalyzing(session) {
+        if (session.phase !== PHASE.EVIDENCE) {
+            throw new Error('Must be in EVIDENCE phase');
+        }
+
+        // Clear evidence timeout
+        if (session.timeoutId) {
+            clearTimeout(session.timeoutId);
+            session.timeoutId = null;
+        }
+
+        // Transition to analysis phase (v2)
+        session.phase = PHASE.ANALYZING;
+        console.log(`[Court] Session ${session.id} → ANALYZING`);
+
+        return session;
+    }
+
+    // === ANALYZING → PRIMING ===
+
+    /**
+     * Transition to PRIMING phase after analysis completes
+     */
+    async transitionToPriming(session) {
+        if (session.phase !== PHASE.ANALYZING) {
+            throw new Error('Must be in ANALYZING phase');
+        }
+
+        // Clear analysis timeout
+        if (session.timeoutId) {
+            clearTimeout(session.timeoutId);
+            session.timeoutId = null;
+        }
+
+        session.phase = PHASE.PRIMING;
+        console.log(`[Court] Session ${session.id} → PRIMING`);
+
+        return session;
+    }
+
+    /**
+     * Check if both users completed priming
+     */
+    bothUsersCompletedPriming(session) {
+        return session.creator.primingReady && session.partner.primingReady;
+    }
+
+    // === PRIMING → JOINT_READY ===
+
+    /**
+     * Transition to JOINT_READY phase after both complete priming
+     */
+    async transitionToJointReady(session) {
+        if (session.phase !== PHASE.PRIMING) {
+            throw new Error('Must be in PRIMING phase');
+        }
+
+        // Clear priming timeout
+        if (session.timeoutId) {
+            clearTimeout(session.timeoutId);
+            session.timeoutId = null;
+        }
+
+        session.phase = PHASE.JOINT_READY;
+        console.log(`[Court] Session ${session.id} → JOINT_READY`);
+
+        return session;
+    }
+
+    /**
+     * Check if both users are ready to proceed from joint menu
+     */
+    bothUsersJointReady(session) {
+        return session.creator.jointReady && session.partner.jointReady;
+    }
+
+    // === JOINT_READY → RESOLUTION ===
+
+    /**
+     * Transition to RESOLUTION phase after both ready from joint menu
+     */
+    async transitionToResolution(session) {
+        if (session.phase !== PHASE.JOINT_READY) {
+            throw new Error('Must be in JOINT_READY phase');
+        }
+
+        // Clear joint timeout
+        if (session.timeoutId) {
+            clearTimeout(session.timeoutId);
+            session.timeoutId = null;
+        }
+
+        session.phase = PHASE.RESOLUTION;
+        console.log(`[Court] Session ${session.id} → RESOLUTION`);
+
+        return session;
+    }
+
+    // === RESOLUTION → VERDICT ===
+
+    /**
+     * Finalize resolution and transition to VERDICT phase
+     */
+    async transitionToVerdict(session) {
+        if (session.timeoutId) {
+            clearTimeout(session.timeoutId);
+            session.timeoutId = null;
+        }
+
+        // Build verdict from final resolution
+        const isHybrid = session.finalResolution?.id
+            ? session.finalResolution.id === session.hybridResolution?.id
+            : false;
+
+        session.verdict = {
+            status: 'success',
+            judgeContent: {
+                theSummary: session.jointMenu?.theSummary || 'Resolution found.',
+                theSentence: {
+                    title: session.finalResolution?.title || 'Resolution',
+                    description: session.finalResolution?.description || session.finalResolution?.combinedDescription,
+                    rationale: session.finalResolution?.rationale
+                },
+                closingStatement: session.jointMenu?.closingWisdom || 'May this resolution bring you closer together.'
+            },
+            _meta: {
+                analysis: session.analysis || null,
+                assessedIntensity: session.assessedIntensity,
+                resolutions: session.resolutions,
+                primingContent: session.primingContent || null,
+                jointMenu: session.jointMenu || null,
+                finalResolution: session.finalResolution,
+                isHybrid
+            }
+        };
+
+        this._recordVerdictVersion(session);
+
+        session.resolvedAt = Date.now();
+        session.phase = PHASE.VERDICT;
+
+        console.log(`[Court] Session ${session.id} → VERDICT`);
+
+        return session;
+    }
+
+    /**
+     * Check if both users accepted verdict
+     */
+    bothUsersAcceptedVerdict(session) {
+        return session.creator.verdictAccepted && session.partner.verdictAccepted;
+    }
+
+    // === VERDICT → CLOSED ===
+
+    /**
+     * Close session and persist to case history
+     */
+    async closeSession(session, reason) {
+        if (session.timeoutId) {
+            clearTimeout(session.timeoutId);
+            session.timeoutId = null;
+        }
+
+        if (session.settlementTimeoutId) {
+            clearTimeout(session.settlementTimeoutId);
+            session.settlementTimeoutId = null;
+        }
+
+        session.phase = PHASE.CLOSED;
+
+        // Persist to case history (best-effort)
+        try {
+            if (this.dbService?.saveCaseFromSession && !session.caseId) {
+                session.caseId = await this.dbService.saveCaseFromSession(session);
+            }
+        } catch (error) {
+            console.error('[Court] Failed to persist case history:', error);
+        }
+
+        // Trigger background memory extraction
+        if (this.judgeEngine?.triggerBackgroundExtraction) {
+            const caseData = this._buildCaseData(session);
+            caseData.submissions.userA.selectedPrimaryEmotion ||= '';
+            caseData.submissions.userA.coreNeed ||= '';
+            caseData.submissions.userB.selectedPrimaryEmotion ||= '';
+            caseData.submissions.userB.coreNeed ||= '';
+            this.judgeEngine.triggerBackgroundExtraction(caseData, session.caseId || null);
+        }
+
+        console.log(`[Court] Session ${session.id} closed (${reason})`);
+
+        return session;
+    }
+
+    // === Addendum Handling ===
+
+    /**
+     * Reset session state for addendum re-run
+     */
+    resetForAddendum(session) {
+        // Reset acceptances
+        session.creator.verdictAccepted = false;
+        session.partner.verdictAccepted = false;
+
+        // Reset v2 pipeline state for re-run
+        session.analysis = null;
+        session.resolutions = null;
+        session.assessedIntensity = null;
+        session.primingContent = null;
+        session.jointMenu = null;
+        session.creator.primingReady = false;
+        session.partner.primingReady = false;
+        session.creator.jointReady = false;
+        session.partner.jointReady = false;
+        session.userAResolutionPick = null;
+        session.userBResolutionPick = null;
+        session.hybridResolution = null;
+        session.finalResolution = null;
+        session.mismatchOriginal = null;
+        session.mismatchPicks = null;
+        session.mismatchLock = null;
+        session.mismatchLockBy = null;
+        session.hybridResolutionPending = false;
+        session.verdict = null;
+        session.resolvedAt = null;
+        session.phase = PHASE.ANALYZING;
+
+        return session;
+    }
+
+    // === Private Helpers ===
+
+    _recordVerdictVersion(session) {
+        if (!session?.verdict) return;
+        const history = Array.isArray(session.verdictHistory) ? session.verdictHistory : [];
+        const version = history.length + 1;
+        const addendumIndex = version - 2;
+        const addendumEntry = addendumIndex >= 0 ? session.addendumHistory?.[addendumIndex] : null;
+
+        history.push({
+            version,
+            content: session.verdict,
+            addendumBy: addendumEntry?.fromUser || null,
+            addendumText: addendumEntry?.text || null,
+            createdAt: new Date().toISOString()
+        });
+
+        session.verdictHistory = history;
+    }
+
+    _buildCaseData(session) {
+        return {
+            participants: {
+                userA: {
+                    id: session.creatorId,
+                    name: 'Partner A',
+                    language: session.creatorLanguage || session.caseLanguage || 'en',
+                },
+                userB: {
+                    id: session.partnerId,
+                    name: 'Partner B',
+                    language: session.partnerLanguage || session.caseLanguage || 'en',
+                }
+            },
+            submissions: {
+                userA: {
+                    cameraFacts: session.creator.evidence,
+                    theStoryIamTellingMyself: session.creator.feelings
+                },
+                userB: {
+                    cameraFacts: session.partner.evidence,
+                    theStoryIamTellingMyself: session.partner.feelings
+                }
+            },
+            addendumHistory: session.addendumHistory || [],
+            language: session.caseLanguage || session.creatorLanguage || 'en',
+        };
+    }
+}
+
+module.exports = PhaseTransitionController;

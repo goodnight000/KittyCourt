@@ -6,21 +6,20 @@
 
 const express = require('express');
 const { v4: uuidv4 } = require('uuid');
-const { requireSupabase, requireAuthUserId, getPartnerIdForUser } = require('../lib/auth');
+const { requireAuthUserId } = require('../lib/auth');
+const { requirePartner } = require('../middleware/requirePartner.cjs');
 const { isSupabaseConfigured } = require('../lib/supabase');
 const { getLevelStatus, isXPSystemEnabled, getOrderedCoupleIds, awardXP, ACTION_TYPES } = require('../lib/xpService');
+const { safeErrorMessage } = require('../lib/shared/errorUtils');
 
 const router = express.Router();
-
-const isProd = process.env.NODE_ENV === 'production';
-const safeErrorMessage = (error) => (isProd ? 'Internal server error' : (error?.message || String(error)));
 
 /**
  * GET /api/levels/status
  *
  * Returns the couple's level status and a questions-answered count.
  */
-router.get('/status', async (req, res) => {
+router.get('/status', requirePartner, async (req, res) => {
     try {
         if (!isXPSystemEnabled()) {
             return res.json({ enabled: false });
@@ -30,13 +29,7 @@ router.get('/status', async (req, res) => {
             return res.status(503).json({ error: 'Supabase not configured' });
         }
 
-        const supabase = requireSupabase();
-        const userId = await requireAuthUserId(req);
-        const partnerId = await getPartnerIdForUser(supabase, userId);
-
-        if (!partnerId) {
-            return res.status(400).json({ error: 'No partner connected' });
-        }
+        const { userId, partnerId, supabase } = req;
 
         const coupleIds = getOrderedCoupleIds(userId, partnerId);
         if (!coupleIds) {
@@ -115,7 +108,7 @@ router.get('/status', async (req, res) => {
  *
  * Development-only endpoint to grant arbitrary XP for testing.
  */
-router.post('/dev/award-xp', async (req, res) => {
+router.post('/dev/award-xp', requirePartner, async (req, res) => {
     try {
         if (process.env.NODE_ENV === 'production') {
             return res.status(404).json({ error: 'Not found' });
@@ -134,13 +127,7 @@ router.post('/dev/award-xp', async (req, res) => {
             return res.status(400).json({ error: 'Invalid amount' });
         }
 
-        const supabase = requireSupabase();
-        const userId = await requireAuthUserId(req);
-        const partnerId = await getPartnerIdForUser(supabase, userId);
-
-        if (!partnerId) {
-            return res.status(400).json({ error: 'No partner connected' });
-        }
+        const { userId, partnerId } = req;
 
         const result = await awardXP({
             userId,
@@ -167,7 +154,7 @@ router.post('/dev/award-xp', async (req, res) => {
  *
  * Update last seen level for the current user.
  */
-router.post('/seen', async (req, res) => {
+router.post('/seen', requirePartner, async (req, res) => {
     try {
         if (!isXPSystemEnabled()) {
             return res.status(400).json({ error: 'XP system disabled' });
@@ -177,13 +164,7 @@ router.post('/seen', async (req, res) => {
             return res.status(503).json({ error: 'Supabase not configured' });
         }
 
-        const supabase = requireSupabase();
-        const userId = await requireAuthUserId(req);
-        const partnerId = await getPartnerIdForUser(supabase, userId);
-
-        if (!partnerId) {
-            return res.status(400).json({ error: 'No partner connected' });
-        }
+        const { userId, partnerId, supabase } = req;
 
         const levelResult = await getLevelStatus(userId, partnerId);
         if (!levelResult?.success || !levelResult?.data) {

@@ -1937,5 +1937,45 @@
       "title": "账号已创建",
       "subtitle": "正在跳转到引导页..."
     }
+  },
+  "settings": {
+    "title": "设置",
+    "account": {
+      "title": "账号",
+      "loginMethod": "登录方式",
+      "google": "Google",
+      "email": "邮箱",
+      "changePassword": "修改密码",
+      "disconnectCouple": "解除情侣绑定",
+      "disconnectWarning": "这将解除与伴侣的连接，此操作不可撤销。",
+      "disconnectConfirm": "确认解除",
+      "disconnectCancel": "取消"
+    },
+    "notifications": {
+      "title": "通知",
+      "dailyMeow": "每日喵问提醒",
+      "verdicts": "裁决通知",
+      "partnerActivity": "伴侣动态"
+    },
+    "preferences": {
+      "title": "偏好设置",
+      "language": "语言"
+    },
+    "support": {
+      "title": "支持与反馈",
+      "contact": "联系客服",
+      "bug": "报告问题",
+      "feature": "功能建议"
+    },
+    "legal": {
+      "title": "法律与关于",
+      "terms": "条款与条件",
+      "privacy": "隐私政策",
+      "version": "应用版本"
+    },
+    "howItWorks": {
+      "title": "审判流程",
+      "description": "双方分别提交证据，胡须法官审阅案件、识别深层感受，并给出公正、有同理心的裁决，帮助你们重建连接。"
+    }
   }
 }

@@ -6,12 +6,13 @@
 
 const express = require('express');
 const router = express.Router();
-const { requireSupabase, requireAuthUserId, getPartnerIdForUser } = require('../lib/auth');
+const { requireAuthUserId, requireSupabase, getPartnerIdForUser } = require('../lib/auth');
+const { requirePartner } = require('../middleware/requirePartner.cjs');
 const { resolveRequestLanguage } = require('../lib/language');
 const { sendError } = require('../lib/http');
+const { safeErrorMessage } = require('../lib/shared/errorUtils');
 
 const isProd = process.env.NODE_ENV === 'production';
-const safeErrorMessage = (error) => (isProd ? 'Internal server error' : (error?.message || String(error)));
 
 /**
  * Helper to transform case data for client (snake_case → camelCase)
@@ -322,12 +323,9 @@ router.post('/:id/rate', async (req, res) => {
 });
 
 // Get Case History
-router.get('/', async (req, res) => {
+router.get('/', requirePartner, async (req, res) => {
     try {
-        const viewerId = await requireAuthUserId(req);
-
-        const supabase = requireSupabase();
-        const partnerId = await getPartnerIdForUser(supabase, viewerId);
+        const { userId: viewerId, partnerId, supabase } = req;
 
         let query = supabase
             .from('cases')

@@ -3,19 +3,28 @@ import { persist } from 'zustand/middleware';
 import api from '../services/api';
 import useCacheStore, { CACHE_TTL, CACHE_KEYS } from './useCacheStore';
 import { quotaSafeLocalStorage, sanitizeProfileForStorage } from './quotaSafeStorage';
+import { eventBus, EVENTS } from '../lib/eventBus';
 
 /**
  * useAppStore - Application-wide state
- * 
+ *
  * This store handles:
  * - User/profile data
  * - Case history
  * - Appreciations
  * - Economy (kibble)
  * - Daily questions
- * 
+ *
  * Court session logic has been moved to useCourtStore.js
+ *
+ * This store listens to auth events from the event bus to:
+ * - Reset state on logout
+ * - Initialize user-specific state on login
  */
+
+// Event bus listener cleanup functions
+let eventCleanupFns = [];
+
 const useAppStore = create(
     persist(
         (set, get) => ({
@@ -25,28 +34,32 @@ const useAppStore = create(
             isLoading: false,
             error: null,
 
+            // Local cache of auth data from events (to avoid circular dependencies)
+            _authUserId: null,
+            _authProfile: null,
+            _authPartner: null,
+
             // --- Actions ---
             fetchUsers: async () => {
                 set({ isLoading: true });
                 try {
-                    // Get real auth user and partner from auth store
-                    const { user: authUser, profile: authProfile, partner: connectedPartner } = await import('./useAuthStore').then(m => m.default.getState());
+                    const { _authUserId, _authProfile, _authPartner } = get();
 
-                    if (!authUser || !authProfile) {
+                    if (!_authUserId || !_authProfile) {
                         set({ users: [], currentUser: null, isLoading: false });
                         return;
                     }
 
-                    // Build users array from auth store data (not from legacy /users endpoint)
-                    const users = [authProfile];
-                    if (connectedPartner) {
-                        users.push(connectedPartner);
+                    // Build users array from cached auth data
+                    const users = [_authProfile];
+                    if (_authPartner) {
+                        users.push(_authPartner);
                     }
 
                     // Fetch kibble balances for each user
                     for (const user of users) {
                         try {
-                            if (user.id === authUser.id) {
+                            if (user.id === _authUserId) {
                                 const balanceRes = await api.get(`/economy/balance/${user.id}`);
                                 user.kibbleBalance = balanceRes.data.balance || 0;
                             } else {
@@ -58,7 +71,7 @@ const useAppStore = create(
                     }
 
                     // Current user is the auth profile with balance
-                    const currentUser = users.find(u => u.id === authUser.id) || authProfile;
+                    const currentUser = users.find(u => u.id === _authUserId) || _authProfile;
 
                     set({ users, currentUser, isLoading: false });
                 } catch (error) {
@@ -77,11 +90,10 @@ const useAppStore = create(
 
             fetchCaseHistory: async () => {
                 try {
-                    // Get auth user and partner to filter cases for this couple
-                    const { user: authUser, partner: connectedPartner } = await import('./useAuthStore').then(m => m.default.getState());
-                    if (!authUser?.id || !connectedPartner?.id) return;
+                    const { _authUserId, _authPartner } = get();
+                    if (!_authUserId || !_authPartner?.id) return;
 
-                    const cacheKey = `${CACHE_KEYS.CASE_HISTORY}:${authUser.id}:${connectedPartner.id}`;
+                    const cacheKey = `${CACHE_KEYS.CASE_HISTORY}:${_authUserId}:${_authPartner.id}`;
 
                     // Check cache first
                     const cached = useCacheStore.getState().getCached(cacheKey);
@@ -92,10 +104,10 @@ const useAppStore = create(
 
                     // Build query params for filtering
                     const params = new URLSearchParams();
-                    if (authUser?.id) params.set('userAId', authUser.id);
-                    if (connectedPartner?.id) params.set('userBId', connectedPartner.id);
+                    params.set('userAId', _authUserId);
+                    params.set('userBId', _authPartner.id);
 
-                    const url = params.toString() ? `/cases?${params.toString()}` : '/cases';
+                    const url = `/cases?${params.toString()}`;
                     const response = await api.get(url);
                     const data = response.data || [];
 
@@ -138,11 +150,10 @@ const useAppStore = create(
 
             // Fetch appreciations that the current user received
             fetchAppreciations: async () => {
-                // Get auth user from auth store
-                const { user: authUser } = await import('./useAuthStore').then(m => m.default.getState());
-                if (!authUser?.id) return;
+                const { _authUserId } = get();
+                if (!_authUserId) return;
 
-                const cacheKey = `${CACHE_KEYS.APPRECIATIONS}:${authUser.id}`;
+                const cacheKey = `${CACHE_KEYS.APPRECIATIONS}:${_authUserId}`;
 
                 // Check cache first
                 const cached = useCacheStore.getState().getCached(cacheKey);
@@ -152,7 +163,7 @@ const useAppStore = create(
                 }
 
                 try {
-                    const response = await api.get(`/appreciations/${authUser.id}`);
+                    const response = await api.get(`/appreciations/${_authUserId}`);
                     const data = response.data || [];
 
                     // Cache the result
@@ -167,20 +178,19 @@ const useAppStore = create(
             // When you show appreciation, you're logging something your PARTNER did
             // So the kibble goes to your partner and it's logged as an appreciation
             logGoodDeed: async (description) => {
-                // Get auth user and partner from auth store
-                const { user: authUser, partner: connectedPartner } = await import('./useAuthStore').then(m => m.default.getState());
-                if (!authUser?.id || !connectedPartner?.id) return;
+                const { _authUserId, _authPartner } = get();
+                if (!_authUserId || !_authPartner?.id) return;
 
                 try {
                     // Log appreciation (partner receives it)
                     // Note: Backend automatically awards kibble, so no separate transaction needed
                     await api.post('/appreciations', {
-                        toUserId: connectedPartner.id,
+                        toUserId: _authPartner.id,
                         message: description
                     });
 
                     // Invalidate partner's appreciations cache (they received a new one)
-                    useCacheStore.getState().invalidate(`${CACHE_KEYS.APPRECIATIONS}:${connectedPartner.id}`);
+                    useCacheStore.getState().invalidate(`${CACHE_KEYS.APPRECIATIONS}:${_authPartner.id}`);
 
                     // Refresh users and appreciations
                     get().fetchUsers();
@@ -191,9 +201,8 @@ const useAppStore = create(
             },
 
             redeemCoupon: async (coupon) => {
-                // Get auth user from auth store
-                const { user: authUser } = await import('./useAuthStore').then(m => m.default.getState());
-                if (!authUser?.id) return;
+                const { _authUserId } = get();
+                if (!_authUserId) return;
 
                 try {
                     // Check if user has enough kibble
@@ -204,7 +213,7 @@ const useAppStore = create(
 
                     // Deduct kibble (the transaction description serves as the redemption log)
                     await api.post('/economy/transaction', {
-                        userId: authUser.id,
+                        userId: _authUserId,
                         amount: -coupon.cost,
                         type: 'SPEND',
                         description: `Redeemed: ${coupon.title}`
@@ -218,6 +227,90 @@ const useAppStore = create(
                     console.error("Failed to redeem coupon", error);
                     throw error;
                 }
+            },
+
+            // --- Event Bus Integration ---
+
+            /**
+             * Initialize event bus listeners
+             * Call this once during app startup
+             */
+            init: () => {
+                // Clear any existing listeners
+                eventCleanupFns.forEach(fn => fn());
+                eventCleanupFns = [];
+
+                // Listen for auth logout - reset all state
+                const unsubLogout = eventBus.on(EVENTS.AUTH_LOGOUT, () => {
+                    console.log('[AppStore] Received AUTH_LOGOUT event, resetting state');
+                    set({
+                        currentUser: null,
+                        users: [],
+                        caseHistory: [],
+                        appreciations: [],
+                        showCelebration: false,
+                        error: null,
+                        _authUserId: null,
+                        _authProfile: null,
+                        _authPartner: null
+                    });
+                });
+                eventCleanupFns.push(unsubLogout);
+
+                // Listen for auth login - initialize user-specific state
+                const unsubLogin = eventBus.on(EVENTS.AUTH_LOGIN, ({ userId, profile, partner }) => {
+                    console.log('[AppStore] Received AUTH_LOGIN event, initializing for userId:', userId);
+                    // Cache auth data locally to avoid circular dependencies
+                    set({
+                        _authUserId: userId,
+                        _authProfile: profile,
+                        _authPartner: partner
+                    });
+                    // Fetch users (which includes kibble balance)
+                    get().fetchUsers();
+                    // Fetch appreciations for the logged-in user
+                    get().fetchAppreciations();
+                    // Fetch case history if partner is connected
+                    if (partner) {
+                        get().fetchCaseHistory();
+                    }
+                });
+                eventCleanupFns.push(unsubLogin);
+
+                // Listen for partner connection - refresh case history and users
+                const unsubPartner = eventBus.on(EVENTS.PARTNER_CONNECTED, ({ partnerId, partnerProfile }) => {
+                    console.log('[AppStore] Received PARTNER_CONNECTED event, partner:', partnerId);
+                    // Update cached partner data
+                    set({ _authPartner: partnerProfile || { id: partnerId } });
+                    // Refresh case history now that partner is connected
+                    get().fetchCaseHistory();
+                    // Refresh users to get partner data
+                    get().fetchUsers();
+                });
+                eventCleanupFns.push(unsubPartner);
+
+                // Listen for profile updates - refresh cached profile
+                const unsubProfile = eventBus.on(EVENTS.PROFILE_UPDATED, ({ userId, changes }) => {
+                    console.log('[AppStore] Received PROFILE_UPDATED event for userId:', userId);
+                    const { _authUserId, _authProfile } = get();
+                    if (userId === _authUserId && _authProfile) {
+                        set({ _authProfile: { ..._authProfile, ...changes } });
+                        // Re-fetch users to update currentUser
+                        get().fetchUsers();
+                    }
+                });
+                eventCleanupFns.push(unsubProfile);
+
+                console.log('[AppStore] Event bus listeners initialized');
+            },
+
+            /**
+             * Cleanup event bus listeners
+             */
+            cleanup: () => {
+                eventCleanupFns.forEach(fn => fn());
+                eventCleanupFns = [];
+                console.log('[AppStore] Event bus listeners cleaned up');
             },
 
         }),

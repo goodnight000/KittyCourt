@@ -4,7 +4,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { requireSupabase, requireAuthUserId, getPartnerIdForUser } = require('../lib/auth');
+const { requirePartner } = require('../middleware/requirePartner.cjs');
 const {
     fetchChallenges,
     startChallenge,
@@ -15,23 +15,15 @@ const {
 const { isXPSystemEnabled } = require('../lib/xpService');
 const { resolveRequestLanguage } = require('../lib/language');
 const { sendError } = require('../lib/http');
+const { safeErrorMessage } = require('../lib/shared/errorUtils');
 
-const isProd = process.env.NODE_ENV === 'production';
-const safeErrorMessage = (error) => (isProd ? 'Internal server error' : (error?.message || String(error)));
-
-router.get('/', async (req, res) => {
+router.get('/', requirePartner, async (req, res) => {
     try {
         if (!isXPSystemEnabled()) {
             return res.json({ active: [], available: [], completed: [], enabled: false });
         }
 
-        const supabase = requireSupabase();
-        const userId = await requireAuthUserId(req);
-        const partnerId = await getPartnerIdForUser(supabase, userId);
-
-        if (!partnerId) {
-            return sendError(res, 400, 'NO_PARTNER', 'No partner connected');
-        }
+        const { userId, partnerId, supabase } = req;
 
         const language = await resolveRequestLanguage(req, supabase, userId);
         const result = await fetchChallenges({ userId, partnerId, language });
@@ -46,19 +38,13 @@ router.get('/', async (req, res) => {
     }
 });
 
-router.post('/:id/start', async (req, res) => {
+router.post('/:id/start', requirePartner, async (req, res) => {
     try {
         if (!isXPSystemEnabled()) {
             return sendError(res, 400, 'XP_DISABLED', 'XP system disabled');
         }
 
-        const supabase = requireSupabase();
-        const userId = await requireAuthUserId(req);
-        const partnerId = await getPartnerIdForUser(supabase, userId);
-
-        if (!partnerId) {
-            return sendError(res, 400, 'NO_PARTNER', 'No partner connected');
-        }
+        const { userId, partnerId, supabase } = req;
 
         const challengeId = req.params.id;
         const language = await resolveRequestLanguage(req, supabase, userId);
@@ -74,19 +60,13 @@ router.post('/:id/start', async (req, res) => {
     }
 });
 
-router.post('/:id/skip', async (req, res) => {
+router.post('/:id/skip', requirePartner, async (req, res) => {
     try {
         if (!isXPSystemEnabled()) {
             return sendError(res, 400, 'XP_DISABLED', 'XP system disabled');
         }
 
-        const supabase = requireSupabase();
-        const userId = await requireAuthUserId(req);
-        const partnerId = await getPartnerIdForUser(supabase, userId);
-
-        if (!partnerId) {
-            return sendError(res, 400, 'NO_PARTNER', 'No partner connected');
-        }
+        const { userId, partnerId, supabase } = req;
 
         const challengeId = req.params.id;
         const language = await resolveRequestLanguage(req, supabase, userId);
@@ -102,19 +82,13 @@ router.post('/:id/skip', async (req, res) => {
     }
 });
 
-router.post('/:id/complete', async (req, res) => {
+router.post('/:id/complete', requirePartner, async (req, res) => {
     try {
         if (!isXPSystemEnabled()) {
             return sendError(res, 400, 'XP_DISABLED', 'XP system disabled');
         }
 
-        const supabase = requireSupabase();
-        const userId = await requireAuthUserId(req);
-        const partnerId = await getPartnerIdForUser(supabase, userId);
-
-        if (!partnerId) {
-            return sendError(res, 400, 'NO_PARTNER', 'No partner connected');
-        }
+        const { userId, partnerId } = req;
 
         const challengeId = req.params.id;
         const result = await requestChallengeCompletion({ userId, partnerId, challengeId });
@@ -129,19 +103,13 @@ router.post('/:id/complete', async (req, res) => {
     }
 });
 
-router.post('/:id/confirm', async (req, res) => {
+router.post('/:id/confirm', requirePartner, async (req, res) => {
     try {
         if (!isXPSystemEnabled()) {
             return sendError(res, 400, 'XP_DISABLED', 'XP system disabled');
         }
 
-        const supabase = requireSupabase();
-        const userId = await requireAuthUserId(req);
-        const partnerId = await getPartnerIdForUser(supabase, userId);
-
-        if (!partnerId) {
-            return sendError(res, 400, 'NO_PARTNER', 'No partner connected');
-        }
+        const { userId, partnerId } = req;
 
         const challengeId = req.params.id;
         const result = await confirmChallengeCompletion({ userId, partnerId, challengeId });

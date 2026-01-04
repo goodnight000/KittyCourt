@@ -7,6 +7,7 @@
 const express = require('express');
 const router = express.Router();
 const { getSupabase, isSupabaseConfigured } = require('../lib/supabase');
+const { getAuthUserIdOrNull } = require('../lib/auth');
 const { getCurrentPeriodStartUTC, incrementUsage } = require('../lib/usageTracking');
 
 const requireSupabase = () => {
@@ -121,34 +122,12 @@ function getLimits(tier) {
 }
 
 /**
- * Extract user ID from Authorization header
- */
-async function getUserIdFromAuth(req) {
-    if (!isSupabaseConfigured()) return null;
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return null;
-    }
-
-    const token = authHeader.split(' ')[1];
-
-    try {
-        const supabase = getSupabase();
-        const { data: { user }, error } = await supabase.auth.getUser(token);
-        if (error || !user) return null;
-        return user.id;
-    } catch (e) {
-        return null;
-    }
-}
-
-/**
  * GET /api/usage
  * Get current month's usage for authenticated user
  */
 router.get('/', async (req, res) => {
     try {
-        const userId = await getUserIdFromAuth(req);
+        const userId = await getAuthUserIdOrNull(req);
         if (!userId) {
             return res.status(401).json({ error: 'Unauthorized' });
         }
@@ -175,7 +154,7 @@ router.get('/', async (req, res) => {
  */
 router.post('/increment', async (req, res) => {
     try {
-        const userId = await getUserIdFromAuth(req);
+        const userId = await getAuthUserIdOrNull(req);
         if (!userId) {
             return res.status(401).json({ error: 'Unauthorized' });
         }
@@ -206,7 +185,7 @@ router.post('/increment', async (req, res) => {
  */
 router.get('/can-use', async (req, res) => {
     try {
-        const userId = await getUserIdFromAuth(req);
+        const userId = await getAuthUserIdOrNull(req);
         if (!userId) {
             return res.status(401).json({ error: 'Unauthorized' });
         }

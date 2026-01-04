@@ -47,17 +47,11 @@ const mockSupabase = {
 
 const mockAwardXP = vi.fn();
 
-const loadChallengeService = () => {
-    delete require.cache[require.resolve('./challengeService')];
-    return require('./challengeService');
-};
-
 describe('challengeService confirmation guard', () => {
     let confirmChallengeCompletion;
 
     beforeEach(() => {
-        vi.restoreAllMocks();
-        mockAwardXP.mockReset();
+        vi.clearAllMocks();
         mockState.coupleChallengeRow = null;
         mockState.xpTransactionRow = null;
 
@@ -67,10 +61,17 @@ describe('challengeService confirmation guard', () => {
         vi.spyOn(supabase, 'getSupabase').mockReturnValue(mockSupabase);
         vi.spyOn(supabase, 'isSupabaseConfigured').mockReturnValue(true);
         vi.spyOn(xpService, 'isXPSystemEnabled').mockReturnValue(true);
-        vi.spyOn(xpService, 'awardXP').mockImplementation((params) => mockAwardXP(params));
+        vi.spyOn(xpService, 'getOrderedCoupleIds').mockReturnValue({ user_a_id: 'user-a', user_b_id: 'user-b' });
+        vi.spyOn(xpService, 'awardXP').mockImplementation(mockAwardXP);
 
-        ({ confirmChallengeCompletion } = loadChallengeService());
         mockAwardXP.mockResolvedValue({ success: true });
+
+        // Load challenge service after mocks are set up
+        // Note: We only clear challengeService cache, not lifecycle controller,
+        // to avoid ES module import issues with dateTimeUtils
+        delete require.cache[require.resolve('./challengeService')];
+        const challengeService = require('./challengeService');
+        confirmChallengeCompletion = challengeService.confirmChallengeCompletion;
     });
 
     it('rejects confirmation from the requester', async () => {

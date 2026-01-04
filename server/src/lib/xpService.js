@@ -9,6 +9,11 @@
  */
 
 const { getSupabase, isSupabaseConfigured } = require('./supabase');
+const {
+    getEtDateParts,
+    getTimeZoneOffsetMinutes,
+    getEtDayRange,
+} = require('./shared/dateTimeUtils');
 
 // ============================================
 // CONSTANTS (Junior owns)
@@ -100,83 +105,6 @@ function meetsQualityRequirements(actionType, content) {
     }
 
     return true;
-}
-
-/**
- * Get the ET date parts for a given date
- */
-function getEtDateParts(date = new Date()) {
-    const formatter = new Intl.DateTimeFormat('en-US', {
-        timeZone: 'America/New_York',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-    });
-    const parts = formatter.formatToParts(date);
-    const values = {};
-    for (const part of parts) {
-        if (part.type !== 'literal') {
-            values[part.type] = part.value;
-        }
-    }
-
-    return {
-        year: Number(values.year),
-        month: Number(values.month),
-        day: Number(values.day),
-    };
-}
-
-/**
- * Get timezone offset (in minutes) for a specific date
- */
-function getTimeZoneOffsetMinutes(date, timeZone) {
-    const formatter = new Intl.DateTimeFormat('en-US', {
-        timeZone,
-        hour12: false,
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-    });
-    const parts = formatter.formatToParts(date);
-    const values = {};
-    for (const part of parts) {
-        if (part.type !== 'literal') {
-            values[part.type] = part.value;
-        }
-    }
-    const asUtc = Date.UTC(
-        Number(values.year),
-        Number(values.month) - 1,
-        Number(values.day),
-        Number(values.hour),
-        Number(values.minute),
-        Number(values.second)
-    );
-
-    return (asUtc - date.getTime()) / 60000;
-}
-
-/**
- * Get ET day range for queries
- */
-function getEtDayRange(date = new Date()) {
-    const { year, month, day } = getEtDateParts(date);
-    const utcMidnight = new Date(Date.UTC(year, month - 1, day, 0, 0, 0));
-    const offsetMinutes = getTimeZoneOffsetMinutes(utcMidnight, 'America/New_York');
-    const start = new Date(utcMidnight.getTime() - offsetMinutes * 60000);
-    const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
-
-    const dateString = `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-
-    return {
-        startIso: start.toISOString(),
-        endIso: end.toISOString(),
-        dateString,
-    };
 }
 
 /**

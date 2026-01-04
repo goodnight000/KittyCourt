@@ -14,6 +14,7 @@ const { awardXP, ACTION_TYPES } = require('../lib/xpService');
 const { recordChallengeAction, CHALLENGE_ACTIONS } = require('../lib/challengeService');
 const { resolveRequestLanguage, getUserPreferredLanguage } = require('../lib/language');
 const { sendError } = require('../lib/http');
+const { asyncHandler } = require('../middleware/asyncHandler');
 
 const requireUserId = async (req, fallbackUserId) => {
     if (isSupabaseConfigured()) {
@@ -38,29 +39,22 @@ const requireUserId = async (req, fallbackUserId) => {
  * GET /api/court/state
  * Get current court state for user
  */
-router.get('/state', (req, res) => {
-    (async () => {
-        try {
-            const fallbackUserId = req.query?.userId;
-            let userId = null;
-            try {
-                userId = await requireUserId(req, fallbackUserId);
-            } catch (e) {
-                // Unauthenticated state requests are treated as idle.
-                if (e?.statusCode === 400 || e?.statusCode === 401) {
-                    return res.json({ phase: PHASE.IDLE, myViewPhase: VIEW_PHASE.IDLE, session: null });
-                }
-                throw e;
-            }
-
-            const state = courtSessionManager.getStateForUser(userId);
-            return res.json(state);
-        } catch (error) {
-            console.error('[API] /state error:', error);
-            return res.status(error.statusCode || 500).json({ error: error.message });
+router.get('/state', asyncHandler(async (req, res) => {
+    const fallbackUserId = req.query?.userId;
+    let userId = null;
+    try {
+        userId = await requireUserId(req, fallbackUserId);
+    } catch (e) {
+        // Unauthenticated state requests are treated as idle.
+        if (e?.statusCode === 400 || e?.statusCode === 401) {
+            return res.json({ phase: PHASE.IDLE, myViewPhase: VIEW_PHASE.IDLE, session: null });
         }
-    })();
-});
+        throw e;
+    }
+
+    const state = courtSessionManager.getStateForUser(userId);
+    return res.json(state);
+}));
 
 // === Actions ===
 
@@ -209,21 +203,14 @@ router.post('/verdict/accept', async (req, res) => {
  * POST /api/court/settle/request
  * Request settlement
  */
-router.post('/settle/request', (req, res) => {
-    (async () => {
-        try {
-            const { userId: fallbackUserId } = req.body;
-            const userId = await requireUserId(req, fallbackUserId);
+router.post('/settle/request', asyncHandler(async (req, res) => {
+    const { userId: fallbackUserId } = req.body;
+    const userId = await requireUserId(req, fallbackUserId);
 
-            courtSessionManager.requestSettlement(userId);
-            const state = courtSessionManager.getStateForUser(userId);
-            return res.json(state);
-        } catch (error) {
-            console.error('[API] /settle/request error:', error);
-            return res.status(error.statusCode || 400).json({ error: error.message });
-        }
-    })();
-});
+    courtSessionManager.requestSettlement(userId);
+    const state = courtSessionManager.getStateForUser(userId);
+    return res.json(state);
+}));
 
 /**
  * POST /api/court/settle/accept
@@ -246,21 +233,14 @@ router.post('/settle/accept', async (req, res) => {
  * POST /api/court/settle/decline
  * Decline settlement (case continues)
  */
-router.post('/settle/decline', (req, res) => {
-    (async () => {
-        try {
-            const { userId: fallbackUserId } = req.body;
-            const userId = await requireUserId(req, fallbackUserId);
+router.post('/settle/decline', asyncHandler(async (req, res) => {
+    const { userId: fallbackUserId } = req.body;
+    const userId = await requireUserId(req, fallbackUserId);
 
-            courtSessionManager.declineSettlement(userId);
-            const state = courtSessionManager.getStateForUser(userId);
-            return res.json(state);
-        } catch (error) {
-            console.error('[API] /settle/decline error:', error);
-            return res.status(error.statusCode || 400).json({ error: error.message });
-        }
-    })();
-});
+    courtSessionManager.declineSettlement(userId);
+    const state = courtSessionManager.getStateForUser(userId);
+    return res.json(state);
+}));
 
 /**
  * POST /api/court/addendum

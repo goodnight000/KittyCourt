@@ -27,6 +27,7 @@ import EconomyPage from './pages/EconomyPage';
 import ChallengesPage from './pages/ChallengesPage';
 import MemoriesPage from './pages/MemoriesPage';
 import InsightsPage from './pages/InsightsPage';
+import SettingsPage from './pages/SettingsPage';
 
 // Components
 import PartnerRequestModal from './components/PartnerRequestModal';
@@ -34,6 +35,8 @@ import LoadingScreen from './components/LoadingScreen';
 
 // Store
 import useAuthStore from './store/useAuthStore';
+import useAppStore from './store/useAppStore';
+import useCourtStore from './store/courtStore';
 import { startAuthLifecycle } from './services/authLifecycle';
 
 // RevenueCat
@@ -68,9 +71,22 @@ const AppRoutes = () => {
 
     useEffect(() => {
         const stop = startAuthLifecycle();
+
         // Initialize RevenueCat SDK (only works on native platforms)
         initializeRevenueCat();
-        return () => stop?.();
+
+        // Initialize event bus listeners for dependent stores
+        console.log('[App] Initializing event bus listeners for stores');
+        useAppStore.getState().init();
+        useCourtStore.getState().init();
+
+        return () => {
+            stop?.();
+            // Cleanup all stores (event bus listeners, pending timeouts, subscriptions)
+            useAuthStore.getState().cleanup?.();
+            useAppStore.getState().cleanup();
+            useCourtStore.getState().cleanup();
+        };
     }, []);
 
     useEffect(() => {
@@ -168,6 +184,7 @@ const AppRoutes = () => {
                     <Route path="challenges" element={<ChallengesPage />} />
                     <Route path="memories" element={<MemoriesPage />} />
                     <Route path="insights" element={<InsightsPage />} />
+                    <Route path="settings" element={<SettingsPage />} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Route>
             </Routes>

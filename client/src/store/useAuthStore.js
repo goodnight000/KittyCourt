@@ -22,14 +22,14 @@ import {
     subscribeToPartnerRequests,
     subscribeToProfileChanges
 } from '../services/supabase';
+import { loadUserContext } from '../services/profileLoader';
+import { eventBus, EVENTS } from '../lib/eventBus';
 import { readSessionBackup, writeSessionBackup, clearSessionBackup } from '../services/authSessionBackup';
 import useSubscriptionStore from './useSubscriptionStore';
 import useCacheStore from './useCacheStore';
 import { logOutUser as revenueCatLogOut } from '../services/revenuecat';
 import { DEFAULT_LANGUAGE, normalizeLanguage } from '../i18n/languageConfig';
 
-const AUTH_PROFILE_TIMEOUT_MS = 5000;
-const AUTH_REQUESTS_TIMEOUT_MS = 5000;
 const resolvePreferredLanguage = (profile) => (
     normalizeLanguage(profile?.preferred_language) || DEFAULT_LANGUAGE
 );
@@ -46,71 +46,159 @@ const resolveInitialProfileLanguage = (preferredLanguage) => (
 
 let initializePromise = null;
 let authListenerSubscription = null;
+let pendingTimeouts = new Set();
 
-const withTimeout = (promise, timeoutMs, label) => {
-    if (!timeoutMs) return promise;
-    return Promise.race([
-        promise,
-        new Promise((_, reject) =>
-            setTimeout(() => reject(new Error(`[Auth] ${label} timed out after ${timeoutMs}ms`)), timeoutMs)
-        )
-    ]);
+/**
+ * Handler for SIGNED_OUT event
+ */
+const handleSignedOut = (set, get) => {
+    console.log('[Auth] Handling SIGNED_OUT event');
+
+    // Clear all pending timeouts to prevent memory leaks
+    pendingTimeouts.forEach(timeoutId => clearTimeout(timeoutId));
+    pendingTimeouts.clear();
+
+    // Clean up realtime subscriptions
+    get().cleanupRealtimeSubscriptions();
+
+    useSubscriptionStore.getState().reset();
+    revenueCatLogOut();
+
+    // Emit logout event
+    eventBus.emit(EVENTS.AUTH_LOGOUT, { userId: null });
+
+    set({
+        user: null,
+        session: null,
+        profile: null,
+        partner: null,
+        pendingRequests: [],
+        sentRequest: null,
+        hasPartner: false,
+        isAuthenticated: false,
+        onboardingComplete: false,
+        onboardingStep: 0,
+        onboardingData: {},
+        preferredLanguage: DEFAULT_LANGUAGE,
+        _profileSubscription: null,
+        _requestsSubscription: null,
+        isLoading: false
+    });
 };
 
-const loadAuthContext = async (user, preferredLanguage) => {
-    let profile = null;
-    try {
-        const profileResult = await withTimeout(getProfile(user.id), AUTH_PROFILE_TIMEOUT_MS, 'getProfile');
-        const { data: profileData, error: profileError } = profileResult || {};
+/**
+ * Handler for TOKEN_REFRESHED event
+ */
+const handleTokenRefreshed = (set, session) => {
+    console.log('[Auth] Handling TOKEN_REFRESHED event');
 
-        if (profileData) {
-            profile = profileData;
-        } else if (profileError?.code === 'PGRST116') {
-            const partnerCode = generatePartnerCode();
-            const { data: newProfile, error: createError } = await upsertProfile({
-                id: user.id,
-                email: user.email,
-                partner_code: partnerCode,
-                onboarding_complete: false,
-                created_at: new Date().toISOString(),
-                preferred_language: resolveInitialProfileLanguage(preferredLanguage),
-            });
+    if (session) {
+        set({ session });
+        // Emit session refreshed event
+        eventBus.emit(EVENTS.AUTH_SESSION_REFRESHED, {
+            userId: session.user?.id,
+            session
+        });
+    }
+};
 
-            if (!createError) {
-                profile = newProfile;
-            }
+/**
+ * Handler for SIGNED_IN event
+ */
+const handleSignedIn = async (set, get, sessionUser, session) => {
+    console.log('[Auth] Handling SIGNED_IN event for user:', sessionUser?.id);
+
+    const state = get();
+
+    // If we're already authenticated with this user, avoid duplicate work.
+    if (state.isAuthenticated && state.user?.id === sessionUser.id) {
+        if (session && state.session?.access_token !== session.access_token) {
+            set({ session });
         }
+        return;
+    }
+
+    // Clear any cached data from a different user.
+    if (state.profile?.id && state.profile.id !== sessionUser.id) {
+        set({
+            profile: null,
+            partner: null,
+            pendingRequests: [],
+            sentRequest: null,
+            hasPartner: false,
+            onboardingComplete: false,
+            onboardingStep: 0,
+            onboardingData: {},
+            preferredLanguage: DEFAULT_LANGUAGE
+        });
+    }
+
+    set({
+        user: sessionUser,
+        session,
+        isAuthenticated: true
+    });
+
+    const cachedProfile = get().profile;
+    if (cachedProfile?.id === sessionUser.id) {
+        set({
+            hasPartner: !!cachedProfile.partner_id,
+            onboardingComplete: !!cachedProfile.onboarding_complete,
+            preferredLanguage: resolvePreferredLanguage(cachedProfile),
+        });
+
+        const timeoutId = setTimeout(() => {
+            pendingTimeouts.delete(timeoutId);
+            get().refreshProfile();
+            get().refreshPendingRequests();
+            get().setupRealtimeSubscriptions();
+        }, 0);
+        pendingTimeouts.add(timeoutId);
+        return;
+    }
+
+    try {
+        const { profile, partner, requests, sent } = await loadUserContext(sessionUser, {
+            preferredLanguage: resolveInitialProfileLanguage(get().preferredLanguage)
+        });
+
+        const stateAfterHydrate = get();
+        set({
+            profile,
+            partner,
+            pendingRequests: requests,
+            sentRequest: sent,
+            hasPartner: profile ? !!profile.partner_id : stateAfterHydrate.hasPartner,
+            onboardingComplete: profile ? !!profile.onboarding_complete : stateAfterHydrate.onboardingComplete,
+            preferredLanguage: profile ? resolvePreferredLanguage(profile) : stateAfterHydrate.preferredLanguage,
+        });
+
+        // Emit login event
+        eventBus.emit(EVENTS.AUTH_LOGIN, {
+            userId: sessionUser.id,
+            profile,
+            partner
+        });
+
+        // Initialize subscription store after auth
+        const timeoutId = setTimeout(() => {
+            pendingTimeouts.delete(timeoutId);
+            useSubscriptionStore.getState().initialize(sessionUser.id);
+            get().setupRealtimeSubscriptions();
+        }, 100);
+        pendingTimeouts.add(timeoutId);
     } catch (e) {
-        console.warn('[Auth] Failed to load profile:', e);
+        console.warn('[Auth] Failed to hydrate user context:', e);
     }
+};
 
-    let partner = null;
-    if (profile?.partner_id) {
-        try {
-            const partnerResult = await withTimeout(getProfile(profile.partner_id), AUTH_PROFILE_TIMEOUT_MS, 'getPartnerProfile');
-            partner = partnerResult?.data || null;
-        } catch (e) {
-            console.warn('[Auth] Failed to load partner profile:', e);
-        }
-    }
-
-    let requests = [];
-    let sent = null;
-    try {
-        const pendingResult = await withTimeout(getPendingRequests(), AUTH_REQUESTS_TIMEOUT_MS, 'getPendingRequests');
-        requests = pendingResult?.data || [];
-    } catch {
-        // Non-critical on boot; ignore.
-    }
-
-    try {
-        const sentResult = await withTimeout(getSentRequest(), AUTH_REQUESTS_TIMEOUT_MS, 'getSentRequest');
-        sent = sentResult?.data || null;
-    } catch {
-        // Non-critical on boot; ignore.
-    }
-
-    return { profile, partner, requests, sent };
+/**
+ * Handler for INITIAL_SESSION event
+ */
+const handleInitialSession = (set, get, sessionUser, session) => {
+    console.log('[Auth] Handling INITIAL_SESSION event');
+    // INITIAL_SESSION uses the same logic as SIGNED_IN
+    return handleSignedIn(set, get, sessionUser, session);
 };
 
 const startSupabaseAuthListener = () => {
@@ -180,105 +268,28 @@ const useAuthStore = create(
             onboardingData: {},
             preferredLanguage: DEFAULT_LANGUAGE,
 
+            // Realtime subscription refs (not persisted)
+            _profileSubscription: null,
+            _requestsSubscription: null,
+
             handleSupabaseAuthEvent: async (event, session) => {
                 const sessionUser = session?.user || null;
                 console.log('[Auth] Auth state change:', event, sessionUser?.id);
 
                 if (event === 'SIGNED_OUT') {
-                    useSubscriptionStore.getState().reset();
-                    revenueCatLogOut();
-                    set({
-                        user: null,
-                        session: null,
-                        profile: null,
-                        partner: null,
-                        pendingRequests: [],
-                        sentRequest: null,
-                        hasPartner: false,
-                        isAuthenticated: false,
-                        onboardingComplete: false,
-                        onboardingStep: 0,
-                        onboardingData: {},
-                        preferredLanguage: DEFAULT_LANGUAGE,
-                        isLoading: false
-                    });
-                    return;
+                    return handleSignedOut(set, get);
                 }
 
                 if (event === 'TOKEN_REFRESHED') {
-                    if (session) set({ session });
-                    return;
+                    return handleTokenRefreshed(set, session);
                 }
 
-                if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && sessionUser) {
-                    const state = get();
+                if (event === 'SIGNED_IN' && sessionUser) {
+                    return handleSignedIn(set, get, sessionUser, session);
+                }
 
-                    // If we're already authenticated with this user, avoid duplicate work.
-                    if (state.isAuthenticated && state.user?.id === sessionUser.id) {
-                        if (session && state.session?.access_token !== session.access_token) {
-                            set({ session });
-                        }
-                        return;
-                    }
-
-                    // Clear any cached data from a different user.
-                    if (state.profile?.id && state.profile.id !== sessionUser.id) {
-                        set({
-                            profile: null,
-                            partner: null,
-                            pendingRequests: [],
-                            sentRequest: null,
-                            hasPartner: false,
-                            onboardingComplete: false,
-                            onboardingStep: 0,
-                            onboardingData: {},
-                            preferredLanguage: DEFAULT_LANGUAGE
-                        });
-                    }
-
-                    set({
-                        user: sessionUser,
-                        session,
-                        isAuthenticated: true
-                    });
-
-                    const cachedProfile = get().profile;
-                    if (cachedProfile?.id === sessionUser.id) {
-                        set({
-                            hasPartner: !!cachedProfile.partner_id,
-                            onboardingComplete: !!cachedProfile.onboarding_complete,
-                            preferredLanguage: resolvePreferredLanguage(cachedProfile),
-                        });
-
-                        setTimeout(() => {
-                            get().refreshProfile();
-                            get().refreshPendingRequests();
-                            get().setupRealtimeSubscriptions();
-                        }, 0);
-                        return;
-                    }
-
-                    try {
-                        const { profile, partner, requests, sent } = await loadAuthContext(sessionUser, get().preferredLanguage);
-                        const stateAfterHydrate = get();
-                        set({
-                            profile,
-                            partner,
-                            pendingRequests: requests,
-                            sentRequest: sent,
-                            hasPartner: profile ? !!profile.partner_id : stateAfterHydrate.hasPartner,
-                            onboardingComplete: profile ? !!profile.onboarding_complete : stateAfterHydrate.onboardingComplete,
-                            preferredLanguage: profile ? resolvePreferredLanguage(profile) : stateAfterHydrate.preferredLanguage,
-                        });
-
-                        // Initialize subscription store after auth
-                        setTimeout(() => {
-                            useSubscriptionStore.getState().initialize(sessionUser.id);
-                            get().setupRealtimeSubscriptions();
-                        }, 100);
-                    } catch (e) {
-                        console.warn('[Auth] Failed to hydrate user context:', e);
-                    }
+                if (event === 'INITIAL_SESSION' && sessionUser) {
+                    return handleInitialSession(set, get, sessionUser, session);
                 }
             },
 
@@ -357,62 +368,24 @@ const useAuthStore = create(
 
                     console.log('[Auth] Sign in successful, user:', data.user?.id);
 
-                    // Fetch profile - don't fail sign-in if profile fetch fails
+                    // Load user context using profile loader service
                     let profile = null;
                     let partner = null;
                     try {
-                        console.log('[Auth] Fetching profile for user:', data.user.id);
+                        console.log('[Auth] Loading user context for user:', data.user.id);
 
-                        // Add timeout to prevent hanging if Supabase is slow
-                        const timeoutPromise = new Promise((_, reject) =>
-                            setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
-                        );
-
-                        const profileResult = await Promise.race([
-                            getProfile(data.user.id),
-                            timeoutPromise
-                        ]).catch(err => {
-                            console.warn('[Auth] Profile fetch timed out or failed:', err.message);
-                            return { data: null, error: err };
+                        const { profile: loadedProfile, partner: loadedPartner } = await loadUserContext(data.user, {
+                            preferredLanguage: resolveInitialProfileLanguage(get().preferredLanguage),
+                            profileTimeout: 5000
                         });
 
-                        const { data: profileData, error: profileError } = profileResult;
-                        console.log('[Auth] Profile fetch result:', { profileData, profileError });
+                        profile = loadedProfile;
+                        partner = loadedPartner;
 
-                        if (profileError) {
-                            console.warn('[Auth] Failed to fetch profile:', profileError);
-                            // If profile doesn't exist, create one
-                            if (profileError.code === 'PGRST116') {
-                                console.log('[Auth] No profile found, creating one...');
-                                const partnerCode = generatePartnerCode();
-                                const { data: newProfile, error: createError } = await upsertProfile({
-                                    id: data.user.id,
-                                    email: data.user.email,
-                                    partner_code: partnerCode,
-                                    onboarding_complete: false,
-                                    created_at: new Date().toISOString(),
-                                    preferred_language: resolveInitialProfileLanguage(get().preferredLanguage),
-                                });
-                                if (createError) {
-                                    console.error('[Auth] Failed to create profile:', createError);
-                                } else {
-                                    profile = newProfile;
-                                    console.log('[Auth] Created new profile:', profile);
-                                }
-                            }
-                        } else {
-                            profile = profileData;
-                        }
-
-                        // Get partner if connected
-                        if (profile?.partner_id) {
-                            try {
-                                const { data: partnerData } = await getPartnerProfile();
-                                partner = partnerData;
-                            } catch (e) {
-                                console.warn('[Auth] Failed to fetch partner profile:', e);
-                            }
-                        }
+                        console.log('[Auth] User context loaded:', {
+                            hasProfile: !!profile,
+                            hasPartner: !!partner
+                        });
                     } catch (e) {
                         console.warn('[Auth] Profile fetch exception:', e);
                     }
@@ -436,11 +409,20 @@ const useAuthStore = create(
                         isLoading: false
                     });
 
+                    // Emit login event
+                    eventBus.emit(EVENTS.AUTH_LOGIN, {
+                        userId: data.user.id,
+                        profile,
+                        partner
+                    });
+
                     // Set up real-time subscriptions and initialize subscription store
-                    setTimeout(() => {
+                    const timeoutId = setTimeout(() => {
+                        pendingTimeouts.delete(timeoutId);
                         useSubscriptionStore.getState().initialize(data.user.id);
                         get().setupRealtimeSubscriptions();
                     }, 100);
+                    pendingTimeouts.add(timeoutId);
 
                     console.log('[Auth] State set complete, returning success');
                     return { data };
@@ -496,10 +478,23 @@ const useAuthStore = create(
 
             // Sign out
             signOut: async () => {
+                const { user } = get();
                 set({ isLoading: true });
+
+                // Clear all pending timeouts to prevent memory leaks
+                pendingTimeouts.forEach(timeoutId => clearTimeout(timeoutId));
+                pendingTimeouts.clear();
+
+                // Clean up realtime subscriptions
+                get().cleanupRealtimeSubscriptions();
+
                 useSubscriptionStore.getState().reset();
                 revenueCatLogOut();
                 await supabaseSignOut();
+
+                // Emit logout event
+                eventBus.emit(EVENTS.AUTH_LOGOUT, { userId: user?.id });
+
                 set({
                     user: null,
                     session: null,
@@ -513,6 +508,8 @@ const useAuthStore = create(
                     onboardingStep: 0,
                     onboardingData: {},
                     preferredLanguage: DEFAULT_LANGUAGE,
+                    _profileSubscription: null,
+                    _requestsSubscription: null,
                     isLoading: false
                 });
             },
@@ -580,6 +577,7 @@ const useAuthStore = create(
 
             // Accept a partner request
             acceptRequest: async (requestId, anniversaryDate = null) => {
+                const { user } = get();
                 const { data: profile, error } = await acceptPartnerRequest(requestId, anniversaryDate);
                 if (error) {
                     return { error };
@@ -595,6 +593,15 @@ const useAuthStore = create(
                     pendingRequests: [],
                     sentRequest: null
                 });
+
+                // Emit partner connected event
+                eventBus.emit(EVENTS.PARTNER_CONNECTED, {
+                    userId: user?.id,
+                    partnerId: profile?.partner_id,
+                    partnerProfile: partner,
+                    anniversary_date: profile?.anniversary_date
+                });
+
                 return { data: profile };
             },
 
@@ -733,23 +740,40 @@ const useAuthStore = create(
                 if (!user) return;
 
                 try {
-                    const { data: profile } = await getProfile(user.id);
+                    // Use profileLoader to load user context
+                    const { profile, partner, requests, sent } = await loadUserContext(user, {
+                        preferredLanguage: get().preferredLanguage,
+                        profileTimeout: 5000
+                    });
 
-                    // Check if partner was just connected
-                    let partner = null;
-                    if (profile?.partner_id) {
-                        const { data: partnerData } = await getPartnerProfile();
-                        partner = partnerData;
-                    }
+                    const previousHasPartner = get().hasPartner;
 
                     set({
                         profile,
                         partner,
+                        pendingRequests: requests,
+                        sentRequest: profile?.partner_id ? null : sent,
                         hasPartner: !!profile?.partner_id,
                         onboardingComplete: profile?.onboarding_complete || false,
-                        sentRequest: profile?.partner_id ? null : get().sentRequest, // Clear sent request if connected
                         preferredLanguage: resolvePreferredLanguage(profile),
                     });
+
+                    // Emit profile updated event
+                    eventBus.emit(EVENTS.PROFILE_UPDATED, {
+                        userId: user.id,
+                        changes: profile
+                    });
+
+                    // If partner was just connected, emit partner connected event
+                    if (profile?.partner_id && !previousHasPartner) {
+                        const partnerProfile = get().partner; // Partner should be loaded by now
+                        eventBus.emit(EVENTS.PARTNER_CONNECTED, {
+                            userId: user.id,
+                            partnerId: profile.partner_id,
+                            partnerProfile,
+                            anniversary_date: profile.anniversary_date
+                        });
+                    }
 
                     console.log('[Auth] Profile refreshed, hasPartner:', !!profile?.partner_id);
                 } catch (e) {
@@ -769,6 +793,14 @@ const useAuthStore = create(
                     });
                 } else {
                     set({ preferredLanguage: normalizedLanguage });
+                }
+
+                // Emit language changed event
+                if (shouldInvalidateCache) {
+                    eventBus.emit(EVENTS.LANGUAGE_CHANGED, {
+                        language: normalizedLanguage,
+                        previousLanguage: currentLanguage
+                    });
                 }
 
                 if (!user) {
@@ -798,6 +830,29 @@ const useAuthStore = create(
                 }
             },
 
+            // Clean up real-time subscriptions
+            cleanupRealtimeSubscriptions: () => {
+                const { _profileSubscription, _requestsSubscription } = get();
+
+                try {
+                    if (_profileSubscription) {
+                        console.log('[Auth] Unsubscribing from profile changes');
+                        supabase.removeChannel(_profileSubscription);
+                    }
+                    if (_requestsSubscription) {
+                        console.log('[Auth] Unsubscribing from partner requests');
+                        supabase.removeChannel(_requestsSubscription);
+                    }
+                } catch (error) {
+                    console.warn('[Auth] Error cleaning up subscriptions:', error);
+                }
+
+                set({
+                    _profileSubscription: null,
+                    _requestsSubscription: null
+                });
+            },
+
             // Set up real-time subscriptions for partner connection updates
             setupRealtimeSubscriptions: () => {
                 const { user } = get();
@@ -805,25 +860,52 @@ const useAuthStore = create(
 
                 console.log('[Auth] Setting up realtime subscriptions for user:', user.id);
 
-                // Subscribe to profile changes (to detect when partner accepts)
-                const profileSub = subscribeToProfileChanges(user.id, (payload) => {
-                    console.log('[Auth] Profile changed:', payload);
-                    const newProfile = payload.new;
+                // Clean up any existing subscriptions first to prevent memory leaks
+                get().cleanupRealtimeSubscriptions();
 
-                    // If partner_id just became set, refresh to get partner details
-                    if (newProfile?.partner_id && !get().hasPartner) {
-                        console.log('[Auth] Partner connected! Refreshing profile...');
-                        get().refreshProfile();
-                    }
-                });
+                try {
+                    // Subscribe to profile changes (to detect when partner accepts)
+                    const profileSub = subscribeToProfileChanges(user.id, (payload) => {
+                        console.log('[Auth] Profile changed:', payload);
+                        const newProfile = payload.new;
 
-                // Subscribe to partner requests (to detect new incoming requests)
-                const requestsSub = subscribeToPartnerRequests(user.id, (payload) => {
-                    console.log('[Auth] Partner request changed:', payload);
-                    get().refreshPendingRequests();
-                });
+                        // If partner_id just became set, refresh to get partner details
+                        if (newProfile?.partner_id && !get().hasPartner) {
+                            console.log('[Auth] Partner connected! Refreshing profile...');
+                            get().refreshProfile();
+                        }
+                    });
 
-                return { profileSub, requestsSub };
+                    // Subscribe to partner requests (to detect new incoming requests)
+                    const requestsSub = subscribeToPartnerRequests(user.id, (payload) => {
+                        console.log('[Auth] Partner request changed:', payload);
+                        get().refreshPendingRequests();
+                    });
+
+                    // Store subscription references in state for cleanup
+                    set({
+                        _profileSubscription: profileSub,
+                        _requestsSubscription: requestsSub
+                    });
+
+                    console.log('[Auth] Realtime subscriptions established');
+                    return { profileSub, requestsSub };
+                } catch (error) {
+                    console.error('[Auth] Error setting up realtime subscriptions:', error);
+                    return null;
+                }
+            },
+
+            // Clean up all resources (called on app unmount)
+            cleanup: () => {
+                console.log('[Auth] Cleaning up all resources');
+
+                // Clear all pending timeouts
+                pendingTimeouts.forEach(timeoutId => clearTimeout(timeoutId));
+                pendingTimeouts.clear();
+
+                // Clean up realtime subscriptions
+                get().cleanupRealtimeSubscriptions();
             },
         }),
         {
@@ -832,6 +914,7 @@ const useAuthStore = create(
             partialize: (state) => ({
                 // Persist non-secret UI state to avoid blocking on network at boot.
                 // Strip large avatar_url/data URLs to prevent localStorage quota issues.
+                // Exclude subscription refs (_profileSubscription, _requestsSubscription) from persistence.
                 profile: state.profile
                     ? {
                         ...state.profile,
@@ -867,6 +950,7 @@ const useAuthStore = create(
                     : {},
                 onboardingStep: state.onboardingStep,
                 preferredLanguage: state.preferredLanguage,
+                // Note: _profileSubscription and _requestsSubscription are intentionally excluded
             }),
         }
     )

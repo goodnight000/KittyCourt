@@ -1,19 +1,19 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import {
-    ArrowRight, ArrowLeft, Sparkles, Heart,
-    Calendar, Check, User, Camera, Upload,
-    AlertTriangle, Mail, Lock, Eye, EyeOff
-} from 'lucide-react';
+import { ArrowRight, ArrowLeft, Sparkles, Check } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 import { validateDate } from '../utils/helpers';
 import Paywall from '../components/Paywall';
-import { PRESET_AVATARS } from '../services/avatarService';
 import { useI18n } from '../i18n';
 import { DEFAULT_LANGUAGE, normalizeLanguage } from '../i18n/languageConfig';
-
-// Note: PRESET_AVATARS is now imported from avatarService
+import OnboardingStep from '../components/onboarding/OnboardingStep';
+import LanguageStep from '../components/onboarding/LanguageStep';
+import WelcomeStep from '../components/onboarding/WelcomeStep';
+import AuthStep from '../components/onboarding/AuthStep';
+import ProfileFieldStep from '../components/onboarding/ProfileFieldStep';
+import OptionsStep from '../components/onboarding/OptionsStep';
+import CompleteStep from '../components/onboarding/CompleteStep';
 
 // Onboarding Steps Configuration
 const ONBOARDING_STEPS = [
@@ -181,30 +181,24 @@ const OnboardingPage = () => {
         setPreferredLanguage
     } = useAuthStore();
 
-    const [customInputs, setCustomInputs] = useState({});
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showConnectChoice, setShowConnectChoice] = useState(false);
     const [saveError, setSaveError] = useState(null);
     const [birthdayError, setBirthdayError] = useState(null);
     const [showPaywall, setShowPaywall] = useState(false);
     const [postPaywallPath, setPostPaywallPath] = useState(null);
-
-    const [authEmail, setAuthEmail] = useState('');
-    const [authPassword, setAuthPassword] = useState('');
-    const [authConfirmPassword, setAuthConfirmPassword] = useState('');
-    const [authShowPassword, setAuthShowPassword] = useState(false);
     const [authError, setAuthError] = useState(null);
     const [authSubmitting, setAuthSubmitting] = useState(false);
+    const logDebug = (...args) => {
+        if (import.meta.env.DEV) console.log(...args);
+    };
+
     const goldButtonBase =
         'relative overflow-hidden border border-[#E3D098] bg-gradient-to-br from-[#C9A227] via-[#B9911F] to-[#8B7019] shadow-[0_12px_24px_rgba(201,162,39,0.22)] hover:brightness-105';
     const goldButtonShineStyle = {
         background: 'radial-gradient(circle at 20% 20%, rgba(255,255,255,0.65), transparent 55%)'
     };
-    const welcomeHighlights = [
-        'onboarding.welcome.highlights.fair',
-        'onboarding.welcome.highlights.dailyCloseness',
-        'onboarding.welcome.highlights.calmerVibe'
-    ];
+
     const translateValidationError = (validation) => {
         if (!validation?.error) return null;
         if (validation.errorCode) {
@@ -318,12 +312,12 @@ const OnboardingPage = () => {
 
         if (currentStepData?.id === 'complete') {
             // Complete onboarding
-            console.log('[OnboardingPage] Starting save profile...');
+            logDebug('[OnboardingPage] Starting save profile...');
             setIsSubmitting(true);
             try {
-                console.log('[OnboardingPage] Calling completeOnboarding...');
+                logDebug('[OnboardingPage] Calling completeOnboarding...');
                 const result = await completeOnboarding();
-                console.log('[OnboardingPage] completeOnboarding returned:', result);
+                logDebug('[OnboardingPage] completeOnboarding returned:', result);
 
                 if (result.error) {
                     console.error('[OnboardingPage] Error:', result.error);
@@ -333,7 +327,7 @@ const OnboardingPage = () => {
                 }
 
                 // Success - show connect choice
-                console.log('[OnboardingPage] Success! Showing connect choice...');
+                logDebug('[OnboardingPage] Success! Showing connect choice...');
                 setShowConnectChoice(true);
             } catch (err) {
                 console.error('[OnboardingPage] Unexpected error:', err);
@@ -379,38 +373,35 @@ const OnboardingPage = () => {
         }
     };
 
-    const handleEmailSignUp = async (e) => {
-        e?.preventDefault?.();
+    const handleEmailSignUp = async (email, password, confirmPassword) => {
         setAuthError(null);
         setAuthSubmitting(true);
 
-        const email = authEmail.trim();
-        if (!email || !authPassword || !authConfirmPassword) {
+        const trimmedEmail = email.trim();
+        if (!trimmedEmail || !password || !confirmPassword) {
             setAuthError(t('onboarding.errors.missingFields'));
             setAuthSubmitting(false);
             return;
         }
 
-        if (authPassword !== authConfirmPassword) {
+        if (password !== confirmPassword) {
             setAuthError(t('onboarding.errors.passwordsMismatch'));
             setAuthSubmitting(false);
             return;
         }
 
-        if (authPassword.length < 8) {
+        if (password.length < 8) {
             setAuthError(t('onboarding.errors.passwordTooShort'));
             setAuthSubmitting(false);
             return;
         }
 
-        const { error } = await signUp(email, authPassword);
+        const { error } = await signUp(trimmedEmail, password);
         setAuthSubmitting(false);
         if (error) {
             setAuthError(t('onboarding.errors.signUpFailed'));
             return;
         }
-        // After sign-up, `isAuthenticated` becomes true and the auth step is removed.
-        // Keeping the same `onboardingStep` naturally advances to the next step.
     };
 
     const handleBack = () => {
@@ -444,32 +435,6 @@ const OnboardingPage = () => {
         setPreferredLanguage(languageCode);
     };
 
-    const handleAvatarFile = (file) => {
-        if (!file) return;
-
-        if (!file.type.startsWith('image/')) {
-            alert(t('onboarding.errors.invalidImage'));
-            return;
-        }
-
-        if (file.size > 5 * 1024 * 1024) {
-            alert(t('onboarding.errors.imageTooLarge'));
-            return;
-        }
-
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            const result = event.target?.result;
-            if (typeof result !== 'string') {
-                alert(t('onboarding.errors.imageReadFailed'));
-                return;
-            }
-            updateOnboardingData({ avatarUrl: result });
-        };
-        reader.onerror = () => alert(t('onboarding.errors.imageReadFailed'));
-        reader.readAsDataURL(file);
-    };
-
     const canProceed = () => {
         if (!currentStepData.field) return true;
         const value = onboardingData[currentStepData.field];
@@ -487,586 +452,87 @@ const OnboardingPage = () => {
         switch (currentStepData.id) {
             case 'language':
                 return (
-                    <Motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="space-y-4"
-                    >
-                        <div className={`grid gap-3 ${supportedLanguages.length > 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                            {supportedLanguages.map((languageOption, index) => {
-                                const label = languageOption.labelKey
-                                    ? t(languageOption.labelKey)
-                                    : (languageOption.label || languageOption.code);
-                                const nativeLabel = languageOption.nativeLabel;
-                                const isSelected = onboardingData.preferredLanguage === languageOption.code;
-                                const showNativeLabel = nativeLabel && nativeLabel !== label;
-                                return (
-                                    <Motion.button
-                                        key={languageOption.code}
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: index * 0.05 }}
-                                        whileTap={{ scale: 0.97 }}
-                                        onClick={() => handleLanguageSelect(languageOption.code)}
-                                        className={`p-4 rounded-2xl text-left transition-all border ${isSelected
-                                            ? 'border-[#D2BC76] bg-[#FBF6E8] shadow-soft'
-                                            : 'border-white/80 bg-white/80 hover:bg-white'
-                                            }`}
-                                    >
-                                        <div className="flex items-start gap-3">
-                                            <div className={`px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-[0.2em] ${isSelected
-                                                ? 'bg-white/80 text-[#8B7019]'
-                                                : 'bg-white/70 text-neutral-400'
-                                                }`}
-                                            >
-                                                {languageOption.code}
-                                            </div>
-                                            <div className="flex-1">
-                                                <p className={`font-bold ${isSelected ? 'text-court-brown' : 'text-neutral-700'}`}>
-                                                    {label}
-                                                </p>
-                                                {showNativeLabel && (
-                                                    <p className="text-xs text-neutral-400 mt-0.5">{nativeLabel}</p>
-                                                )}
-                                            </div>
-                                            {isSelected && (
-                                                <Motion.div
-                                                    initial={{ scale: 0 }}
-                                                    animate={{ scale: 1 }}
-                                                    className="w-5 h-5 rounded-full flex items-center justify-center bg-gradient-to-br from-[#C9A227] to-[#8B7019]"
-                                                >
-                                                    <Check className="w-3 h-3 text-white" />
-                                                </Motion.div>
-                                            )}
-                                        </div>
-                                    </Motion.button>
-                                );
-                            })}
-                        </div>
-                        <p className="text-xs text-neutral-400 text-center">
-                            {t('onboarding.language.helper')}
-                        </p>
-                    </Motion.div>
+                    <LanguageStep
+                        supportedLanguages={supportedLanguages}
+                        selectedLanguage={onboardingData.preferredLanguage}
+                        onLanguageSelect={handleLanguageSelect}
+                    />
                 );
 
             case 'welcome':
-                return (
-                    <Motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="text-center space-y-6"
-                    >
-                        <div className="glass-card p-6">
-                            <div className="w-20 h-20 mx-auto rounded-3xl overflow-hidden shadow-soft border border-white/80 bg-white/80">
-                                <img
-                                    src="/assets/avatars/judge_whiskers.png"
-                                    alt={t('onboarding.welcome.judgeAlt')}
-                                    className="w-full h-full object-cover"
-                                />
-                            </div>
-                            <p className="text-neutral-700 mt-4 leading-relaxed">
-                                {t('onboarding.welcome.description')}
-                            </p>
-                            <div className="flex flex-wrap justify-center gap-2 mt-4">
-                                {welcomeHighlights.map((item, i) => (
-                                    <span
-                                        key={i}
-                                        className="px-3 py-1.5 bg-white/80 border border-white/80 rounded-full text-sm text-court-brown shadow-soft"
-                                    >
-                                        {t(item)}
-                                    </span>
-                                ))}
-                            </div>
-                        </div>
-                        <button
-                            onClick={() => navigate('/signin')}
-                            className="text-sm font-semibold text-court-brown hover:text-[#8B7019] transition-colors"
-                        >
-                            {t('onboarding.welcome.signInPrompt')}
-                        </button>
-                        <div className="space-y-4">
-                            <p className="text-xs text-neutral-400">
-                                {t('onboarding.welcome.upgradeNote')}
-                            </p>
-                        </div>
-                    </Motion.div>
-                );
+                return <WelcomeStep />;
 
             case 'auth':
                 return (
-                    <Motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="space-y-6"
-                    >
-                        {authError && (
-                            <div className="glass-card p-4 border border-[#E2D6C7] text-[#6B4F3C] text-sm">
-                                {authError}
-                            </div>
-                        )}
-
-                        <Motion.button
-                            whileTap={{ scale: 0.98 }}
-                            onClick={handleGoogleSignUp}
-                            disabled={authSubmitting}
-                            className="w-full py-4 bg-white/90 border border-white/80 rounded-2xl font-bold text-neutral-700 flex items-center justify-center gap-3 hover:bg-white transition-all disabled:opacity-50 shadow-soft"
-                        >
-                            <svg className="w-5 h-5" viewBox="0 0 24 24">
-                                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-                                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-                            </svg>
-                            {t('onboarding.auth.continueWithGoogle')}
-                        </Motion.button>
-
-                        <div className="flex items-center gap-4">
-                            <div className="flex-1 h-px bg-neutral-200" />
-                            <span className="text-neutral-400 text-sm">{t('common.or')}</span>
-                            <div className="flex-1 h-px bg-neutral-200" />
-                        </div>
-
-                        <form onSubmit={handleEmailSignUp} className="space-y-4">
-                            <div className="relative">
-                                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
-                                <input
-                                    type="email"
-                                    value={authEmail}
-                                    onChange={(e) => setAuthEmail(e.target.value)}
-                                    placeholder={t('onboarding.auth.emailPlaceholder')}
-                                    className="w-full pl-12 pr-4 py-4 bg-white/90 border border-white/80 rounded-2xl text-neutral-700 text-base placeholder:text-neutral-400 focus:outline-none focus:border-[#D2BC76] focus:ring-2 focus:ring-[#F1E3B6] transition-all shadow-inner-soft"
-                                    autoFocus
-                                />
-                            </div>
-
-                            <div className="relative">
-                                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
-                                <input
-                                    type={authShowPassword ? 'text' : 'password'}
-                                    value={authPassword}
-                                    onChange={(e) => setAuthPassword(e.target.value)}
-                                    placeholder={t('onboarding.auth.passwordPlaceholder')}
-                                    className="w-full pl-12 pr-12 py-4 bg-white/90 border border-white/80 rounded-2xl text-neutral-700 text-base placeholder:text-neutral-400 focus:outline-none focus:border-[#D2BC76] focus:ring-2 focus:ring-[#F1E3B6] transition-all shadow-inner-soft"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setAuthShowPassword(!authShowPassword)}
-                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
-                                >
-                                    {authShowPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                                </button>
-                            </div>
-
-                            <div className="relative">
-                                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
-                                <input
-                                    type={authShowPassword ? 'text' : 'password'}
-                                    value={authConfirmPassword}
-                                    onChange={(e) => setAuthConfirmPassword(e.target.value)}
-                                    placeholder={t('onboarding.auth.confirmPasswordPlaceholder')}
-                                    className="w-full pl-12 pr-4 py-4 bg-white/90 border border-white/80 rounded-2xl text-neutral-700 text-base placeholder:text-neutral-400 focus:outline-none focus:border-[#D2BC76] focus:ring-2 focus:ring-[#F1E3B6] transition-all shadow-inner-soft"
-                                />
-                            </div>
-
-                            <Motion.button
-                                whileTap={{ scale: 0.98 }}
-                                type="submit"
-                                disabled={authSubmitting}
-                                className={`w-full py-4 rounded-2xl font-bold text-white flex items-center justify-center gap-2 transition-all disabled:opacity-50 ${goldButtonBase}`}
-                            >
-                                <span aria-hidden="true" className="absolute inset-0 opacity-60" style={goldButtonShineStyle} />
-                                <span className="relative z-10 flex items-center gap-2">
-                                    {authSubmitting ? t('onboarding.auth.creating') : t('onboarding.auth.createAccount')}
-                                    <ArrowRight className="w-5 h-5" />
-                                </span>
-                            </Motion.button>
-                        </form>
-
-                        <button
-                            onClick={() => navigate('/signin')}
-                            className="w-full text-center text-sm font-semibold text-court-brown hover:text-[#8B7019] transition-colors"
-                        >
-                            {t('onboarding.welcome.signInPrompt')}
-                        </button>
-                    </Motion.div>
+                    <AuthStep
+                        onGoogleSignUp={handleGoogleSignUp}
+                        onEmailSignUp={handleEmailSignUp}
+                        authError={authError}
+                        authSubmitting={authSubmitting}
+                    />
                 );
 
             case 'name':
                 return (
-                    <Motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="space-y-6"
-                    >
-                        <div className="relative">
-                            <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
-                            <input
-                                type="text"
-                                value={onboardingData.displayName || ''}
-                                onChange={(e) => updateOnboardingData({ displayName: e.target.value })}
-                                placeholder={t('onboarding.name.placeholder')}
-                                className="w-full pl-12 pr-4 py-4 bg-white/90 border border-white/80 rounded-2xl text-neutral-700 text-lg placeholder:text-neutral-400 focus:outline-none focus:border-[#D2BC76] focus:ring-2 focus:ring-[#F1E3B6] transition-all shadow-inner-soft"
-                                autoFocus
-                            />
-                        </div>
-                        <p className="text-sm text-neutral-400 text-center">
-                            {t('onboarding.name.helper')}
-                        </p>
-                    </Motion.div>
+                    <ProfileFieldStep
+                        fieldType="name"
+                        value={onboardingData.displayName}
+                        onChange={(value) => updateOnboardingData({ displayName: value })}
+                    />
                 );
 
             case 'birthday':
                 return (
-                    <Motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="space-y-6"
-                    >
-                        <div className="relative w-full">
-                            <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
-                            <input
-                                type="date"
-                                value={onboardingData.birthday || ''}
-                                onChange={(e) => {
-                                    const value = e.target.value;
-                                    updateOnboardingData({ birthday: value });
-
-                                    // Validate the date
-                                    if (value) {
-                                        const validation = validateDate(value);
-                                        setBirthdayError(validation.isValid ? null : translateValidationError(validation));
-                                    } else {
-                                        setBirthdayError(null);
-                                    }
-                                }}
-                                className={`w-full min-w-0 max-w-full box-border pl-12 pr-4 py-4 bg-white/90 border rounded-2xl text-neutral-700 text-lg focus:outline-none focus:ring-2 transition-all shadow-inner-soft ${birthdayError
-                                    ? 'border-[#D2BC76] focus:border-[#B9911F] focus:ring-[#F1E3B6]'
-                                    : 'border-white/80 focus:border-[#D2BC76] focus:ring-[#F1E3B6]'
-                                    }`}
-                            />
-                        </div>
-                        {birthdayError && (
-                            <p className="text-sm text-[#6B4F3C] text-center flex items-center justify-center gap-1">
-                                <AlertTriangle className="w-4 h-4" />
-                                {birthdayError}
-                            </p>
-                        )}
-                        <p className="text-sm text-neutral-400 text-center">
-                            {t('onboarding.birthday.helper')}
-                        </p>
-                    </Motion.div>
+                    <ProfileFieldStep
+                        fieldType="birthday"
+                        value={onboardingData.birthday}
+                        onChange={(value) => {
+                            updateOnboardingData({ birthday: value });
+                            if (value) {
+                                const validation = validateDate(value);
+                                setBirthdayError(validation.isValid ? null : translateValidationError(validation));
+                            } else {
+                                setBirthdayError(null);
+                            }
+                        }}
+                        error={birthdayError}
+                    />
                 );
 
             case 'avatar':
                 return (
-                    <Motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="space-y-6"
-                    >
-                        {/* Current selection preview */}
-                        <div className="flex flex-col items-center">
-                            <div className={`w-20 h-24 rounded-2xl overflow-hidden border-4 shadow-soft bg-white transition-all ${onboardingData.avatarUrl ? 'border-[#D2BC76]' : 'border-neutral-200'}`}>
-                                {onboardingData.avatarUrl ? (
-                                    <img
-                                        src={onboardingData.avatarUrl}
-                                        alt={t('onboarding.avatar.selectedAlt')}
-                                        className="w-full h-full object-cover"
-                                    />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center bg-neutral-100 text-neutral-400">
-                                        <User className="w-12 h-12" />
-                                    </div>
-                                )}
-                            </div>
-                            <p className={`text-sm mt-2 ${onboardingData.avatarUrl ? 'text-neutral-500' : 'text-[#6B4F3C] font-medium'}`}>
-                                {onboardingData.avatarUrl ? t('onboarding.avatar.selectedHint') : t('onboarding.avatar.requiredHint')}
-                            </p>
-                        </div>
-
-                        {/* Preset avatars grid */}
-                        <div>
-                            <p className="text-xs text-neutral-400 uppercase tracking-wider mb-3 text-center">{t('onboarding.avatar.presetLabel')}</p>
-                            <div className="grid grid-cols-4 gap-3">
-                                {PRESET_AVATARS.map((avatar, index) => (
-                                    <Motion.button
-                                        key={avatar.id}
-                                        initial={{ opacity: 0, scale: 0.8 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        transition={{ delay: index * 0.05 }}
-                                        whileTap={{ scale: 0.9 }}
-                                        onClick={() => updateOnboardingData({ avatarUrl: avatar.path })}
-                                        className={`aspect-square rounded-2xl overflow-hidden border-3 transition-all ${onboardingData.avatarUrl === avatar.path
-                                            ? 'border-[#D2BC76] ring-2 ring-[#F1E3B6]/60 shadow-soft'
-                                            : 'border-white/80 hover:border-neutral-200'
-                                            }`}
-                                    >
-                                        <img
-                                            src={avatar.path}
-                                            alt={t('onboarding.avatar.presetAlt', {
-                                                name: avatar.labelKey ? t(avatar.labelKey) : avatar.label
-                                            })}
-                                            className="w-full h-full object-cover"
-                                        />
-                                    </Motion.button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Divider */}
-                        <div className="flex items-center gap-4">
-                            <div className="flex-1 h-px bg-neutral-200" />
-                            <span className="text-neutral-400 text-xs">{t('common.or')}</span>
-                            <div className="flex-1 h-px bg-neutral-200" />
-                        </div>
-
-                        {/* Upload options */}
-                        <div className="flex gap-3">
-                            <label className="flex-1 cursor-pointer">
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    className="hidden"
-                                    onChange={(e) => {
-                                        const file = e.target.files?.[0];
-                                        handleAvatarFile(file);
-                                    }}
-                                />
-                                <div className="flex items-center justify-center gap-2 py-3 px-4 bg-white/90 border border-white/80 rounded-xl hover:bg-white transition-all shadow-soft">
-                                    <Upload className="w-5 h-5 text-neutral-500" />
-                                    <span className="font-medium text-neutral-700">{t('onboarding.avatar.upload')}</span>
-                                </div>
-                            </label>
-
-                            <label className="flex-1 cursor-pointer">
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    capture="user"
-                                    className="hidden"
-                                    onChange={(e) => {
-                                        const file = e.target.files?.[0];
-                                        handleAvatarFile(file);
-                                    }}
-                                />
-                                <div className="flex items-center justify-center gap-2 py-3 px-4 bg-white/90 border border-white/80 rounded-xl hover:bg-white transition-all shadow-soft">
-                                    <Camera className="w-5 h-5 text-neutral-500" />
-                                    <span className="font-medium text-neutral-700">{t('onboarding.avatar.camera')}</span>
-                                </div>
-                            </label>
-                        </div>
-
-                        {/* Note about changing later */}
-                        <p className="text-xs text-neutral-400 text-center">
-                            {t('onboarding.avatar.changeLater')}
-                        </p>
-                    </Motion.div>
+                    <ProfileFieldStep
+                        fieldType="avatar"
+                        value={onboardingData.avatarUrl}
+                        onChange={(value) => updateOnboardingData({ avatarUrl: value })}
+                    />
                 );
 
             case 'complete':
-                // Show connect choice after profile is saved
-                if (showConnectChoice) {
-                    return (
-                        <Motion.div
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            className="text-center space-y-6"
-                        >
-                            <Motion.div
-                                initial={{ scale: 0 }}
-                                animate={{ scale: 1 }}
-                                transition={{ type: 'spring', delay: 0.1 }}
-                                className="w-20 h-20 mx-auto rounded-full flex items-center justify-center shadow-soft border border-[#E3D098] bg-gradient-to-br from-[#C9A227] via-[#B9911F] to-[#8B7019]"
-                            >
-                                <Heart className="w-10 h-10 text-white" />
-                            </Motion.div>
-
-                            <div>
-                                <h3 className="text-xl font-display font-bold text-neutral-800 mb-2">
-                                    {t('onboarding.complete.connectTitle')}
-                                </h3>
-                                <p className="text-neutral-500 text-sm">
-                                    {t('onboarding.complete.connectSubtitle')}
-                                </p>
-                            </div>
-
-                            {/* Partner Code Display */}
-                            {profile?.partner_code && (
-                                <Motion.div
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.3 }}
-                                    className="bg-white/80 rounded-2xl p-4 border border-[#E0D2C4] shadow-inner-soft"
-                                >
-                                    <p className="text-xs text-neutral-500 mb-1">{t('onboarding.complete.partnerCodeLabel')}</p>
-                                    <p className="text-xl font-mono font-bold text-court-brown tracking-widest">
-                                        {profile.partner_code}
-                                    </p>
-                                </Motion.div>
-                            )}
-
-                            {/* Connect Now Button */}
-                            <Motion.button
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.4 }}
-                                whileTap={{ scale: 0.97 }}
-                                onClick={handleConnectNow}
-                                className={`w-full py-4 rounded-2xl font-bold text-white flex items-center justify-center gap-2 ${goldButtonBase}`}
-                            >
-                                <span aria-hidden="true" className="absolute inset-0 opacity-60" style={goldButtonShineStyle} />
-                                <span className="relative z-10 flex items-center gap-2">
-                                <Heart className="w-5 h-5" />
-                                {t('onboarding.complete.connectNow')}
-                                </span>
-                            </Motion.button>
-
-                            {/* Connect Later Button */}
-                            <Motion.button
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                transition={{ delay: 0.5 }}
-                                whileTap={{ scale: 0.97 }}
-                                onClick={handleConnectLater}
-                                className="w-full py-3 rounded-2xl font-medium text-neutral-500 bg-white/80 border border-neutral-200/70 hover:bg-white transition-colors shadow-soft"
-                            >
-                                {t('onboarding.complete.connectLater')}
-                            </Motion.button>
-
-                            <Motion.p
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                transition={{ delay: 0.6 }}
-                                className="text-xs text-neutral-400"
-                            >
-                                {t('onboarding.complete.connectNote')}
-                            </Motion.p>
-                        </Motion.div>
-                    );
-                }
-
-                // Initial complete state (before save)
                 return (
-                    <Motion.div
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="text-center space-y-6"
-                    >
-                        <Motion.div
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            transition={{ type: 'spring', delay: 0.2 }}
-                            className="w-24 h-24 mx-auto rounded-full flex items-center justify-center shadow-soft border border-[#E3D098] bg-gradient-to-br from-[#C9A227] via-[#B9911F] to-[#8B7019]"
-                        >
-                            <Check className="w-12 h-12 text-white" />
-                        </Motion.div>
-
-                        <div className="flex flex-wrap justify-center gap-3">
-                            <div className="px-4 py-2 bg-white/80 rounded-xl shadow-soft border border-white/80">
-                                <p className="text-xs text-neutral-400">{t('onboarding.complete.summaryName')}</p>
-                                <p className="font-bold text-neutral-700">{onboardingData.displayName}</p>
-                            </div>
-                            <div className="px-4 py-2 bg-white/80 rounded-xl shadow-soft border border-white/80">
-                                <p className="text-xs text-neutral-400">{t('onboarding.complete.summaryLoveLanguage')}</p>
-                                <p className="font-bold text-neutral-700">
-                                    {loveLanguageOption?.emoji}{' '}
-                                    {loveLanguageOption ? t(loveLanguageOption.labelKey) : (onboardingData.loveLanguage || t('common.unknown'))}
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* Error message */}
-                        {saveError && (
-                            <Motion.div
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="p-4 bg-[#F7F1EA] border border-[#E2D6C7] rounded-xl"
-                            >
-                                <p className="text-sm text-[#6B4F3C] font-medium flex items-center gap-2">
-                                    <AlertTriangle className="w-4 h-4" />
-                                    {saveError}
-                                </p>
-                            </Motion.div>
-                        )}
-                    </Motion.div>
+                    <CompleteStep
+                        onboardingData={onboardingData}
+                        loveLanguageOption={loveLanguageOption}
+                        showConnectChoice={showConnectChoice}
+                        partnerCode={profile?.partner_code}
+                        saveError={saveError}
+                        onConnectNow={handleConnectNow}
+                        onConnectLater={handleConnectLater}
+                    />
                 );
 
             default:
                 // Options-based steps
                 if (currentStepData.options) {
                     return (
-                        <Motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="space-y-3"
-                        >
-                            <div className={`grid gap-3 ${currentStepData.multiSelect ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                                {currentStepData.options.map((option, index) => {
-                                    const optionLabel = option.labelKey ? t(option.labelKey) : option.label;
-                                    const optionDesc = option.descKey ? t(option.descKey) : option.desc;
-                                    return (
-                                    <Motion.button
-                                        key={option.id}
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: index * 0.05 }}
-                                        whileTap={{ scale: 0.97 }}
-                                        onClick={() => handleOptionSelect(option.id)}
-                                        className={`p-4 rounded-2xl text-left transition-all border ${isOptionSelected(option.id)
-                                            ? 'border-[#D2BC76] bg-[#FBF6E8] shadow-soft'
-                                            : 'border-white/80 bg-white/80 hover:bg-white'
-                                            }`}
-                                    >
-                                        <div className="flex items-start gap-3">
-                                            <span className="text-2xl">{option.emoji}</span>
-                                            <div className="flex-1">
-                                                <p className={`font-bold ${isOptionSelected(option.id) ? 'text-court-brown' : 'text-neutral-700'}`}>
-                                                    {optionLabel}
-                                                </p>
-                                                {optionDesc && (
-                                                    <p className="text-xs text-neutral-400 mt-0.5">{optionDesc}</p>
-                                                )}
-                                            </div>
-                                            {isOptionSelected(option.id) && (
-                                                <Motion.div
-                                                    initial={{ scale: 0 }}
-                                                    animate={{ scale: 1 }}
-                                                    className="w-5 h-5 rounded-full flex items-center justify-center bg-gradient-to-br from-[#C9A227] to-[#8B7019]"
-                                                >
-                                                    <Check className="w-3 h-3 text-white" />
-                                                </Motion.div>
-                                            )}
-                                        </div>
-                                    </Motion.button>
-                                );
-                                })}
-                            </div>
-
-                            {/* Custom input for multi-select */}
-                            {currentStepData.allowCustom && (
-                                <Motion.div
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    transition={{ delay: 0.3 }}
-                                    className="mt-4"
-                                >
-                                    <input
-                                        type="text"
-                                        placeholder={t('onboarding.customOptionPlaceholder')}
-                                        value={customInputs[currentStepData.field] || ''}
-                                        onChange={(e) => setCustomInputs({ ...customInputs, [currentStepData.field]: e.target.value })}
-                                        onKeyPress={(e) => {
-                                            if (e.key === 'Enter' && e.target.value.trim()) {
-                                                const customId = `custom_${e.target.value.trim().toLowerCase().replace(/\s+/g, '_')}`;
-                                                handleOptionSelect(customId);
-                                                setCustomInputs({ ...customInputs, [currentStepData.field]: '' });
-                                            }
-                                        }}
-                                        className="w-full px-4 py-3 bg-white/80 border border-dashed border-neutral-200 rounded-xl text-neutral-600 placeholder:text-neutral-400 focus:outline-none focus:border-[#D2BC76] transition-all"
-                                    />
-                                </Motion.div>
-                            )}
-                        </Motion.div>
+                        <OptionsStep
+                            options={currentStepData.options}
+                            selectedValue={onboardingData[currentStepData.field]}
+                            onOptionSelect={handleOptionSelect}
+                            multiSelect={currentStepData.multiSelect}
+                            allowCustom={currentStepData.allowCustom}
+                            fieldName={currentStepData.field}
+                        />
                     );
                 }
                 return null;
@@ -1124,38 +590,13 @@ const OnboardingPage = () => {
                             transition={{ duration: 0.3 }}
                             className="flex-1 flex flex-col"
                         >
-                            <div className="glass-card relative overflow-hidden p-6 flex-1 flex flex-col">
-                                <div className="absolute -top-10 -right-6 h-20 w-20 rounded-full bg-[#E8DED1]/30 blur-3xl" />
-                                <div className="absolute -bottom-12 -left-8 h-24 w-24 rounded-full bg-[#E8DED1]/25 blur-3xl" />
-                                <div className="relative flex-1 flex flex-col">
-                                    {/* Step Header */}
-                                    <div className="text-center mb-6">
-                                        {currentStepData.icon && (
-                                            <Motion.div
-                                                animate={{ y: [0, -5, 0] }}
-                                                transition={{ duration: 2, repeat: Infinity }}
-                                                className="text-5xl mb-3"
-                                            >
-                                                {currentStepData.icon}
-                                            </Motion.div>
-                                        )}
-                                        <div className="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/80 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-neutral-400">
-                                            {stepBadgeLabel}
-                                        </div>
-                                        <h2 className="text-2xl font-display font-bold text-neutral-800 mt-3 mb-2">
-                                            {showConnectChoice ? t('onboarding.complete.oneMoreThing') : t(currentStepData.titleKey)}
-                                        </h2>
-                                        <p className="text-neutral-500">
-                                            {showConnectChoice ? t('onboarding.complete.savedNotice') : t(currentStepData.subtitleKey)}
-                                        </p>
-                                    </div>
-
-                                    {/* Step Content */}
-                                    <div className="flex-1">
-                                        {renderStepContent()}
-                                    </div>
-                                </div>
-                            </div>
+                            <OnboardingStep
+                                stepData={currentStepData}
+                                stepBadgeLabel={stepBadgeLabel}
+                                showConnectChoice={showConnectChoice}
+                            >
+                                {renderStepContent()}
+                            </OnboardingStep>
                         </Motion.div>
                     </AnimatePresence>
                 </div>

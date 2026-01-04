@@ -7,9 +7,7 @@
 const express = require('express');
 const router = express.Router();
 const { requireSupabase, requireAuthUserId } = require('../lib/auth');
-
-const isProd = process.env.NODE_ENV === 'production';
-const safeErrorMessage = (error) => (isProd ? 'Internal server error' : (error?.message || String(error)));
+const { safeErrorMessage } = require('../lib/shared/errorUtils');
 
 // Create a transaction
 router.post('/transaction', async (req, res) => {

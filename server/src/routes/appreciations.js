@@ -6,17 +6,16 @@
 
 const express = require('express');
 const router = express.Router();
-const { requireSupabase, requireAuthUserId, getPartnerIdForUser } = require('../lib/auth');
+const { requireAuthUserId, requireSupabase } = require('../lib/auth');
+const { requirePartner } = require('../middleware/requirePartner.cjs');
 const { awardXP, ACTION_TYPES } = require('../lib/xpService');
 const { recordChallengeAction, CHALLENGE_ACTIONS } = require('../lib/challengeService');
-
-const isProd = process.env.NODE_ENV === 'production';
-const safeErrorMessage = (error) => (isProd ? 'Internal server error' : (error?.message || String(error)));
+const { safeErrorMessage } = require('../lib/shared/errorUtils');
 
 // Create an appreciation
-router.post('/', async (req, res) => {
+router.post('/', requirePartner, async (req, res) => {
     try {
-        const viewerId = await requireAuthUserId(req);
+        const { userId: viewerId, partnerId, supabase } = req;
         const { toUserId, message, category, kibbleAmount = 10 } = req.body;
 
         if (!toUserId) {
@@ -30,9 +29,7 @@ router.post('/', async (req, res) => {
         if (!safeMessage) return res.status(400).json({ error: 'message is required' });
         const safeCategory = typeof category === 'string' ? category.trim().slice(0, 50) : null;
 
-        const supabase = requireSupabase();
-        const partnerId = await getPartnerIdForUser(supabase, viewerId);
-        if (!partnerId || String(toUserId) !== String(partnerId)) {
+        if (String(toUserId) !== String(partnerId)) {
             return res.status(403).json({ error: 'Can only send appreciation to your connected partner' });
         }
 
