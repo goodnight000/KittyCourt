@@ -41,6 +41,9 @@ const levelsRoutes = require('./routes/levels');
 const challengesRoutes = require('./routes/challenges');
 const memoriesRoutes = require('./routes/memories');
 const insightsRoutes = require('./routes/insights');
+const feedbackRoutes = require('./routes/feedback');
+const notificationsRoutes = require('./routes/notifications');
+const statsRoutes = require('./routes/stats');
 
 // Court architecture
 const courtRoutes = require('./routes/court');
@@ -127,6 +130,15 @@ app.use('/api/memories', memoriesRoutes);
 
 // Insights Routes
 app.use('/api/insights', insightsRoutes);
+
+// Feedback Routes
+app.use('/api/feedback', feedbackRoutes);
+
+// Notifications Routes
+app.use('/api/notifications', notificationsRoutes);
+
+// Stats Routes
+app.use('/api/stats', statsRoutes);
 
 // Root endpoint - for easy verification
 app.get('/', (req, res) => {

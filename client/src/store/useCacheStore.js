@@ -12,6 +12,7 @@ export const CACHE_TTL = {
     CASE_HISTORY: 5 * 60 * 1000,    // 5 minutes
     APPRECIATIONS: 5 * 60 * 1000,   // 5 minutes
     EVENT_PLANS: 30 * 60 * 1000,    // 30 minutes
+    STATS: 5 * 60 * 1000,           // 5 minutes - unified stats cache
 };
 
 /**
@@ -25,6 +26,7 @@ export const CACHE_KEYS = {
     CASE_HISTORY: 'cases',
     APPRECIATIONS: 'appreciations',
     EVENT_PLANS: 'calendar:plans-exist',
+    STATS: 'user-stats',            // unified stats from user_stats table
 };
 
 /**

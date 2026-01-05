@@ -7,12 +7,13 @@
 const express = require('express');
 const router = express.Router();
 const { requireAuthUserId, requireSupabase } = require('../lib/auth');
-const { requirePartner } = require('../middleware/requirePartner.cjs');
+const { requirePartner } = require('../middleware/requirePartner');
 const { canUseFeature } = require('../lib/usageLimits');
 const { awardXP, ACTION_TYPES } = require('../lib/xpService');
 const { recordChallengeAction, CHALLENGE_ACTIONS } = require('../lib/challengeService');
 const { resolveRequestLanguage } = require('../lib/language');
 const { safeErrorMessage } = require('../lib/shared/errorUtils');
+const { processSecureInput, securityConfig } = require('../lib/security');
 
 // Get calendar events
 router.get('/events', requirePartner, async (req, res) => {
@@ -340,6 +341,34 @@ router.post('/plan-event', requirePartner, async (req, res) => {
             type: eventType,
             date: eventDate,
         };
+
+        // Security: Validate and sanitize event title
+        if (normalizedEvent.title) {
+            const titleCheck = processSecureInput(normalizedEvent.title, {
+                userId: viewerId,
+                fieldName: 'eventTitle',
+                maxLength: securityConfig.fieldLimits.eventTitle,
+                endpoint: 'eventPlanner',
+            });
+            if (!titleCheck.safe) {
+                return res.status(400).json({ error: 'Event title contains invalid content. Please use plain text.' });
+            }
+            normalizedEvent.title = titleCheck.input;
+        }
+
+        // Security: Validate and sanitize event notes if present
+        if (normalizedEvent.notes) {
+            const notesCheck = processSecureInput(normalizedEvent.notes, {
+                userId: viewerId,
+                fieldName: 'eventNotes',
+                maxLength: securityConfig.fieldLimits.eventNotes,
+                endpoint: 'eventPlanner',
+            });
+            if (!notesCheck.safe) {
+                return res.status(400).json({ error: 'Event notes contain invalid content. Please use plain text.' });
+            }
+            normalizedEvent.notes = notesCheck.input;
+        }
 
         if (partnerIdFromClient && String(partnerIdFromClient) !== String(partnerId)) {
             return res.status(400).json({ error: 'Invalid partnerId for current user' });

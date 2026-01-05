@@ -11,11 +11,27 @@ const PartnerConnection = ({ hasPartner, profile, partner, loveLanguages }) => {
     const navigate = useNavigate();
     const [copied, setCopied] = useState(false);
 
-    const handleCopyCode = () => {
+    const handleCopyCode = async () => {
         if (profile?.partner_code) {
-            navigator.clipboard.writeText(profile.partner_code);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
+            try {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(profile.partner_code);
+                } else {
+                    // Fallback for browsers without clipboard API
+                    const textArea = document.createElement('textarea');
+                    textArea.value = profile.partner_code;
+                    textArea.style.position = 'fixed';
+                    textArea.style.left = '-9999px';
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                }
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+            } catch (err) {
+                console.error('Failed to copy to clipboard:', err);
+            }
         }
     };
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -8,6 +8,7 @@ import {
 import useAuthStore from '../store/useAuthStore';
 import { useI18n } from '../i18n';
 import { SUPPORTED_LANGUAGE_CONFIG } from '../i18n/languageConfig';
+import api from '../services/api';
 
 const SettingsPage = () => {
     const navigate = useNavigate();
@@ -17,12 +18,32 @@ const SettingsPage = () => {
     const [showDisconnectModal, setShowDisconnectModal] = useState(false);
     const [showLanguagePicker, setShowLanguagePicker] = useState(false);
 
-    // Notification toggles (local state for now - can be persisted later)
+    // Notification toggles (connected to API)
     const [notifications, setNotifications] = useState({
-        dailyMeow: true,
-        verdicts: true,
+        dailyQuestions: true,
+        eventReminders: true,
         partnerActivity: true,
     });
+    const [loadingPrefs, setLoadingPrefs] = useState(true);
+
+    // Load notification preferences on mount
+    useEffect(() => {
+        const loadPreferences = async () => {
+            try {
+                const response = await api.get('/notifications/preferences');
+                setNotifications({
+                    dailyQuestions: response.data.dailyQuestions ?? true,
+                    eventReminders: response.data.eventReminders ?? true,
+                    partnerActivity: response.data.partnerActivity ?? true,
+                });
+            } catch (error) {
+                console.error('Failed to load notification preferences:', error);
+            } finally {
+                setLoadingPrefs(false);
+            }
+        };
+        loadPreferences();
+    }, []);
 
     // Derive login method from Supabase user
     const getLoginMethod = () => {
@@ -33,11 +54,19 @@ const SettingsPage = () => {
 
     const loginMethod = getLoginMethod();
 
-    const handleNotificationToggle = (key) => {
-        setNotifications((prev) => ({
-            ...prev,
-            [key]: !prev[key],
-        }));
+    const handleNotificationToggle = async (key) => {
+        const newValue = !notifications[key];
+        setNotifications(prev => ({ ...prev, [key]: newValue }));
+
+        try {
+            await api.put('/notifications/preferences', {
+                [key]: newValue
+            });
+        } catch (error) {
+            // Revert on error
+            setNotifications(prev => ({ ...prev, [key]: !newValue }));
+            console.error('Failed to save notification preference:', error);
+        }
     };
 
     const handleLanguageChange = (langCode) => {
@@ -133,8 +162,8 @@ const SettingsPage = () => {
                     </h2>
 
                     {[
-                        { key: 'dailyMeow', label: t('settings.notifications.dailyMeow') },
-                        { key: 'verdicts', label: t('settings.notifications.verdicts') },
+                        { key: 'dailyQuestions', label: t('settings.notifications.dailyMeow') },
+                        { key: 'eventReminders', label: t('settings.notifications.eventReminders') },
                         { key: 'partnerActivity', label: t('settings.notifications.partnerActivity') },
                     ].map(({ key, label }) => (
                         <div key={key} className="flex items-center justify-between py-2">
@@ -143,8 +172,8 @@ const SettingsPage = () => {
                                 whileTap={{ scale: 0.95 }}
                                 onClick={() => handleNotificationToggle(key)}
                                 className={`relative w-12 h-7 rounded-full transition-colors ${notifications[key]
-                                        ? 'bg-gradient-to-r from-[#C9A227] to-[#8B7019]'
-                                        : 'bg-neutral-200'
+                                    ? 'bg-gradient-to-r from-[#C9A227] to-[#8B7019]'
+                                    : 'bg-neutral-200'
                                     }`}
                             >
                                 <motion.div
@@ -184,20 +213,14 @@ const SettingsPage = () => {
                         {t('settings.support.title')}
                     </h2>
 
-                    {[
-                        { key: 'contact', label: t('settings.support.contact'), href: 'mailto:support@pauseapp.com' },
-                        { key: 'bug', label: t('settings.support.bug'), href: 'mailto:bugs@pauseapp.com?subject=Bug Report' },
-                        { key: 'feature', label: t('settings.support.feature'), href: 'mailto:feedback@pauseapp.com?subject=Feature Suggestion' },
-                    ].map(({ key, label, href }) => (
-                        <a
-                            key={key}
-                            href={href}
-                            className="w-full flex items-center justify-between py-3 px-3 rounded-2xl border border-white/80 bg-white/70"
-                        >
-                            <span className="text-sm text-neutral-700">{label}</span>
-                            <ExternalLink className="w-4 h-4 text-neutral-400" />
-                        </a>
-                    ))}
+                    <motion.button
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => navigate('/feedback')}
+                        className="w-full flex items-center justify-between py-3 px-3 rounded-2xl border border-white/80 bg-white/70"
+                    >
+                        <span className="text-sm text-neutral-700">{t('settings.support.sendFeedback')}</span>
+                        <ChevronRight className="w-4 h-4 text-neutral-400" />
+                    </motion.button>
                 </section>
 
                 {/* Legal Section */}
@@ -208,8 +231,8 @@ const SettingsPage = () => {
                     </h2>
 
                     {[
-                        { key: 'terms', label: t('settings.legal.terms'), href: 'https://pauseapp.com/terms' },
-                        { key: 'privacy', label: t('settings.legal.privacy'), href: 'https://pauseapp.com/privacy' },
+                        { key: 'terms', label: t('settings.legal.terms'), href: '/terms-of-service.html' },
+                        { key: 'privacy', label: t('settings.legal.privacy'), href: '/privacy-policy.html' },
                     ].map(({ key, label, href }) => (
                         <a
                             key={key}
@@ -294,42 +317,113 @@ const SettingsPage = () => {
                 )}
             </AnimatePresence>
 
-            {/* Language Picker Modal */}
+            {/* Language Picker Modal - Premium Centered Design */}
             <AnimatePresence>
                 {showLanguagePicker && (
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm"
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md p-4"
                         onClick={() => setShowLanguagePicker(false)}
                     >
                         <motion.div
-                            initial={{ y: '100%' }}
-                            animate={{ y: 0 }}
-                            exit={{ y: '100%' }}
+                            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.9, opacity: 0, y: 20 }}
                             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
                             onClick={(e) => e.stopPropagation()}
-                            className="glass-card w-full max-w-lg rounded-b-none p-6 space-y-4"
+                            className="relative w-full max-w-sm overflow-hidden"
                         >
-                            <h3 className="font-display font-bold text-neutral-800 text-center">
-                                {t('settings.preferences.language')}
-                            </h3>
-                            <div className="space-y-2">
-                                {(supportedLanguages || SUPPORTED_LANGUAGE_CONFIG).map((lang) => (
-                                    <motion.button
-                                        key={lang.code}
-                                        whileTap={{ scale: 0.98 }}
-                                        onClick={() => handleLanguageChange(lang.code)}
-                                        className={`w-full flex items-center justify-between py-4 px-4 rounded-2xl border transition-colors ${language === lang.code
-                                                ? 'border-amber-300 bg-amber-50/70'
-                                                : 'border-white/80 bg-white/70'
-                                            }`}
+                            {/* Decorative background glow */}
+                            <div className="absolute -top-20 -right-20 w-40 h-40 rounded-full bg-amber-300/30 blur-3xl pointer-events-none" />
+                            <div className="absolute -bottom-20 -left-20 w-40 h-40 rounded-full bg-rose-300/20 blur-3xl pointer-events-none" />
+
+                            {/* Card content */}
+                            <div className="relative bg-white/95 backdrop-blur-xl rounded-3xl p-6 shadow-2xl border border-white/80">
+                                {/* Header */}
+                                <div className="text-center mb-6">
+                                    <motion.div
+                                        initial={{ scale: 0 }}
+                                        animate={{ scale: 1 }}
+                                        transition={{ delay: 0.1, type: 'spring', stiffness: 200 }}
+                                        className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-100 to-rose-100 flex items-center justify-center mx-auto mb-3 shadow-soft"
                                     >
-                                        <span className="text-sm font-medium text-neutral-800">{lang.nativeLabel}</span>
-                                        <span className="text-xs text-neutral-500">{lang.label}</span>
-                                    </motion.button>
-                                ))}
+                                        <Globe className="w-7 h-7 text-amber-600" />
+                                    </motion.div>
+                                    <h3 className="text-xl font-display font-bold text-neutral-800">
+                                        {t('settings.preferences.language')}
+                                    </h3>
+                                    <p className="text-sm text-neutral-500 mt-1">
+                                        Choose your preferred language
+                                    </p>
+                                </div>
+
+                                {/* Language options with staggered animation */}
+                                <div className="space-y-3">
+                                    {(supportedLanguages || SUPPORTED_LANGUAGE_CONFIG).map((lang, index) => {
+                                        const isSelected = language === lang.code;
+                                        const flagEmoji = lang.code === 'en' ? '🇺🇸' : lang.code === 'zh-Hans' ? '🇨🇳' : '🌐';
+
+                                        return (
+                                            <motion.button
+                                                key={lang.code}
+                                                initial={{ opacity: 0, x: -20 }}
+                                                animate={{ opacity: 1, x: 0 }}
+                                                transition={{ delay: 0.15 + index * 0.05 }}
+                                                whileHover={{ scale: 1.02 }}
+                                                whileTap={{ scale: 0.98 }}
+                                                onClick={() => handleLanguageChange(lang.code)}
+                                                className={`w-full flex items-center gap-4 py-4 px-4 rounded-2xl border-2 transition-all ${isSelected
+                                                        ? 'border-amber-400 bg-gradient-to-r from-amber-50 to-rose-50/50 shadow-soft'
+                                                        : 'border-neutral-100 bg-white hover:border-amber-200 hover:bg-amber-50/30'
+                                                    }`}
+                                            >
+                                                {/* Flag emoji */}
+                                                <span className="text-2xl">{flagEmoji}</span>
+
+                                                {/* Language names */}
+                                                <div className="flex-1 text-left">
+                                                    <p className={`font-semibold ${isSelected ? 'text-amber-700' : 'text-neutral-800'}`}>
+                                                        {lang.nativeLabel}
+                                                    </p>
+                                                    <p className="text-xs text-neutral-500">{lang.label}</p>
+                                                </div>
+
+                                                {/* Checkmark with animation */}
+                                                <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-all ${isSelected
+                                                        ? 'bg-gradient-to-br from-amber-400 to-[#8B7019]'
+                                                        : 'bg-neutral-100'
+                                                    }`}>
+                                                    {isSelected && (
+                                                        <motion.svg
+                                                            initial={{ scale: 0 }}
+                                                            animate={{ scale: 1 }}
+                                                            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                                                            className="w-3.5 h-3.5 text-white"
+                                                            fill="none"
+                                                            viewBox="0 0 24 24"
+                                                            stroke="currentColor"
+                                                            strokeWidth={3}
+                                                        >
+                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                                        </motion.svg>
+                                                    )}
+                                                </div>
+                                            </motion.button>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* Close hint */}
+                                <motion.p
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    transition={{ delay: 0.4 }}
+                                    className="text-center text-xs text-neutral-400 mt-5"
+                                >
+                                    Tap outside to close
+                                </motion.p>
                             </div>
                         </motion.div>
                     </motion.div>

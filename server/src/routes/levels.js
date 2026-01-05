@@ -7,7 +7,7 @@
 const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 const { requireAuthUserId } = require('../lib/auth');
-const { requirePartner } = require('../middleware/requirePartner.cjs');
+const { requirePartner } = require('../middleware/requirePartner');
 const { isSupabaseConfigured } = require('../lib/supabase');
 const { getLevelStatus, isXPSystemEnabled, getOrderedCoupleIds, awardXP, ACTION_TYPES } = require('../lib/xpService');
 const { safeErrorMessage } = require('../lib/shared/errorUtils');

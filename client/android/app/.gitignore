@@ -1,2 +1,5 @@
 /build/*
 !/build/.npmkeep
+
+# Firebase configuration (contains API keys)
+google-services.json

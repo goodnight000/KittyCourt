@@ -1,0 +1,43 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd /Users/charleszheng/Desktop/Ideas/Cat\\\\ Judge && find:*)",
+      "Bash(wc:*)",
+      "Bash(find:*)",
+      "Bash(git checkout:*)",
+      "Bash(cd:*)",
+      "Bash(npm test)",
+      "Bash(timeout 10s npm start:*)",
+      "Bash(node --check:*)",
+      "Bash(cat:*)",
+      "Bash(npm test -- SessionStateRepository.test.js)",
+      "Bash(npm test -- court/)",
+      "Bash(for file in src/lib/court/SessionStateRepository.js src/lib/court/PhaseTransitionController.js src/lib/court/EvidenceService.js src/lib/court/ResolutionService.js src/lib/court/SettlementService.js)",
+      "Bash(do echo \"Checking $file...\")",
+      "Bash(node -c:*)",
+      "Bash(echo:*)",
+      "Bash(done)",
+      "Bash(npm test -- challenges)",
+      "Bash(npm test -- challengeService.test)",
+      "Bash(cd /Users/charleszheng/Desktop/Ideas/Cat\\\\ Judge/server && git stash:*)",
+      "Bash(git stash pop)",
+      "Bash(npm run build:*)",
+      "Bash(npm ls:*)",
+      "Bash(npm install:*)",
+      "Bash(npm test:*)",
+      "Bash(node -e:*)",
+      "Bash(tree:*)",
+      "Bash(ls:*)",
+      "Bash(npm run lint:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(npx eslint:*)",
+      "Bash(npm run test:coverage:*)",
+      "Bash(npx cap sync)",
+      "Bash(npm uninstall:*)",
+      "Bash(grep:*)",
+      "Bash(git check-ignore:*)",
+      "Bash(test:*)"
+    ]
+  }
+}
+

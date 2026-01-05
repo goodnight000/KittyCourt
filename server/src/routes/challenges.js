@@ -4,7 +4,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { requirePartner } = require('../middleware/requirePartner.cjs');
+const { requirePartner } = require('../middleware/requirePartner');
 const {
     fetchChallenges,
     startChallenge,
@@ -16,6 +16,7 @@ const { isXPSystemEnabled } = require('../lib/xpService');
 const { resolveRequestLanguage } = require('../lib/language');
 const { sendError } = require('../lib/http');
 const { safeErrorMessage } = require('../lib/shared/errorUtils');
+const { sendNotificationToPartner } = require('../lib/notificationService');
 
 router.get('/', requirePartner, async (req, res) => {
     try {
@@ -96,6 +97,14 @@ router.post('/:id/complete', requirePartner, async (req, res) => {
             return sendError(res, 400, 'CHALLENGE_COMPLETE_FAILED', result.error);
         }
 
+        // Notify partner of completion request
+        sendNotificationToPartner(userId, {
+            type: 'challenge_completion',
+            title: 'Challenge Completion',
+            body: 'Your partner marked a challenge as complete - please confirm!',
+            data: { screen: 'challenges', challengeId }
+        }).catch(err => console.warn('[Challenges] Push notification failed:', err?.message));
+
         return res.json({ success: true, pending: !!result?.pending });
     } catch (error) {
         console.error('[Challenges] Failed to request completion:', error);
@@ -116,6 +125,14 @@ router.post('/:id/confirm', requirePartner, async (req, res) => {
         if (result?.error) {
             return sendError(res, 400, 'CHALLENGE_CONFIRM_FAILED', result.error);
         }
+
+        // Notify partner that challenge was confirmed
+        sendNotificationToPartner(userId, {
+            type: 'challenge_confirmed',
+            title: 'Challenge Confirmed!',
+            body: 'Your partner confirmed the challenge completion',
+            data: { screen: 'challenges', challengeId }
+        }).catch(err => console.warn('[Challenges] Push notification failed:', err?.message));
 
         return res.json({ success: true });
     } catch (error) {

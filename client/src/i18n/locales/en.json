@@ -1191,7 +1191,8 @@
       "daysLabel": "Days",
       "daysTogether": "Days together",
       "streakLabel": "Streak",
-      "questionStreak": "Daily Meow streak"
+      "questionStreak": "Daily Meow streak",
+      "gracePeriod": "{days}d left to save streak"
     },
     "connectPrompt": "Connect your partner to unlock shared features.",
     "dailyQuestion": {
@@ -1804,14 +1805,48 @@
     },
     "milestones": {
       "title": "Milestones",
-      "firstCase": "First case",
-      "appreciation": "First appreciation",
-      "fiveCases": "5 cases",
-      "giftGiver": "Gift giver",
-      "tenCases": "10 cases",
-      "superFan": "Super fan",
-      "deepTalks": "Deep talks",
-      "storyTellers": "Storytellers"
+      "unlockedCount": "{count} of {total} unlocked",
+      "totalXP": "+{xp} XP earned",
+      "unlocked": "Unlocked!",
+      "progress": "{current}/{target}",
+      "reward": "+{xp} XP",
+      "claimed": "Claimed",
+      "firstResolution": {
+        "title": "First Resolution",
+        "description": "Resolve 3 disputes together in court"
+      },
+      "conflictConquerors": {
+        "title": "Conflict Conquerors",
+        "description": "Navigate 25 cases as a team"
+      },
+      "dailyDevotion": {
+        "title": "Daily Devotion",
+        "description": "Answer 30 Daily Meow questions together"
+      },
+      "storytellers": {
+        "title": "Storytellers",
+        "description": "Build your story with 100 Daily Meow answers"
+      },
+      "generousHearts": {
+        "title": "Generous Hearts",
+        "description": "Send 20 appreciations to your partner"
+      },
+      "memoryMakers": {
+        "title": "Memory Makers",
+        "description": "Upload 5 shared memories together"
+      },
+      "memoryVault": {
+        "title": "Memory Vault",
+        "description": "Build a collection of 30 shared memories"
+      },
+      "challengeMasters": {
+        "title": "Challenge Masters",
+        "description": "Complete 15 couple challenges together"
+      },
+      "datePlanners": {
+        "title": "Date Planners",
+        "description": "Add 10 events to your shared calendar"
+      }
     },
     "edit": {
       "title": "Edit profile",
@@ -1954,7 +1989,7 @@
     "notifications": {
       "title": "Notifications",
       "dailyMeow": "Daily Meow reminders",
-      "verdicts": "Verdict notifications",
+      "eventReminders": "Event Reminders",
       "partnerActivity": "Partner activity"
     },
     "preferences": {
@@ -1963,9 +1998,7 @@
     },
     "support": {
       "title": "Support & Feedback",
-      "contact": "Contact support",
-      "bug": "Report a bug",
-      "feature": "Suggest a feature"
+      "sendFeedback": "Send Feedback"
     },
     "legal": {
       "title": "Legal & About",
@@ -1976,6 +2009,37 @@
     "howItWorks": {
       "title": "How Judge Whiskers Works",
       "description": "Both partners submit their perspective. Judge Whiskers reviews the evidence, identifies hidden feelings, and delivers a fair, empathetic verdict designed to help you reconnect."
+    }
+  },
+  "streak": {
+    "gracePeriod": "Grace period",
+    "gracePeriodHint": "Answer today to keep your streak!",
+    "daysRemaining": "{{count}} day left",
+    "streakLost": "Streak lost",
+    "reviveStreak": "Revive Streak",
+    "reviveAvailable": "Revival available!",
+    "reviveNotAvailable": "Revival available in {{days}} days",
+    "reviveSuccess": "Streak revived!",
+    "reviveGoldOnly": "Gold members can revive streaks",
+    "onGracePeriod": "On grace period"
+  },
+  "feedback": {
+    "title": "Send Feedback",
+    "subtitle": "We'd love to hear from you",
+    "reasonLabel": "What's this about?",
+    "reasons": {
+      "contact": "Contact Support",
+      "bug": "Report a Bug",
+      "feature": "Suggest a Feature"
+    },
+    "messageLabel": "Your message",
+    "messagePlaceholder": "Tell us what's on your mind...",
+    "submit": "Submit Feedback",
+    "success": "Thanks for your feedback! 💕",
+    "errors": {
+      "reasonRequired": "Please select a reason",
+      "messageRequired": "Please enter a message",
+      "submitFailed": "Couldn't submit feedback. Please try again."
     }
   }
 }

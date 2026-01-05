@@ -7,10 +7,11 @@
 const express = require('express');
 const router = express.Router();
 const { requireAuthUserId, requireSupabase } = require('../lib/auth');
-const { requirePartner } = require('../middleware/requirePartner.cjs');
+const { requirePartner } = require('../middleware/requirePartner');
 const { awardXP, ACTION_TYPES } = require('../lib/xpService');
 const { recordChallengeAction, CHALLENGE_ACTIONS } = require('../lib/challengeService');
 const { safeErrorMessage } = require('../lib/shared/errorUtils');
+const { sendNotificationToUser } = require('../lib/notificationService');
 
 // Create an appreciation
 router.post('/', requirePartner, async (req, res) => {
@@ -70,6 +71,14 @@ router.post('/', requirePartner, async (req, res) => {
         } catch (challengeError) {
             console.warn('[Appreciations] Challenge progress failed:', challengeError?.message || challengeError);
         }
+
+        // Send push notification to recipient
+        sendNotificationToUser(toUserId, {
+            type: 'appreciation',
+            title: 'New Appreciation',
+            body: `Your partner sent you an appreciation!`,
+            data: { screen: 'appreciations' }
+        }).catch(err => console.warn('[Appreciations] Push notification failed:', err?.message));
 
         // Award kibble via transaction
         const { data: transaction } = await supabase

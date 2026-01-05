@@ -5,6 +5,20 @@ import api from '../../services/api';
 
 // Mock dependencies
 vi.mock('../../services/api');
+vi.mock('../../store/useCacheStore', () => {
+    const getCached = vi.fn(() => null);
+    const setCache = vi.fn();
+    return {
+        default: {
+            getState: () => ({
+                getCached,
+                setCache,
+            }),
+        },
+        CACHE_KEYS: { CALENDAR_EVENTS: 'calendar:events' },
+        CACHE_TTL: { CALENDAR_EVENTS: 10 * 60 * 1000 },
+    };
+});
 vi.mock('../../store/useAuthStore', () => ({
     default: vi.fn(() => ({
         user: { id: 'user-1' },

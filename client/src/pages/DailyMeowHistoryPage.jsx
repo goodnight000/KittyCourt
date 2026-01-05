@@ -63,6 +63,7 @@ const DailyMeowHistoryPage = () => {
     const [selectedEntry, setSelectedEntry] = useState(null);
     const filter = 'all' // 'all', 'completed', 'mine-only'
     const [searchQuery, setSearchQuery] = useState('');
+    const [userStats, setUserStats] = useState(null);
 
     const fetchHistory = useCallback(async () => {
         if (!myId || !partnerId) return;
@@ -101,6 +102,20 @@ const DailyMeowHistoryPage = () => {
             setLoading(false);
         }
     }, [fetchHistory, myId, partnerId, language]);
+
+    // Fetch user stats from unified API
+    useEffect(() => {
+        const fetchStats = async () => {
+            if (!myId) return;
+            try {
+                const response = await api.get('/stats');
+                setUserStats(response.data);
+            } catch (err) {
+                console.error('Failed to fetch stats:', err);
+            }
+        };
+        fetchStats();
+    }, [myId]);
 
     const getMoodData = (moodId) => MOOD_OPTIONS.find(m => m.id === moodId);
     const getMoodList = (answer) => {
@@ -165,43 +180,11 @@ const DailyMeowHistoryPage = () => {
         return groups;
     }, {});
 
-    // Stats
-    const totalAnswered = history.filter(h => h.my_answer).length;
-    const streak = calculateStreak(history);
-
-    function calculateStreak(hist) {
-        const completed = (hist || []).filter(h => h?.my_answer && h?.partner_answer);
-        if (completed.length === 0) return 0;
-
-        const parseDay = (day) => new Date(`${day}T00:00:00`);
-        const sorted = [...completed].sort((a, b) => parseDay(b.assigned_date) - parseDay(a.assigned_date));
-
-        // Bug 4 fix: Check if most recent is within last 1 day (today or yesterday)
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const mostRecent = parseDay(sorted[0].assigned_date);
-        const daysSinceLast = Math.round((today - mostRecent) / (1000 * 60 * 60 * 24));
-
-        // If most recent answer is more than 1 day ago, streak is broken
-        if (daysSinceLast > 1) return 0;
-
-        const msPerDay = 1000 * 60 * 60 * 24;
-        let streakCount = 1;
-
-        for (let i = 1; i < sorted.length; i++) {
-            const prev = parseDay(sorted[i - 1].assigned_date);
-            const curr = parseDay(sorted[i].assigned_date);
-            const diffDays = Math.round((prev - curr) / msPerDay);
-
-            if (diffDays === 1) {
-                streakCount++;
-            } else {
-                break;
-            }
-        }
-
-        return streakCount;
-    }
+    // Stats - use server-side stats when available, with history count as fallback
+    const historyAnsweredCount = history.filter(h => h.my_answer).length;
+    const totalAnswered = userStats?.questions_completed ?? historyAnsweredCount;
+    const streak = userStats?.current_streak ?? 0;
+    const isGracePeriod = userStats?.is_grace_period ?? false;
 
     return (
         <RequirePartner
@@ -257,8 +240,10 @@ const DailyMeowHistoryPage = () => {
                         <div className="px-3 py-1.5 rounded-full bg-white/80 border border-white/80 text-[11px] font-bold text-neutral-700">
                             {t('dailyMeowHistory.answeredCount', { count: totalAnswered })}
                         </div>
-                        <div className="px-3 py-1.5 rounded-full bg-amber-100/70 border border-amber-200/70 text-[11px] font-bold text-amber-700">
-                            {t('dailyMeowHistory.streakCount', { count: streak })}
+                        <div className={`px-3 py-1.5 rounded-full ${isGracePeriod ? 'bg-neutral-100/70 border border-neutral-200/70' : 'bg-amber-100/70 border border-amber-200/70'} text-[11px] font-bold ${isGracePeriod ? 'text-neutral-600' : 'text-amber-700'}`}>
+                            {isGracePeriod
+                                ? t('streak.onGracePeriod')
+                                : t('dailyMeowHistory.streakCount', { count: streak })}
                         </div>
                     </div>
                 </div>

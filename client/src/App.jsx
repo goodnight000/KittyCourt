@@ -28,6 +28,7 @@ import ChallengesPage from './pages/ChallengesPage';
 import MemoriesPage from './pages/MemoriesPage';
 import InsightsPage from './pages/InsightsPage';
 import SettingsPage from './pages/SettingsPage';
+import FeedbackPage from './pages/FeedbackPage';
 
 // Components
 import PartnerRequestModal from './components/PartnerRequestModal';
@@ -42,12 +43,16 @@ import { startAuthLifecycle } from './services/authLifecycle';
 // RevenueCat
 import { initializeRevenueCat } from './services/revenuecat';
 
+// Push Notifications
+import { initializePushNotifications, removePushListeners } from './services/pushNotifications';
+
 // Protected Route Component - Now allows access without partner (with restrictions)
 const ProtectedRoute = ({ children }) => {
-    const { isAuthenticated, isLoading, onboardingComplete } = useAuthStore();
+    const { isAuthenticated, isLoading, hasCheckedAuth, onboardingComplete } = useAuthStore();
     const location = useLocation();
 
-    if (isLoading) {
+    // Show loading until auth check completes
+    if (!hasCheckedAuth || isLoading) {
         return <LoadingScreen />;
     }
 
@@ -66,7 +71,7 @@ const ProtectedRoute = ({ children }) => {
 
 // App Routes Component
 const AppRoutes = () => {
-    const { initialize, isLoading, isAuthenticated, onboardingComplete, pendingRequests, hasPartner, refreshPendingRequests } = useAuthStore();
+    const { initialize, isLoading, hasCheckedAuth, isAuthenticated, onboardingComplete, pendingRequests, hasPartner, refreshPendingRequests } = useAuthStore();
     const initializedRef = useRef(false);
 
     useEffect(() => {
@@ -86,6 +91,8 @@ const AppRoutes = () => {
             useAuthStore.getState().cleanup?.();
             useAppStore.getState().cleanup();
             useCourtStore.getState().cleanup();
+            // Cleanup push notification listeners
+            removePushListeners();
         };
     }, []);
 
@@ -100,6 +107,20 @@ const AppRoutes = () => {
             console.error('[App] Initialize failed:', err);
         });
     }, [initialize]);
+
+    // Initialize push notifications when user is authenticated
+    useEffect(() => {
+        if (!isAuthenticated) return;
+
+        // Initialize push notifications after user is authenticated
+        initializePushNotifications().then((success) => {
+            if (success) {
+                console.log('[App] Push notifications initialized');
+            }
+        }).catch((err) => {
+            console.warn('[App] Push notifications initialization failed:', err);
+        });
+    }, [isAuthenticated]);
 
     // Global polling for pending partner requests (fallback for realtime)
     useEffect(() => {
@@ -116,9 +137,11 @@ const AppRoutes = () => {
         return () => clearInterval(interval);
     }, [isAuthenticated, hasPartner, refreshPendingRequests]);
 
-    console.log('[App] Render - isLoading:', isLoading, 'isAuthenticated:', isAuthenticated);
+    console.log('[App] Render - isLoading:', isLoading, 'hasCheckedAuth:', hasCheckedAuth, 'isAuthenticated:', isAuthenticated);
 
-    if (isLoading) {
+    // Show loading screen until initial auth check completes
+    // This prevents the flash of onboarding page on refresh
+    if (!hasCheckedAuth || isLoading) {
         return <LoadingScreen />;
     }
 
@@ -185,6 +208,7 @@ const AppRoutes = () => {
                     <Route path="memories" element={<MemoriesPage />} />
                     <Route path="insights" element={<InsightsPage />} />
                     <Route path="settings" element={<SettingsPage />} />
+                    <Route path="feedback" element={<FeedbackPage />} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Route>
             </Routes>

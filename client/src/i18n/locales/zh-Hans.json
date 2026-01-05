@@ -1191,7 +1191,8 @@
       "daysLabel": "天数",
       "daysTogether": "在一起",
       "streakLabel": "连击",
-      "questionStreak": "每日喵问连击"
+      "questionStreak": "每日喵问连击",
+      "gracePeriod": "还剩{days}天保住连击"
     },
     "connectPrompt": "连接伴侣后解锁更多功能。",
     "dailyQuestion": {
@@ -1804,14 +1805,48 @@
     },
     "milestones": {
       "title": "里程碑",
-      "firstCase": "第一次案件",
-      "appreciation": "第一次感谢",
-      "fiveCases": "5 次案件",
-      "giftGiver": "送礼达人",
-      "tenCases": "10 次案件",
-      "superFan": "超级粉丝",
-      "deepTalks": "深度沟通",
-      "storyTellers": "故事分享"
+      "unlockedCount": "已解锁 {count}/{total}",
+      "totalXP": "已获得 +{xp} XP",
+      "unlocked": "已解锁！",
+      "progress": "{current}/{target}",
+      "reward": "+{xp} XP",
+      "claimed": "已领取",
+      "firstResolution": {
+        "title": "初次调解",
+        "description": "在法庭一起解决3个分歧"
+      },
+      "conflictConquerors": {
+        "title": "冲突征服者",
+        "description": "一起经历25个案件"
+      },
+      "dailyDevotion": {
+        "title": "每日坚持",
+        "description": "一起回答30次每日问答"
+      },
+      "storytellers": {
+        "title": "故事讲述者",
+        "description": "一起回答100次每日问答"
+      },
+      "generousHearts": {
+        "title": "慷慨之心",
+        "description": "向伴侣发送20次感谢"
+      },
+      "memoryMakers": {
+        "title": "回忆制造者",
+        "description": "一起上传5张共享回忆"
+      },
+      "memoryVault": {
+        "title": "回忆宝库",
+        "description": "积累30张共享回忆"
+      },
+      "challengeMasters": {
+        "title": "挑战大师",
+        "description": "一起完成15个情侣挑战"
+      },
+      "datePlanners": {
+        "title": "约会策划师",
+        "description": "在共享日历添加10个活动"
+      }
     },
     "edit": {
       "title": "编辑资料",
@@ -1954,7 +1989,7 @@
     "notifications": {
       "title": "通知",
       "dailyMeow": "每日喵问提醒",
-      "verdicts": "裁决通知",
+      "eventReminders": "活动提醒",
       "partnerActivity": "伴侣动态"
     },
     "preferences": {
@@ -1963,9 +1998,7 @@
     },
     "support": {
       "title": "支持与反馈",
-      "contact": "联系客服",
-      "bug": "报告问题",
-      "feature": "功能建议"
+      "sendFeedback": "发送反馈"
     },
     "legal": {
       "title": "法律与关于",
@@ -1976,6 +2009,37 @@
     "howItWorks": {
       "title": "审判流程",
       "description": "双方分别提交证据，胡须法官审阅案件、识别深层感受，并给出公正、有同理心的裁决，帮助你们重建连接。"
+    }
+  },
+  "streak": {
+    "gracePeriod": "宽限期",
+    "gracePeriodHint": "今天回答以保持连续记录！",
+    "daysRemaining": "还剩{{count}}天",
+    "streakLost": "连续记录中断",
+    "reviveStreak": "恢复连续记录",
+    "reviveAvailable": "可以恢复！",
+    "reviveNotAvailable": "{{days}}天后可恢复",
+    "reviveSuccess": "连续记录已恢复！",
+    "reviveGoldOnly": "金会员可恢复连续记录",
+    "onGracePeriod": "宽限期中"
+  },
+  "feedback": {
+    "title": "发送反馈",
+    "subtitle": "我们很想听听你的想法",
+    "reasonLabel": "反馈类型",
+    "reasons": {
+      "contact": "联系客服",
+      "bug": "报告问题",
+      "feature": "功能建议"
+    },
+    "messageLabel": "你的留言",
+    "messagePlaceholder": "告诉我们你的想法...",
+    "submit": "提交反馈",
+    "success": "感谢你的反馈！💕",
+    "errors": {
+      "reasonRequired": "请选择反馈类型",
+      "messageRequired": "请输入留言内容",
+      "submitFailed": "提交失败，请稍后再试。"
     }
   }
 }

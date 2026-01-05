@@ -11,6 +11,8 @@
  * - Extract confirmation requests
  */
 
+const { parseLog, getConfirmRequest } = require('./verificationLogUtils');
+
 class ProgressCalculator {
     /**
      * Parse verification log
@@ -19,15 +21,7 @@ class ProgressCalculator {
      * @returns {Array} - Parsed log array
      */
     parseLog(log) {
-        if (Array.isArray(log)) return log;
-        if (!log) return [];
-
-        try {
-            const parsed = typeof log === 'string' ? JSON.parse(log) : log;
-            return Array.isArray(parsed) ? parsed : [];
-        } catch {
-            return [];
-        }
+        return parseLog(log);
     }
 
     /**
@@ -155,10 +149,7 @@ class ProgressCalculator {
      * @returns {Object|null} - Confirm request entry or null
      */
     getConfirmRequest(log) {
-        for (let i = log.length - 1; i >= 0; i -= 1) {
-            if (log[i]?.type === 'confirm_request') return log[i];
-        }
-        return null;
+        return getConfirmRequest(log);
     }
 }
 

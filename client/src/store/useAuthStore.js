@@ -28,6 +28,7 @@ import { readSessionBackup, writeSessionBackup, clearSessionBackup } from '../se
 import useSubscriptionStore from './useSubscriptionStore';
 import useCacheStore from './useCacheStore';
 import { logOutUser as revenueCatLogOut } from '../services/revenuecat';
+import { deactivateDeviceToken } from '../services/pushNotifications';
 import { DEFAULT_LANGUAGE, normalizeLanguage } from '../i18n/languageConfig';
 
 const resolvePreferredLanguage = (profile) => (
@@ -61,6 +62,11 @@ const handleSignedOut = (set, get) => {
     // Clean up realtime subscriptions
     get().cleanupRealtimeSubscriptions();
 
+    // Deactivate push tokens (fire and forget - don't block signout on failure)
+    deactivateDeviceToken().catch(err => {
+        console.warn('[Auth] Failed to deactivate push tokens:', err);
+    });
+
     useSubscriptionStore.getState().reset();
     revenueCatLogOut();
 
@@ -76,6 +82,7 @@ const handleSignedOut = (set, get) => {
         sentRequest: null,
         hasPartner: false,
         isAuthenticated: false,
+        hasCheckedAuth: true, // Keep true after signout (auth was checked, user is signed out)
         onboardingComplete: false,
         onboardingStep: 0,
         onboardingData: {},
@@ -133,15 +140,17 @@ const handleSignedIn = async (set, get, sessionUser, session) => {
         });
     }
 
-    set({
-        user: sessionUser,
-        session,
-        isAuthenticated: true
-    });
-
     const cachedProfile = get().profile;
+
+    // Set auth state atomically to prevent flash of unauthenticated content
     if (cachedProfile?.id === sessionUser.id) {
+        // Use cached profile - set all auth state in one atomic update
         set({
+            user: sessionUser,
+            session,
+            isAuthenticated: true,
+            hasCheckedAuth: true,
+            isLoading: false,
             hasPartner: !!cachedProfile.partner_id,
             onboardingComplete: !!cachedProfile.onboarding_complete,
             preferredLanguage: resolvePreferredLanguage(cachedProfile),
@@ -157,12 +166,20 @@ const handleSignedIn = async (set, get, sessionUser, session) => {
         return;
     }
 
+    // No cached profile - set basic auth state first
+    set({
+        user: sessionUser,
+        session,
+        isAuthenticated: true
+    });
+
     try {
         const { profile, partner, requests, sent } = await loadUserContext(sessionUser, {
             preferredLanguage: resolveInitialProfileLanguage(get().preferredLanguage)
         });
 
         const stateAfterHydrate = get();
+        // Set all auth state atomically to prevent flash
         set({
             profile,
             partner,
@@ -171,6 +188,8 @@ const handleSignedIn = async (set, get, sessionUser, session) => {
             hasPartner: profile ? !!profile.partner_id : stateAfterHydrate.hasPartner,
             onboardingComplete: profile ? !!profile.onboarding_complete : stateAfterHydrate.onboardingComplete,
             preferredLanguage: profile ? resolvePreferredLanguage(profile) : stateAfterHydrate.preferredLanguage,
+            hasCheckedAuth: true,
+            isLoading: false,
         });
 
         // Emit login event
@@ -189,6 +208,8 @@ const handleSignedIn = async (set, get, sessionUser, session) => {
         pendingTimeouts.add(timeoutId);
     } catch (e) {
         console.warn('[Auth] Failed to hydrate user context:', e);
+        // Even on error, mark auth as checked so we don't get stuck on loading
+        set({ hasCheckedAuth: true, isLoading: false });
     }
 };
 
@@ -255,6 +276,7 @@ const useAuthStore = create(
             profile: null,
             isLoading: true,
             isAuthenticated: false,
+            hasCheckedAuth: false, // Tracks if initial auth check completed (not persisted)
 
             // Partner state
             partner: null,
@@ -325,8 +347,10 @@ const useAuthStore = create(
                     }
 
                     if (session?.user) {
+                        // handleSignedIn sets hasCheckedAuth and isLoading atomically
                         await get().handleSupabaseAuthEvent('INITIAL_SESSION', session);
                     } else {
+                        // No session - set all state atomically including hasCheckedAuth
                         set({
                             user: null,
                             session: null,
@@ -336,6 +360,7 @@ const useAuthStore = create(
                             sentRequest: null,
                             hasPartner: false,
                             isAuthenticated: false,
+                            hasCheckedAuth: true,
                             onboardingComplete: false,
                             onboardingStep: 0,
                             onboardingData: {},
@@ -343,11 +368,9 @@ const useAuthStore = create(
                             isLoading: false
                         });
                     }
-
-                    set({ isLoading: false });
                 })().catch((error) => {
                     console.error('[Auth] Initialization error:', error);
-                    set({ isLoading: false });
+                    set({ isLoading: false, hasCheckedAuth: true });
                 });
 
                 return initializePromise;
@@ -488,6 +511,9 @@ const useAuthStore = create(
                 // Clean up realtime subscriptions
                 get().cleanupRealtimeSubscriptions();
 
+                // Deactivate push notification tokens
+                await deactivateDeviceToken();
+
                 useSubscriptionStore.getState().reset();
                 revenueCatLogOut();
                 await supabaseSignOut();
@@ -504,6 +530,7 @@ const useAuthStore = create(
                     sentRequest: null,
                     hasPartner: false,
                     isAuthenticated: false,
+                    hasCheckedAuth: true, // Keep true after signout (auth was checked, user is signed out)
                     onboardingComplete: false,
                     onboardingStep: 0,
                     onboardingData: {},

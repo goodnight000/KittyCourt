@@ -5,10 +5,9 @@ import PropTypes from 'prop-types';
 import { validateBirthdayDate } from '../../utils/helpers';
 import { PRESET_AVATARS } from '../../services/avatarService';
 import { useI18n } from '../../i18n';
-import { DEFAULT_LANGUAGE } from '../../i18n/languageConfig';
 
 const ProfileEditForm = ({ profileData, loveLanguages, onSave, onClose }) => {
-    const { t, supportedLanguages } = useI18n();
+    const { t } = useI18n();
     const [formData, setFormData] = useState({ ...profileData });
     const [birthdayError, setBirthdayError] = useState(null);
     const [uploading, setUploading] = useState(false);
@@ -229,22 +228,6 @@ const ProfileEditForm = ({ profileData, loveLanguages, onSave, onClose }) => {
                             </button>
                         ))}
                     </div>
-                </div>
-
-                {/* Preferred Language */}
-                <div>
-                    <label className="text-xs font-bold text-neutral-500 mb-1 block">{t('profile.languageLabel')}</label>
-                    <select
-                        value={formData.preferredLanguage || DEFAULT_LANGUAGE}
-                        onChange={(e) => setFormData({ ...formData, preferredLanguage: e.target.value })}
-                        className="w-full bg-neutral-50 border-2 border-neutral-100 rounded-xl p-3 text-neutral-700 focus:ring-2 focus:ring-amber-200 focus:border-amber-300 focus:outline-none text-sm"
-                    >
-                        {supportedLanguages.map((lang) => (
-                            <option key={lang.code} value={lang.code}>
-                                {lang.labelKey ? t(lang.labelKey) : (lang.label || lang.code)}
-                            </option>
-                        ))}
-                    </select>
                 </div>
 
                 <button

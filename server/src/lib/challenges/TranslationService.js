@@ -10,6 +10,7 @@
  */
 
 const { normalizeLanguage } = require('../language');
+const { parseLog, getConfirmRequest } = require('./verificationLogUtils');
 
 const DEFAULT_DURATION_DAYS = 7;
 
@@ -85,8 +86,8 @@ class TranslationService {
     toChallengeDto(definition, row, fallbackExpiresAt) {
         const targetProgress = definition?.target_value || 0;
         const currentProgress = row?.current_progress || 0;
-        const log = this._parseLog(row?.verification_log);
-        const confirmRequest = this._getConfirmRequest(log);
+        const log = parseLog(row?.verification_log);
+        const confirmRequest = getConfirmRequest(log);
         const confirmationStatus = row?.partner_confirmed_at
             ? 'confirmed'
             : row?.partner_confirm_requested_at
@@ -127,39 +128,6 @@ class TranslationService {
         const diffDays = Math.ceil((end - now) / (1000 * 60 * 60 * 24));
 
         return Math.max(diffDays, 0);
-    }
-
-    /**
-     * Parse verification log
-     *
-     * @param {Array|string|null} log - Verification log
-     * @returns {Array} - Parsed log array
-     * @private
-     */
-    _parseLog(log) {
-        if (Array.isArray(log)) return log;
-        if (!log) return [];
-
-        try {
-            const parsed = typeof log === 'string' ? JSON.parse(log) : log;
-            return Array.isArray(parsed) ? parsed : [];
-        } catch {
-            return [];
-        }
-    }
-
-    /**
-     * Get latest confirm request from log
-     *
-     * @param {Array} log - Verification log
-     * @returns {Object|null} - Confirm request entry or null
-     * @private
-     */
-    _getConfirmRequest(log) {
-        for (let i = log.length - 1; i >= 0; i -= 1) {
-            if (log[i]?.type === 'confirm_request') return log[i];
-        }
-        return null;
     }
 }
 

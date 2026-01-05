@@ -15,6 +15,7 @@ const { recordChallengeAction, CHALLENGE_ACTIONS } = require('../lib/challengeSe
 const { resolveRequestLanguage, getUserPreferredLanguage } = require('../lib/language');
 const { sendError } = require('../lib/http');
 const { asyncHandler } = require('../middleware/asyncHandler');
+const { processSecureInput, securityConfig } = require('../lib/security');
 
 const requireUserId = async (req, fallbackUserId) => {
     if (isSupabaseConfigured()) {
@@ -140,8 +141,30 @@ router.post('/evidence', async (req, res) => {
         const { userId: fallbackUserId, evidence, feelings } = req.body;
         const userId = await requireUserId(req, fallbackUserId);
 
-        const safeEvidence = typeof evidence === 'string' ? evidence.trim().slice(0, 5000) : '';
-        const safeFeelings = typeof feelings === 'string' ? feelings.trim().slice(0, 2000) : '';
+        // Security: Validate and sanitize evidence input
+        const evidenceCheck = processSecureInput(evidence, {
+            userId,
+            fieldName: 'cameraFacts',
+            maxLength: securityConfig.fieldLimits.cameraFacts,
+            endpoint: 'court',
+        });
+        if (!evidenceCheck.safe) {
+            return sendError(res, 400, 'SECURITY_BLOCK', 'Your input contains content that cannot be processed. Please rephrase using natural language.');
+        }
+
+        // Security: Validate and sanitize feelings input
+        const feelingsCheck = processSecureInput(feelings, {
+            userId,
+            fieldName: 'theStoryIamTellingMyself',
+            maxLength: securityConfig.fieldLimits.theStoryIamTellingMyself,
+            endpoint: 'court',
+        });
+        if (!feelingsCheck.safe) {
+            return sendError(res, 400, 'SECURITY_BLOCK', 'Your input contains content that cannot be processed. Please rephrase using natural language.');
+        }
+
+        const safeEvidence = evidenceCheck.input || '';
+        const safeFeelings = feelingsCheck.input || '';
         if (!safeEvidence) return sendError(res, 400, 'EVIDENCE_REQUIRED', 'evidence is required');
 
         await courtSessionManager.submitEvidence(userId, safeEvidence, safeFeelings);
@@ -251,7 +274,18 @@ router.post('/addendum', async (req, res) => {
         const { userId: fallbackUserId, text } = req.body;
         const userId = await requireUserId(req, fallbackUserId);
 
-        const safeText = typeof text === 'string' ? text.trim().slice(0, 2000) : '';
+        // Security: Validate and sanitize addendum input
+        const textCheck = processSecureInput(text, {
+            userId,
+            fieldName: 'addendum',
+            maxLength: securityConfig.fieldLimits.addendum,
+            endpoint: 'court',
+        });
+        if (!textCheck.safe) {
+            return sendError(res, 400, 'SECURITY_BLOCK', 'Your input contains content that cannot be processed. Please rephrase using natural language.');
+        }
+
+        const safeText = textCheck.input || '';
         if (!safeText) return res.status(400).json({ error: 'text required' });
 
         await courtSessionManager.submitAddendum(userId, safeText);

@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import React, { useMemo, useState, useEffect, useCallback, useRef, memo } from 'react';
 import { motion as Motion } from 'framer-motion';
 import { Calendar } from 'lucide-react';
 import PropTypes from 'prop-types';
@@ -32,8 +32,9 @@ const getEventKey = (event) => {
 /**
  * UpcomingEvents Component
  * Displays upcoming events in the next 7 days with plan buttons
+ * Wrapped with React.memo to prevent unnecessary re-renders
  */
-const UpcomingEvents = ({
+const UpcomingEvents = memo(({
     events,
     partnerId,
     isGold,
@@ -42,6 +43,7 @@ const UpcomingEvents = ({
 }) => {
     const { t } = useI18n();
     const [plannedEventKeys, setPlannedEventKeys] = useState(() => new Set());
+    const debounceTimerRef = useRef(null);
 
     // Get upcoming events (next 7 days)
     const upcomingEvents = useMemo(() => events
@@ -54,20 +56,35 @@ const UpcomingEvents = ({
         })
         .sort((a, b) => parseLocalDate(a.date) - parseLocalDate(b.date)), [events]);
 
+    // Create a stable key from upcoming event IDs to prevent excessive API calls
+    // This only changes when the actual event composition changes, not on every render
+    const upcomingEventKeysString = useMemo(() =>
+        upcomingEvents.slice(0, 20).map(getEventKey).join('|'),
+        [upcomingEvents]
+    );
+
     const upcomingCountLabel = upcomingEvents.length === 1
         ? t('calendar.upcoming.countOne')
         : t('calendar.upcoming.countOther', { count: upcomingEvents.length });
 
     // Fetch whether upcoming events already have a saved plan (for "View my plan")
+    // Uses debouncing and stable dependency to prevent API thrashing
     useEffect(() => {
-        const eventKeys = upcomingEvents.slice(0, 20).map(getEventKey);
-        if (!eventKeys.length) {
+        // Clear any pending debounce timer
+        if (debounceTimerRef.current) {
+            clearTimeout(debounceTimerRef.current);
+        }
+
+        const eventKeys = upcomingEventKeysString ? upcomingEventKeysString.split('|') : [];
+        if (!eventKeys.length || !eventKeys[0]) {
             setPlannedEventKeys(new Set());
             return;
         }
 
         let cancelled = false;
-        (async () => {
+
+        // Debounce API calls by 150ms to prevent rapid re-fetching
+        debounceTimerRef.current = setTimeout(async () => {
             try {
                 const response = await api.post('/calendar/event-plans/exists', { eventKeys });
                 const exists = response.data?.exists || {};
@@ -77,10 +94,15 @@ const UpcomingEvents = ({
                 if (cancelled) return;
                 setPlannedEventKeys(new Set());
             }
-        })();
+        }, 150);
 
-        return () => { cancelled = true; };
-    }, [upcomingEvents]);
+        return () => {
+            cancelled = true;
+            if (debounceTimerRef.current) {
+                clearTimeout(debounceTimerRef.current);
+            }
+        };
+    }, [upcomingEventKeysString]);
 
     const handleSavedPlan = useCallback((eventKey) => {
         setPlannedEventKeys((prev) => {
@@ -96,9 +118,10 @@ const UpcomingEvents = ({
             animate={{ opacity: 1, y: 0 }}
             className="glass-card p-4 overflow-hidden relative"
         >
+            {/* Decorative background */}
             <div aria-hidden="true" className="pointer-events-none absolute inset-0">
-                <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-gradient-to-br from-amber-200/35 via-white/20 to-pink-200/30 blur-3xl" />
-                <div className="absolute -bottom-16 -left-14 w-56 h-56 rounded-full bg-gradient-to-br from-sky-100/35 via-white/20 to-violet-200/30 blur-3xl" />
+                <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-gradient-to-br from-amber-200/25 via-white/15 to-pink-200/20 blur-3xl opacity-70" />
+                <div className="absolute -bottom-16 -left-14 w-56 h-56 rounded-full bg-gradient-to-br from-sky-100/25 via-white/15 to-violet-200/20 blur-3xl opacity-70" />
             </div>
 
             <div className="relative z-10">
@@ -152,7 +175,9 @@ const UpcomingEvents = ({
             </div>
         </Motion.div>
     );
-};
+});
+
+UpcomingEvents.displayName = 'UpcomingEvents';
 
 UpcomingEvents.propTypes = {
     events: PropTypes.arrayOf(PropTypes.shape({

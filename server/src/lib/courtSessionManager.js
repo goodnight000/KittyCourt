@@ -9,6 +9,7 @@
 
 const { incrementUsage } = require('./usageTracking');
 const { canUseFeature } = require('./usageLimits');
+const { sendNotificationToUser } = require('./notificationService');
 
 // Import specialized services
 const SessionStateRepository = require('./court/SessionStateRepository');
@@ -22,6 +23,7 @@ const { PHASE, VIEW_PHASE, ADDENDUM_LIMIT, computeViewPhase, sanitizeSession } =
 const { TIMEOUT } = require('./court/timeoutHandlers');
 const { reconstructFromDB } = require('./court/databaseService');
 const { runVerdictPipeline, mapJudgeTypeToUsage } = require('./court/verdictGenerator');
+const { buildCaseData } = require('./court/caseDataBuilder');
 
 class CourtSessionManager {
     constructor() {
@@ -153,6 +155,15 @@ class CourtSessionManager {
         await this._dbCheckpoint(session, 'create');
 
         this._notifyBoth(session);
+
+        // Send push notification to partner
+        sendNotificationToUser(partnerId, {
+            type: 'court_session',
+            title: 'Court Session Request',
+            body: 'Your partner wants to settle a dispute in Cat Court',
+            data: { screen: 'courtroom', sessionId: session.id }
+        }).catch(err => console.warn('[Court] Push notification failed:', err?.message));
+
         return session;
     }
 
@@ -221,6 +232,21 @@ class CourtSessionManager {
             await this.phaseController.transitionToAnalyzing(session);
             this._notifyBoth(session);
 
+            // Notify both users evidence phase complete
+            sendNotificationToUser(session.creatorId, {
+                type: 'evidence_submitted',
+                title: 'Evidence Complete',
+                body: 'Both partners have submitted evidence. Judge Whiskers is analyzing...',
+                data: { screen: 'courtroom', sessionId: session.id }
+            }).catch(err => console.warn('[Court] Push notification failed:', err?.message));
+
+            sendNotificationToUser(session.partnerId, {
+                type: 'evidence_submitted',
+                title: 'Evidence Complete',
+                body: 'Both partners have submitted evidence. Judge Whiskers is analyzing...',
+                data: { screen: 'courtroom', sessionId: session.id }
+            }).catch(err => console.warn('[Court] Push notification failed:', err?.message));
+
             // Generate verdict (async, doesn't block)
             this._generateVerdict(session);
         } else {
@@ -282,6 +308,14 @@ class CourtSessionManager {
         if (this.wsService) {
             this.wsService.emitToUser(partnerId, 'court:settlement_requested', { byUserId: userId });
         }
+
+        // Push notification for settlement request
+        sendNotificationToUser(partnerId, {
+            type: 'settlement_request',
+            title: 'Settlement Request',
+            body: 'Your partner is requesting to settle this dispute peacefully',
+            data: { screen: 'courtroom', sessionId: session.id }
+        }).catch(err => console.warn('[Court] Push notification failed:', err?.message));
 
         this._notifyBoth(session);
         this._dbCheckpoint(session, 'settlement_request');
@@ -529,7 +563,7 @@ class CourtSessionManager {
             judgeEngine: this.judgeEngine,
             canUseFeature,
             incrementUsage,
-            buildCaseData: (s) => this._buildCaseData(s),
+            buildCaseData,
             dbCheckpoint: (s, action) => this._dbCheckpoint(s, action),
             notifyBoth: (s) => this._notifyBoth(s),
             setAnalyzingTimeout: (coupleId) => {
@@ -546,7 +580,7 @@ class CourtSessionManager {
         try {
             await this.resolutionService.generateHybridResolution(
                 session,
-                (s) => this._buildCaseData(s)
+                buildCaseData
             );
 
             await this._dbCheckpoint(session, 'hybrid_generated');
@@ -556,35 +590,6 @@ class CourtSessionManager {
             session.hybridResolutionPending = false;
             this._notifyBoth(session);
         }
-    }
-
-    _buildCaseData(session) {
-        return {
-            participants: {
-                userA: {
-                    id: session.creatorId,
-                    name: 'Partner A',
-                    language: session.creatorLanguage || session.caseLanguage || 'en',
-                },
-                userB: {
-                    id: session.partnerId,
-                    name: 'Partner B',
-                    language: session.partnerLanguage || session.caseLanguage || 'en',
-                }
-            },
-            submissions: {
-                userA: {
-                    cameraFacts: session.creator.evidence,
-                    theStoryIamTellingMyself: session.creator.feelings
-                },
-                userB: {
-                    cameraFacts: session.partner.evidence,
-                    theStoryIamTellingMyself: session.partner.feelings
-                }
-            },
-            addendumHistory: session.addendumHistory || [],
-            language: session.caseLanguage || session.creatorLanguage || 'en',
-        };
     }
 
     _cleanup(coupleId) {

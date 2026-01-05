@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import useAuthStore from '../../store/useAuthStore';
+import useCacheStore, { CACHE_KEYS, CACHE_TTL } from '../../store/useCacheStore';
 import api from '../../services/api';
 
 const getDefaultHolidays = (year, t) => [
@@ -97,10 +98,10 @@ const getPersonalEvents = (profile, connectedPartner, myId, partnerId, myDisplay
  */
 export default function useCalendarEvents(t) {
     const { user: authUser, profile, partner: connectedPartner } = useAuthStore();
-    const [events, setEvents] = useState([]);
+    const [dbEvents, setDbEvents] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const isMounted = useRef(true);
-    const hasFetched = useRef(false);
+    const fetchTimerRef = useRef(null);
 
     // Build stable user IDs (only change when actual IDs change)
     const myId = authUser?.id;
@@ -116,83 +117,104 @@ export default function useCalendarEvents(t) {
         [connectedPartner?.display_name, connectedPartner?.name, t]
     );
 
-    // Memoize profile data that matters for personal events (birthdays, anniversaries)
-    const profileBirthday = profile?.birthday || profile?.birth_date;
-    const profileAnniversary = profile?.anniversary_date || profile?.anniversaryDate;
-    const partnerBirthday = connectedPartner?.birthday || connectedPartner?.birth_date;
+    const cacheKey = useMemo(() => {
+        if (!myId) return null;
+        return `${CACHE_KEYS.CALENDAR_EVENTS}:${myId}:${partnerId || 'solo'}`;
+    }, [myId, partnerId]);
 
-    const fetchEvents = useCallback(async () => {
+    const currentYear = new Date().getFullYear();
+    const defaultEvents = useMemo(() => ([
+        ...getDefaultHolidays(currentYear, t),
+        ...getDefaultHolidays(currentYear + 1, t)
+    ]), [currentYear, t]);
+
+    const personalEvents = useMemo(() => getPersonalEvents(
+        profile,
+        connectedPartner,
+        myId,
+        partnerId,
+        myDisplayName,
+        partnerDisplayName,
+        t
+    ), [profile, connectedPartner, myId, partnerId, myDisplayName, partnerDisplayName, t]);
+
+    const events = useMemo(() => {
+        const existingKeys = new Set(dbEvents.map(getEventKey));
+        const newDefaults = defaultEvents.filter(d => !existingKeys.has(getEventKey(d)));
+
+        return [
+            ...dbEvents,
+            ...newDefaults.map(d => ({ ...d, id: `default_${d.title}` })),
+            ...personalEvents
+        ];
+    }, [dbEvents, defaultEvents, personalEvents]);
+
+    const fetchEvents = useCallback(async ({ force = false } = {}) => {
         if (!isMounted.current) return;
+        if (!myId) {
+            setDbEvents([]);
+            setIsLoading(false);
+            return;
+        }
+
+        const shouldLog = import.meta.env.DEV
+            && typeof window !== 'undefined'
+            && window.__navDebugTarget === '/calendar';
+
+        if (!force && cacheKey) {
+            const cached = useCacheStore.getState().getCached(cacheKey);
+            if (cached !== null) {
+                if (shouldLog) {
+                    console.log('[calendar] cache hit for events');
+                }
+                setDbEvents(Array.isArray(cached) ? cached : []);
+                setIsLoading(false);
+                return;
+            }
+        }
 
         try {
             setIsLoading(true);
+            if (shouldLog) {
+                const label = `[calendar] fetch events ${Date.now()}`;
+                fetchTimerRef.current = label;
+                console.time(label);
+            }
             const response = await api.get('/calendar/events');
 
             if (!isMounted.current) return;
 
-            const dbEvents = Array.isArray(response.data) ? response.data : [];
-
-            const currentYear = new Date().getFullYear();
-            const defaultEvents = [
-                ...getDefaultHolidays(currentYear, t),
-                ...getDefaultHolidays(currentYear + 1, t)
-            ];
-
-            const personalEvents = getPersonalEvents(
-                profile,
-                connectedPartner,
-                myId,
-                partnerId,
-                myDisplayName,
-                partnerDisplayName,
-                t
-            );
-
-            const existingKeys = new Set(dbEvents.map(getEventKey));
-            const newDefaults = defaultEvents.filter(d => !existingKeys.has(getEventKey(d)));
-
+            const nextDbEvents = Array.isArray(response.data) ? response.data : [];
             if (isMounted.current) {
-                setEvents([
-                    ...dbEvents,
-                    ...newDefaults.map(d => ({ ...d, id: `default_${d.title}` })),
-                    ...personalEvents
-                ]);
+                setDbEvents(nextDbEvents);
+                if (cacheKey) {
+                    useCacheStore.getState().setCache(cacheKey, nextDbEvents, CACHE_TTL.CALENDAR_EVENTS);
+                }
             }
         } catch (error) {
             console.error('Failed to fetch events:', error);
             if (!isMounted.current) return;
-
-            const currentYear = new Date().getFullYear();
-            const defaultEvents = getDefaultHolidays(currentYear, t);
-            const personalEvents = getPersonalEvents(
-                profile,
-                connectedPartner,
-                myId,
-                partnerId,
-                myDisplayName,
-                partnerDisplayName,
-                t
-            );
-            setEvents([
-                ...defaultEvents.map(d => ({ ...d, id: `default_${d.title}` })),
-                ...personalEvents
-            ]);
+            setDbEvents((prev) => prev.length ? prev : []);
         } finally {
+            if (shouldLog && fetchTimerRef.current) {
+                console.timeEnd(fetchTimerRef.current);
+                fetchTimerRef.current = null;
+            }
             if (isMounted.current) {
                 setIsLoading(false);
             }
         }
-    // Use stable primitive dependencies instead of objects
-    }, [myId, partnerId, profileBirthday, profileAnniversary, partnerBirthday, myDisplayName, partnerDisplayName, t]);
+    }, [cacheKey, myId]);
 
-    // Fetch on mount and when key profile data changes
+    // Fetch on mount and when identity changes
     useEffect(() => {
         isMounted.current = true;
 
         // Only fetch if we have a user ID
         if (myId) {
             fetchEvents();
-            hasFetched.current = true;
+        } else {
+            setIsLoading(false);
         }
 
         return () => {
@@ -205,24 +227,36 @@ export default function useCalendarEvents(t) {
             const response = await api.post('/calendar/events', {
                 ...eventData
             });
-            setEvents(prev => [...prev, response.data]);
+            setDbEvents((prev) => {
+                const next = [...prev, response.data];
+                if (cacheKey) {
+                    useCacheStore.getState().setCache(cacheKey, next, CACHE_TTL.CALENDAR_EVENTS);
+                }
+                return next;
+            });
             return { success: true, data: response.data };
         } catch (error) {
             console.error('Failed to add event:', error);
             return { success: false, error };
         }
-    }, []);
+    }, [cacheKey]);
 
     const deleteEvent = useCallback(async (eventId) => {
         try {
             await api.delete(`/calendar/events/${eventId}`);
-            setEvents(prev => prev.filter(e => e.id !== eventId));
+            setDbEvents((prev) => {
+                const next = prev.filter(e => e.id !== eventId);
+                if (cacheKey) {
+                    useCacheStore.getState().setCache(cacheKey, next, CACHE_TTL.CALENDAR_EVENTS);
+                }
+                return next;
+            });
             return { success: true };
         } catch (error) {
             console.error('Failed to delete event:', error);
             return { success: false, error };
         }
-    }, []);
+    }, [cacheKey]);
 
     return {
         events,

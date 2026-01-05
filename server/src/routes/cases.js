@@ -7,7 +7,7 @@
 const express = require('express');
 const router = express.Router();
 const { requireAuthUserId, requireSupabase, getPartnerIdForUser } = require('../lib/auth');
-const { requirePartner } = require('../middleware/requirePartner.cjs');
+const { requirePartner } = require('../middleware/requirePartner');
 const { resolveRequestLanguage } = require('../lib/language');
 const { sendError } = require('../lib/http');
 const { safeErrorMessage } = require('../lib/shared/errorUtils');

@@ -217,3 +217,6 @@ The app uses Capacitor for iOS/Android deployment:
 - `supabase/migrations/*.sql` - Database schema and RLS policies
 - `server/MEMORY_SYSTEM.md` - Memory system documentation
 - `.github/copilot-instructions.md` - Additional development context
+
+
+## When using subagents, always use opus 4.5 model

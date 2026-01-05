@@ -7,23 +7,30 @@ import { PRESET_AVATARS } from '../../services/avatarService';
 
 const ProfileFieldStep = ({
     fieldType,
-    value,
+    value = '',
     onChange,
-    error,
-    onFileSelect
+    error = null,
+    onFileSelect = null,
+    onError = null
 }) => {
     const { t } = useI18n();
+    const [avatarError, setAvatarError] = React.useState(null);
 
     const handleAvatarFile = (file) => {
         if (!file) return;
+        setAvatarError(null);
 
         if (!file.type.startsWith('image/')) {
-            alert(t('onboarding.errors.invalidImage'));
+            const errorMsg = t('onboarding.errors.invalidImage');
+            setAvatarError(errorMsg);
+            onError?.(errorMsg);
             return;
         }
 
         if (file.size > 5 * 1024 * 1024) {
-            alert(t('onboarding.errors.imageTooLarge'));
+            const errorMsg = t('onboarding.errors.imageTooLarge');
+            setAvatarError(errorMsg);
+            onError?.(errorMsg);
             return;
         }
 
@@ -31,12 +38,19 @@ const ProfileFieldStep = ({
         reader.onload = (event) => {
             const result = event.target?.result;
             if (typeof result !== 'string') {
-                alert(t('onboarding.errors.imageReadFailed'));
+                const errorMsg = t('onboarding.errors.imageReadFailed');
+                setAvatarError(errorMsg);
+                onError?.(errorMsg);
                 return;
             }
+            setAvatarError(null);
             onChange(result);
         };
-        reader.onerror = () => alert(t('onboarding.errors.imageReadFailed'));
+        reader.onerror = () => {
+            const errorMsg = t('onboarding.errors.imageReadFailed');
+            setAvatarError(errorMsg);
+            onError?.(errorMsg);
+        };
         reader.readAsDataURL(file);
     };
 
@@ -202,6 +216,14 @@ const ProfileFieldStep = ({
                     </label>
                 </div>
 
+                {/* Avatar error message */}
+                {avatarError && (
+                    <p className="text-sm text-[#6B4F3C] text-center flex items-center justify-center gap-1">
+                        <AlertTriangle className="w-4 h-4" />
+                        {avatarError}
+                    </p>
+                )}
+
                 {/* Note about changing later */}
                 <p className="text-xs text-neutral-400 text-center">
                     {t('onboarding.avatar.changeLater')}
@@ -219,12 +241,7 @@ ProfileFieldStep.propTypes = {
     onChange: PropTypes.func.isRequired,
     error: PropTypes.string,
     onFileSelect: PropTypes.func,
-};
-
-ProfileFieldStep.defaultProps = {
-    value: '',
-    error: null,
-    onFileSelect: null,
+    onError: PropTypes.func,
 };
 
 export default ProfileFieldStep;

@@ -2,10 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-    User, Heart, Settings, Lock, Crown, Sparkles, Zap, Gavel, Wand2, ImagePlus, Award, Scale
+    User, Heart, Settings, Lock, Crown, Sparkles, Zap, Gavel, Wand2, ImagePlus, Scale
 } from 'lucide-react';
 import useAppStore from '../store/useAppStore';
 import useAuthStore from '../store/useAuthStore';
+import useCacheStore, { CACHE_TTL, CACHE_KEYS } from '../store/useCacheStore';
 import useSubscriptionStore from '../store/useSubscriptionStore';
 import useLevelStore from '../store/useLevelStore';
 import useMemoryStore from '../store/useMemoryStore';
@@ -18,7 +19,9 @@ import MemoryCard from '../components/MemoryCard';
 import ProfileCard from '../components/profile/ProfileCard';
 import ProfileEditForm from '../components/profile/ProfileEditForm';
 import PartnerConnection from '../components/profile/PartnerConnection';
+import MilestonesSection from '../components/profile/MilestonesSection';
 import useProfileData from '../components/profile/useProfileData';
+import useCalendarEvents from '../components/calendar/useCalendarEvents';
 import api from '../services/api';
 import { useI18n } from '../i18n';
 
@@ -26,13 +29,13 @@ const ProfilesPage = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const { t, language } = useI18n();
-    const { currentUser, users, caseHistory, appreciations, fetchAppreciations } = useAppStore();
+    const { currentUser, users, fetchAppreciations } = useAppStore();
     const { profile, partner: connectedPartner, hasPartner, signOut, refreshProfile, user: authUser } = useAuthStore();
     const { isGold, usage, limits, getUsageDisplay, purchaseGold, restorePurchases, isLoading: subLoading } = useSubscriptionStore();
     const { level, currentXP, xpForNextLevel, title, fetchLevel, shouldShowChallenges, shouldShowInsights, serverAvailable } = useLevelStore();
     const { memories, deletedMemories, fetchMemories, serverAvailable: memoriesAvailable } = useMemoryStore();
     const { insights, consent, fetchInsights, updateConsent, serverAvailable: insightsAvailable } = useInsightsStore();
-    const { active: activeChallenges, available: availableChallenges, isLoading: challengesLoading, fetchChallenges } = useChallengeStore();
+    const { active: activeChallenges, completed: completedChallenges, available: availableChallenges, isLoading: challengesLoading, fetchChallenges } = useChallengeStore();
     const latestInsight = insights?.[0] || null;
     const selfConsent = consent ? !!consent.selfConsent : true;
     const partnerConsent = consent ? !!consent.partnerConsent : true;
@@ -58,12 +61,17 @@ const ProfilesPage = () => {
     // Use custom hook for profile data management
     const { profileData, saveProfile } = useProfileData();
 
+    // Calendar events for milestones tracking (only user-created events, not defaults)
+    const { events: calendarEvents } = useCalendarEvents(t);
+    const userCreatedCalendarEvents = calendarEvents?.filter(e => !e.isDefault && !e.isPersonal) || [];
+
     const [showEditModal, setShowEditModal] = useState(false);
     const [activeTab, setActiveTab] = useState('me'); // 'me' or 'us'
     const [showPaywall, setShowPaywall] = useState(false);
     const [devXPLoading, setDevXPLoading] = useState(false);
     const [devXPMessage, setDevXPMessage] = useState('');
     const [activeChallengeIndex, setActiveChallengeIndex] = useState(0);
+    const [userStats, setUserStats] = useState(null);
     const challengeTrackRef = useRef(null);
     const challengeCardWidthRef = useRef(0);
 
@@ -73,6 +81,34 @@ const ProfilesPage = () => {
             fetchLevel();
         }
     }, [fetchAppreciations, hasPartner, fetchLevel, language]);
+
+    // Fetch unified stats from /api/stats with caching
+    useEffect(() => {
+        const fetchStats = async () => {
+            if (!authUser?.id) return;
+
+            const cacheKey = `${CACHE_KEYS.STATS}:${authUser.id}`;
+
+            // Check cache first
+            const cached = useCacheStore.getState().getCached(cacheKey);
+            if (cached !== null) {
+                setUserStats(cached);
+                return;
+            }
+
+            try {
+                const response = await api.get('/stats');
+                const stats = response.data;
+
+                // Cache for 5 minutes
+                useCacheStore.getState().setCache(cacheKey, stats, CACHE_TTL.STATS || 5 * 60 * 1000);
+                setUserStats(stats);
+            } catch (err) {
+                console.error('Failed to fetch stats:', err);
+            }
+        };
+        fetchStats();
+    }, [authUser?.id]);
 
     useEffect(() => {
         if (!hasPartner || !memoriesAvailable) return;
@@ -143,14 +179,12 @@ const ProfilesPage = () => {
         }
     };
 
-    // Calculate relationship stats
-    const totalCases = Array.isArray(caseHistory) ? caseHistory.length : 0;
-    const totalAppreciations = Array.isArray(appreciations) ? appreciations.length : 0;
-    const totalKibbleEarned = Array.isArray(appreciations)
-        ? appreciations.reduce((sum, a) => sum + (a.kibbleAmount || 0), 0)
-        : 0;
-    const questionsAnswered = profile?.questions_answered || 0;
-    const partnerQuestionsAnswered = connectedPartner?.questions_answered || 0;
+    // Unified stats from user_stats table (single source of truth)
+    const totalCases = userStats?.cases_resolved ?? 0;
+    const totalAppreciations = userStats?.appreciations_received ?? 0;
+    const questionsAnswered = userStats?.questions_completed ?? 0;
+    // Partner stats would need a separate fetch or couple stats endpoint
+    const partnerQuestionsAnswered = 0; // Deprecated - use couple stats if needed
 
     // Get love language
     const selectedLoveLanguage = loveLanguages.find(l => l.id === profileData.loveLanguage);
@@ -232,9 +266,9 @@ const ProfilesPage = () => {
                                 selectedLoveLanguage={selectedLoveLanguage}
                                 onEditClick={() => setShowEditModal(true)}
                                 onSignOut={signOut}
-                                totalCases={totalCases}
+                                totalCases={userStats?.cases_resolved ?? totalCases}
                                 totalAppreciations={totalAppreciations}
-                                questionsAnswered={questionsAnswered}
+                                questionsAnswered={userStats?.questions_completed ?? questionsAnswered}
                             />
 
                             {/* Subscription Card */}
@@ -829,55 +863,18 @@ const ProfilesPage = () => {
                                 </div>
                             )}
 
-                            {/* Achievements */}
-                            <div className="glass-card p-4 space-y-3">
-                                <h3 className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-                                    <Award className="w-4 h-4 text-amber-600" />
-                                    {t('profilePage.milestones.title')}
-                                </h3>
-                                <div className="grid grid-cols-3 gap-2">
-                                    <AchievementBadge
-                                        emoji="🌟"
-                                        label={t('profilePage.milestones.firstCase')}
-                                        unlocked={totalCases >= 1}
-                                    />
-                                    <AchievementBadge
-                                        emoji="💕"
-                                        label={t('profilePage.milestones.appreciation')}
-                                        unlocked={totalAppreciations >= 1}
-                                    />
-                                    <AchievementBadge
-                                        emoji="⚖️"
-                                        label={t('profilePage.milestones.fiveCases')}
-                                        unlocked={totalCases >= 5}
-                                    />
-                                    <AchievementBadge
-                                        emoji="🎁"
-                                        label={t('profilePage.milestones.giftGiver')}
-                                        unlocked={currentUser?.kibbleBalance > 0}
-                                    />
-                                    <AchievementBadge
-                                        emoji="🏆"
-                                        label={t('profilePage.milestones.tenCases')}
-                                        unlocked={totalCases >= 10}
-                                    />
-                                    <AchievementBadge
-                                        emoji="💎"
-                                        label={t('profilePage.milestones.superFan')}
-                                        unlocked={totalAppreciations >= 10}
-                                    />
-                                    <AchievementBadge
-                                        emoji="💬"
-                                        label={t('profilePage.milestones.deepTalks')}
-                                        unlocked={(questionsAnswered + partnerQuestionsAnswered) >= 7}
-                                    />
-                                    <AchievementBadge
-                                        emoji="📖"
-                                        label={t('profilePage.milestones.storyTellers')}
-                                        unlocked={(questionsAnswered + partnerQuestionsAnswered) >= 30}
-                                    />
-                                </div>
-                            </div>
+                            {/* Milestones */}
+                            <MilestonesSection
+                                stats={{
+                                    totalCases: userStats?.cases_resolved ?? totalCases,
+                                    totalAppreciations,
+                                    questionsAnswered: userStats?.questions_completed ?? questionsAnswered,
+                                    partnerQuestionsAnswered,
+                                    memoriesCount: memories?.length || 0,
+                                    challengesCompleted: completedChallenges?.length || 0,
+                                    calendarEventsCount: userCreatedCalendarEvents?.length || 0,
+                                }}
+                            />
                         </motion.div>
                     )}
                 </AnimatePresence>
@@ -948,16 +945,5 @@ const StatBar = ({ label, value, max, color }) => {
         </div>
     );
 };
-
-const AchievementBadge = ({ emoji, label, unlocked }) => (
-    <div className={`rounded-2xl px-2.5 py-3 text-center transition-all ${unlocked
-        ? 'border border-white/80 bg-white/85 shadow-soft'
-        : 'border border-neutral-200/70 bg-neutral-100/70 opacity-50'
-        }`}>
-        <span className="text-2xl block mb-1">{unlocked ? emoji : '🔒'}</span>
-        <span className="text-[10px] font-bold text-neutral-600">{label}</span>
-    </div>
-);
-
 
 export default ProfilesPage;

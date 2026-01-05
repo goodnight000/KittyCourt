@@ -27,6 +27,11 @@ const EVENT_GRADIENTS = {
 const EventDetailsModal = ({ events, onDelete, onClose, onAddMore, currentUserId, myDisplayName, partnerDisplayName }) => {
     const { t, language } = useI18n();
 
+    // Guard against empty events array
+    if (!events?.length) {
+        return null;
+    }
+
     // Parse date string as local date to prevent timezone shift
     const dateStr = events[0].date;
     const eventDate = dateStr?.includes('T') ? new Date(dateStr) : new Date(dateStr + 'T00:00:00');

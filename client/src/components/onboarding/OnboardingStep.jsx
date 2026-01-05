@@ -6,7 +6,7 @@ import { useI18n } from '../../i18n';
 const OnboardingStep = ({
     stepData,
     stepBadgeLabel,
-    showConnectChoice,
+    showConnectChoice = false,
     children
 }) => {
     const { t } = useI18n();
@@ -58,10 +58,6 @@ OnboardingStep.propTypes = {
     stepBadgeLabel: PropTypes.string.isRequired,
     showConnectChoice: PropTypes.bool,
     children: PropTypes.node.isRequired,
-};
-
-OnboardingStep.defaultProps = {
-    showConnectChoice: false,
 };
 
 export default OnboardingStep;

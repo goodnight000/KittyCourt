@@ -17,6 +17,8 @@ const { checkMemoriesBySource } = require('../lib/supabase');
 const { triggerDailyQuestionExtraction } = require('../lib/stenographer');
 const { resolveRequestLanguage, normalizeLanguage } = require('../lib/language');
 const { sendError, createHttpError } = require('../lib/http');
+const { sendNotificationToUser } = require('../lib/notificationService');
+const { processSecureInput, securityConfig } = require('../lib/security');
 
 const normalizeLimit = (limit) => {
     const parsed = parseInt(limit, 10);
@@ -183,7 +185,18 @@ router.post('/answer', async (req, res) => {
             return sendError(res, 403, 'USER_ID_MISMATCH', 'userId does not match authenticated user');
         }
 
-        const trimmedAnswer = typeof answer === 'string' ? answer.trim() : '';
+        // Security: Validate and sanitize answer input
+        const answerCheck = processSecureInput(answer, {
+            userId: authUserId,
+            fieldName: 'dailyQuestionAnswer',
+            maxLength: securityConfig.fieldLimits.dailyQuestionAnswer,
+            endpoint: 'dailyQuestions',
+        });
+        if (!answerCheck.safe) {
+            return sendError(res, 400, 'SECURITY_BLOCK', 'Your answer contains content that cannot be processed. Please rephrase using natural language.');
+        }
+
+        const trimmedAnswer = answerCheck.input || '';
         if (!assignmentId || trimmedAnswer.length === 0) {
             return sendError(res, 400, 'ANSWER_REQUIRED', 'assignmentId and non-empty answer are required');
         }
@@ -325,6 +338,21 @@ router.post('/answer', async (req, res) => {
                     { user_id: assignment.user_a_id, amount: kibbleAmount, type: 'EARN', description: 'Daily Meow completed!' },
                     { user_id: assignment.user_b_id, amount: kibbleAmount, type: 'EARN', description: 'Daily Meow completed!' }
                 ]);
+
+                // Notify both users that daily question is complete
+                sendNotificationToUser(assignment.user_a_id, {
+                    type: 'daily_question',
+                    title: 'Daily Meow Complete!',
+                    body: 'You and your partner both answered today\'s question',
+                    data: { screen: 'daily_meow' }
+                }).catch(err => console.warn('[Daily Questions] Push notification failed:', err?.message));
+
+                sendNotificationToUser(assignment.user_b_id, {
+                    type: 'daily_question',
+                    title: 'Daily Meow Complete!',
+                    body: 'You and your partner both answered today\'s question',
+                    data: { screen: 'daily_meow' }
+                }).catch(err => console.warn('[Daily Questions] Push notification failed:', err?.message));
             }
         }
 
@@ -566,7 +594,18 @@ router.put('/answer/:id', async (req, res) => {
         const supabase = requireSupabase();
         const authUserId = await requireAuthUserId(req);
 
-        const trimmedAnswer = typeof answer === 'string' ? answer.trim() : '';
+        // Security: Validate and sanitize answer input
+        const answerCheck = processSecureInput(answer, {
+            userId: authUserId,
+            fieldName: 'dailyQuestionAnswer',
+            maxLength: securityConfig.fieldLimits.dailyQuestionAnswer,
+            endpoint: 'dailyQuestions',
+        });
+        if (!answerCheck.safe) {
+            return sendError(res, 400, 'SECURITY_BLOCK', 'Your answer contains content that cannot be processed. Please rephrase using natural language.');
+        }
+
+        const trimmedAnswer = answerCheck.input || '';
         if (!trimmedAnswer) {
             return sendError(res, 400, 'ANSWER_REQUIRED', 'answer is required');
         }

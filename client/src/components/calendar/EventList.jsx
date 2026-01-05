@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo, useMemo } from 'react';
 import { motion as Motion } from 'framer-motion';
 import { ChevronRight, Check, Wand2, Lock } from 'lucide-react';
 import PropTypes from 'prop-types';
@@ -15,36 +15,52 @@ const EVENT_TYPES = [
 /**
  * EventCard Component
  * Displays a single event card with plan button
+ * Wrapped with React.memo to prevent unnecessary re-renders
  */
-const EventCard = ({ event, delay, onClick, onPlanClick, showPlanButton, hasSavedPlan }) => {
+const EventCard = memo(({ event, delay, onClick, onPlanClick, showPlanButton, hasSavedPlan }) => {
     const { t, language } = useI18n();
     const eventType = EVENT_TYPES.find((item) => item.id === event.type) || EVENT_TYPES[4];
 
-    // Parse date string as local date to prevent timezone shift
-    const dateStr = event?.date || '';
-    if (!dateStr) return null;
+    // Memoize date parsing and timing calculations - these are expensive
+    const dateInfo = useMemo(() => {
+        const dateStr = event?.date || '';
+        if (!dateStr) return null;
 
-    const eventDate = dateStr.includes('T') ? new Date(dateStr) : new Date(dateStr + 'T00:00:00');
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const eventStart = new Date(eventDate);
-    eventStart.setHours(0, 0, 0, 0);
+        const eventDate = dateStr.includes('T') ? new Date(dateStr) : new Date(dateStr + 'T00:00:00');
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const eventStart = new Date(eventDate);
+        eventStart.setHours(0, 0, 0, 0);
 
-    const daysAway = Math.round((eventStart.getTime() - today.getTime()) / (24 * 60 * 60 * 1000));
-    const timingLabel = daysAway === 0
-        ? t('calendar.timing.today')
-        : daysAway === 1
-            ? t('calendar.timing.tomorrow')
-            : daysAway > 1
-                ? t('calendar.timing.inDays', { count: daysAway })
-                : null;
-    const isToday = daysAway === 0;
-    const isSoon = daysAway >= 0 && daysAway <= 7;
+        const daysAway = Math.round((eventStart.getTime() - today.getTime()) / (24 * 60 * 60 * 1000));
+        const timingLabel = daysAway === 0
+            ? t('calendar.timing.today')
+            : daysAway === 1
+                ? t('calendar.timing.tomorrow')
+                : daysAway > 1
+                    ? t('calendar.timing.inDays', { count: daysAway })
+                    : null;
+        const isToday = daysAway === 0;
+        const isSoon = daysAway >= 0 && daysAway <= 7;
 
-    const monthLabel = eventDate.toLocaleDateString(language, { month: 'short' });
-    const weekdayLabel = eventDate.toLocaleDateString(language, { weekday: 'short' });
-    const dayNumber = eventDate.getDate();
+        return {
+            eventDate,
+            daysAway,
+            timingLabel,
+            isToday,
+            isSoon,
+            monthLabel: eventDate.toLocaleDateString(language, { month: 'short' }),
+            weekdayLabel: eventDate.toLocaleDateString(language, { weekday: 'short' }),
+            dayNumber: eventDate.getDate()
+        };
+    }, [event?.date, language, t]);
 
+    // Early return if no valid date
+    if (!dateInfo) return null;
+
+    const { eventDate, daysAway, timingLabel, isToday, isSoon, monthLabel, weekdayLabel, dayNumber } = dateInfo;
+
+    // Gradient classes
     const cardFrame = event.isSecret
         ? 'from-indigo-200/65 via-white/35 to-violet-200/55'
         : 'from-rose-200/70 via-white/40 to-amber-200/55';
@@ -57,6 +73,7 @@ const EventCard = ({ event, delay, onClick, onPlanClick, showPlanButton, hasSave
 
     const planLabel = hasSavedPlan ? t('calendar.plan.view') : t('calendar.plan.help');
     const eventTypeLabel = t(eventType.labelKey);
+
     const planBorder = isSoon
         ? event.isSecret
             ? 'from-indigo-300/55 via-court-goldLight/35 to-violet-300/55'
@@ -64,33 +81,33 @@ const EventCard = ({ event, delay, onClick, onPlanClick, showPlanButton, hasSave
         : event.isSecret
             ? 'from-indigo-200/55 via-white/40 to-violet-200/55'
             : 'from-rose-200/60 via-white/40 to-amber-200/55';
+
     const planGlow = isSoon
         ? event.isSecret
             ? 'from-indigo-200/35 via-amber-100/25 to-violet-200/35'
             : 'from-rose-200/35 via-amber-100/25 to-pink-200/35'
         : 'from-transparent via-transparent to-transparent';
+
     const planFill = hasSavedPlan
         ? 'from-white/80 via-amber-50/65 to-white/75'
         : 'from-white/80 via-rose-50/55 to-amber-50/55';
 
     return (
         <Motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay }}
             whileTap={{ scale: 0.995 }}
             onClick={onClick}
-            className={`group relative w-full rounded-3xl p-[1px] bg-gradient-to-br ${cardFrame} shadow-soft hover:shadow-soft-lg transition-all duration-300 cursor-pointer overflow-hidden`}
+            className={`group relative w-full rounded-3xl p-[1px] bg-gradient-to-br ${cardFrame} shadow-soft hover:shadow-soft-lg transition-shadow duration-200 cursor-pointer overflow-hidden`}
         >
-            <div
-                aria-hidden="true"
-                className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-shimmer-gradient bg-[length:900px_100%] animate-shimmer"
-            />
+            {/* Shimmer animation overlay */}
+            <div aria-hidden="true" className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
+            </div>
 
-            <div className="relative rounded-[23px] bg-white/75 backdrop-blur-xl border border-white/60">
+            {/* Card content */}
+            <div className="relative rounded-[23px] bg-white/90 border border-white/60">
                 <div className="p-3">
                     <div className="flex items-start gap-3">
-                        <div className={`relative w-14 shrink-0 rounded-2xl p-[1px] bg-gradient-to-br ${dateFrame} ${isToday ? 'shadow-glow-cream' : 'shadow-soft'}`}>
+                        <div className={`relative w-14 shrink-0 rounded-2xl p-[1px] bg-gradient-to-br ${dateFrame} shadow-soft`}>
                             <div className={`rounded-[15px] px-2.5 py-2 text-center ${isToday ? 'bg-gradient-to-br from-[#B85C6B] via-[#8B4049] to-[#722F37]' : 'bg-white/85'}`}>
                                 <div className={`text-[10px] font-extrabold tracking-wide uppercase ${isToday ? 'text-white/90' : 'text-neutral-500'}`}>
                                     {monthLabel}
@@ -157,12 +174,17 @@ const EventCard = ({ event, delay, onClick, onPlanClick, showPlanButton, hasSave
                             whileTap={{ scale: 0.98 }}
                             onClick={onPlanClick}
                             aria-label={planLabel}
-                            className={`group/plan relative w-full rounded-full p-[1px] shadow-soft hover:shadow-soft-lg transition-all duration-300 ${hasSavedPlan ? 'ring-1 ring-amber-200/30' : ''}`}
+                            className={`group/plan relative w-full rounded-full p-[1px] shadow-soft hover:shadow-soft-lg transition-shadow duration-200 ${hasSavedPlan ? 'ring-1 ring-amber-200/30' : ''}`}
                         >
                             <span aria-hidden="true" className={`absolute inset-0 rounded-full bg-gradient-to-r ${planBorder}`} />
-                            <span aria-hidden="true" className={`absolute -inset-2 rounded-full bg-gradient-to-r ${planGlow} blur-xl opacity-60 transition-opacity duration-300 ${isSoon ? 'group-hover/plan:opacity-85' : 'opacity-0'}`} />
 
-                            <span className={`relative z-10 flex items-center justify-between gap-3 w-full h-10 rounded-full px-3.5 bg-gradient-to-r ${planFill} border border-white/70 backdrop-blur-xl`}>
+                            {/* Glow effect */}
+                            {planGlow && (
+                                <span aria-hidden="true" className={`absolute -inset-1 rounded-full bg-gradient-to-r ${planGlow} blur-xl opacity-60`} />
+                            )}
+
+                            {/* Plan button content */}
+                            <span className={`relative z-10 flex items-center justify-between gap-3 w-full h-10 rounded-full px-3.5 bg-gradient-to-r ${planFill} border border-white/70`}>
                                 <span className="flex items-center gap-2.5 min-w-0">
                                     <span className={`grid place-items-center w-7 h-7 rounded-full border shadow-inner-soft ${hasSavedPlan
                                         ? 'bg-amber-50/70 border-amber-200/60 text-amber-800'
@@ -188,7 +210,9 @@ const EventCard = ({ event, delay, onClick, onPlanClick, showPlanButton, hasSave
             </div>
         </Motion.div>
     );
-};
+});
+
+EventCard.displayName = 'EventCard';
 
 EventCard.propTypes = {
     event: PropTypes.shape({

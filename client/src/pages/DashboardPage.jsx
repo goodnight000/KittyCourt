@@ -19,6 +19,13 @@ const DashboardPage = () => {
     const [todaysQuestion, setTodaysQuestion] = useState(null);
     const [questionLoading, setQuestionLoading] = useState(true);
 
+    // Streak grace period state
+    const [isGracePeriod, setIsGracePeriod] = useState(false);
+    const [graceDaysRemaining, setGraceDaysRemaining] = useState(0);
+    // Future: Used for streak revival UI - unused for now
+    const [, setStreakExpired] = useState(false);
+    const [, setCanRevive] = useState(false);
+
     // Get partner name - prefer connected partner from auth store
     const partnerName = connectedPartner?.display_name || t('common.partner');
     // Get current user's display name
@@ -29,9 +36,9 @@ const DashboardPage = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
 
-    // Fetch question streak with caching
+    // Fetch streak stats from API with caching
     useEffect(() => {
-        const fetchStreak = async () => {
+        const fetchStreakStats = async () => {
             if (!authUser?.id || !connectedPartner?.id) return;
 
             const cacheKey = `${CACHE_KEYS.STREAK}:${authUser.id}:${connectedPartner.id}`;
@@ -39,43 +46,31 @@ const DashboardPage = () => {
             // Check cache first
             const cached = useCacheStore.getState().getCached(cacheKey);
             if (cached !== null) {
-                setQuestionStreak(cached);
+                setQuestionStreak(cached.current_streak || 0);
+                setIsGracePeriod(cached.is_grace_period || false);
+                setGraceDaysRemaining(cached.grace_days_remaining || 0);
+                setStreakExpired(cached.streak_expired || false);
+                setCanRevive(cached.can_revive || false);
                 return;
             }
 
             try {
-                const response = await api.get('/daily-questions/history', {
-                    params: { userId: authUser.id, partnerId: connectedPartner.id }
-                });
-                const history = response.data || [];
-                const completed = history.filter(q => q.my_answer && q.partner_answer);
-                if (completed.length === 0) {
-                    useCacheStore.getState().setCache(cacheKey, 0, CACHE_TTL.STREAK);
-                    setQuestionStreak(0);
-                    return;
-                }
+                const response = await api.get('/stats');
+                const stats = response.data || {};
 
-                const parseDay = (day) => new Date(`${day}T00:00:00`);
-                const sorted = [...completed].sort((a, b) => parseDay(b.assigned_date) - parseDay(a.assigned_date));
+                // Cache the stats object
+                useCacheStore.getState().setCache(cacheKey, stats, CACHE_TTL.STREAK);
 
-                const msPerDay = 1000 * 60 * 60 * 24;
-                let streak = 1;
-                for (let i = 1; i < sorted.length; i++) {
-                    const prev = parseDay(sorted[i - 1].assigned_date);
-                    const curr = parseDay(sorted[i].assigned_date);
-                    const diffDays = Math.round((prev - curr) / msPerDay);
-                    if (diffDays === 1) streak++;
-                    else break;
-                }
-
-                // Cache the calculated streak
-                useCacheStore.getState().setCache(cacheKey, streak, CACHE_TTL.STREAK);
-                setQuestionStreak(streak);
+                setQuestionStreak(stats.current_streak || 0);
+                setIsGracePeriod(stats.is_grace_period || false);
+                setGraceDaysRemaining(stats.grace_days_remaining || 0);
+                setStreakExpired(stats.streak_expired || false);
+                setCanRevive(stats.can_revive || false);
             } catch (err) {
-                console.error('Failed to fetch streak:', err);
+                console.error('Failed to fetch streak stats:', err);
             }
         };
-        fetchStreak();
+        fetchStreakStats();
     }, [authUser?.id, connectedPartner?.id, language]);
 
     // Fetch today's question for dashboard preview (with caching)
@@ -272,20 +267,40 @@ const DashboardPage = () => {
                             <Motion.button
                                 whileTap={{ scale: 0.98 }}
                                 onClick={() => navigate(hasPartner ? '/daily-meow/history' : '/connect')}
-                                className="relative overflow-hidden rounded-2xl border border-amber-200/70 bg-white/85 px-3 py-3 text-left shadow-inner-soft"
+                                className={`relative overflow-hidden rounded-2xl border ${isGracePeriod ? 'border-neutral-200/70' : 'border-amber-200/70'} bg-white/85 px-3 py-3 text-left shadow-inner-soft`}
                             >
-                                <div className="absolute -top-8 -right-6 h-16 w-16 rounded-full bg-amber-200/40 blur-2xl" />
+                                <div className={`absolute -top-8 -right-6 h-16 w-16 rounded-full ${isGracePeriod ? 'bg-neutral-200/40' : 'bg-amber-200/40'} blur-2xl`} />
                                 <div className="relative">
                                     <div className="flex items-center justify-between">
-                                        <Flame className="w-4 h-4 text-amber-500 fill-current" />
+                                        <div className="relative">
+                                            <Flame className={`w-4 h-4 ${isGracePeriod ? 'text-neutral-400' : 'text-amber-500'} fill-current`} />
+                                            {/* Grace period warning badge */}
+                                            {isGracePeriod && (
+                                                <Motion.div
+                                                    initial={{ scale: 0 }}
+                                                    animate={{ scale: 1 }}
+                                                    className="absolute -top-1 -right-1 w-3 h-3 bg-amber-500 rounded-full flex items-center justify-center"
+                                                >
+                                                    <span className="text-[8px] font-bold text-white">!</span>
+                                                </Motion.div>
+                                            )}
+                                        </div>
                                         <span className="text-[10px] font-semibold uppercase tracking-[0.3em] text-neutral-400">
                                             {t('dashboard.stats.streakLabel')}
                                         </span>
                                     </div>
-                                    <div className="text-2xl font-display font-bold text-neutral-800 mt-2">
+                                    <div className={`text-2xl font-display font-bold mt-2 ${isGracePeriod ? 'text-neutral-500' : 'text-neutral-800'}`}>
                                         {questionStreak}
                                     </div>
-                                    <div className="text-[11px] text-neutral-500">{t('dashboard.stats.questionStreak')}</div>
+                                    <div className="text-[11px] text-neutral-500">
+                                        {isGracePeriod ? (
+                                            <span className="text-amber-600 font-medium">
+                                                {t('dashboard.stats.gracePeriod', { days: graceDaysRemaining })}
+                                            </span>
+                                        ) : (
+                                            t('dashboard.stats.questionStreak')
+                                        )}
+                                    </div>
                                 </div>
                             </Motion.button>
                         </div>

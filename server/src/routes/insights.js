@@ -5,7 +5,7 @@
 const express = require('express');
 const router = express.Router();
 const { requireAuthUserId, requireSupabase } = require('../lib/auth');
-const { requirePartner } = require('../middleware/requirePartner.cjs');
+const { requirePartner } = require('../middleware/requirePartner');
 const { getOrderedCoupleIds, getLevelStatus } = require('../lib/xpService');
 const { generateInsightsForCouple } = require('../lib/insightService');
 const { getUserSubscriptionTier } = require('../lib/usageLimits');

@@ -6,11 +6,11 @@ import { useI18n } from '../../i18n';
 
 const OptionsStep = ({
     options,
-    selectedValue,
+    selectedValue = null,
     onOptionSelect,
     multiSelect = false,
     allowCustom = false,
-    fieldName
+    fieldName = ''
 }) => {
     const { t } = useI18n();
     const [customInput, setCustomInput] = useState('');
@@ -94,7 +94,7 @@ const OptionsStep = ({
                         placeholder={t('onboarding.customOptionPlaceholder')}
                         value={customInput}
                         onChange={(e) => setCustomInput(e.target.value)}
-                        onKeyPress={handleCustomInputKeyPress}
+                        onKeyDown={handleCustomInputKeyPress}
                         className="w-full px-4 py-3 bg-white/80 border border-dashed border-neutral-200 rounded-xl text-neutral-600 placeholder:text-neutral-400 focus:outline-none focus:border-[#D2BC76] transition-all"
                     />
                 </Motion.div>
@@ -120,13 +120,6 @@ OptionsStep.propTypes = {
     multiSelect: PropTypes.bool,
     allowCustom: PropTypes.bool,
     fieldName: PropTypes.string,
-};
-
-OptionsStep.defaultProps = {
-    selectedValue: null,
-    multiSelect: false,
-    allowCustom: false,
-    fieldName: '',
 };
 
 export default OptionsStep;

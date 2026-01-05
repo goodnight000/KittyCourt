@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import TranslationService from './TranslationService.js';
+import { parseLog, getConfirmRequest } from './verificationLogUtils.js';
 
 describe('TranslationService', () => {
     let service;
@@ -221,10 +222,15 @@ describe('TranslationService', () => {
         });
     });
 
-    describe('_parseLog', () => {
+});
+
+// Test the shared utilities (parseLog and getConfirmRequest)
+// These were previously private methods on TranslationService but are now shared
+describe('verificationLogUtils', () => {
+    describe('parseLog', () => {
         it('should parse JSON string log', () => {
             const log = JSON.stringify([{ type: 'action', user_id: 'user1' }]);
-            const result = service._parseLog(log);
+            const result = parseLog(log);
 
             expect(Array.isArray(result)).toBe(true);
             expect(result.length).toBe(1);
@@ -232,25 +238,25 @@ describe('TranslationService', () => {
 
         it('should return array as-is', () => {
             const log = [{ type: 'action' }];
-            const result = service._parseLog(log);
+            const result = parseLog(log);
 
             expect(result).toBe(log);
         });
 
         it('should handle null log', () => {
-            const result = service._parseLog(null);
+            const result = parseLog(null);
 
             expect(result).toEqual([]);
         });
 
         it('should handle invalid JSON gracefully', () => {
-            const result = service._parseLog('invalid json');
+            const result = parseLog('invalid json');
 
             expect(result).toEqual([]);
         });
     });
 
-    describe('_getConfirmRequest', () => {
+    describe('getConfirmRequest', () => {
         it('should return latest confirm request', () => {
             const log = [
                 { type: 'action', user_id: 'user1' },
@@ -258,7 +264,7 @@ describe('TranslationService', () => {
                 { type: 'action', user_id: 'user2' },
             ];
 
-            const result = service._getConfirmRequest(log);
+            const result = getConfirmRequest(log);
 
             expect(result.type).toBe('confirm_request');
             expect(result.user_id).toBe('user1');
@@ -269,13 +275,13 @@ describe('TranslationService', () => {
                 { type: 'action', user_id: 'user1' },
             ];
 
-            const result = service._getConfirmRequest(log);
+            const result = getConfirmRequest(log);
 
             expect(result).toBeNull();
         });
 
         it('should handle empty log', () => {
-            const result = service._getConfirmRequest([]);
+            const result = getConfirmRequest([]);
 
             expect(result).toBeNull();
         });

@@ -15,6 +15,7 @@
 
 const { PHASE } = require('./stateSerializer');
 const { TIMEOUT } = require('./timeoutHandlers');
+const { buildCaseData } = require('./caseDataBuilder');
 
 class PhaseTransitionController {
     constructor(dependencies) {
@@ -242,7 +243,7 @@ class PhaseTransitionController {
 
         // Trigger background memory extraction
         if (this.judgeEngine?.triggerBackgroundExtraction) {
-            const caseData = this._buildCaseData(session);
+            const caseData = buildCaseData(session);
             caseData.submissions.userA.selectedPrimaryEmotion ||= '';
             caseData.submissions.userA.coreNeed ||= '';
             caseData.submissions.userB.selectedPrimaryEmotion ||= '';
@@ -309,35 +310,6 @@ class PhaseTransitionController {
         });
 
         session.verdictHistory = history;
-    }
-
-    _buildCaseData(session) {
-        return {
-            participants: {
-                userA: {
-                    id: session.creatorId,
-                    name: 'Partner A',
-                    language: session.creatorLanguage || session.caseLanguage || 'en',
-                },
-                userB: {
-                    id: session.partnerId,
-                    name: 'Partner B',
-                    language: session.partnerLanguage || session.caseLanguage || 'en',
-                }
-            },
-            submissions: {
-                userA: {
-                    cameraFacts: session.creator.evidence,
-                    theStoryIamTellingMyself: session.creator.feelings
-                },
-                userB: {
-                    cameraFacts: session.partner.evidence,
-                    theStoryIamTellingMyself: session.partner.feelings
-                }
-            },
-            addendumHistory: session.addendumHistory || [],
-            language: session.caseLanguage || session.creatorLanguage || 'en',
-        };
     }
 }
 

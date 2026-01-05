@@ -1,17 +1,20 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Heart, Calendar, Sparkles } from 'lucide-react';
 import useAppStore from '../store/useAppStore';
 import useAuthStore from '../store/useAuthStore';
+import useCacheStore, { CACHE_TTL, CACHE_KEYS } from '../store/useCacheStore';
 import RequirePartner from '../components/RequirePartner';
+import api from '../services/api';
 import { useI18n } from '../i18n';
 
 const AppreciationsPage = () => {
     const navigate = useNavigate();
     const { appreciations, fetchAppreciations } = useAppStore();
-    const { hasPartner, partner: connectedPartner } = useAuthStore();
+    const { hasPartner, partner: connectedPartner, user: authUser } = useAuthStore();
     const { t, language } = useI18n();
+    const [totalAppreciations, setTotalAppreciations] = useState(null);
     
     // Get partner info from auth store
     const partnerName = connectedPartner?.display_name || connectedPartner?.name || t('appreciations.partnerFallback');
@@ -19,6 +22,32 @@ const AppreciationsPage = () => {
     useEffect(() => {
         fetchAppreciations();
     }, [fetchAppreciations, language]);
+
+    // Fetch unified stats for count display (single source of truth)
+    useEffect(() => {
+        const fetchStats = async () => {
+            if (!authUser?.id) return;
+
+            const cacheKey = `${CACHE_KEYS.STATS}:${authUser.id}`;
+            const cached = useCacheStore.getState().getCached(cacheKey);
+            if (cached !== null) {
+                setTotalAppreciations(cached.appreciations_received ?? 0);
+                return;
+            }
+
+            try {
+                const response = await api.get('/stats');
+                const stats = response.data;
+                useCacheStore.getState().setCache(cacheKey, stats, CACHE_TTL.STATS);
+                setTotalAppreciations(stats.appreciations_received ?? 0);
+            } catch (err) {
+                console.error('Failed to fetch stats:', err);
+                // Fallback to appreciations array length if stats fail
+                setTotalAppreciations(appreciations.length);
+            }
+        };
+        fetchStats();
+    }, [authUser?.id, appreciations.length]);
 
     // Require partner for appreciations
     if (!hasPartner) {
@@ -137,7 +166,7 @@ const AppreciationsPage = () => {
                             {t('appreciations.summary.title')}
                         </p>
                         <div className="flex items-baseline gap-2">
-                            <span className="text-4xl font-display font-bold text-neutral-800">{appreciations.length}</span>
+                            <span className="text-4xl font-display font-bold text-neutral-800">{totalAppreciations ?? appreciations.length}</span>
                             <span className="text-neutral-500 text-lg">💕</span>
                         </div>
                         <p className="text-xs text-neutral-500 mt-1">
