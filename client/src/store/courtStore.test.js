@@ -88,6 +88,7 @@ describe('courtStore', () => {
             expect(state._authPartnerId).toBeNull();
             expect(state.localEvidence).toBe('');
             expect(state.localFeelings).toBe('');
+            expect(state.localNeeds).toBe('');
             expect(state.localAddendum).toBe('');
             expect(state.isSubmitting).toBe(false);
             expect(state.isGeneratingVerdict).toBe(false);
@@ -106,6 +107,7 @@ describe('courtStore', () => {
             // State setters
             expect(typeof state.setLocalEvidence).toBe('function');
             expect(typeof state.setLocalFeelings).toBe('function');
+            expect(typeof state.setLocalNeeds).toBe('function');
             expect(typeof state.setLocalAddendum).toBe('function');
             expect(typeof state.setShowOpeningAnimation).toBe('function');
             expect(typeof state.setShowCelebrationAnimation).toBe('function');
@@ -174,6 +176,12 @@ describe('courtStore', () => {
             useCourtStore.getState().setLocalFeelings('frustrated, upset');
 
             expect(useCourtStore.getState().localFeelings).toBe('frustrated, upset');
+        });
+
+        it('should update local needs', () => {
+            useCourtStore.getState().setLocalNeeds('I need to feel heard and supported');
+
+            expect(useCourtStore.getState().localNeeds).toBe('I need to feel heard and supported');
         });
 
         it('should update local addendum', () => {
@@ -289,6 +297,7 @@ describe('courtStore', () => {
                 session: { id: 'old-session' },
                 localEvidence: 'old evidence',
                 localFeelings: 'old feelings',
+                localNeeds: 'old needs',
                 localAddendum: 'old addendum'
             });
 
@@ -301,6 +310,7 @@ describe('courtStore', () => {
             const state = useCourtStore.getState();
             expect(state.localEvidence).toBe('');
             expect(state.localFeelings).toBe('');
+            expect(state.localNeeds).toBe('');
             expect(state.localAddendum).toBe('');
         });
 
@@ -308,7 +318,8 @@ describe('courtStore', () => {
             useCourtStore.setState({
                 session: { id: 'some-session' },
                 localEvidence: 'evidence',
-                localFeelings: 'feelings'
+                localFeelings: 'feelings',
+                localNeeds: 'needs'
             });
 
             useCourtStore.getState().onStateSync({
@@ -320,6 +331,7 @@ describe('courtStore', () => {
             const state = useCourtStore.getState();
             expect(state.localEvidence).toBe('');
             expect(state.localFeelings).toBe('');
+            expect(state.localNeeds).toBe('');
         });
 
         it('should show settlement request when requested by other user', () => {
@@ -392,6 +404,7 @@ describe('courtStore', () => {
                 session: { id: 'session-123' },
                 localEvidence: 'some evidence',
                 localFeelings: 'frustrated',
+                localNeeds: 'some needs',
                 localAddendum: 'addendum',
                 isSubmitting: true,
                 isGeneratingVerdict: true,
@@ -408,6 +421,7 @@ describe('courtStore', () => {
             expect(state.session).toBeNull();
             expect(state.localEvidence).toBe('');
             expect(state.localFeelings).toBe('');
+            expect(state.localNeeds).toBe('');
             expect(state.localAddendum).toBe('');
             expect(state.isSubmitting).toBe(false);
             expect(state.isGeneratingVerdict).toBe(false);
@@ -627,13 +641,13 @@ describe('courtStore', () => {
                     }
                 });
 
-                await useCourtStore.getState().serve('partner-456', 'couple-789', 'logical');
+                await useCourtStore.getState().serve('partner-456', 'couple-789', 'swift');
 
                 expect(apiMock.post).toHaveBeenCalledWith('/court/serve', {
                     userId: 'user-123',
                     partnerId: 'partner-456',
                     coupleId: 'couple-789',
-                    judgeType: 'logical'
+                    judgeType: 'swift'
                 });
             });
 
@@ -642,7 +656,7 @@ describe('courtStore', () => {
                     response: { data: { error: 'Partner is busy' } }
                 });
 
-                await useCourtStore.getState().serve('partner-456', null, 'logical');
+                await useCourtStore.getState().serve('partner-456', null, 'swift');
 
                 expect(useCourtStore.getState().error).toBe('Partner is busy');
             });
@@ -703,7 +717,8 @@ describe('courtStore', () => {
             it('should call API and clear local inputs', async () => {
                 useCourtStore.setState({
                     localEvidence: 'My testimony',
-                    localFeelings: 'frustrated'
+                    localFeelings: 'frustrated',
+                    localNeeds: 'I need to feel heard'
                 });
 
                 apiMock.post.mockResolvedValue({
@@ -719,12 +734,14 @@ describe('courtStore', () => {
                 expect(apiMock.post).toHaveBeenCalledWith('/court/evidence', {
                     userId: 'user-123',
                     evidence: 'My testimony',
-                    feelings: 'frustrated'
+                    feelings: 'frustrated',
+                    needs: 'I need to feel heard'
                 });
 
                 const state = useCourtStore.getState();
                 expect(state.localEvidence).toBe('');
                 expect(state.localFeelings).toBe('');
+                expect(state.localNeeds).toBe('');
             });
         });
 
@@ -949,7 +966,7 @@ describe('courtStore', () => {
 
         describe('serve() with socket', () => {
             it('should use socket when connected', async () => {
-                await useCourtStore.getState().serve('partner-456', 'couple-789', 'best');
+                await useCourtStore.getState().serve('partner-456', 'couple-789', 'wise');
 
                 expect(socketActionHelperMock.createSocketAction).toHaveBeenCalledWith(
                     'court:serve',
@@ -958,7 +975,7 @@ describe('courtStore', () => {
                 expect(mockSocketAction).toHaveBeenCalledWith(mockSocket, {
                     partnerId: 'partner-456',
                     coupleId: 'couple-789',
-                    judgeType: 'best'
+                    judgeType: 'wise'
                 });
             });
         });
@@ -967,7 +984,8 @@ describe('courtStore', () => {
             it('should use socket and clear local inputs optimistically', async () => {
                 useCourtStore.setState({
                     localEvidence: 'My testimony',
-                    localFeelings: 'frustrated'
+                    localFeelings: 'frustrated',
+                    localNeeds: 'I need to feel heard'
                 });
 
                 await useCourtStore.getState().submitEvidence();
@@ -977,9 +995,17 @@ describe('courtStore', () => {
                     expect.any(Object)
                 );
 
+                // Verify needs is included in the socket action payload
+                expect(mockSocketAction).toHaveBeenCalledWith(mockSocket, {
+                    evidence: 'My testimony',
+                    feelings: 'frustrated',
+                    needs: 'I need to feel heard'
+                });
+
                 // Local inputs should be cleared immediately (optimistic)
                 expect(useCourtStore.getState().localEvidence).toBe('');
                 expect(useCourtStore.getState().localFeelings).toBe('');
+                expect(useCourtStore.getState().localNeeds).toBe('');
             });
         });
 
@@ -989,7 +1015,7 @@ describe('courtStore', () => {
                     error: 'Session expired'
                 });
 
-                await useCourtStore.getState().serve('partner-456', null, 'logical');
+                await useCourtStore.getState().serve('partner-456', null, 'swift');
 
                 expect(useCourtStore.getState().error).toBe('Session expired');
             });

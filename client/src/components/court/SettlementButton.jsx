@@ -154,17 +154,8 @@ export default function SettlementButton({ className = '' }) {
                 <div className="relative z-10 p-4">
                     <div className="flex items-center gap-3 mb-3">
                         {/* Vibrancy Icon Circle */}
-                        <div
-                            className="p-2 rounded-full"
-                            style={{
-                                background: 'rgba(255, 200, 220, 0.25)',
-                                backdropFilter: 'blur(12px) saturate(150%)',
-                                WebkitBackdropFilter: 'blur(12px) saturate(150%)',
-                                border: '1px solid rgba(255, 255, 255, 0.35)',
-                                boxShadow: 'inset 0 1px 0 0 rgba(255,255,255,0.4)',
-                            }}
-                        >
-                            <Heart className="w-5 h-5" style={{ color: 'rgba(219, 39, 119, 0.9)' }} />
+                        <div className="p-2 rounded-full bg-court-gold/15 border border-court-gold/30 shadow-inner-soft">
+                            <Heart className="w-5 h-5 text-court-gold" />
                         </div>
                         <div>
                             <p
@@ -187,40 +178,16 @@ export default function SettlementButton({ className = '' }) {
 
                     {/* Integrated Buttons */}
                     <div className="flex gap-2">
-                        {/* Primary: Pink gradient over glass */}
                         <button
                             onClick={handleAcceptPartnerSettlement}
                             disabled={isLoading}
-                            className="flex-1 py-2 px-4 rounded-full font-bold text-white transition-all disabled:opacity-50"
-                            style={{
-                                background: 'linear-gradient(135deg, rgba(236,72,153,0.92) 0%, rgba(244,114,182,0.88) 100%)',
-                                backdropFilter: 'blur(4px)',
-                                border: '1px solid rgba(255, 180, 210, 0.4)',
-                                boxShadow: '0 6px 20px rgba(236, 72, 153, 0.32), inset 0 1px 0 0 rgba(255,255,255,0.25)',
-                            }}
+                            className="court-btn-primary flex-1 disabled:opacity-60"
                         >
                             {isLoading ? t('court.settlement.partnerRequest.settling') : t('court.settlement.partnerRequest.accept')}
                         </button>
-
-                        {/* Secondary: Outline style on glass */}
                         <button
                             onClick={handleDeclinePartnerSettlement}
-                            className="py-2 px-4 rounded-full font-medium transition-all"
-                            style={{
-                                background: 'rgba(255, 255, 255, 0.18)',
-                                backdropFilter: 'blur(8px)',
-                                border: '1px solid rgba(255, 255, 255, 0.4)',
-                                color: 'rgba(50, 35, 30, 0.85)',
-                                boxShadow: 'inset 0 1px 0 0 rgba(255,255,255,0.25)',
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.32)';
-                                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.55)';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.18)';
-                                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.4)';
-                            }}
+                            className="court-btn-secondary flex-1"
                         >
                             {t('court.settlement.partnerRequest.reject')}
                         </button>
@@ -236,7 +203,7 @@ export default function SettlementButton({ className = '' }) {
             <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className={`flex items-center gap-2 text-pink-300/70 ${className}`}
+                className={`inline-flex items-center gap-2 rounded-full border border-court-gold/20 bg-court-cream/80 px-3 py-1 text-court-brown ${className}`}
             >
                 <Handshake className="w-4 h-4" />
                 <span className="text-sm">{t('court.settlement.waiting', { name: partnerName })}</span>
@@ -283,7 +250,7 @@ export default function SettlementButton({ className = '' }) {
 
             <button
                 onClick={() => setShowConfirmation(true)}
-                className={`flex items-center justify-center gap-2 text-sm font-semibold text-pink-600/90 hover:text-pink-700 transition ${className}`}
+                className={`court-btn-secondary ${className}`}
             >
                 <Handshake className="w-4 h-4" />
                 <span>{t('court.settlement.cta')}</span>
@@ -369,17 +336,8 @@ export default function SettlementButton({ className = '' }) {
                                 {/* Header: Icon + Close */}
                                 <div className="flex justify-between items-start mb-4">
                                     {/* Vibrancy Icon Circle (responds to background) */}
-                                    <div
-                                        className="p-3 rounded-full"
-                                        style={{
-                                            background: 'rgba(255, 200, 220, 0.25)',
-                                            backdropFilter: 'blur(12px) saturate(150%)',
-                                            WebkitBackdropFilter: 'blur(12px) saturate(150%)',
-                                            border: '1px solid rgba(255, 255, 255, 0.35)',
-                                            boxShadow: 'inset 0 1px 0 0 rgba(255,255,255,0.4)',
-                                        }}
-                                    >
-                                        <Handshake className="w-6 h-6" style={{ color: 'rgba(219, 39, 119, 0.9)' }} />
+                                    <div className="p-3 rounded-full bg-court-gold/15 border border-court-gold/30 shadow-inner-soft">
+                                        <Handshake className="w-6 h-6 text-court-gold" />
                                     </div>
                                     <button
                                         onClick={() => setShowConfirmation(false)}
@@ -421,49 +379,23 @@ export default function SettlementButton({ className = '' }) {
                                     {t('court.settlement.modal.body', { name: partnerName })}
                                 </p>
 
-                                <p
-                                    className="text-xs mb-6"
-                                    style={{ color: 'rgba(180, 50, 90, 0.85)' }}
-                                >
+                                <p className="text-xs mb-6 text-court-goldDark">
                                     {t('court.settlement.modal.note')}
                                 </p>
 
                                 {/* ═══ BUTTONS (Integrated with Glass) ═══ */}
                                 <div className="flex gap-3">
-                                    {/* Secondary: Outline style on glass */}
                                     <button
                                         onClick={() => setShowConfirmation(false)}
-                                        className="flex-1 py-2.5 px-4 rounded-full font-semibold transition-all"
-                                        style={{
-                                            background: 'rgba(255, 255, 255, 0.18)',
-                                            backdropFilter: 'blur(8px)',
-                                            border: '1px solid rgba(255, 255, 255, 0.4)',
-                                            color: 'rgba(50, 35, 30, 0.85)',
-                                            boxShadow: 'inset 0 1px 0 0 rgba(255,255,255,0.25)',
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.32)';
-                                            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.55)';
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.18)';
-                                            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.4)';
-                                        }}
+                                        className="court-btn-secondary flex-1"
                                     >
                                         {t('common.cancel')}
                                     </button>
 
-                                    {/* Primary: Pink gradient, slightly translucent over glass */}
                                     <button
                                         onClick={handleSettle}
                                         disabled={isLoading}
-                                        className="flex-1 py-2.5 px-4 rounded-full text-white font-extrabold transition-all disabled:opacity-50"
-                                        style={{
-                                            background: 'linear-gradient(135deg, rgba(236,72,153,0.92) 0%, rgba(244,114,182,0.88) 100%)',
-                                            backdropFilter: 'blur(4px)',
-                                            border: '1px solid rgba(255, 180, 210, 0.4)',
-                                            boxShadow: '0 6px 24px rgba(236, 72, 153, 0.35), inset 0 1px 0 0 rgba(255,255,255,0.25)',
-                                        }}
+                                        className="court-btn-primary flex-1 disabled:opacity-60"
                                     >
                                         {isLoading ? t('court.settlement.modal.requesting') : t('court.settlement.modal.confirm')}
                                     </button>

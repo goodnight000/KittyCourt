@@ -32,9 +32,9 @@ async function getCoupleUsageRecord(userId) {
 
         if (!error && data && data.length > 0) {
             return {
-                lightning_count: data[0].lightning_count || 0,
-                mittens_count: data[0].mittens_count || 0,
-                whiskers_count: data[0].whiskers_count || 0,
+                classic_count: data[0].classic_count || 0,
+                swift_count: data[0].swift_count || 0,
+                wise_count: data[0].wise_count || 0,
                 plan_count: data[0].plan_count || 0,
                 period_start: periodStart,
             };
@@ -54,18 +54,18 @@ async function getCoupleUsageRecord(userId) {
     // If no record exists, return zeros
     if (fetchError && fetchError.code === 'PGRST116') {
         return {
-            lightning_count: 0,
-            mittens_count: 0,
-            whiskers_count: 0,
+            classic_count: 0,
+            swift_count: 0,
+            wise_count: 0,
             plan_count: 0,
             period_start: periodStart,
         };
     } else if (fetchError && fetchError.code === '42P01') {
         // migration not applied yet
         return {
-            lightning_count: 0,
-            mittens_count: 0,
-            whiskers_count: 0,
+            classic_count: 0,
+            swift_count: 0,
+            wise_count: 0,
             plan_count: 0,
             period_start: periodStart,
         };
@@ -107,16 +107,16 @@ async function getUserSubscriptionTier(userId) {
 function getLimits(tier) {
     if (tier === 'pause_gold') {
         return {
-            lightning: Infinity,
-            mittens: 100,
-            whiskers: 10,
+            classic: Infinity,
+            swift: 100,
+            wise: 10,
             plan: Infinity,
         };
     }
     return {
-        lightning: 3,
-        mittens: 1,
-        whiskers: 0,
+        classic: 3,
+        swift: 1,
+        wise: 0,
         plan: 0,
     };
 }
@@ -135,9 +135,9 @@ router.get('/', async (req, res) => {
         const record = await getCoupleUsageRecord(userId);
 
         res.json({
-            lightningUsed: record.lightning_count || 0,
-            mittensUsed: record.mittens_count || 0,
-            whiskersUsed: record.whiskers_count || 0,
+            classicUsed: record.classic_count || 0,
+            swiftUsed: record.swift_count || 0,
+            wiseUsed: record.wise_count || 0,
             planUsed: record.plan_count || 0,
             periodStart: record.period_start,
         });
@@ -160,8 +160,8 @@ router.post('/increment', async (req, res) => {
         }
 
         const { type } = req.body;
-        if (!['lightning', 'mittens', 'whiskers', 'plan'].includes(type)) {
-            return res.status(400).json({ error: 'Invalid type. Must be lightning, mittens, whiskers, or plan' });
+        if (!['classic', 'swift', 'wise', 'plan'].includes(type)) {
+            return res.status(400).json({ error: 'Invalid type. Must be classic, swift, wise, or plan' });
         }
 
         try {
@@ -191,7 +191,7 @@ router.get('/can-use', async (req, res) => {
         }
 
         const { type } = req.query;
-        if (!['lightning', 'mittens', 'whiskers', 'plan'].includes(type)) {
+        if (!['classic', 'swift', 'wise', 'plan'].includes(type)) {
             return res.status(400).json({ error: 'Invalid type' });
         }
 
@@ -204,9 +204,9 @@ router.get('/can-use', async (req, res) => {
 
         // Map type to column and limit
         const columnMap = {
-            lightning: 'lightning_count',
-            mittens: 'mittens_count',
-            whiskers: 'whiskers_count',
+            classic: 'classic_count',
+            swift: 'swift_count',
+            wise: 'wise_count',
             plan: 'plan_count',
         };
 

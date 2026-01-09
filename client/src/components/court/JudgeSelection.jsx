@@ -1,9 +1,19 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Gavel, Zap, Scale, Sparkles, Lock, Crown } from 'lucide-react';
+import { X, Gavel, Zap, Scale, Medal, Lock, Crown } from 'lucide-react';
 import useSubscriptionStore from '../../store/useSubscriptionStore';
 import Paywall from '../Paywall';
 import { useI18n } from '../../i18n';
+
+// Floating decorative elements for premium ambiance
+// Duration is pre-computed to avoid Math.random() during render
+const floatingElements = [
+    { type: '✦', color: 'text-court-gold', size: 'text-sm', left: '5%', top: '8%', delay: 0, duration: 3.5 },
+    { type: '✦', color: 'text-court-goldLight', size: 'text-xs', left: '90%', top: '15%', delay: 0.6, duration: 4.2 },
+    { type: '✦', color: 'text-court-gold', size: 'text-base', left: '92%', top: '55%', delay: 1.2, duration: 3.8 },
+    { type: '✧', color: 'text-lavender-300', size: 'text-xs', left: '4%', top: '45%', delay: 0.4, duration: 4.5 },
+    { type: '✧', color: 'text-court-goldLight', size: 'text-sm', left: '8%', top: '85%', delay: 1.8, duration: 3.2 },
+];
 
 /**
  * Judge Selection Modal
@@ -13,39 +23,38 @@ import { useI18n } from '../../i18n';
 
 const JUDGES = [
     {
-        id: 'fast',
-        nameKey: 'court.judges.fast.name',
-        subtitleKey: 'court.judges.fast.subtitle',
-        descriptionKey: 'court.judges.fast.description',
+        id: 'classic',
+        nameKey: 'court.judges.classic.name',
+        subtitleKey: 'court.judges.classic.subtitle',
+        descriptionKey: 'court.judges.classic.description',
         model: 'DeepSeek v3.2',
-        avatar: '/assets/avatars/judge_fast.png',
-        accentColor: 'bg-blue-500',
-        borderColor: 'border-blue-400',
-        icon: Zap
-    },
-    {
-        id: 'logical',
-        nameKey: 'court.judges.logical.name',
-        subtitleKey: 'court.judges.logical.subtitle',
-        descriptionKey: 'court.judges.logical.description',
-        model: 'Kimi K2',
-        avatar: '/assets/avatars/judge_logical.png',
-        accentColor: 'bg-emerald-500',
-        borderColor: 'border-emerald-400',
+        avatar: '/assets/avatars/judge_mochi.png',
+        accentColor: 'bg-amber-400',
+        borderColor: 'border-amber-300',
         icon: Scale
     },
     {
-        id: 'best',
-        nameKey: 'court.judges.best.name',
-        subtitleKey: 'court.judges.best.subtitle',
-        descriptionKey: 'court.judges.best.description',
-        model: 'Opus 4.5',
+        id: 'swift',
+        nameKey: 'court.judges.swift.name',
+        subtitleKey: 'court.judges.swift.subtitle',
+        descriptionKey: 'court.judges.swift.description',
+        model: 'Gemini 3 Flash',
+        avatar: '/assets/avatars/judge_dash.png',
+        accentColor: 'bg-teal-500',
+        borderColor: 'border-teal-400',
+        icon: Zap
+    },
+    {
+        id: 'wise',
+        nameKey: 'court.judges.wise.name',
+        subtitleKey: 'court.judges.wise.subtitle',
+        descriptionKey: 'court.judges.wise.description',
+        model: 'GPT 5.2',
         avatar: '/assets/avatars/judge_whiskers.png',
-        accentColor: 'bg-amber-500',
-        borderColor: 'border-amber-400',
-        icon: Gavel
+        accentColor: 'bg-purple-500',
+        borderColor: 'border-purple-400',
+        icon: Medal
     }
-
 ];
 
 const JudgeSelection = ({ isOpen, onClose, onServe }) => {
@@ -54,7 +63,7 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
     const [paywallReason, setPaywallReason] = useState(null);
     const { t } = useI18n();
 
-    const { canUseJudge, getUsageDisplay, isGold, isLoading, fetchUsage } = useSubscriptionStore();
+    const { canUseJudge, getUsageDisplay, isGold, fetchUsage } = useSubscriptionStore();
 
     // Refresh usage data when modal opens to ensure accurate counts
     useEffect(() => {
@@ -64,7 +73,7 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
     }, [isOpen, fetchUsage]);
 
     const getPaywallReason = useCallback((judge) => {
-        if (judge.id === 'best' && !isGold) {
+        if (judge.id === 'wise' && !isGold) {
             return t('court.judgeSelection.paywall.bestLocked');
         }
         return t('court.judgeSelection.paywall.limitReached', { judge: t(judge.nameKey) });
@@ -146,14 +155,49 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
                             onClick={handleClose}
                         />
 
+                        {/* Ambient glow blobs */}
+                        <div className="absolute -top-16 -right-12 w-48 h-48 rounded-full bg-court-gold/15 blur-3xl pointer-events-none" />
+                        <div className="absolute -bottom-16 -left-12 w-56 h-56 rounded-full bg-lavender-200/15 blur-3xl pointer-events-none" />
+                        <div className="absolute top-1/3 left-1/4 w-40 h-40 rounded-full bg-blush-200/10 blur-3xl pointer-events-none" />
+
+                        {/* Floating decorative elements */}
+                        {floatingElements.map((el, i) => (
+                            <motion.span
+                                key={i}
+                                animate={{
+                                    y: [0, -8, 0],
+                                    opacity: [0.3, 0.7, 0.3],
+                                    scale: [0.9, 1.1, 0.9],
+                                }}
+                                transition={{
+                                    duration: el.duration,
+                                    delay: el.delay,
+                                    repeat: Infinity,
+                                    ease: "easeInOut",
+                                }}
+                                className={`absolute ${el.color} ${el.size} drop-shadow-sm pointer-events-none z-10`}
+                                style={{ left: el.left, top: el.top }}
+                            >
+                                {el.type}
+                            </motion.span>
+                        ))}
+
                         {/* Modal */}
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
                             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                            className="relative w-full max-w-md glass-card p-6 max-h-[90vh] overflow-y-auto"
+                            className="relative w-full max-w-md glass-card p-5 max-h-[78vh] overflow-y-auto
+                                bg-gradient-to-br from-court-cream/60 via-white/90 to-court-tan/30
+                                border border-court-gold/15 shadow-xl"
+                            style={{ paddingBottom: 'calc(var(--safe-area-bottom) + 16px)' }}
                         >
+                            {/* Inner glow effect */}
+                            <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-court-gold/5 via-transparent to-lavender-100/10 pointer-events-none" />
+
+                            {/* Decorative top border accent */}
+                            <div className="absolute inset-x-8 top-0 h-0.5 bg-gradient-to-r from-transparent via-court-gold/30 to-transparent" />
                             {/* Close button */}
                             <button
                                 onClick={handleClose}
@@ -163,27 +207,40 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
                             </button>
 
                             {/* Header */}
-                            <div className="text-center mb-6">
-                                <div className="inline-flex items-center gap-2 mb-2">
-                                    <h2 className="text-xl font-bold text-court-brown">
-                                        {t('court.judgeSelection.title')}
-                                    </h2>
-                                </div>
-                                <p className="text-sm text-court-brownLight">
-                                    {t('court.judgeSelection.subtitle')}
-                                </p>
+                            <div className="relative text-center mb-4 pt-2">
+                                {/* Ceremonial gavel icon */}
+                                <motion.div
+                                    animate={{ rotate: [-3, 3, -3] }}
+                                    transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+                                    className="inline-flex items-center justify-center w-12 h-12 mb-3
+                                        bg-gradient-to-br from-court-gold/20 via-court-goldLight/10 to-transparent
+                                        rounded-full border border-court-gold/20"
+                                >
+                                    <Gavel className="w-6 h-6 text-court-gold" />
+                                </motion.div>
 
-                                {/* Gold badge */}
+                                <h2 className="text-xl font-bold text-court-brown mb-1">
+                                    {t('court.judgeSelection.title')}
+                                </h2>
+                                {/* Gold badge - enhanced styling */}
                                 {isGold && (
-                                    <div className="inline-flex items-center gap-1 mt-2 px-2 py-1 bg-gradient-to-r from-court-gold/20 to-amber-500/20 rounded-full">
-                                        <Crown className="w-3 h-3 text-court-gold" />
-                                        <span className="text-xs font-medium text-court-gold">{t('court.judgeSelection.goldBadge')}</span>
-                                    </div>
+                                    <motion.div
+                                        initial={{ opacity: 0, scale: 0.9 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        className="inline-flex items-center gap-1.5 mt-3 px-3 py-1.5
+                                            bg-gradient-to-r from-court-gold/15 via-amber-500/10 to-court-goldLight/15
+                                            rounded-full border border-court-gold/20 shadow-sm"
+                                    >
+                                        <Crown className="w-3.5 h-3.5 text-court-gold" />
+                                        <span className="text-xs font-semibold text-court-gold tracking-wide">
+                                            {t('court.judgeSelection.goldBadge')}
+                                        </span>
+                                    </motion.div>
                                 )}
                             </div>
 
                             {/* Judge Cards */}
-                            <div className="space-y-3 mb-6">
+                            <div className="space-y-3 mb-4">
                                 {JUDGES.map((judge) => {
                                     const isSelected = selectedJudge === judge.id;
                                     const IconComponent = judge.icon;
@@ -197,13 +254,21 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
                                             key={judge.id}
                                             onClick={() => handleJudgeClick(judge)}
                                             whileTap={{ scale: 0.98 }}
-                                            className={`w-full p-4 rounded-xl border-2 text-left transition-all duration-200 relative ${isLocked
+                                            className={`w-full p-4 rounded-2xl border-2 text-left transition-all duration-300 relative ${isLocked
                                                 ? 'border-court-tan/30 bg-white/30 opacity-75'
                                                 : isSelected
-                                                    ? `${judge.borderColor} bg-white shadow-lg`
-                                                    : 'border-court-tan/50 bg-white/50 hover:border-court-tan hover:bg-white/80'
+                                                    ? `${judge.borderColor} bg-white shadow-lg shadow-court-gold/10`
+                                                    : 'border-court-tan/40 bg-white/60 hover:border-court-tan/70 hover:bg-white/90 hover:shadow-md'
                                                 }`}
                                         >
+                                            {/* Selection glow effect */}
+                                            {isSelected && !isLocked && (
+                                                <motion.div
+                                                    initial={{ opacity: 0 }}
+                                                    animate={{ opacity: 1 }}
+                                                    className="absolute inset-0 rounded-2xl bg-gradient-to-br from-court-gold/5 via-transparent to-transparent pointer-events-none"
+                                                />
+                                            )}
                                             <div className="flex items-center gap-4">
                                                 {/* Avatar */}
                                                 <div className={`relative w-16 h-16 rounded-full overflow-hidden border-2 ${isLocked
@@ -261,7 +326,7 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
                                                             : 'bg-court-tan/50 text-court-brownLight'
                                                         }`}>
                                                         {isLocked && <Lock className="w-3 h-3" />}
-                                                        {!isLocked && status.remaining === Infinity && <Sparkles className="w-3 h-3" />}
+                                                        {!isLocked && status.remaining === Infinity && <Crown className="w-3 h-3" />}
                                                         <span>{usageText}</span>
                                                     </div>
                                                 </div>
@@ -300,18 +365,30 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
                                 })}
                             </div>
 
-                            {/* Serve Button */}
+                            {/* Serve Button - Premium Gold Gradient */}
                             <motion.button
                                 onClick={handleServe}
                                 disabled={!canServe}
+                                whileHover={canServe ? { scale: 1.01 } : {}}
                                 whileTap={canServe ? { scale: 0.98 } : {}}
-                                className={`w-full py-4 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-all duration-300 ${canServe
-                                    ? 'btn-primary shadow-lg'
-                                    : 'bg-court-tan/50 cursor-not-allowed text-court-brownLight'
+                                className={`relative w-full py-3.5 rounded-2xl font-bold flex items-center justify-center gap-3
+                                    transition-all duration-300 overflow-hidden ${canServe
+                                    ? 'text-white bg-gradient-to-br from-court-maroon via-court-brown to-court-brownDark shadow-lg shadow-court-maroon/30 border border-court-gold/20'
+                                    : 'bg-court-tan/40 cursor-not-allowed text-court-brownLight/70'
                                     }`}
                             >
-                                <Gavel className="w-5 h-5" />
-                                {canServe ? t('court.judgeSelection.serve') : t('court.judgeSelection.selectPrompt')}
+                                {/* Button shimmer effect when active */}
+                                {canServe && (
+                                    <motion.div
+                                        animate={{ x: ['-100%', '200%'] }}
+                                        transition={{ duration: 2.5, repeat: Infinity, repeatDelay: 4 }}
+                                        className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12"
+                                    />
+                                )}
+                                <Gavel className="w-5 h-5 relative z-10" />
+                                <span className="relative z-10">
+                                    {canServe ? t('court.judgeSelection.serve') : t('court.judgeSelection.selectPrompt')}
+                                </span>
                             </motion.button>
 
                             {/* Cancel link */}

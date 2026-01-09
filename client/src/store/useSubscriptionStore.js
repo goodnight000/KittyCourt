@@ -24,38 +24,38 @@ import {
 
 /**
  * Judge limits by subscription tier
- * Judge IDs: 'fast' (Lightning), 'logical' (Mittens), 'best' (Whiskers)
+ * Judge IDs: 'classic' (Mochi), 'swift' (Dash), 'wise' (Whiskers)
  */
 const FREE_LIMITS = {
-    fast: 3,        // Lightning: 3/month
-    logical: 1,     // Mittens: 1/month
-    best: 0,        // Whiskers: locked
+    classic: 3,     // Mochi: 3/month
+    swift: 1,       // Dash: 1/month
+    wise: 0,        // Whiskers: locked
     plan: 0,        // Help Me Plan: locked
 };
 
 const GOLD_LIMITS = {
-    fast: Infinity,  // Lightning: unlimited
-    logical: 100,    // Mittens: 100/month
-    best: 10,        // Whiskers: 10/month
-    plan: Infinity,  // Help Me Plan: unlimited
+    classic: Infinity,  // Mochi: unlimited
+    swift: 100,         // Dash: 100/month
+    wise: 10,           // Whiskers: 10/month
+    plan: Infinity,     // Help Me Plan: unlimited
 };
 
 /**
- * Map judge display names to IDs
+ * Map judge display names to IDs (for backward compatibility)
  */
 export const JUDGE_ID_MAP = {
-    lightning: 'fast',
-    mittens: 'logical',
-    whiskers: 'best',
+    mochi: 'classic',
+    dash: 'swift',
+    whiskers: 'wise',
 };
 
 /**
  * Map judge IDs to display names
  */
 export const JUDGE_NAME_MAP = {
-    fast: 'Lightning',
-    logical: 'Mittens',
-    best: 'Whiskers',
+    classic: 'Mochi',
+    swift: 'Dash',
+    wise: 'Whiskers',
 };
 
 const useSubscriptionStore = create((set, get) => ({
@@ -68,9 +68,9 @@ const useSubscriptionStore = create((set, get) => ({
 
     // Usage tracking (fetched from backend)
     usage: {
-        lightningUsed: 0,  // fast
-        mittensUsed: 0,    // logical
-        whiskersUsed: 0,   // best
+        classicUsed: 0,   // classic (Mochi)
+        swiftUsed: 0,     // swift (Dash)
+        wiseUsed: 0,      // wise (Whiskers)
         planUsed: 0,
         periodStart: null,
     },
@@ -313,9 +313,9 @@ const useSubscriptionStore = create((set, get) => ({
 
             set({
                 usage: {
-                    lightningUsed: data.lightningUsed || 0,
-                    mittensUsed: data.mittensUsed || 0,
-                    whiskersUsed: data.whiskersUsed || 0,
+                    classicUsed: data.classicUsed || 0,
+                    swiftUsed: data.swiftUsed || 0,
+                    wiseUsed: data.wiseUsed || 0,
                     planUsed: data.planUsed || 0,
                     periodStart: data.periodStart,
                 },
@@ -328,7 +328,7 @@ const useSubscriptionStore = create((set, get) => ({
 
     /**
      * Check if user can use a specific judge
-     * @param {string} judgeType - 'fast', 'logical', or 'best'
+     * @param {string} judgeType - 'classic', 'swift', or 'wise'
      * @returns {object} { allowed, remaining, limit, used }
      */
     canUseJudge: (judgeType) => {
@@ -338,14 +338,14 @@ const useSubscriptionStore = create((set, get) => ({
         let used = 0;
 
         switch (judgeType) {
-            case 'fast':
-                used = usage.lightningUsed;
+            case 'classic':
+                used = usage.classicUsed;
                 break;
-            case 'logical':
-                used = usage.mittensUsed;
+            case 'swift':
+                used = usage.swiftUsed;
                 break;
-            case 'best':
-                used = usage.whiskersUsed;
+            case 'wise':
+                used = usage.wiseUsed;
                 break;
             default:
                 return { allowed: false, remaining: 0, limit: 0, used: 0 };
@@ -369,14 +369,11 @@ const useSubscriptionStore = create((set, get) => ({
 
     /**
      * Increment usage after successful action
-     * @param {string} type - 'lightning'|'mittens'|'whiskers'|'plan' or 'fast'|'logical'|'best'
+     * @param {string} type - 'classic'|'swift'|'wise'|'plan'
      */
     incrementUsage: async (type) => {
-        // Normalize judge IDs to API types
-        let apiType = type;
-        if (type === 'fast') apiType = 'lightning';
-        else if (type === 'logical') apiType = 'mittens';
-        else if (type === 'best') apiType = 'whiskers';
+        // Judge types now map directly to API types
+        const apiType = type;
 
         try {
             const response = await api.post('/usage/increment', { type: apiType });
@@ -387,14 +384,14 @@ const useSubscriptionStore = create((set, get) => ({
                 const newUsage = { ...usage };
 
                 switch (apiType) {
-                    case 'lightning':
-                        newUsage.lightningUsed = response.data.newCount;
+                    case 'classic':
+                        newUsage.classicUsed = response.data.newCount;
                         break;
-                    case 'mittens':
-                        newUsage.mittensUsed = response.data.newCount;
+                    case 'swift':
+                        newUsage.swiftUsed = response.data.newCount;
                         break;
-                    case 'whiskers':
-                        newUsage.whiskersUsed = response.data.newCount;
+                    case 'wise':
+                        newUsage.wiseUsed = response.data.newCount;
                         break;
                     case 'plan':
                         newUsage.planUsed = response.data.newCount;
@@ -411,7 +408,7 @@ const useSubscriptionStore = create((set, get) => ({
 
     /**
      * Get display text for usage
-     * @param {string} judgeType - 'fast', 'logical', or 'best'
+     * @param {string} judgeType - 'classic', 'swift', or 'wise'
      * @returns {string} Display text like "2/3 used" or "✨ Unlimited"
      */
     getUsageDisplay: (judgeType, t) => {
@@ -432,7 +429,7 @@ const useSubscriptionStore = create((set, get) => ({
                 }
             };
 
-        if (judgeType === 'best' && !isGold) {
+        if (judgeType === 'wise' && !isGold) {
             return translate('subscription.usage.locked');
         }
 
@@ -445,7 +442,7 @@ const useSubscriptionStore = create((set, get) => ({
 
     /**
      * Get remaining count display
-     * @param {string} judgeType - 'fast', 'logical', or 'best'
+     * @param {string} judgeType - 'classic', 'swift', or 'wise'
      * @returns {string} Display text like "3 left" or "Unlimited"
      */
     getRemainingDisplay: (judgeType, t) => {
@@ -466,7 +463,7 @@ const useSubscriptionStore = create((set, get) => ({
                 }
             };
 
-        if (judgeType === 'best' && !isGold) {
+        if (judgeType === 'wise' && !isGold) {
             return translate('subscription.remaining.upgrade');
         }
 
@@ -493,9 +490,9 @@ const useSubscriptionStore = create((set, get) => ({
             offerings: null,
             _rcUnsub: null,
             usage: {
-                lightningUsed: 0,
-                mittensUsed: 0,
-                whiskersUsed: 0,
+                classicUsed: 0,
+                swiftUsed: 0,
+                wiseUsed: 0,
                 planUsed: 0,
                 periodStart: null,
             },

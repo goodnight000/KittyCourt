@@ -41,15 +41,15 @@ const LanguageStep = ({
                             }`}
                         >
                             <div className="flex items-start gap-3">
-                                <div className={`px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-[0.2em] ${
+                                <div className={`flex-shrink-0 px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-[0.2em] ${
                                     isSelected
                                         ? 'bg-white/80 text-[#8B7019]'
                                         : 'bg-white/70 text-neutral-400'
                                 }`}>
                                     {languageOption.code}
                                 </div>
-                                <div className="flex-1">
-                                    <p className={`font-bold ${isSelected ? 'text-court-brown' : 'text-neutral-700'}`}>
+                                <div className="flex-1 min-w-0">
+                                    <p className={`font-bold break-words ${isSelected ? 'text-court-brown' : 'text-neutral-700'}`}>
                                         {label}
                                     </p>
                                     {showNativeLabel && (

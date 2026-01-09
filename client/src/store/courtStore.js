@@ -69,6 +69,7 @@ const useCourtStore = create((set, get) => ({
     // === Local Input (not synced until submit) ===
     localEvidence: '',
     localFeelings: '',
+    localNeeds: '',
     localAddendum: '',
 
     // === UI State ===
@@ -87,6 +88,7 @@ const useCourtStore = create((set, get) => ({
 
     setLocalEvidence: (text) => set({ localEvidence: text }),
     setLocalFeelings: (text) => set({ localFeelings: text }),
+    setLocalNeeds: (text) => set({ localNeeds: text }),
     setLocalAddendum: (text) => set({ localAddendum: text }),
     setShowOpeningAnimation: (show) => set({ showOpeningAnimation: show }),
     setShowCelebrationAnimation: (show) => set({ showCelebrationAnimation: show }),
@@ -133,7 +135,7 @@ const useCourtStore = create((set, get) => ({
             ...(isSessionCleared || isNewSession ? { showOpeningAnimation: false, showCelebrationAnimation: false } : {}),
             // Clear stale local inputs when a session ends or a new session starts
             ...(isSessionCleared || isNewSession
-                ? { localEvidence: '', localFeelings: '', localAddendum: '' }
+                ? { localEvidence: '', localFeelings: '', localNeeds: '', localAddendum: '' }
                 : {}),
             // Decline indicator should not leak across sessions
             ...(isSessionCleared || isNewSession ? { settlementDeclinedNotice: null } : {}),
@@ -159,9 +161,9 @@ const useCourtStore = create((set, get) => ({
      * Serve partner (create pending session)
      * @param {string} partnerId - Partner's user ID
      * @param {string} coupleId - Optional couple ID
-     * @param {string} judgeType - Selected judge: 'best', 'fast', or 'logical'
+     * @param {string} judgeType - Selected judge: 'classic', 'swift', or 'wise'
      */
-    serve: async (partnerId, coupleId, judgeType = 'logical') => {
+    serve: async (partnerId, coupleId, judgeType = 'swift') => {
         set({ isSubmitting: true, error: null });
 
         if (socketRef?.connected) {
@@ -285,19 +287,19 @@ const useCourtStore = create((set, get) => ({
      * Submit evidence
      */
     submitEvidence: async () => {
-        const { localEvidence, localFeelings } = get();
+        const { localEvidence, localFeelings, localNeeds } = get();
         set({ isSubmitting: true, error: null });
 
         if (socketRef?.connected) {
             // Clear local inputs on submit (optimistic)
-            set({ localEvidence: '', localFeelings: '' });
+            set({ localEvidence: '', localFeelings: '', localNeeds: '' });
 
             const submitAction = createSocketAction('court:submit_evidence', {
                 timeoutMs: 2500,
                 fallbackFn: () => get().fetchState({ force: true })
             });
 
-            const response = await submitAction(socketRef, { evidence: localEvidence, feelings: localFeelings });
+            const response = await submitAction(socketRef, { evidence: localEvidence, feelings: localFeelings, needs: localNeeds });
 
             if (response?.state) get().onStateSync(response.state);
             if (response?.error) get().onError(response.error);
@@ -309,10 +311,11 @@ const useCourtStore = create((set, get) => ({
                 const response = await api.post(`${COURT_API}/evidence`, {
                     userId,
                     evidence: localEvidence,
-                    feelings: localFeelings
+                    feelings: localFeelings,
+                    needs: localNeeds
                 });
                 get().onStateSync(response.data);
-                set({ localEvidence: '', localFeelings: '' });
+                set({ localEvidence: '', localFeelings: '', localNeeds: '' });
             } catch (error) {
                 get().onError(error.response?.data?.error || error.message);
             }
@@ -701,6 +704,7 @@ const useCourtStore = create((set, get) => ({
             session: null,
             localEvidence: '',
             localFeelings: '',
+            localNeeds: '',
             localAddendum: '',
             isSubmitting: false,
             isGeneratingVerdict: false,

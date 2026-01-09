@@ -222,11 +222,11 @@ class CourtSessionManager {
     /**
      * Submit evidence
      */
-    async submitEvidence(userId, evidence, feelings) {
+    async submitEvidence(userId, evidence, feelings, needs = '') {
         const session = this.repository.getSessionForUser(userId);
         if (!session) throw new Error('No active session');
 
-        const { bothSubmitted } = this.evidenceService.submitEvidence(session, userId, evidence, feelings);
+        const { bothSubmitted } = this.evidenceService.submitEvidence(session, userId, evidence, feelings, needs);
 
         if (bothSubmitted) {
             await this.phaseController.transitionToAnalyzing(session);

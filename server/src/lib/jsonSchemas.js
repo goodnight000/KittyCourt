@@ -69,6 +69,47 @@ const ANALYST_REPAIR_JSON_SCHEMA = {
                     rootConflictTheme: {
                         type: 'string',
                         description: 'What they are REALLY fighting about'
+                    },
+                    needsAnalysis: {
+                        type: 'object',
+                        properties: {
+                            userA_PrimaryNeed: {
+                                type: 'string',
+                                description: 'Primary unmet need for User A (e.g., connection, autonomy, security, significance, growth)'
+                            },
+                            userA_SecondaryNeeds: {
+                                type: 'array',
+                                items: { type: 'string' },
+                                description: 'Secondary needs for User A'
+                            },
+                            userA_StatedNeedMapping: {
+                                type: 'string',
+                                description: 'How User A stated need maps to universal need'
+                            },
+                            userB_PrimaryNeed: {
+                                type: 'string',
+                                description: 'Primary unmet need for User B (e.g., connection, autonomy, security, significance, growth)'
+                            },
+                            userB_SecondaryNeeds: {
+                                type: 'array',
+                                items: { type: 'string' },
+                                description: 'Secondary needs for User B'
+                            },
+                            userB_StatedNeedMapping: {
+                                type: 'string',
+                                description: 'How User B stated need maps to universal need'
+                            },
+                            needCollision: {
+                                type: 'string',
+                                description: 'Where their needs conflict'
+                            },
+                            bridgingPath: {
+                                type: 'string',
+                                description: 'How to bridge both needs'
+                            }
+                        },
+                        required: ['userA_PrimaryNeed', 'userB_PrimaryNeed', 'needCollision', 'bridgingPath'],
+                        additionalProperties: false
                     }
                 },
                 required: [
@@ -76,7 +117,8 @@ const ANALYST_REPAIR_JSON_SCHEMA = {
                     'dynamicExplanation',
                     'userA_VulnerableEmotion',
                     'userB_VulnerableEmotion',
-                    'rootConflictTheme'
+                    'rootConflictTheme',
+                    'needsAnalysis'
                 ],
                 additionalProperties: false
             },
@@ -121,12 +163,33 @@ const ANALYST_REPAIR_JSON_SCHEMA = {
                             type: 'string',
                             description: 'Why this resolution fits this conflict'
                         },
+                        needsAddressed: {
+                            type: 'object',
+                            properties: {
+                                userA: {
+                                    type: 'array',
+                                    items: { type: 'string' },
+                                    description: 'Needs addressed for User A'
+                                },
+                                userB: {
+                                    type: 'array',
+                                    items: { type: 'string' },
+                                    description: 'Needs addressed for User B'
+                                }
+                            },
+                            required: ['userA', 'userB'],
+                            additionalProperties: false
+                        },
+                        howItMeetsNeeds: {
+                            type: 'string',
+                            description: 'Explanation of how this resolution meets both partners needs'
+                        },
                         estimatedDuration: {
                             type: 'string',
                             description: 'Estimated time: 5-30 minutes'
                         }
                     },
-                    required: ['id', 'title', 'repairAttemptIds', 'combinedDescription', 'rationale', 'estimatedDuration'],
+                    required: ['id', 'title', 'repairAttemptIds', 'combinedDescription', 'rationale', 'needsAddressed', 'howItMeetsNeeds', 'estimatedDuration'],
                     additionalProperties: false
                 },
                 description: 'Exactly 3 resolution options'
@@ -175,9 +238,17 @@ const PRIMING_JOINT_JSON_SCHEMA = {
                                 type: 'array',
                                 items: { type: 'string' },
                                 description: '2-3 questions to ask partner'
+                            },
+                            yourNeeds: {
+                                type: 'string',
+                                description: '1-2 paragraphs about their own needs in NVC terms'
+                            },
+                            partnerNeeds: {
+                                type: 'string',
+                                description: '1-2 paragraphs about partner needs'
                             }
                         },
-                        required: ['yourFeelings', 'partnerPerspective', 'reflectionQuestions', 'questionsForPartner'],
+                        required: ['yourFeelings', 'partnerPerspective', 'reflectionQuestions', 'questionsForPartner', 'yourNeeds', 'partnerNeeds'],
                         additionalProperties: false
                     },
                     userB: {
@@ -200,9 +271,17 @@ const PRIMING_JOINT_JSON_SCHEMA = {
                                 type: 'array',
                                 items: { type: 'string' },
                                 description: '2-3 questions to ask partner'
+                            },
+                            yourNeeds: {
+                                type: 'string',
+                                description: '1-2 paragraphs about their own needs in NVC terms'
+                            },
+                            partnerNeeds: {
+                                type: 'string',
+                                description: '1-2 paragraphs about partner needs'
                             }
                         },
-                        required: ['yourFeelings', 'partnerPerspective', 'reflectionQuestions', 'questionsForPartner'],
+                        required: ['yourFeelings', 'partnerPerspective', 'reflectionQuestions', 'questionsForPartner', 'yourNeeds', 'partnerNeeds'],
                         additionalProperties: false
                     }
                 },
@@ -215,6 +294,29 @@ const PRIMING_JOINT_JSON_SCHEMA = {
                     theSummary: {
                         type: 'string',
                         description: '2-3 paragraphs synthesizing the real story'
+                    },
+                    needsBridge: {
+                        type: 'object',
+                        properties: {
+                            whatUserANeeds: {
+                                type: 'string',
+                                description: 'Concise statement of User A core need'
+                            },
+                            whatUserBNeeds: {
+                                type: 'string',
+                                description: 'Concise statement of User B core need'
+                            },
+                            commonGround: {
+                                type: 'string',
+                                description: 'What both partners share at a deeper level'
+                            },
+                            bridgingInsight: {
+                                type: 'string',
+                                description: 'Key insight that reframes the conflict from needs to solutions'
+                            }
+                        },
+                        required: ['whatUserANeeds', 'whatUserBNeeds', 'commonGround', 'bridgingInsight'],
+                        additionalProperties: false
                     },
                     theGoodStuff: {
                         type: 'object',
@@ -243,7 +345,7 @@ const PRIMING_JOINT_JSON_SCHEMA = {
                         description: 'Brief wisdom statement'
                     }
                 },
-                required: ['theSummary', 'theGoodStuff', 'theGrowthEdges', 'resolutionPreview', 'closingWisdom'],
+                required: ['theSummary', 'needsBridge', 'theGoodStuff', 'theGrowthEdges', 'resolutionPreview', 'closingWisdom'],
                 additionalProperties: false
             }
         },

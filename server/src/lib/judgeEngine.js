@@ -48,10 +48,13 @@ const CONFIG = {
 };
 
 // Judge types for verdict generation (user-selectable)
+// - classic (Mochi): DeepSeek - thoughtful, methodical reasoning
+// - swift (Dash): Gemini - fast AND brilliant
+// - wise (Whiskers): GPT 5.2 - deepest emotional intelligence
 const JUDGE_MODELS = {
-    best: 'anthropic/claude-opus-4.5',
-    fast: 'deepseek/deepseek-v3.2',
-    logical: 'google/gemini-3-flash-preview'
+    wise: 'openai/gpt-5.2-chat',
+    classic: 'deepseek/deepseek-v3.2',
+    swift: 'google/gemini-3-flash-preview'
 };
 
 // Hybrid resolution always uses this fast model
@@ -72,7 +75,7 @@ const HYBRID_MODEL = 'x-ai/grok-4.1-fast';
  * @param {string} judgeType - User-selected model type
  * @returns {Promise<object>} - Analysis with 3 resolutions
  */
-async function runAnalystRepair(input, historicalContext = '', judgeType = 'logical') {
+async function runAnalystRepair(input, historicalContext = '', judgeType = 'swift') {
     const model = JUDGE_MODELS[judgeType] || CONFIG.model;
     const userPrompt = buildAnalystRepairUserPrompt(input, historicalContext);
 
@@ -116,7 +119,7 @@ async function runAnalystRepair(input, historicalContext = '', judgeType = 'logi
  * @param {string} judgeType - User-selected model type
  * @returns {Promise<object>} - Priming + Joint menu content
  */
-async function runPrimingJoint(input, analysis, historicalContext = '', judgeType = 'logical') {
+async function runPrimingJoint(input, analysis, historicalContext = '', judgeType = 'swift') {
     const model = JUDGE_MODELS[judgeType] || CONFIG.model;
     const userPrompt = buildPrimingJointUserPrompt(
         input,
@@ -259,7 +262,7 @@ async function deliberatePhase1(rawInput, options = {}) {
 
     // Step 3: Analyst + Repair
     console.log('[Judge Engine v2] Running analyst + repair selection...');
-    const judgeType = options.judgeType || 'logical';
+    const judgeType = options.judgeType || 'swift';
     const analysisResult = await runAnalystRepair(input, formattedContext, judgeType);
 
     const duration = Date.now() - startTime;
@@ -290,7 +293,7 @@ async function deliberatePhase1(rawInput, options = {}) {
  */
 async function deliberatePhase2(phase1Result, options = {}) {
     const startTime = Date.now();
-    const judgeType = options.judgeType || 'logical';
+    const judgeType = options.judgeType || 'swift';
 
     const result = await runPrimingJoint(
         phase1Result.input,

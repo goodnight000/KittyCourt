@@ -545,16 +545,20 @@
       "patternDetected": "{pattern} Pattern Detected",
       "sections": {
         "summary": {
-          "title": "The Real Story",
+          "title": "The Summary",
           "subtitle": "What you're really fighting about"
         },
         "purr": {
-          "title": "The Purr",
+          "title": "What You Both Did Right",
           "subtitle": "Your feelings are valid"
         },
         "hiss": {
-          "title": "The Hiss",
+          "title": "Room to Grow",
           "subtitle": "Behaviors to work on"
+        },
+        "sentence": {
+          "title": "Your Repair Exercise",
+          "subtitle": "Your path to reconnection"
         },
         "repair": {
           "title": "The Repair",
@@ -707,20 +711,23 @@
       }
     },
     "judges": {
-      "fast": {
-        "name": "Judge Lightning",
-        "subtitle": "Fast and focused",
-        "description": "Quick, concise verdicts when you want speed."
+      "classic": {
+        "name": "Judge Mochi",
+        "subtitle": "The Gentle Thinker",
+        "description": "A warm, patient judge who takes time to understand both sides. Your reliable companion for everyday disputes.",
+        "tagline": "Included with your plan"
       },
-      "logical": {
-        "name": "Judge Mittens",
-        "subtitle": "Balanced and logical",
-        "description": "Thoughtful, structured guidance."
+      "swift": {
+        "name": "Judge Dash",
+        "subtitle": "Speed Meets Brilliance",
+        "description": "Don't mistake fast for shallow. Dash delivers razor-sharp verdicts at record speed—no waiting, no compromises.",
+        "tagline": "Fast AND insightful"
       },
-      "best": {
+      "wise": {
         "name": "Judge Whiskers",
-        "subtitle": "Deep and empathetic",
-        "description": "Our most nuanced, therapist-level ruling."
+        "subtitle": "The Wise Sage",
+        "description": "The legendary elder with an almost mystical understanding of the human heart. Whiskers sees what others miss.",
+        "tagline": "Therapist-level wisdom"
       }
     },
     "celebration": {
@@ -778,8 +785,9 @@
       "returning": "Returning to the court..."
     },
     "summons": {
+      "officialBadge": "Official Summons",
       "title": "You have been summoned",
-      "body": "opened a case. Enter the court?",
+      "body": "Enter the court?",
       "cta": "Join court",
       "expiry": "Summons expires in 24 hours."
     },
@@ -1029,38 +1037,56 @@
       }
     },
     "detail": {
+      "kicker": "CASE REVIEW",
       "notFound": "Case not found",
       "titleFallback": "Untitled case",
+      "loading": "Opening case file...",
+      "caseFile": "Case File",
+      "status": {
+        "resolved": "Resolved",
+        "pending": "Pending"
+      },
+      "resolution": {
+        "label": "Resolution"
+      },
       "verdicts": {
         "one": "1 verdict",
         "other": "{count} verdicts"
       },
       "journey": {
-        "title": "Judging journey",
+        "title": "Judging Journey",
         "subtitle": "A snapshot of the court flow",
         "evidence": "Evidence",
         "analysis": "Analysis",
         "priming": "Priming",
-        "jointMenu": "Joint menu",
+        "jointMenu": "Joint Menu",
         "resolution": "Resolution",
         "missing": "This case was created before the new court flow."
       },
+      "judgedBy": "Judged by",
       "partnerStatements": {
-        "title": "Partner statements",
+        "title": "Partner Perspectives",
+        "theirPerspective": "Their perspective",
         "partnerA": "Partner A",
         "partnerB": "Partner B",
-        "noInput": "No statement provided"
+        "noInput": "No statement provided",
+        "fact": "What happened",
+        "feelings": "How they felt",
+        "needs": "Underlying need"
       },
       "analysis": {
         "title": "Analysis",
+        "emotionalInsights": "Emotional Insights",
         "intensity": "Intensity",
         "notAssessed": "Not assessed",
         "dynamic": "Dynamic",
-        "rootConflict": "Root conflict",
+        "rootConflict": "Core conflict",
         "partnerAVulnerable": "Partner A vulnerable emotion",
         "partnerBVulnerable": "Partner B vulnerable emotion",
         "partnerAPatterns": "Partner A patterns",
         "partnerBPatterns": "Partner B patterns",
+        "vulnerableEmotion": "Vulnerable emotion",
+        "patterns": "Patterns observed",
         "none": "None"
       },
       "priming": {
@@ -1069,6 +1095,8 @@
         "partnerB": "Partner B",
         "yourFeelings": "Your feelings",
         "partnerPerspective": "Partner perspective",
+        "yourNeeds": "Your Needs",
+        "partnerNeeds": "Your Partner's Needs",
         "reflectionQuestions": "Reflection questions",
         "questionsForPartner": "Questions for your partner"
       },
@@ -1077,12 +1105,16 @@
         "summary": "Summary",
         "goodStuff": "The good stuff",
         "growthEdges": "Growth edges",
-        "resolutionPreview": "Resolution preview"
+        "resolutionPreview": "Resolution preview",
+        "needsBridge": "Bridging Your Needs"
       },
       "resolutions": {
         "title": "Resolution options",
         "chosen": "Chosen",
-        "why": "Why: {reason}"
+        "why": "Why: {reason}",
+        "partnerPicks": "What each partner chose",
+        "chose": "'s choice",
+        "mergedResolution": "AI-merged resolution"
       },
       "timeline": {
         "title": "Addendum timeline",
@@ -1091,8 +1123,9 @@
       },
       "verdict": {
         "title": "Verdict",
+        "officialRuling": "Official Ruling",
         "judgeName": "Judge Whiskers",
-        "judgeTitle": "Therapist Cat",
+        "judgeTitle": "Chief Justice of Feline Affairs",
         "originalLabel": "Original verdict",
         "addendumLabel": "Addendum {number}",
         "addendumBy": "Addendum by {name}",
@@ -1170,6 +1203,9 @@
       "feelingsLabel": "How did you feel?",
       "feelingsPlaceholder": "Share your feelings...",
       "feelingsHint": "Use I statements.",
+      "needsLabel": "What do you need?",
+      "needsPlaceholder": "What needs of yours feel unmet? What would you need from your partner to feel heard, safe, or loved?",
+      "needsHint": "Focus on your needs, not what your partner should do differently",
       "submit": "Submit evidence",
       "footer": "Your partner will see your evidence once they submit theirs."
     },
@@ -1712,8 +1748,8 @@
       "freeSubtitle": "Basic access for both of you.",
       "goldPlan": "Gold plan",
       "goldSubtitle": "Unlimited judges and planning.",
-      "judgeLightning": "Judge Lightning",
-      "judgeMittens": "Judge Mittens",
+      "judgeMochi": "Judge Mochi",
+      "judgeDash": "Judge Dash",
       "judgeWhiskers": "Judge Whiskers",
       "goldOnly": "Gold only",
       "helpMePlan": "Help Me Plan",

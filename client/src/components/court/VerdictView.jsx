@@ -1,8 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import {
-    Gavel, Sparkles, Quote, AlertTriangle, HeartHandshake,
-    Plus, Check, ChevronRight, History
+    Gavel, Star, Quote, AlertTriangle, HeartHandshake,
+    Plus, Check, ChevronRight
 } from 'lucide-react';
 import { useI18n } from '../../i18n';
 
@@ -20,11 +20,13 @@ const HORSEMAN_LABELS = {
 const VerdictView = ({
     activeCase, verdict, analysis, allVerdicts, selectedVerdictVersion,
     setSelectedVerdictVersion, userAName, userBName, setShowAddendumModal,
-    resetCase, navigate, currentUser, onAcceptVerdict, isInitiator,
+    resetCase, currentUser, onAcceptVerdict, isInitiator,
     addendumRemaining = null,
-    addendumLimit = null
+    addendumLimit = null,
+    judgeAvatar
 }) => {
     const { t } = useI18n();
+    const avatarSrc = judgeAvatar || '/assets/avatars/judge_whiskers.png';
     const isUserA = isInitiator;
     const hasAccepted = isUserA ? activeCase.userAAccepted : activeCase.userBAccepted;
     const partnerHasAccepted = isUserA ? activeCase.userBAccepted : activeCase.userAAccepted;
@@ -40,7 +42,7 @@ const VerdictView = ({
             <motion.div
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                className="glass-card p-5 text-center bg-gradient-to-br from-court-cream to-court-tan/30"
+                className="glass-card p-5 text-center bg-gradient-to-br from-court-ivory via-white/95 to-court-tan/30 border border-court-gold/15"
             >
                 {/* Courtroom Banner */}
                 <div className="bg-gradient-to-r from-court-gold to-court-goldDark text-white text-xs font-bold py-1.5 px-4 rounded-full inline-flex items-center gap-1.5 mb-4">
@@ -49,12 +51,12 @@ const VerdictView = ({
                 </div>
 
                 <motion.div
-                    animate={{ rotate: [-5, 5, -5] }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                    className="w-20 h-20 rounded-3xl mx-auto mb-3 shadow-lg overflow-hidden border-2 border-court-gold"
+                    animate={{ rotate: [-3, 3, -3] }}
+                    transition={{ duration: 2.4, repeat: Infinity }}
+                    className="w-28 h-28 rounded-[2rem] mx-auto mb-2 shadow-2xl overflow-hidden border-4 border-court-gold"
                 >
                     <img
-                        src="/assets/avatars/judge_whiskers.png"
+                        src={avatarSrc}
                         alt={t('court.verdict.judgeAlt')}
                         className="w-full h-full object-cover"
                     />
@@ -73,8 +75,8 @@ const VerdictView = ({
                                     key={v.version}
                                     onClick={() => setSelectedVerdictVersion(v.version)}
                                     className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${(selectedVerdictVersion === 0 && idx === 0) || selectedVerdictVersion === v.version
-                                        ? 'bg-court-gold text-white'
-                                        : 'bg-court-cream text-court-brown hover:bg-court-tan'
+                                        ? 'bg-court-gold text-white shadow-soft'
+                                        : 'bg-white/80 text-court-brown border border-court-tan/40 hover:bg-court-cream'
                                         }`}
                                 >
                                     {v.addendumBy ? `+${v.version}` : `#${v.version}`}
@@ -92,7 +94,7 @@ const VerdictView = ({
                         transition={{ delay: 0.2 }}
                         className="mt-3 inline-flex items-center gap-1.5 bg-court-gold/20 text-court-goldDark text-xs font-bold px-3 py-1.5 rounded-full"
                     >
-                        <Sparkles className="w-3 h-3" />
+                        <Star className="w-3 h-3" />
                         {t('court.verdict.patternDetected', { pattern: analysis.identifiedDynamic })}
                     </motion.div>
                 )}
@@ -103,7 +105,7 @@ const VerdictView = ({
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.1 }}
-                className="glass-card p-4 space-y-3"
+                className="glass-card p-4 space-y-3 bg-white/85 border border-court-tan/30"
             >
                 <div className="flex items-center gap-2">
                     <div className="w-8 h-8 bg-gradient-to-br from-court-gold/20 to-court-tan rounded-xl flex items-center justify-center">
@@ -125,7 +127,7 @@ const VerdictView = ({
                     initial={{ y: 20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ delay: 0.2 }}
-                    className="glass-card p-4 space-y-4 bg-gradient-to-br from-green-50/60 to-emerald-50/60"
+                    className="glass-card p-4 space-y-4 bg-gradient-to-br from-green-50/70 to-emerald-50/70 border border-green-100/60"
                 >
                     <div className="flex items-center gap-2">
                         <div className="w-8 h-8 bg-gradient-to-br from-green-100 to-green-50 rounded-xl flex items-center justify-center">
@@ -161,7 +163,7 @@ const VerdictView = ({
                     initial={{ y: 20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ delay: 0.3 }}
-                    className="glass-card p-4 space-y-3 bg-gradient-to-br from-court-gold/10 to-court-tan/30"
+                    className="glass-card p-4 space-y-3 bg-gradient-to-br from-court-gold/10 to-court-tan/30 border border-court-gold/15"
                 >
                     <div className="flex items-center gap-2">
                         <div className="w-8 h-8 bg-gradient-to-br from-court-gold/30 to-court-tan rounded-xl flex items-center justify-center">
@@ -190,7 +192,7 @@ const VerdictView = ({
                     initial={{ y: 20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ delay: 0.4 }}
-                    className="glass-card p-4 space-y-3 bg-gradient-to-br from-court-maroon/10 to-court-maroonLight/10 border-2 border-court-maroon/20"
+                    className="glass-card p-4 space-y-3 bg-gradient-to-br from-court-maroon/10 to-court-maroonLight/10 border-2 border-court-maroon/25"
                 >
                     <div className="flex items-center gap-2">
                         <div className="w-8 h-8 bg-gradient-to-br from-court-maroon/20 to-court-maroonLight/20 rounded-xl flex items-center justify-center">
@@ -203,8 +205,7 @@ const VerdictView = ({
                     </div>
 
                     <div className="bg-white/60 rounded-xl p-4 space-y-2">
-                        <h4 className="font-bold text-court-brown flex items-center gap-2">
-                            <span className="text-lg">✨</span>
+                        <h4 className="font-bold text-court-brown">
                             {verdict.theSentence.title}
                         </h4>
                         <p className="text-court-brown text-sm leading-relaxed">
@@ -240,7 +241,7 @@ const VerdictView = ({
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.6 }}
-                    className="glass-card p-3 bg-court-cream/50"
+                    className="glass-card p-3 bg-white/80 border border-court-tan/30"
                 >
                     <p className="text-xs text-court-brownLight text-center mb-2">{t('court.verdict.horsemenTitle')}</p>
                     <div className="flex flex-wrap justify-center gap-1.5">
@@ -263,8 +264,8 @@ const VerdictView = ({
                     whileTap={{ scale: 0.98 }}
                     onClick={() => setShowAddendumModal(true)}
                     disabled={addendumDisabled}
-                    className={`glass-card w-full p-4 flex items-center justify-between transition-colors ${
-                        addendumDisabled ? 'opacity-60 cursor-not-allowed' : 'hover:bg-white/80'
+                    className={`glass-card w-full p-4 flex items-center justify-between transition-colors border border-court-gold/15 bg-white/85 ${
+                        addendumDisabled ? 'opacity-60 cursor-not-allowed' : 'hover:bg-court-cream/80'
                     }`}
                 >
                     <div className="flex items-center gap-3">
@@ -286,14 +287,13 @@ const VerdictView = ({
                     <ChevronRight className="w-5 h-5 text-court-brownLight" />
                 </motion.button>
 
-                <div className="flex gap-3">
+                <div>
                     {/* Accept Verdict Button */}
                     {!hasAccepted ? (
                         <motion.button
                             whileTap={{ scale: 0.98 }}
                             onClick={onAcceptVerdict}
-                            className="flex-1 flex items-center justify-center gap-2 rounded-xl py-3 px-4 text-white font-extrabold shadow-lg"
-                            style={{ background: 'linear-gradient(135deg, #1c1c84 0%, #000035 100%)' }}
+                            className="court-btn-primary w-full"
                         >
                             <Check className="w-5 h-5" />
                             {t('court.verdict.accept')}
@@ -302,7 +302,7 @@ const VerdictView = ({
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
-                            className="flex-1 glass-card p-4 bg-gradient-to-br from-amber-50 to-white text-center"
+                            className="glass-card p-4 bg-gradient-to-br from-amber-50 to-white text-center border border-amber-100/60"
                         >
                             <motion.div
                                 animate={{ scale: [1, 1.1, 1] }}
@@ -315,14 +315,6 @@ const VerdictView = ({
                             <p className="text-xs text-court-brownLight">{t('court.verdict.waitingForPartner', { name: partnerName })}</p>
                         </motion.div>
                     ) : null}
-                    <motion.button
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => navigate('/history')}
-                        className="glass-card px-4 py-3 flex items-center justify-center gap-2 text-court-gold font-bold text-sm"
-                    >
-                        <History className="w-4 h-4" />
-                        {t('court.verdict.history')}
-                    </motion.button>
                 </div>
             </div>
         </div>

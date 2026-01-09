@@ -175,6 +175,14 @@ class PhaseTransitionController {
             ? session.finalResolution.id === session.hybridResolution?.id
             : false;
 
+        // Get the actual resolution objects for user picks
+        const userAPickedResolution = session.userAResolutionPick
+            ? this._findResolutionById(session, session.userAResolutionPick)
+            : null;
+        const userBPickedResolution = session.userBResolutionPick
+            ? this._findResolutionById(session, session.userBResolutionPick)
+            : null;
+
         session.verdict = {
             status: 'success',
             judgeContent: {
@@ -193,7 +201,11 @@ class PhaseTransitionController {
                 primingContent: session.primingContent || null,
                 jointMenu: session.jointMenu || null,
                 finalResolution: session.finalResolution,
-                isHybrid
+                isHybrid,
+                // Track individual resolution picks for history
+                userAResolutionPick: userAPickedResolution,
+                userBResolutionPick: userBPickedResolution,
+                hybridResolution: session.hybridResolution || null
             }
         };
 
@@ -310,6 +322,15 @@ class PhaseTransitionController {
         });
 
         session.verdictHistory = history;
+    }
+
+    /**
+     * Find resolution by ID (checks both resolutions array and hybrid)
+     */
+    _findResolutionById(session, resolutionId) {
+        if (!resolutionId) return null;
+        if (session.hybridResolution?.id === resolutionId) return session.hybridResolution;
+        return (session.resolutions || []).find((r) => r.id === resolutionId) || null;
     }
 }
 

@@ -6,7 +6,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
-import { Gavel, MessageCircle, Heart, Send } from 'lucide-react';
+import { Gavel, MessageCircle, Heart, Target, Send } from 'lucide-react';
 
 import useAuthStore from '../store/useAuthStore';
 import useCourtStore, { VIEW_PHASE } from '../store/courtStore';
@@ -41,6 +41,7 @@ export default function CourtroomPageV2() {
         session,
         localEvidence,
         localFeelings,
+        localNeeds,
         localAddendum,
         isSubmitting,
         isGeneratingVerdict,
@@ -50,6 +51,7 @@ export default function CourtroomPageV2() {
         dismissedRatingSessionId,
         setLocalEvidence,
         setLocalFeelings,
+        setLocalNeeds,
         setLocalAddendum,
         setShowOpeningAnimation,
         setShowCelebrationAnimation,
@@ -101,6 +103,15 @@ export default function CourtroomPageV2() {
     const addendumLimit = session?.addendumLimit ?? 2;
     const addendumCount = session?.addendumCount ?? 0;
     const addendumRemaining = session?.addendumRemaining ?? Math.max(addendumLimit - addendumCount, 0);
+    const judgeType = session?.judgeType || 'swift';
+    const judgeAvatar = useMemo(() => {
+        const map = {
+            classic: '/assets/avatars/judge_mochi.png',
+            swift: '/assets/avatars/judge_dash.png',
+            wise: '/assets/avatars/judge_whiskers.png'
+        };
+        return map[judgeType] || map.swift;
+    }, [judgeType]);
 
     const myPick = useMemo(() => {
         if (!session?.resolutionPicks) return null;
@@ -182,6 +193,18 @@ export default function CourtroomPageV2() {
         }
     }, [myViewPhase, session?.verdict, markVerdictSeen]);
 
+    useEffect(() => {
+        if (!myViewPhase) return;
+        requestAnimationFrame(() => {
+            const scrollingEl = document.scrollingElement || document.documentElement;
+            if (scrollingEl) {
+                scrollingEl.scrollTop = 0;
+            }
+            document.body.scrollTop = 0;
+            window.scrollTo(0, 0);
+        });
+    }, [myViewPhase]);
+
     const handleCelebrationComplete = () => {
         setShowCelebrationAnimation(false);
         setShowRatingPopup(true);
@@ -189,7 +212,7 @@ export default function CourtroomPageV2() {
 
     const [showAddendumModal, setShowAddendumModal] = useState(false);
 
-    const handleServe = async (judgeType = 'logical') => {
+    const handleServe = async (judgeType = 'swift') => {
         const partnerId = partner?.id;
         if (!partnerId) return;
         await serve(partnerId, null, judgeType);
@@ -236,8 +259,10 @@ export default function CourtroomPageV2() {
                     <EvidenceForm
                         localEvidence={localEvidence}
                         localFeelings={localFeelings}
+                        localNeeds={localNeeds}
                         setLocalEvidence={setLocalEvidence}
                         setLocalFeelings={setLocalFeelings}
+                        setLocalNeeds={setLocalNeeds}
                         onSubmit={handleSubmitEvidence}
                         isSubmitting={isSubmitting}
                         myName={myName}
@@ -249,7 +274,7 @@ export default function CourtroomPageV2() {
                 return <WaitingForEvidence session={session} partnerName={partnerName} myName={myName} />;
 
             case VIEW_PHASE.ANALYZING:
-                return <DeliberatingScreen isLoading={isGeneratingVerdict || true} />;
+                return <DeliberatingScreen isLoading={isGeneratingVerdict || true} judgeAvatar={judgeAvatar} />;
 
             case VIEW_PHASE.PRIMING:
                 return (
@@ -361,12 +386,12 @@ export default function CourtroomPageV2() {
                         userBName={userBName}
                         setShowAddendumModal={setShowAddendumModal}
                         resetCase={reset}
-                        navigate={navigate}
                         currentUser={null}
                         onAcceptVerdict={acceptVerdict}
                         isInitiator={isCreator}
                         addendumRemaining={addendumRemaining}
                         addendumLimit={addendumLimit}
+                        judgeAvatar={judgeAvatar}
                     />
                 );
             }
@@ -378,22 +403,39 @@ export default function CourtroomPageV2() {
                 return <CourtAtRest onServe={handleServe} navigate={navigate} />;
         }
     };
+    const isIdleView = myViewPhase === VIEW_PHASE.IDLE || myViewPhase === VIEW_PHASE.CLOSED;
 
     return (
         <RequirePartner
             feature={t('courtroom.feature')}
             description={t('courtroom.requirePartnerDescription')}
         >
-            <div className="min-h-screen bg-gradient-to-b from-court-cream to-court-tan/20">
+            <div className={`relative min-h-screen bg-gradient-to-b from-court-cream to-court-tan/20 ${isIdleView ? '' : 'overflow-hidden'}`}>
+                {!isIdleView && (
+                    <>
+                        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(70%_55%_at_50%_0%,_rgba(212,175,55,0.18),_transparent_65%)]" />
+                        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(40%_40%_at_85%_20%,_rgba(244,182,155,0.18),_transparent_70%)]" />
+                        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(45%_40%_at_10%_85%,_rgba(209,198,236,0.18),_transparent_70%)]" />
+                        <div className="pointer-events-none absolute -top-24 -right-20 w-72 h-72 rounded-full bg-court-gold/20 blur-3xl" />
+                        <div className="pointer-events-none absolute -bottom-24 -left-20 w-80 h-80 rounded-full bg-lavender-200/25 blur-3xl" />
+                        <div className="pointer-events-none absolute inset-0 opacity-[0.08] bg-[linear-gradient(120deg,_rgba(74,55,40,0.35)_0%,_rgba(255,255,255,0)_55%,_rgba(74,55,40,0.25)_100%)]" />
+                    </>
+                )}
                 {showOpeningAnimation && (
-                    <CourtOpeningAnimation onComplete={() => setShowOpeningAnimation(false)} />
+                    <CourtOpeningAnimation
+                        onComplete={() => setShowOpeningAnimation(false)}
+                        judgeAvatar={judgeAvatar}
+                    />
                 )}
 
                 {showCelebrationAnimation && (
-                    <CelebrationAnimation onComplete={handleCelebrationComplete} />
+                    <CelebrationAnimation
+                        onComplete={handleCelebrationComplete}
+                        judgeAvatar={judgeAvatar}
+                    />
                 )}
 
-                <div className="w-full">
+                <div className="relative z-10 w-full">
                     {error && (
                         <Motion.div
                             initial={{ opacity: 0, y: -10 }}
@@ -430,8 +472,10 @@ export default function CourtroomPageV2() {
 function EvidenceForm({
     localEvidence,
     localFeelings,
+    localNeeds,
     setLocalEvidence,
     setLocalFeelings,
+    setLocalNeeds,
     onSubmit,
     isSubmitting,
     myName,
@@ -441,14 +485,18 @@ function EvidenceForm({
     const maxLen = 2000;
     const evidenceLen = localEvidence?.length || 0;
     const feelingsLen = localFeelings?.length || 0;
+    const needsLen = localNeeds?.length || 0;
 
     return (
-        <div className="space-y-5">
+        <div className="space-y-5 pb-6">
             <Motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="glass-card p-4 bg-gradient-to-br from-court-cream to-court-tan/30"
+                className="relative glass-card p-5 bg-gradient-to-br from-court-ivory via-white/95 to-court-tan/40 border border-court-gold/15 overflow-hidden"
             >
+                <div className="absolute inset-x-6 top-0 h-0.5 bg-gradient-to-r from-transparent via-court-gold/60 to-transparent" />
+                <div className="absolute -top-12 -right-8 w-28 h-28 rounded-full bg-court-gold/15 blur-2xl" />
+                <div className="absolute -bottom-16 -left-10 w-32 h-32 rounded-full bg-lavender-200/20 blur-2xl" />
                 <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                         <div className="w-10 h-10 bg-gradient-to-br from-court-gold/20 to-court-tan rounded-xl flex items-center justify-center">
@@ -459,8 +507,8 @@ function EvidenceForm({
                             <p className="text-xs text-court-brownLight">{t('courtroom.evidence.subtitle')}</p>
                         </div>
                     </div>
-                    <div className="flex items-center gap-1 bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded-full">
-                        <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+                    <div className="flex items-center gap-1 bg-emerald-100/80 text-emerald-700 text-xs font-bold px-2.5 py-1 rounded-full border border-emerald-200/60">
+                        <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
                         {t('courtroom.evidence.live')}
                     </div>
                 </div>
@@ -482,8 +530,9 @@ function EvidenceForm({
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className="glass-card p-4 space-y-5"
+                className="relative glass-card p-5 space-y-5 bg-white/80 border border-court-tan/30 overflow-hidden"
             >
+                <div className="absolute inset-x-6 top-0 h-0.5 bg-gradient-to-r from-court-gold/50 via-court-tan/40 to-transparent" />
                 <div>
                     <label className="flex items-center gap-2 text-sm font-medium text-court-brown mb-2">
                         <MessageCircle className="w-4 h-4" />
@@ -494,9 +543,9 @@ function EvidenceForm({
                         onChange={(e) => setLocalEvidence(e.target.value)}
                         placeholder={t('courtroom.evidence.factsPlaceholder')}
                         maxLength={maxLen}
-                        className="w-full h-32 px-4 py-3 rounded-xl border-2 border-court-tan/30 
+                        className="w-full h-32 px-4 py-3 rounded-2xl border-2 border-court-gold/20 
                             focus:border-court-gold focus:ring-2 focus:ring-court-gold/20 
-                            bg-white/50 text-court-brown placeholder-court-brownLight/50
+                            bg-court-ivory/80 text-court-brown placeholder-court-brownLight/60
                             transition-all resize-none"
                     />
                     <div className="flex items-center justify-between mt-2">
@@ -515,9 +564,9 @@ function EvidenceForm({
                         onChange={(e) => setLocalFeelings(e.target.value)}
                         placeholder={t('courtroom.evidence.feelingsPlaceholder')}
                         maxLength={maxLen}
-                        className="w-full h-32 px-4 py-3 rounded-xl border-2 border-court-tan/30 
-                            focus:border-court-gold focus:ring-2 focus:ring-court-gold/20 
-                            bg-white/50 text-court-brown placeholder-court-brownLight/50
+                        className="w-full h-32 px-4 py-3 rounded-2xl border-2 border-court-gold/20
+                            focus:border-court-gold focus:ring-2 focus:ring-court-gold/20
+                            bg-court-ivory/80 text-court-brown placeholder-court-brownLight/60
                             transition-all resize-none"
                     />
                     <div className="flex items-center justify-between mt-2">
@@ -526,15 +575,34 @@ function EvidenceForm({
                     </div>
                 </div>
 
+                <div>
+                    <label className="flex items-center gap-2 text-sm font-medium text-court-brown mb-2">
+                        <Target className="w-4 h-4" />
+                        {t('courtroom.evidence.needsLabel')}
+                    </label>
+                    <textarea
+                        value={localNeeds}
+                        onChange={(e) => setLocalNeeds(e.target.value)}
+                        placeholder={t('courtroom.evidence.needsPlaceholder')}
+                        maxLength={maxLen}
+                        className="w-full h-32 px-4 py-3 rounded-2xl border-2 border-court-gold/20
+                            focus:border-court-gold focus:ring-2 focus:ring-court-gold/20
+                            bg-court-ivory/80 text-court-brown placeholder-court-brownLight/60
+                            transition-all resize-none"
+                    />
+                    <div className="flex items-center justify-between mt-2">
+                        <span className="text-[11px] text-court-brownLight/80">{t('courtroom.evidence.needsHint')}</span>
+                        <span className="text-[11px] text-neutral-400">{needsLen}/{maxLen}</span>
+                    </div>
+                </div>
+
                 <div className="space-y-3">
                     <Motion.button
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={onSubmit}
-                        disabled={isSubmitting || !localEvidence.trim() || !localFeelings.trim()}
-                        className="w-full py-3 px-4 rounded-xl text-white font-extrabold flex items-center justify-center gap-2
-                            disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
-                        style={{ background: 'linear-gradient(135deg, #1c1c84 0%, #000035 100%)' }}
+                        disabled={isSubmitting || !localEvidence.trim() || !localFeelings.trim() || !localNeeds.trim()}
+                        className="court-btn-primary w-full disabled:opacity-60 disabled:cursor-not-allowed"
                     >
                         {isSubmitting ? (
                             <Motion.div
@@ -571,16 +639,17 @@ function AddendumModal({ open, onClose, value, onChange, onSubmit, isSubmitting,
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+                    className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4"
                     onClick={onClose}
                 >
                     <Motion.div
                         initial={{ scale: 0.95, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
                         exit={{ scale: 0.98, opacity: 0 }}
-                        className="glass-card p-5 max-w-md w-full max-h-[80dvh] overflow-y-auto"
+                        className="relative glass-card p-6 max-w-md w-full max-h-[80dvh] overflow-y-auto bg-gradient-to-br from-court-ivory via-white/90 to-court-tan/30 border border-court-gold/20 shadow-xl"
                         onClick={(e) => e.stopPropagation()}
                     >
+                        <div className="absolute inset-x-6 top-0 h-0.5 bg-gradient-to-r from-transparent via-court-gold/60 to-transparent" />
                         <h3 className="text-lg font-bold text-court-brown mb-2">{t('courtroom.addendum.title')}</h3>
                         <p className="text-sm text-court-brownLight mb-4">
                             {t('courtroom.addendum.subtitle')}
@@ -594,24 +663,23 @@ function AddendumModal({ open, onClose, value, onChange, onSubmit, isSubmitting,
                             value={value}
                             onChange={(e) => onChange(e.target.value)}
                             placeholder={t('courtroom.addendum.placeholder')}
-                            className="w-full h-32 px-4 py-3 rounded-xl border-2 border-court-tan/30 
+                            className="w-full h-32 px-4 py-3 rounded-2xl border-2 border-court-gold/20 
                                 focus:border-court-gold focus:ring-2 focus:ring-court-gold/20 
-                                bg-white/50 text-court-brown placeholder-court-brownLight/50
+                                bg-court-ivory/80 text-court-brown placeholder-court-brownLight/60
                                 transition-all resize-none"
                             disabled={limitReached}
                         />
                         <div className="flex gap-3 mt-4">
                             <button
                                 onClick={onClose}
-                                className="flex-1 py-2 px-4 rounded-lg border border-court-tan text-court-brown"
+                                className="court-btn-secondary flex-1"
                             >
                                 {t('common.cancel')}
                             </button>
                             <button
                                 onClick={onSubmit}
                                 disabled={limitReached || isSubmitting || !value?.trim()}
-                                className="flex-1 py-2 px-4 rounded-lg text-white font-extrabold disabled:opacity-50 shadow-lg"
-                                style={{ background: 'linear-gradient(135deg, #1c1c84 0%, #000035 100%)' }}
+                                className="court-btn-primary flex-1 disabled:opacity-60"
                             >
                                 {limitReached ? t('courtroom.addendum.limitReached') : t('courtroom.addendum.submit')}
                             </button>
@@ -626,16 +694,15 @@ function AddendumModal({ open, onClose, value, onChange, onSubmit, isSubmitting,
 function VerdictErrorCard({ message, onReset }) {
     const { t } = useI18n();
     return (
-        <div className="max-w-md mx-auto glass-card p-5 text-center space-y-3">
-            <div className="w-12 h-12 rounded-2xl bg-red-100 mx-auto flex items-center justify-center">
-                <Gavel className="w-6 h-6 text-red-500" />
+        <div className="max-w-md mx-auto glass-card p-6 text-center space-y-3 bg-gradient-to-br from-rose-50/80 via-white/90 to-court-cream border border-rose-200/40">
+            <div className="w-12 h-12 rounded-2xl bg-rose-100 mx-auto flex items-center justify-center shadow-soft">
+                <Gavel className="w-6 h-6 text-rose-500" />
             </div>
             <h2 className="text-lg font-bold text-court-brown">{t('courtroom.errors.title')}</h2>
             <p className="text-sm text-court-brownLight">{message}</p>
             <button
                 onClick={onReset}
-                className="w-full py-2.5 px-4 rounded-xl text-white font-extrabold shadow-lg"
-                style={{ background: 'linear-gradient(135deg, #1c1c84 0%, #000035 100%)' }}
+                className="court-btn-primary w-full"
             >
                 {t('courtroom.errors.return')}
             </button>

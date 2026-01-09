@@ -9,6 +9,7 @@ const securityConfig = {
   fieldLimits: {
     cameraFacts: 5000,
     theStoryIamTellingMyself: 2000,
+    unmetNeeds: 2000,
     addendum: 2000,
     eventTitle: 200,
     eventNotes: 1000,

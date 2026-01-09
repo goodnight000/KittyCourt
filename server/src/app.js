@@ -61,8 +61,16 @@ const courtServeRateLimiter = createRateLimiter({
 
 const casesRateLimiter = createRateLimiter({
     windowMs: 10 * 60 * 1000, // 10 minutes
-    max: 20,
-    keyGenerator: (req) => req.headers.authorization || req.ip || 'unknown',
+    max: 60, // Increased from 20 to allow browsing case history
+    keyGenerator: (req) => {
+        // Prefer auth token for per-user rate limiting
+        // Fall back to IP + user-agent hash to separate unauthenticated requests
+        const auth = req.headers.authorization;
+        if (auth) return auth;
+        const ip = req.ip || 'unknown';
+        const ua = req.headers['user-agent'] || '';
+        return `${ip}:${ua.slice(0, 50)}`;
+    },
 });
 
 const app = express();
@@ -79,11 +87,28 @@ initializeCourtServices(server).catch(err => {
     console.error('[App] Court services initialization failed:', err);
 });
 
+// Security: Verify production environment is properly configured
+const isProd = process.env.NODE_ENV === 'production';
+if (isProd) {
+    // Verify critical security settings in production
+    if (!process.env.CORS_ORIGIN) {
+        console.warn('[Security] Warning: CORS_ORIGIN not set in production - CORS may be restrictive');
+    }
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
+        console.error('[Security] CRITICAL: Supabase not configured in production');
+    }
+    // Log security mode
+    console.log('[Security] Running in PRODUCTION mode with strict security');
+} else {
+    console.log('[Security] Running in DEVELOPMENT mode - auth bypass may be available');
+    if (process.env.REQUIRE_AUTH_IN_DEV === 'true') {
+        console.log('[Security] REQUIRE_AUTH_IN_DEV is set - authentication required even in dev');
+    }
+}
+
 app.use(corsMiddleware());
 app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || '256kb' }));
 app.use(express.urlencoded({ extended: false, limit: process.env.JSON_BODY_LIMIT || '256kb' }));
-
-const isProd = process.env.NODE_ENV === 'production';
 const safeErrorMessage = (error) => (isProd ? 'Internal server error' : (error?.message || String(error)));
 
 // --- Routes ---

@@ -20,9 +20,10 @@ class EvidenceService {
      * @param {string} userId - User submitting evidence
      * @param {string} evidence - Evidence text
      * @param {string} feelings - Feelings text
+     * @param {string} needs - Unmet needs text (optional for backward compatibility)
      * @returns {Object} - { bothSubmitted: boolean }
      */
-    submitEvidence(session, userId, evidence, feelings) {
+    submitEvidence(session, userId, evidence, feelings, needs = '') {
         // Validate user is part of this session
         if (session.creatorId !== userId && session.partnerId !== userId) {
             throw new Error('User not authorized for this session');
@@ -43,6 +44,7 @@ class EvidenceService {
         userState.evidenceSubmitted = true;
         userState.evidence = evidence;
         userState.feelings = feelings;
+        userState.needs = needs;
 
         // Check if both users submitted
         const bothSubmitted = session.creator.evidenceSubmitted && session.partner.evidenceSubmitted;

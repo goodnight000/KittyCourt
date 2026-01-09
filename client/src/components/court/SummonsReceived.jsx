@@ -1,51 +1,191 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Gavel } from 'lucide-react';
+import { Gavel, Star } from 'lucide-react';
 import { useI18n } from '../../i18n';
 
 /**
- * SummonsReceived - Shows when partner has filed a case
- * Invitation to join the court session
+ * SummonsReceived - Premium Court Invitation Experience
+ * Shows when partner has filed a case - makes the invitation feel special and ceremonial
  */
+
+// Floating decorative elements for magical ambiance
+const floatingElements = [
+    // Gold stars (ceremonial)
+    { type: '✦', color: 'text-court-gold', size: 'text-sm', left: '8%', top: '5%', delay: 0 },
+    { type: '✦', color: 'text-court-goldLight', size: 'text-xs', left: '88%', top: '10%', delay: 0.8 },
+    { type: '✦', color: 'text-court-gold', size: 'text-base', left: '92%', top: '40%', delay: 1.5 },
+    // Lavender accents (dreamy)
+    { type: '✦', color: 'text-lavender-300', size: 'text-sm', left: '5%', top: '35%', delay: 0.5 },
+    { type: '✦', color: 'text-lavender-400', size: 'text-xs', left: '90%', top: '65%', delay: 1.2 },
+    // Hearts (love theme - it's a couples app)
+    { type: '♥', color: 'text-blush-300', size: 'text-xs', left: '6%', top: '60%', delay: 1.8 },
+    { type: '♥', color: 'text-blush-400', size: 'text-sm', left: '85%', top: '25%', delay: 0.3 },
+    // Scroll accent
+    { type: '✧', color: 'text-court-goldLight', size: 'text-xs', left: '12%', top: '80%', delay: 2.0 },
+];
+
 const SummonsReceived = ({ session, senderName, onJoin }) => {
     const { t } = useI18n();
     const displaySenderName = senderName || t('common.yourPartner');
 
     return (
-        <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="glass-card p-6 text-center max-w-sm mx-auto bg-gradient-to-br from-court-cream to-court-tan/30"
-        >
+        <div className="relative min-h-[400px] flex items-center justify-center px-4 py-8">
+            {/* Ambient glow blobs */}
+            <div className="absolute -top-10 -right-8 w-40 h-40 rounded-full bg-court-gold/15 blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-12 -left-10 w-48 h-48 rounded-full bg-lavender-200/20 blur-3xl pointer-events-none" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 rounded-full bg-blush-200/10 blur-3xl pointer-events-none" />
+
+            {/* Floating decorative elements */}
+            {floatingElements.map((el, i) => (
+                <motion.span
+                    key={i}
+                    animate={{
+                        y: [0, -10, 0],
+                        opacity: [0.4, 0.9, 0.4],
+                        scale: [0.9, 1.15, 0.9],
+                    }}
+                    transition={{
+                        duration: 3 + Math.random() * 2,
+                        delay: el.delay,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                    }}
+                    className={`absolute ${el.color} ${el.size} drop-shadow-sm pointer-events-none`}
+                    style={{ left: el.left, top: el.top }}
+                >
+                    {el.type}
+                </motion.span>
+            ))}
+
+            {/* Main card */}
             <motion.div
-                animate={{ y: [0, -5, 0], rotate: [-5, 5, -5] }}
-                transition={{ duration: 1.5, repeat: Infinity }}
-                className="w-24 h-24 bg-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg"
+                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                transition={{ duration: 0.5, ease: "easeOut" }}
+                className="relative z-10 glass-card p-8 text-center max-w-sm mx-auto
+                    bg-gradient-to-br from-court-ivory via-white/95 to-court-tan/40
+                    border border-court-gold/20 shadow-xl overflow-hidden"
             >
-                <span className="text-5xl">📜</span>
+                {/* Inner glow effect */}
+                <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-court-gold/5 via-transparent to-lavender-100/10 pointer-events-none" />
+
+                {/* Decorative top border accent */}
+                <div className="absolute inset-x-8 top-0 h-0.5 bg-gradient-to-r from-transparent via-court-gold/40 to-transparent" />
+                <div className="absolute -right-10 -top-10 w-24 h-24 rounded-full bg-court-gold/10 blur-2xl pointer-events-none" />
+
+                {/* Scroll icon with ceremonial styling */}
+                <motion.div
+                    initial={{ rotate: -2, scale: 0.98 }}
+                    animate={{
+                        rotate: [-2, 2, -2],
+                        scale: [0.98, 1.02, 0.98],
+                    }}
+                    transition={{
+                        duration: 3.6,
+                        repeat: Infinity,
+                        ease: "easeInOut"
+                    }}
+                    className="relative mb-6 flex justify-center w-full"
+                >
+                    {/* Outer glow ring */}
+                    <motion.div
+                        animate={{
+                            scale: [1, 1.1, 1],
+                            opacity: [0.3, 0.6, 0.3]
+                        }}
+                        transition={{ duration: 2, repeat: Infinity }}
+                        className="absolute -inset-4 bg-gradient-to-br from-court-gold/30 via-lavender-200/20 to-blush-200/25 rounded-full blur-xl"
+                    />
+
+                    {/* Scroll container */}
+                    <div className="relative w-28 h-28 bg-gradient-to-br from-white to-court-cream rounded-3xl
+                        flex items-center justify-center shadow-lg border border-court-gold/20">
+                        <span className="text-6xl">📜</span>
+
+                        {/* Accent */}
+                        <motion.div
+                            animate={{ rotate: [0, 12, -12, 0], opacity: [0.5, 1, 0.5] }}
+                            transition={{ duration: 2.6, repeat: Infinity }}
+                            className="absolute -top-1 -right-1"
+                        >
+                            <Star className="w-5 h-5 text-court-gold" />
+                        </motion.div>
+                    </div>
+                </motion.div>
+
+                {/* Kicker text */}
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.2 }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full
+                        bg-gradient-to-r from-court-gold/10 via-lavender-100/20 to-blush-100/15
+                        border border-court-gold/15 mb-3"
+                >
+                    <Gavel className="w-3 h-3 text-court-gold" />
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-court-gold">
+                        {t('court.summons.officialBadge')}
+                    </span>
+                </motion.div>
+
+                {/* Title */}
+                <motion.h2
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                    className="text-2xl font-bold text-court-brown mb-3"
+                >
+                    {t('court.summons.title')}
+                </motion.h2>
+
+                {/* Body text */}
+                <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.4 }}
+                    className="text-court-brownLight text-sm mb-6 leading-relaxed"
+                >
+                    <span className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-court-gold to-court-goldDark">
+                        {displaySenderName}
+                    </span>
+                    <span className="ml-1">.</span>{' '}
+                    {t('court.summons.body')}
+                </motion.p>
+
+                {/* Premium CTA button */}
+                <motion.button
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.5 }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={onJoin}
+                    className="relative w-full court-btn-primary overflow-hidden group"
+                >
+                    {/* Button shimmer effect */}
+                    <motion.div
+                        animate={{ x: ['-100%', '200%'] }}
+                        transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+                        className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12"
+                    />
+
+                    <Gavel className="w-5 h-5 relative z-10" />
+                    <span className="relative z-10">{t('court.summons.cta')}</span>
+                </motion.button>
+
+                {/* Expiry notice */}
+                <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.6 }}
+                    className="text-xs text-court-brownLight/70 mt-5 flex items-center justify-center gap-1.5"
+                >
+                    <span className="inline-block w-1 h-1 rounded-full bg-court-gold/50" />
+                    {t('court.summons.expiry')}
+                    <span className="inline-block w-1 h-1 rounded-full bg-court-gold/50" />
+                </motion.p>
             </motion.div>
-
-            <h2 className="text-xl font-bold text-court-brown mb-2">
-                {t('court.summons.title')}
-            </h2>
-            <p className="text-court-brownLight text-sm mb-4">
-                <span className="font-bold text-court-gold">{displaySenderName}</span>{' '}
-                {t('court.summons.body')}
-            </p>
-
-            <motion.button
-                whileTap={{ scale: 0.98 }}
-                onClick={onJoin}
-                className="btn-primary w-full flex items-center justify-center gap-2"
-            >
-                <Gavel className="w-4 h-4" />
-                {t('court.summons.cta')}
-            </motion.button>
-
-            <p className="text-xs text-court-brownLight mt-4">
-                {t('court.summons.expiry')}
-            </p>
-        </motion.div>
+        </div>
     );
 };
 

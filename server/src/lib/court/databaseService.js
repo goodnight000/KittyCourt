@@ -92,6 +92,7 @@ function reconstructFromDB(db) {
             evidenceSubmitted: evidence.creator?.submitted || !!db.user_a_evidence,
             evidence: evidence.creator?.evidence || db.user_a_evidence || null,
             feelings: evidence.creator?.feelings || db.user_a_feelings || null,
+            needs: evidence.creator?.needs || db.user_a_needs || null,
             verdictAccepted: acceptances.creator || false,
             primingReady: db.user_a_priming_ready || false,
             jointReady: db.user_a_joint_ready || false
@@ -100,6 +101,7 @@ function reconstructFromDB(db) {
             evidenceSubmitted: evidence.partner?.submitted || !!db.user_b_evidence,
             evidence: evidence.partner?.evidence || db.user_b_evidence || null,
             feelings: evidence.partner?.feelings || db.user_b_feelings || null,
+            needs: evidence.partner?.needs || db.user_b_needs || null,
             verdictAccepted: acceptances.partner || false,
             primingReady: db.user_b_priming_ready || false,
             jointReady: db.user_b_joint_ready || false

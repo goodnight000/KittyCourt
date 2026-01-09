@@ -57,12 +57,25 @@ function createSocketCorsOptions() {
 }
 
 function securityHeaders(req, res, next) {
+    const isProd = process.env.NODE_ENV === 'production';
+
     // Basic hardening (helmet-lite) for an API server.
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Referrer-Policy', 'no-referrer');
     res.setHeader('Cross-Origin-Resource-Policy', 'same-site');
     res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
     res.setHeader('X-Frame-Options', 'DENY');
+
+    // HSTS - enforce HTTPS (only in production to avoid dev issues)
+    if (isProd) {
+        res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+    }
+
+    // Permissions Policy - restrict browser features
+    res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=(), payment=(), usb=()');
+
+    // Cross-Origin-Embedder-Policy for enhanced isolation
+    res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
 
     // Content Security Policy - defense in depth against XSS
     // Note: 'unsafe-inline' for styles is needed for React's inline styling
@@ -72,7 +85,7 @@ function securityHeaders(req, res, next) {
         "style-src 'self' 'unsafe-inline'",
         "img-src 'self' data: blob: https:",
         "font-src 'self' https://fonts.gstatic.com",
-        "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.openai.com",
+        "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.openai.com https://openrouter.ai",
         "frame-ancestors 'none'",
         "base-uri 'self'",
         "form-action 'self'",

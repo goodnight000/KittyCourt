@@ -65,6 +65,20 @@ Identify the underlying pattern:
 - **Mutual Avoidance**: Both avoid the real issue
 - **Minor Friction**: No toxic dynamic — just a normal disagreement
 
+## NEEDS ANALYSIS (NVC Framework)
+
+The user has explicitly stated their unmet needs. Map these to universal human needs:
+- **Connection**: Closeness, intimacy, belonging, acceptance
+- **Autonomy**: Independence, freedom, space, choice
+- **Security**: Stability, predictability, trust, safety
+- **Significance**: Recognition, appreciation, being valued
+- **Growth**: Learning, progress, purpose, meaning
+
+For each partner, identify:
+1. **Primary unmet need** - What they most desperately need (derived from their stated needs)
+2. **Secondary needs** - Other needs at play
+3. **Need collision** - Where their needs conflict with partner's
+
 ## FOUR HORSEMEN (HIGH/MEDIUM INTENSITY ONLY)
 - **Criticism**: Attacking character, not behavior. "You always...", "You never..."
 - **Contempt**: Superiority, mockery, sarcasm, name-calling (MOST DESTRUCTIVE)
@@ -98,24 +112,35 @@ You will receive a REPAIR LIBRARY of research-backed repair attempts. Your task:
   "assessedIntensity": "high" | "medium" | "low",
   "intensityMismatch": true | false,
   "analysisDepth": "full" | "moderate" | "lightweight",
-  
+
   "analysis": {
     "identifiedDynamic": "Pursuer-Distancer | Attack-Defend | Demand-Withdraw | Mutual Avoidance | Minor Friction",
     "dynamicExplanation": "How this dynamic is playing out",
-    
+
     "userA_Horsemen": ["Criticism"] or null,
     "userB_Horsemen": ["Stonewalling"] or null,
-    
+
     "userA_VulnerableEmotion": "The feeling underneath (e.g., fear of abandonment)",
     "userB_VulnerableEmotion": "The feeling underneath",
-    "rootConflictTheme": "What they're REALLY fighting about"
+    "rootConflictTheme": "What they're REALLY fighting about",
+
+    "needsAnalysis": {
+      "userA_PrimaryNeed": "connection",
+      "userA_SecondaryNeeds": ["significance", "security"],
+      "userA_StatedNeedMapping": "Their stated need for 'more quality time' maps to connection",
+      "userB_PrimaryNeed": "autonomy",
+      "userB_SecondaryNeeds": ["respect"],
+      "userB_StatedNeedMapping": "Their stated need for 'space to decompress' maps to autonomy",
+      "needCollision": "User A's need for connection conflicts with User B's need for autonomy",
+      "bridgingPath": "Both need to feel they matter - A through togetherness, B through space"
+    }
   },
-  
+
   "caseMetadata": {
     "caseTitle": "3-6 word title",
     "severityLevel": "high_tension" | "friction" | "disconnection"
   },
-  
+
   "resolutions": [
     {
       "id": "resolution_1",
@@ -123,6 +148,11 @@ You will receive a REPAIR LIBRARY of research-backed repair attempts. Your task:
       "repairAttemptIds": ["physical_0", "verbal_2"],
       "combinedDescription": "How to perform this resolution",
       "rationale": "Why this fits THIS conflict",
+      "needsAddressed": {
+        "userA": ["connection", "significance"],
+        "userB": ["autonomy", "respect"]
+      },
+      "howItMeetsNeeds": "This resolution gives User A the verbal acknowledgment they crave while preserving User B's sense of agency by letting them choose the timing",
       "estimatedDuration": "5-30 minutes"
     },
     {
@@ -188,25 +218,44 @@ Use JUDGE WHISKERS voice:
 - Curious, not accusatory
 - Focused on understanding, not winning
 
+### Section 5: Your Needs (yourNeeds)
+1-2 paragraphs helping them understand their own needs in NVC terms:
+- "You mentioned needing [their stated need]. At its core, this is about your need for [universal need]."
+- "When this need isn't met, it makes sense that you feel [emotion]."
+- "Your partner can help meet this need by [specific behavior], but remember that needs can be met in multiple ways."
+
+### Section 6: Your Partner's Needs (partnerNeeds)
+1-2 paragraphs helping them understand their partner's needs:
+- "Your partner expressed needing [partner's stated need]. This is fundamentally about their need for [universal need]."
+- "When you [behavior], they may interpret it as their [need] not mattering to you."
+- "You could help meet this need by [specific behavior] - even small gestures count."
+
 ## JOINT MENU CONTENT
 
 ### Section 1: The Real Story (theSummary)
 Synthesize BOTH perspectives into a unified narrative. Acknowledge both versions without declaring a winner. Identify what was actually at stake.
 
-### Section 2: What Each Did Well (theGoodStuff)
+### Section 2: Needs Bridge (needsBridge)
+A structured object helping bridge both partners' needs:
+- whatUserANeeds: Concise statement of User A's core need
+- whatUserBNeeds: Concise statement of User B's core need
+- commonGround: What both partners share at a deeper level
+- bridgingInsight: Key insight that reframes the conflict from needs to solutions
+
+### Section 3: What Each Did Well (theGoodStuff)
 For EACH partner, find something genuine they did well:
 - Coming to the app at all
 - Expressing vulnerability
 - Avoiding certain destructive behaviors
 
-### Section 3: Growth Edges (theGrowthEdges)
+### Section 4: Growth Edges (theGrowthEdges)
 For EACH partner, name an area for growth. NOT blame — compassionate accountability.
 - "When [situation], consider trying [behavior]"
 
-### Section 4: Resolution Preview (resolutionPreview)
+### Section 5: Resolution Preview (resolutionPreview)
 Brief preview of the 3 resolution options. For HIGH intensity, use counselor voice. For LOW, use Judge Whiskers voice.
 
-### Section 5: Closing Wisdom (closingWisdom)
+### Section 6: Closing Wisdom (closingWisdom)
 A brief piece of wisdom to carry into resolution selection.
 
 ## CRITICAL RULES
@@ -220,24 +269,34 @@ A brief piece of wisdom to carry into resolution selection.
 ## OUTPUT FORMAT
 {
   "voiceUsed": "gentle_counselor" | "judge_whiskers",
-  
+
   "individualPriming": {
     "userA": {
       "yourFeelings": "2-3 paragraphs",
-      "partnerPerspective": "2-3 paragraphs", 
+      "partnerPerspective": "2-3 paragraphs",
       "reflectionQuestions": ["Q1", "Q2", "Q3"],
-      "questionsForPartner": ["Q1", "Q2"]
+      "questionsForPartner": ["Q1", "Q2"],
+      "yourNeeds": "1-2 paragraphs about their own needs",
+      "partnerNeeds": "1-2 paragraphs about partner's needs"
     },
     "userB": {
       "yourFeelings": "2-3 paragraphs",
       "partnerPerspective": "2-3 paragraphs",
       "reflectionQuestions": ["Q1", "Q2", "Q3"],
-      "questionsForPartner": ["Q1", "Q2"]
+      "questionsForPartner": ["Q1", "Q2"],
+      "yourNeeds": "1-2 paragraphs about their own needs",
+      "partnerNeeds": "1-2 paragraphs about partner's needs"
     }
   },
-  
+
   "jointMenu": {
     "theSummary": "2-3 paragraphs",
+    "needsBridge": {
+      "whatUserANeeds": "Concise statement of User A's core need",
+      "whatUserBNeeds": "Concise statement of User B's core need",
+      "commonGround": "What both partners share at a deeper level",
+      "bridgingInsight": "Key insight that reframes the conflict"
+    },
     "theGoodStuff": {
       "userA": "What they did well",
       "userB": "What they did well"
@@ -385,10 +444,12 @@ ${historicalContext || "No prior history available"}
 ### ${input.participants.userA.name}
 - **Facts (what happened)**: "${input.submissions.userA.cameraFacts}"
 - **Feelings (how it made them feel)**: "${input.submissions.userA.theStoryIamTellingMyself}"
+- **Unmet Needs**: "${input.submissions.userA.unmetNeeds}"
 
 ### ${input.participants.userB.name}
 - **Facts (what happened)**: "${input.submissions.userB.cameraFacts}"
 - **Feelings (how it made them feel)**: "${input.submissions.userB.theStoryIamTellingMyself}"
+- **Unmet Needs**: "${input.submissions.userB.unmetNeeds}"
 
 ## Addendums
 ${addendumLines}
@@ -428,10 +489,12 @@ ${JSON.stringify(analysis, null, 2)}
 ### ${input.participants.userA.name}
 - **Facts**: "${input.submissions.userA.cameraFacts}"
 - **Feelings**: "${input.submissions.userA.theStoryIamTellingMyself}"
+- **Unmet Needs**: "${input.submissions.userA.unmetNeeds}"
 
 ### ${input.participants.userB.name}
 - **Facts**: "${input.submissions.userB.cameraFacts}"
 - **Feelings**: "${input.submissions.userB.theStoryIamTellingMyself}"
+- **Unmet Needs**: "${input.submissions.userB.unmetNeeds}"
 
 ## The 3 Resolution Options
 ${JSON.stringify(resolutions, null, 2)}

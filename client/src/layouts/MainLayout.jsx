@@ -84,7 +84,7 @@ const MainLayout = () => {
     return (
         <div className="min-h-screen min-h-[100dvh] flex flex-col font-sans">
             {/* Main Scrollable Content - with safe area for Dynamic Island/notch */}
-            <main ref={mainRef} className="flex-1 overflow-y-auto overscroll-contain safe-top">
+            <main ref={mainRef} className="flex-1 overflow-y-auto overscroll-contain safe-top" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
                 <div className="px-4 py-5 pb-20 max-w-lg mx-auto">
                     <AnimatePresence mode="wait">
                         <motion.div

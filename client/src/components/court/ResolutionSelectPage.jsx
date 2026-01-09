@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle, Clock, ArrowRight, Sparkles } from 'lucide-react';
+import { CheckCircle, Clock, ArrowRight, Star } from 'lucide-react';
 import { useI18n } from '../../i18n';
 
 const ResolutionSelectPage = ({
@@ -78,7 +78,7 @@ const ResolutionSelectPage = ({
 
     const renderJourneyMap = () => (
         <div className="sticky top-3 z-10">
-            <div className="glass-card p-3 bg-white/70 border border-court-tan/30">
+            <div className="glass-card p-3 bg-white/80 border border-court-gold/15">
                 <div className="text-[12px] uppercase tracking-[0.2em] text-court-brownLight">
                     {t('court.journey.title')}
                 </div>
@@ -143,18 +143,15 @@ const ResolutionSelectPage = ({
                 animate={{
                     opacity: 1,
                     y: 0,
-                    scale: selected ? 1.02 : 1,
-                    boxShadow: selected
-                        ? '0 4px 20px rgba(34, 197, 94, 0.25), 0 0 0 2px rgba(34, 197, 94, 0.1)'
-                        : '0 1px 3px rgba(0, 0, 0, 0.05)'
+                    scale: selected ? 1.02 : 1
                 }}
                 transition={{
-                    scale: { type: 'spring', stiffness: 400, damping: 25 },
-                    boxShadow: { duration: 0.2 }
+                    scale: { type: 'spring', stiffness: 400, damping: 25 }
                 }}
                 whileTap={!disabled ? { scale: 0.98 } : undefined}
-                className={`glass-card p-4 space-y-3 border-2 relative overflow-hidden cursor-pointer ${selected ? 'border-green-500/80 bg-white' : 'border-court-tan/30 bg-white/70'
-                    } ${disabled ? 'opacity-70 cursor-not-allowed' : ''}`}
+                className={`glass-card p-4 space-y-3 border-2 relative overflow-hidden cursor-pointer ${
+                    selected ? 'border-green-500/80 bg-white animate-glow-green' : 'border-court-gold/15 bg-white/85'
+                } ${disabled ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
                 <div
                     className={`absolute inset-x-0 top-0 h-1 ${selected ? 'bg-green-500/70' : 'bg-gradient-to-r from-court-gold/60 via-court-tan/40 to-transparent'
@@ -211,12 +208,18 @@ const ResolutionSelectPage = ({
 
     if (mode === 'waiting') {
         return (
-            <div className="max-w-2xl mx-auto space-y-5 pb-6">
+            <div className="max-w-2xl mx-auto space-y-5 pb-6 relative">
+                <motion.div
+                    aria-hidden
+                    animate={{ opacity: [0.25, 0.45, 0.25], y: [0, -6, 0] }}
+                    transition={{ duration: 5.5, repeat: Infinity, ease: 'easeInOut' }}
+                    className="absolute -top-12 -right-8 w-32 h-32 rounded-full bg-court-gold/15 blur-2xl pointer-events-none"
+                />
                 {renderJourneyMap()}
                 <motion.div
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="glass-card p-5 bg-gradient-to-br from-court-cream to-court-tan/30 text-center relative overflow-hidden"
+                    className="glass-card p-5 bg-gradient-to-br from-court-ivory via-white/95 to-court-tan/40 text-center relative overflow-hidden border border-court-gold/15"
                 >
                     <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-court-gold/60 to-transparent" />
                     <h2 className="text-lg font-bold text-court-brown">{t('court.resolution.waiting.title')}</h2>
@@ -244,13 +247,25 @@ const ResolutionSelectPage = ({
     };
 
     return (
-        <div className="max-w-2xl mx-auto space-y-5 pb-6">
+        <div className="max-w-2xl mx-auto space-y-5 pb-6 relative">
+            <motion.div
+                aria-hidden
+                animate={{ opacity: [0.2, 0.4, 0.2], scale: [1, 1.05, 1] }}
+                transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+                className="absolute -top-10 -left-10 w-32 h-32 rounded-full bg-mint-200/20 blur-2xl pointer-events-none"
+            />
+            <motion.div
+                aria-hidden
+                animate={{ opacity: [0.25, 0.45, 0.25], y: [0, -6, 0] }}
+                transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
+                className="absolute top-1/3 -right-10 w-36 h-36 rounded-full bg-court-gold/15 blur-2xl pointer-events-none"
+            />
             {renderJourneyMap()}
 
             <motion.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="glass-card p-5 bg-gradient-to-br from-court-cream to-court-tan/30 relative overflow-hidden"
+                className="glass-card p-5 bg-gradient-to-br from-court-ivory via-white/95 to-court-tan/40 relative overflow-hidden border border-court-gold/15"
             >
                 <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-court-gold/70 via-court-tan/40 to-transparent" />
                 <div className="flex items-start gap-3">
@@ -264,7 +279,7 @@ const ResolutionSelectPage = ({
                         </p>
                         <div className="mt-3 flex flex-wrap gap-2 text-[10px] text-court-brownLight">
                             <span className="inline-flex items-center gap-1 rounded-full border border-court-tan/40 bg-white/60 px-2 py-1">
-                                <Sparkles className="w-3 h-3 text-court-gold" />
+                                <Star className="w-3 h-3 text-court-gold" />
                                 {t('court.resolution.header.alignTogether')}
                             </span>
                             <span className="inline-flex items-center gap-1 rounded-full border border-court-tan/40 bg-white/60 px-2 py-1">
@@ -281,7 +296,7 @@ const ResolutionSelectPage = ({
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.05 }}
-                    className="glass-card p-4 space-y-2 border-l-4 border-court-gold/40 relative overflow-hidden"
+                    className="glass-card p-4 space-y-2 border-l-4 border-court-gold/50 relative overflow-hidden bg-white/80"
                 >
                     <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-court-gold/60 to-transparent" />
                     <p className="text-sm font-semibold text-court-brown">
@@ -298,7 +313,7 @@ const ResolutionSelectPage = ({
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.08 }}
-                    className="glass-card p-4 border border-court-tan/30 bg-white/70 flex items-center gap-3 relative overflow-hidden"
+                    className="glass-card p-4 border border-court-tan/30 bg-white/85 flex items-center gap-3 relative overflow-hidden"
                 >
                     <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-green-500/60 to-transparent" />
                     <div className="w-9 h-9 rounded-xl bg-court-cream flex items-center justify-center border border-court-tan/30">
@@ -325,7 +340,7 @@ const ResolutionSelectPage = ({
                 })}
             </div>
 
-            <div className="glass-card p-4 space-y-3 relative overflow-hidden">
+            <div className="glass-card p-4 space-y-3 relative overflow-hidden bg-white/85 border border-court-tan/30">
                 <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-court-gold/60 to-transparent" />
                 {selectedResolution ? (
                     <div className="text-xs text-court-brownLight">
@@ -341,9 +356,7 @@ const ResolutionSelectPage = ({
                     whileTap={{ scale: canConfirm ? 0.98 : 1 }}
                     onClick={() => onConfirm?.(pendingPick)}
                     disabled={!canConfirm}
-                    className="w-full py-2.5 px-4 rounded-xl text-white font-extrabold flex items-center justify-center gap-2
-                        disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
-                    style={{ background: 'linear-gradient(135deg, #1c1c84 0%, #000035 100%)' }}
+                    className="court-btn-primary w-full disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                     {isSubmitting ? (
                         <motion.div

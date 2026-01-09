@@ -1,7 +1,8 @@
 /**
  * Webhook Routes
- * 
+ *
  * Handles webhooks from external services like RevenueCat.
+ * Security: Uses timing-safe comparison and optional HMAC signature verification.
  */
 
 const express = require('express');
@@ -10,6 +11,7 @@ const crypto = require('crypto');
 const { getSupabase, isSupabaseConfigured } = require('../lib/supabase');
 
 const REVENUECAT_WEBHOOK_TOKEN = process.env.REVENUECAT_WEBHOOK_TOKEN || '';
+const REVENUECAT_WEBHOOK_SECRET = process.env.REVENUECAT_WEBHOOK_SECRET || ''; // For HMAC verification
 // Support both formats: 'Pause Gold' (with space) or 'pause_gold' (snake_case).
 const PAUSE_GOLD_ENTITLEMENTS = new Set(['pause_gold', 'pause gold']);
 const PAUSE_GOLD_PRODUCTS = new Set([
@@ -20,6 +22,29 @@ const PAUSE_GOLD_PRODUCTS = new Set([
     'prodaa5384f89b',
 ]);
 const isProd = process.env.NODE_ENV === 'production';
+
+/**
+ * Verify HMAC signature for webhook body
+ * @param {string} signature - The signature from headers
+ * @param {string|Buffer} body - The raw request body
+ * @param {string} secret - The shared secret
+ * @returns {boolean} - Whether signature is valid
+ */
+function verifyHmacSignature(signature, body, secret) {
+    if (!signature || !secret) return false;
+    try {
+        const expectedSignature = crypto
+            .createHmac('sha256', secret)
+            .update(body)
+            .digest('hex');
+        const sig = Buffer.from(signature);
+        const expected = Buffer.from(expectedSignature);
+        if (sig.length !== expected.length) return false;
+        return crypto.timingSafeEqual(sig, expected);
+    } catch {
+        return false;
+    }
+}
 
 /**
  * POST /api/webhooks/revenuecat
@@ -39,12 +64,25 @@ router.post('/revenuecat', async (req, res) => {
             return res.status(500).json({ error: 'Server not configured' });
         }
 
-        // Optional shared-secret auth (recommended).
-        if (isProd && !REVENUECAT_WEBHOOK_TOKEN) {
+        // Security: Require webhook auth in production
+        if (isProd && !REVENUECAT_WEBHOOK_TOKEN && !REVENUECAT_WEBHOOK_SECRET) {
+            console.error('[Webhook] CRITICAL: No webhook authentication configured in production');
             return res.status(503).json({ error: 'Webhook auth not configured' });
         }
 
-        if (REVENUECAT_WEBHOOK_TOKEN) {
+        // Method 1: HMAC signature verification (preferred if configured)
+        if (REVENUECAT_WEBHOOK_SECRET) {
+            const signature = req.headers['x-revenuecat-signature'] || req.headers['x-signature'];
+            // Note: For HMAC verification, we need the raw body
+            // This requires express.raw() middleware or similar
+            const rawBody = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+            if (!verifyHmacSignature(signature, rawBody, REVENUECAT_WEBHOOK_SECRET)) {
+                console.warn('[Webhook] HMAC signature verification failed');
+                return res.status(401).json({ error: 'Invalid signature' });
+            }
+        }
+        // Method 2: Bearer token auth (fallback)
+        else if (REVENUECAT_WEBHOOK_TOKEN) {
             const authHeader = req.headers.authorization || '';
             const match = typeof authHeader === 'string' ? authHeader.match(/^Bearer\s+(.+)$/i) : null;
             const token = match?.[1];
@@ -60,8 +98,13 @@ router.post('/revenuecat', async (req, res) => {
                 }
             })();
             if (!ok) {
+                console.warn('[Webhook] Bearer token verification failed');
                 return res.status(401).json({ error: 'Unauthorized' });
             }
+        }
+        // In development without auth configured, log a warning
+        else if (!isProd) {
+            console.warn('[Webhook] WARNING: Processing webhook without authentication (dev mode)');
         }
 
         const supabase = getSupabase();

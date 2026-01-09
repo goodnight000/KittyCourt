@@ -34,7 +34,7 @@ const SubmissionSchema = z.object({
     cameraFacts: z.string().min(1, 'Camera facts are required'),
     selectedPrimaryEmotion: z.string().optional().default('not specified'),
     theStoryIamTellingMyself: z.string().min(1, 'Story is required'),
-    coreNeed: z.string().optional().default('understanding'),
+    unmetNeeds: z.string().min(1, 'Unmet needs are required'),
 });
 
 const AddendumEntrySchema = z.object({
@@ -77,12 +77,30 @@ const DynamicType = z.enum([
 
 const HorsemanType = z.enum(['Criticism', 'Contempt', 'Defensiveness', 'Stonewalling', 'None']);
 
+const NeedsAddressedSchema = z.object({
+    userA: z.array(z.string()),
+    userB: z.array(z.string()),
+});
+
+const NeedsAnalysisSchema = z.object({
+    userA_PrimaryNeed: z.string(),
+    userA_SecondaryNeeds: z.array(z.string()).optional().default([]),
+    userA_StatedNeedMapping: z.string().optional().default(''),
+    userB_PrimaryNeed: z.string(),
+    userB_SecondaryNeeds: z.array(z.string()).optional().default([]),
+    userB_StatedNeedMapping: z.string().optional().default(''),
+    needCollision: z.string(),
+    bridgingPath: z.string(),
+});
+
 const ResolutionSchema = z.object({
     id: z.string(),
     title: z.string(),
     repairAttemptIds: z.array(z.string()),
     combinedDescription: z.string(),
     rationale: z.string(),
+    needsAddressed: NeedsAddressedSchema,
+    howItMeetsNeeds: z.string(),
     estimatedDuration: z.string(),
 });
 
@@ -99,6 +117,7 @@ const AnalystRepairOutputSchema = z.object({
         userA_VulnerableEmotion: z.string(),
         userB_VulnerableEmotion: z.string(),
         rootConflictTheme: z.string(),
+        needsAnalysis: NeedsAnalysisSchema,
     }),
     caseMetadata: z.object({
         caseTitle: z.string(),
@@ -111,15 +130,41 @@ const AnalystRepairOutputSchema = z.object({
 // PRIMING + JOINT MENU OUTPUT SCHEMAS (v2.0)
 // ============================================================================
 
+/**
+ * Individual priming content for each partner
+ * @property {string} yourFeelings - Validation of their emotional experience
+ * @property {string} partnerPerspective - Help understanding partner's viewpoint
+ * @property {string[]} reflectionQuestions - Questions for self-reflection
+ * @property {string[]} questionsForPartner - Questions to ask their partner
+ * @property {string} yourNeeds - NVC-based explanation of their own needs
+ * @property {string} partnerNeeds - NVC-based explanation of partner's needs
+ */
 const IndividualPrimingSchema = z.object({
     yourFeelings: z.string(),
     partnerPerspective: z.string(),
     reflectionQuestions: z.array(z.string()),
     questionsForPartner: z.array(z.string()),
+    yourNeeds: z.string(),
+    partnerNeeds: z.string(),
+});
+
+/**
+ * Needs bridge in joint menu - helps partners find common ground
+ * @property {string} whatUserANeeds - Concise statement of User A's core need
+ * @property {string} whatUserBNeeds - Concise statement of User B's core need
+ * @property {string} commonGround - What both partners share at a deeper level
+ * @property {string} bridgingInsight - Key insight that reframes conflict to solutions
+ */
+const NeedsBridgeSchema = z.object({
+    whatUserANeeds: z.string(),
+    whatUserBNeeds: z.string(),
+    commonGround: z.string(),
+    bridgingInsight: z.string(),
 });
 
 const JointMenuSchema = z.object({
     theSummary: z.string(),
+    needsBridge: NeedsBridgeSchema,
     theGoodStuff: z.object({
         userA: z.string(),
         userB: z.string(),
@@ -170,6 +215,9 @@ module.exports = {
     ResolutionSchema,
     IndividualPrimingSchema,
     JointMenuSchema,
+    NeedsAnalysisSchema,
+    NeedsAddressedSchema,
+    NeedsBridgeSchema,
 
     // Type enums
     HorsemanType,

@@ -43,6 +43,14 @@ api.interceptors.request.use(async (config) => {
         if (token) {
             config.headers = config.headers || {};
             config.headers.Authorization = `Bearer ${token}`;
+        } else {
+            // Session missing - try to refresh before giving up
+            const { data: refreshData } = await supabase.auth.refreshSession();
+            const refreshedToken = refreshData?.session?.access_token;
+            if (refreshedToken) {
+                config.headers = config.headers || {};
+                config.headers.Authorization = `Bearer ${refreshedToken}`;
+            }
         }
         const state = useAuthStore.getState();
         const preferred = normalizeLanguage(state.preferredLanguage || state.profile?.preferred_language);

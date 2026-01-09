@@ -14,7 +14,7 @@ const SettleSuccessAnimation = ({ partnerName }) => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-gradient-to-br from-pink-50 via-white to-rose-50 flex items-center justify-center overflow-hidden"
+            className="fixed inset-0 z-[100] bg-gradient-to-br from-court-cream via-white to-court-tan/40 flex items-center justify-center overflow-hidden"
         >
             {/* Floating Hearts */}
             {[...Array(20)].map((_, i) => (
@@ -33,7 +33,7 @@ const SettleSuccessAnimation = ({ partnerName }) => {
                     }}
                     className="absolute text-2xl"
                 >
-                    {['💕', '💗', '💖', '✨', '🤍'][i % 5]}
+                    {['💕', '💗', '💖', '🤍', '💛'][i % 5]}
                 </motion.div>
             ))}
 
@@ -43,13 +43,13 @@ const SettleSuccessAnimation = ({ partnerName }) => {
                     initial={{ scale: 0, rotate: -180 }}
                     animate={{ scale: 1, rotate: 0 }}
                     transition={{ type: "spring", bounce: 0.5, delay: 0.2 }}
-                    className="w-32 h-32 mx-auto mb-6 bg-gradient-to-br from-pink-200 to-rose-200 rounded-full flex items-center justify-center shadow-2xl"
+                    className="w-32 h-32 mx-auto mb-6 bg-gradient-to-br from-court-gold/25 to-court-tan/50 rounded-full flex items-center justify-center shadow-2xl border border-court-gold/20"
                 >
                     <motion.div
                         animate={{ scale: [1, 1.2, 1] }}
                         transition={{ duration: 1, repeat: Infinity }}
                     >
-                        <Handshake className="w-16 h-16 text-pink-600" />
+                        <Handshake className="w-16 h-16 text-court-gold" />
                     </motion.div>
                 </motion.div>
 
@@ -58,7 +58,7 @@ const SettleSuccessAnimation = ({ partnerName }) => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.5 }}
-                    className="text-3xl font-bold text-pink-600 mb-3"
+                    className="text-3xl font-bold text-gradient mb-3"
                 >
                     {t('court.settleSuccess.title')}
                 </motion.h1>
@@ -68,7 +68,7 @@ const SettleSuccessAnimation = ({ partnerName }) => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.7 }}
-                    className="text-neutral-600 text-lg mb-6"
+                    className="text-court-brownLight text-lg mb-6"
                 >
                     {t('court.settleSuccess.subtitle')}
                 </motion.p>
@@ -78,21 +78,21 @@ const SettleSuccessAnimation = ({ partnerName }) => {
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 0.9 }}
-                    className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl max-w-xs mx-auto"
+                    className="bg-white/85 backdrop-blur-sm rounded-3xl p-6 shadow-xl max-w-xs mx-auto border border-court-tan/30"
                 >
                     <div className="flex items-center justify-center gap-3 mb-4">
-                        <div className="w-12 h-12 bg-pink-100 rounded-full flex items-center justify-center text-2xl">
+                        <div className="w-12 h-12 bg-court-cream rounded-full flex items-center justify-center text-2xl border border-court-tan/30">
                             🐱
                         </div>
-                        <Heart className="w-6 h-6 text-pink-400 fill-pink-400" />
-                        <div className="w-12 h-12 bg-rose-100 rounded-full flex items-center justify-center text-2xl">
+                        <Heart className="w-6 h-6 text-court-gold fill-court-gold" />
+                        <div className="w-12 h-12 bg-court-cream rounded-full flex items-center justify-center text-2xl border border-court-tan/30">
                             🐱
                         </div>
                     </div>
-                    <p className="text-sm text-neutral-600 italic">
+                    <p className="text-sm text-court-brownLight italic">
                         {t('court.settleSuccess.quote')}
                     </p>
-                    <p className="text-xs text-neutral-400 mt-2">{t('court.settleSuccess.signature')}</p>
+                    <p className="text-xs text-court-tan mt-2">{t('court.settleSuccess.signature')}</p>
                 </motion.div>
 
                 {/* Redirect notice */}
@@ -100,7 +100,7 @@ const SettleSuccessAnimation = ({ partnerName }) => {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 1.5 }}
-                    className="text-neutral-400 text-sm mt-6"
+                    className="text-court-tan text-sm mt-6"
                 >
                     {t('court.settleSuccess.returning')}
                 </motion.p>

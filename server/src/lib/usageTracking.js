@@ -1,6 +1,6 @@
 const { getSupabase, isSupabaseConfigured } = require('./supabase');
 
-const VALID_TYPES = new Set(['lightning', 'mittens', 'whiskers', 'plan']);
+const VALID_TYPES = new Set(['classic', 'swift', 'wise', 'plan']);
 
 function getCurrentPeriodStartUTC() {
     const now = new Date();
@@ -44,16 +44,16 @@ async function incrementUsage({ userId, type, periodStart = null }) {
     const base = record || {
         user_id: userId,
         period_start: effectivePeriodStart,
-        lightning_count: 0,
-        mittens_count: 0,
-        whiskers_count: 0,
+        classic_count: 0,
+        swift_count: 0,
+        wise_count: 0,
         plan_count: 0,
     };
 
     const columnMap = {
-        lightning: 'lightning_count',
-        mittens: 'mittens_count',
-        whiskers: 'whiskers_count',
+        classic: 'classic_count',
+        swift: 'swift_count',
+        wise: 'wise_count',
         plan: 'plan_count',
     };
 

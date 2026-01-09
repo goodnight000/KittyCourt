@@ -22,7 +22,7 @@ const WaitingForEvidence = ({ session, partnerName, myName }) => {
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="glass-card overflow-hidden"
+                className="glass-card overflow-hidden border border-court-gold/15 bg-white/85"
             >
                 {/* Header */}
                 <div className="bg-gradient-to-r from-court-gold via-court-goldDark to-court-brown p-4 text-center">
@@ -68,7 +68,7 @@ const WaitingForEvidence = ({ session, partnerName, myName }) => {
                     </p>
 
                     {/* Submission Status Panel */}
-                    <div className="bg-gradient-to-br from-court-cream to-court-tan/30 rounded-2xl p-4 mb-6">
+                    <div className="bg-gradient-to-br from-court-ivory/90 to-court-tan/30 rounded-2xl p-4 mb-6 border border-court-tan/30">
                         <div className="flex items-center justify-center gap-2 mb-3">
                             <Users className="w-4 h-4 text-court-gold" />
                             <span className="text-sm font-bold text-court-brown">{t('court.waitingEvidence.panelTitle')}</span>

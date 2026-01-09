@@ -1,7 +1,7 @@
 const { getSupabase, isSupabaseConfigured } = require('./supabase');
 const { getCurrentPeriodStartUTC } = require('./usageTracking');
 
-const VALID_TYPES = new Set(['lightning', 'mittens', 'whiskers', 'plan']);
+const VALID_TYPES = new Set(['classic', 'swift', 'wise', 'plan']);
 
 async function getUserSubscriptionTier(userId) {
     if (!isSupabaseConfigured()) {
@@ -29,17 +29,17 @@ async function getUserSubscriptionTier(userId) {
 function getLimits(tier) {
     if (tier === 'pause_gold') {
         return {
-            lightning: Infinity,
-            mittens: 100,
-            whiskers: 10,
+            classic: Infinity,
+            swift: 100,
+            wise: 10,
             plan: Infinity,
         };
     }
 
     return {
-        lightning: 3,
-        mittens: 1,
-        whiskers: 0,
+        classic: 3,
+        swift: 1,
+        wise: 0,
         plan: 0,
     };
 }
@@ -48,9 +48,9 @@ async function getUsageRecord(userId, periodStart) {
     const effectivePeriodStart = periodStart || getCurrentPeriodStartUTC();
     const emptyRecord = {
         period_start: effectivePeriodStart,
-        lightning_count: 0,
-        mittens_count: 0,
-        whiskers_count: 0,
+        classic_count: 0,
+        swift_count: 0,
+        wise_count: 0,
         plan_count: 0,
     };
 
@@ -69,9 +69,9 @@ async function getUsageRecord(userId, periodStart) {
 
         if (!error && data && data.length > 0) {
             return {
-                lightning_count: data[0].lightning_count || 0,
-                mittens_count: data[0].mittens_count || 0,
-                whiskers_count: data[0].whiskers_count || 0,
+                classic_count: data[0].classic_count || 0,
+                swift_count: data[0].swift_count || 0,
+                wise_count: data[0].wise_count || 0,
                 plan_count: data[0].plan_count || 0,
                 period_start: effectivePeriodStart,
             };
@@ -96,7 +96,7 @@ async function getUsageRecord(userId, periodStart) {
 
         const { data: rows, error: coupleError } = await supabase
             .from('usage_tracking')
-            .select('lightning_count, mittens_count, whiskers_count, plan_count')
+            .select('classic_count, swift_count, wise_count, plan_count')
             .eq('couple_id', coupleId)
             .eq('period_start', effectivePeriodStart);
 
@@ -104,15 +104,15 @@ async function getUsageRecord(userId, periodStart) {
 
         return (rows || []).reduce((acc, row) => ({
             period_start: effectivePeriodStart,
-            lightning_count: acc.lightning_count + (row.lightning_count || 0),
-            mittens_count: acc.mittens_count + (row.mittens_count || 0),
-            whiskers_count: acc.whiskers_count + (row.whiskers_count || 0),
+            classic_count: acc.classic_count + (row.classic_count || 0),
+            swift_count: acc.swift_count + (row.swift_count || 0),
+            wise_count: acc.wise_count + (row.wise_count || 0),
             plan_count: acc.plan_count + (row.plan_count || 0),
         }), {
             period_start: effectivePeriodStart,
-            lightning_count: 0,
-            mittens_count: 0,
-            whiskers_count: 0,
+            classic_count: 0,
+            swift_count: 0,
+            wise_count: 0,
             plan_count: 0,
         });
     } catch (error) {
@@ -134,9 +134,9 @@ async function canUseFeature({ userId, type }) {
 
     const limits = getLimits(tier);
     const columnMap = {
-        lightning: 'lightning_count',
-        mittens: 'mittens_count',
-        whiskers: 'whiskers_count',
+        classic: 'classic_count',
+        swift: 'swift_count',
+        wise: 'wise_count',
         plan: 'plan_count',
     };
 

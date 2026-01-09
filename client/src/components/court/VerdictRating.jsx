@@ -95,19 +95,20 @@ export default function VerdictRating({ onRate, onSkip }) {
                         className="relative z-10 w-full max-w-md"
                     >
                         {/* Glassmorphic Card */}
-                        <div className="relative overflow-hidden rounded-3xl">
-                            {/* Gradient background */}
-                            <div className="absolute inset-0 bg-gradient-to-br from-[#1c1c84] to-[#000035]" />
+                        <div className="relative overflow-hidden rounded-3xl border border-court-gold/20 shadow-soft-lg">
+                            {/* Gradient background - soft premium */}
+                            <div className="absolute inset-0 bg-gradient-to-br from-court-ivory via-white to-court-tan/60" />
 
-                            {/* Glass overlay */}
-                            <div className="absolute inset-0 bg-white/5 backdrop-blur-xl" />
+                            {/* Glass overlay - warm tint */}
+                            <div className="absolute inset-0 bg-white/60 backdrop-blur-xl" />
+                            <div className="absolute inset-x-8 top-0 h-0.5 bg-gradient-to-r from-transparent via-court-gold/60 to-transparent" />
 
                             {/* Content */}
                             <div className="relative p-8">
                                 {/* Close button */}
                                 <button
                                     onClick={handleSkip}
-                                    className="absolute top-4 right-4 p-2 text-white/40 hover:text-white/70 transition"
+                                    className="absolute top-4 right-4 p-2 text-court-brownLight hover:text-court-brown transition"
                                 >
                                     <X className="w-5 h-5" />
                                 </button>
@@ -121,16 +122,16 @@ export default function VerdictRating({ onRate, onSkip }) {
                                     >
                                         ⚖️
                                     </motion.div>
-                                    <h2 className="text-2xl font-bold text-white mb-1">
+                                    <h2 className="text-2xl font-bold text-court-brown mb-1">
                                         {t('court.rating.title')}
                                     </h2>
-                                    <p className="text-white/60 text-sm">
+                                    <p className="text-court-brownLight text-sm">
                                         {t('court.rating.subtitle')}
                                     </p>
                                 </div>
 
                                 {(localError || storeError) && (
-                                    <div className="mb-4 rounded-xl border border-red-300/20 bg-red-500/10 px-4 py-3 text-sm text-red-100">
+                                    <div className="mb-4 rounded-xl border border-rose-200/60 bg-rose-50 px-4 py-3 text-sm text-rose-700">
                                         {localError || storeError}
                                     </div>
                                 )}
@@ -149,8 +150,8 @@ export default function VerdictRating({ onRate, onSkip }) {
                                         >
                                             <Star
                                                 className={`w-10 h-10 transition-all duration-200 ${star <= displayRating
-                                                    ? 'fill-yellow-400 text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]'
-                                                    : 'text-white/30'
+                                                    ? 'fill-court-gold text-court-gold drop-shadow-[0_0_8px_rgba(212,175,55,0.5)]'
+                                                    : 'text-court-tan/70'
                                                     }`}
                                             />
                                             {star <= displayRating && (
@@ -175,7 +176,7 @@ export default function VerdictRating({ onRate, onSkip }) {
                                                 initial={{ opacity: 0, y: 5 }}
                                                 animate={{ opacity: 1, y: 0 }}
                                                 exit={{ opacity: 0, y: -5 }}
-                                                className="text-lg text-white/80"
+                                                className="text-lg text-court-brown"
                                             >
                                                 <span className="mr-2">{ratingInfo.emoji}</span>
                                                 {t(ratingInfo.textKey)}
@@ -188,7 +189,7 @@ export default function VerdictRating({ onRate, onSkip }) {
                                 <div className="flex gap-3">
                                     <button
                                         onClick={handleSkip}
-                                        className="flex-1 py-3 px-4 rounded-xl text-white/50 hover:text-white/70 hover:bg-white/5 transition font-medium"
+                                        className="court-btn-secondary flex-1"
                                     >
                                         {t('court.rating.skip')}
                                     </button>
@@ -197,9 +198,9 @@ export default function VerdictRating({ onRate, onSkip }) {
                                         disabled={selectedRating === 0 || isSubmitting}
                                         whileHover={{ scale: 1.02 }}
                                         whileTap={{ scale: 0.98 }}
-                                        className={`flex-1 py-3 px-4 rounded-xl font-semibold transition ${selectedRating > 0
-                                            ? 'bg-gradient-to-r from-yellow-500 to-amber-500 text-white shadow-lg shadow-yellow-500/25'
-                                            : 'bg-white/10 text-white/30 cursor-not-allowed'
+                                        className={`flex-1 transition ${selectedRating > 0
+                                            ? 'court-btn-primary'
+                                            : 'py-3 px-4 rounded-xl font-semibold bg-court-tan/40 text-court-brownLight border border-court-tan/40 cursor-not-allowed'
                                             }`}
                                     >
                                         {isSubmitting ? (
@@ -207,7 +208,7 @@ export default function VerdictRating({ onRate, onSkip }) {
                                                 <motion.div
                                                     animate={{ rotate: 360 }}
                                                     transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                                                    className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full"
+                                                    className="w-4 h-4 border-2 border-court-gold/40 border-t-court-gold rounded-full"
                                                 />
                                                 {t('court.rating.submitting')}
                                             </span>
@@ -218,7 +219,7 @@ export default function VerdictRating({ onRate, onSkip }) {
                                 </div>
 
                                 {/* Footer hint */}
-                                <p className="text-center text-white/30 text-xs mt-4">
+                                <p className="text-center text-court-brownLight text-xs mt-4">
                                     {t('court.rating.footer')}
                                 </p>
                             </div>

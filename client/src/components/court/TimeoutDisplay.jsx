@@ -5,12 +5,12 @@ import { useI18n } from '../../i18n';
 
 /**
  * Countdown Timer Display
- * 
+ *
  * Shows remaining time with visual urgency indicators.
  * Changes color based on urgency level:
- * - normal: amber/gold
- * - warning: orange (last 15 min)
- * - critical: red pulsing (last 5 min)
+ * - normal: court-gold (champagne warmth)
+ * - warning: amber (last 15 min)
+ * - critical: rose pulsing (last 5 min)
  */
 
 export default function TimeoutDisplay({
@@ -25,19 +25,19 @@ export default function TimeoutDisplay({
 
     const urgencyStyles = {
         normal: {
-            container: 'bg-amber-500/20 border-amber-500/30 text-amber-200',
+            container: 'bg-court-cream/80 border-court-gold/30 text-court-brown',
+            icon: 'text-court-gold',
+            time: 'text-court-goldDark'
+        },
+        warning: {
+            container: 'bg-amber-500/20 border-amber-500/40 text-amber-100',
             icon: 'text-amber-400',
             time: 'text-amber-100'
         },
-        warning: {
-            container: 'bg-orange-500/20 border-orange-500/30 text-orange-200',
-            icon: 'text-orange-400',
-            time: 'text-orange-100'
-        },
         critical: {
-            container: 'bg-red-500/20 border-red-500/30 text-red-200',
-            icon: 'text-red-400',
-            time: 'text-red-100'
+            container: 'bg-rose-500/20 border-rose-500/40 text-rose-100',
+            icon: 'text-rose-400',
+            time: 'text-rose-100'
         }
     };
 
@@ -65,7 +65,7 @@ export default function TimeoutDisplay({
             }}
             className={`
                 inline-flex items-center gap-2 px-3 py-1.5 rounded-full 
-                border backdrop-blur-sm
+                border backdrop-blur-sm shadow-soft
                 ${styles.container}
                 ${className}
             `}

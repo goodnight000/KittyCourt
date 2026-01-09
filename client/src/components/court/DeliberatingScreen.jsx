@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Scale, BookOpen, Heart, Feather, Sparkles, Gavel } from 'lucide-react';
+import { Scale, BookOpen, Heart, Feather, Star, Gavel } from 'lucide-react';
 import { useI18n } from '../../i18n';
 
 /**
@@ -33,8 +33,9 @@ const FALLBACK_QUOTES = [
     'Court Note: A fair ruling protects both hearts.',
 ];
 
-const DeliberatingScreen = ({ isLoading = true }) => {
+const DeliberatingScreen = ({ isLoading = true, judgeAvatar }) => {
     const { t } = useI18n();
+    const avatarSrc = judgeAvatar || '/assets/avatars/judge_whiskers.png';
     const [stepIndex, setStepIndex] = useState(0);
     const [quoteIndex, setQuoteIndex] = useState(0);
     const [pulse, setPulse] = useState(0);
@@ -76,7 +77,7 @@ const DeliberatingScreen = ({ isLoading = true }) => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[35] pointer-events-none bg-gradient-to-b from-court-cream/90 via-court-cream/70 to-court-tan/30 flex items-center justify-center p-4"
+            className="fixed inset-0 z-[35] pointer-events-none bg-gradient-to-b from-court-ivory/95 via-court-cream/80 to-court-tan/40 flex items-center justify-center p-4"
         >
             <div className="w-full max-w-md">
                 {/* Ambient animated background accents (inside overlay, no extra colors) */}
@@ -100,7 +101,7 @@ const DeliberatingScreen = ({ isLoading = true }) => {
                         className="absolute -bottom-10 -right-10 w-56 h-56 rounded-full bg-court-maroon/10 blur-2xl"
                     />
 
-                    <div className="glass-card p-6 relative overflow-hidden">
+                    <div className="glass-card p-6 relative overflow-hidden border border-court-gold/15 bg-white/85">
                         {/* Shimmer sweep */}
                         <motion.div
                             aria-hidden
@@ -126,7 +127,7 @@ const DeliberatingScreen = ({ isLoading = true }) => {
                                             transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
                                             className="text-court-gold"
                                         >
-                                            <Sparkles className="w-4 h-4" />
+                                        <Star className="w-4 h-4" />
                                         </motion.div>
                                     </div>
                                     <p className="text-sm text-court-brownLight">{t('court.deliberating.subtitle')}</p>
@@ -141,7 +142,7 @@ const DeliberatingScreen = ({ isLoading = true }) => {
                                     className="w-14 h-14 rounded-2xl overflow-hidden border border-court-gold/40 shadow-soft"
                                 >
                                     <img
-                                        src="/assets/avatars/judge_whiskers.png"
+                                        src={avatarSrc}
                                         alt={t('court.deliberating.judgeAlt')}
                                         className="w-full h-full object-cover"
                                     />

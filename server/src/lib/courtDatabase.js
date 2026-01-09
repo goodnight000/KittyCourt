@@ -94,12 +94,14 @@ async function checkpoint(session, action) {
         creator: {
             submitted: session.creator.evidenceSubmitted,
             evidence: session.creator.evidence || '',
-            feelings: session.creator.feelings || ''
+            feelings: session.creator.feelings || '',
+            needs: session.creator.needs || ''
         },
         partner: {
             submitted: session.partner.evidenceSubmitted,
             evidence: session.partner.evidence || '',
-            feelings: session.partner.feelings || ''
+            feelings: session.partner.feelings || '',
+            needs: session.partner.needs || ''
         }
     };
 
@@ -138,8 +140,10 @@ async function checkpoint(session, action) {
         evidence_submissions: evidence,
         user_a_evidence: session.creator.evidence || '',
         user_a_feelings: session.creator.feelings || '',
+        user_a_needs: session.creator.needs || '',
         user_b_evidence: session.partner.evidence || '',
         user_b_feelings: session.partner.feelings || '',
+        user_b_needs: session.partner.needs || '',
         settle_requests: settleRequests,
         verdict_acceptances: acceptances,
         verdict: session.verdict,
@@ -240,8 +244,10 @@ async function saveCaseFromSession(session) {
     const creatorIsUserA = userAId === creatorId;
     const aEvidence = creatorIsUserA ? session.creator?.evidence : session.partner?.evidence;
     const aFeelings = creatorIsUserA ? session.creator?.feelings : session.partner?.feelings;
+    const aNeeds = creatorIsUserA ? session.creator?.needs : session.partner?.needs;
     const bEvidence = creatorIsUserA ? session.partner?.evidence : session.creator?.evidence;
     const bFeelings = creatorIsUserA ? session.partner?.feelings : session.creator?.feelings;
+    const bNeeds = creatorIsUserA ? session.partner?.needs : session.creator?.needs;
 
     // Judge engine returns an envelope { status, judgeContent, _meta, ... }
     const verdictHistory = Array.isArray(session.verdictHistory) && session.verdictHistory.length > 0
@@ -289,8 +295,10 @@ async function saveCaseFromSession(session) {
             user_b_id: userBId,
             user_a_input: aEvidence || '',
             user_a_feelings: aFeelings || '',
+            user_a_needs: aNeeds || '',
             user_b_input: bEvidence || '',
             user_b_feelings: bFeelings || '',
+            user_b_needs: bNeeds || '',
             status: 'RESOLVED',
             case_language: session.caseLanguage || session.creatorLanguage || 'en',
             case_title: analysisMeta.caseTitle || analysisMeta.case_title || null,

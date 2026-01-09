@@ -545,16 +545,20 @@
       "patternDetected": "识别到 {pattern} 模式",
       "sections": {
         "summary": {
-          "title": "真实核心",
+          "title": "总结",
           "subtitle": "你们真正争执的是什么"
         },
         "purr": {
-          "title": "温柔肯定",
+          "title": "你们做对了什么",
           "subtitle": "你的感受是合理的"
         },
         "hiss": {
-          "title": "轻柔提醒",
+          "title": "成长空间",
           "subtitle": "需要调整的行为"
+        },
+        "sentence": {
+          "title": "修复练习",
+          "subtitle": "重建连接的路径"
         },
         "repair": {
           "title": "修复方案",
@@ -707,20 +711,23 @@
       }
     },
     "judges": {
-      "fast": {
-        "name": "闪电法官",
-        "subtitle": "快速聚焦",
-        "description": "需要速度时的简洁裁决。"
+      "classic": {
+        "name": "麻糬法官",
+        "subtitle": "温柔的思考者",
+        "description": "一位温暖、耐心的法官，会花时间理解双方。您日常争议的可靠伙伴。",
+        "tagline": "包含在您的计划中"
       },
-      "logical": {
-        "name": "米滕斯法官",
-        "subtitle": "理性平衡",
-        "description": "条理清晰、温和的指导。"
+      "swift": {
+        "name": "疾风法官",
+        "subtitle": "速度与智慧并存",
+        "description": "不要误以为快就是浅。疾风以创纪录的速度给出精准的裁决——无需等待，绝不妥协。",
+        "tagline": "快速且深刻"
       },
-      "best": {
+      "wise": {
         "name": "胡须法官",
-        "subtitle": "深度共情",
-        "description": "最细腻、最有温度的裁决。"
+        "subtitle": "睿智的贤者",
+        "description": "传奇的长老，对人心有近乎神秘的洞察力。胡须法官能看到他人看不到的。",
+        "tagline": "心理治疗级的智慧"
       }
     },
     "celebration": {
@@ -778,8 +785,9 @@
       "returning": "正在返回法庭..."
     },
     "summons": {
+      "officialBadge": "正式传唤",
       "title": "收到传唤",
-      "body": "发起了案件。要进入法庭吗？",
+      "body": "要进入法庭吗？",
       "cta": "进入法庭",
       "expiry": "传唤 24 小时内有效。"
     },
@@ -1029,38 +1037,56 @@
       }
     },
     "detail": {
+      "kicker": "案件回顾",
       "notFound": "未找到案件",
       "titleFallback": "未命名案件",
+      "loading": "正在打开案件档案...",
+      "caseFile": "案件档案",
+      "status": {
+        "resolved": "已解决",
+        "pending": "待处理"
+      },
+      "resolution": {
+        "label": "解决方案"
+      },
       "verdicts": {
         "one": "1 份裁决",
         "other": "{count} 份裁决"
       },
       "journey": {
-        "title": "审理流程",
+        "title": "审判历程",
         "subtitle": "案件流程概览",
         "evidence": "证据",
         "analysis": "分析",
-        "priming": "预热",
-        "jointMenu": "共菜单",
-        "resolution": "方案",
+        "priming": "准备",
+        "jointMenu": "共同菜单",
+        "resolution": "解决",
         "missing": "此案件创建于旧流程之前。"
       },
+      "judgedBy": "裁判",
       "partnerStatements": {
-        "title": "双方陈述",
+        "title": "双方视角",
+        "theirPerspective": "他们的观点",
         "partnerA": "伴侣 A",
         "partnerB": "伴侣 B",
-        "noInput": "暂无陈述"
+        "noInput": "未提供陈述",
+        "fact": "发生了什么",
+        "feelings": "感受如何",
+        "needs": "内在需求"
       },
       "analysis": {
         "title": "分析",
+        "emotionalInsights": "情绪洞察",
         "intensity": "强度",
         "notAssessed": "未评估",
-        "dynamic": "动态",
+        "dynamic": "互动模式",
         "rootConflict": "核心冲突",
         "partnerAVulnerable": "伴侣 A 脆弱情绪",
         "partnerBVulnerable": "伴侣 B 脆弱情绪",
         "partnerAPatterns": "伴侣 A 模式",
         "partnerBPatterns": "伴侣 B 模式",
+        "vulnerableEmotion": "脆弱情绪",
+        "patterns": "观察到的模式",
         "none": "无"
       },
       "priming": {
@@ -1069,6 +1095,8 @@
         "partnerB": "伴侣 B",
         "yourFeelings": "你的感受",
         "partnerPerspective": "对方视角",
+        "yourNeeds": "你的需求",
+        "partnerNeeds": "伴侣的需求",
         "reflectionQuestions": "反思问题",
         "questionsForPartner": "给伴侣的问题"
       },
@@ -1077,12 +1105,16 @@
         "summary": "摘要",
         "goodStuff": "好的部分",
         "growthEdges": "成长空间",
-        "resolutionPreview": "方案预览"
+        "resolutionPreview": "方案预览",
+        "needsBridge": "连接你们的需求"
       },
       "resolutions": {
         "title": "方案列表",
         "chosen": "已选",
-        "why": "原因：{reason}"
+        "why": "原因：{reason}",
+        "partnerPicks": "双方的选择",
+        "chose": "的选择",
+        "mergedResolution": "AI 合并方案"
       },
       "timeline": {
         "title": "补充时间线",
@@ -1091,8 +1123,9 @@
       },
       "verdict": {
         "title": "裁决",
+        "officialRuling": "正式裁决",
         "judgeName": "胡须法官",
-        "judgeTitle": "疗愈猫法官",
+        "judgeTitle": "猫咪事务首席法官",
         "originalLabel": "原始裁决",
         "addendumLabel": "补充 {number}",
         "addendumBy": "补充来自 {name}",
@@ -1169,7 +1202,10 @@
       "factsHint": "尽量客观描述。",
       "feelingsLabel": "你的感受",
       "feelingsPlaceholder": "表达你的感受...",
-      "feelingsHint": "使用“我”来表达。",
+      "feelingsHint": "使用\u201c我\u201d来表达。",
+      "needsLabel": "你需要什么？",
+      "needsPlaceholder": "你有什么需求没有被满足？你需要伴侣做什么才能让你感到被倾听、安全或被爱？",
+      "needsHint": "专注于你的需求，而不是你的伴侣应该怎么做",
       "submit": "提交证据",
       "footer": "对方提交后将看到你的内容。"
     },
@@ -1712,8 +1748,8 @@
       "freeSubtitle": "基础功能",
       "goldPlan": "Gold 会员",
       "goldSubtitle": "更多法官与规划",
-      "judgeLightning": "闪电法官",
-      "judgeMittens": "米滕斯法官",
+      "judgeMochi": "麻糬法官",
+      "judgeDash": "冲刺法官",
       "judgeWhiskers": "胡须法官",
       "goldOnly": "仅限 Gold",
       "helpMePlan": "帮我规划",

@@ -24,12 +24,15 @@ export const supabase = createClient(
 /**
  * Generate a unique 12-character partner code
  * Uses uppercase, lowercase letters and numbers
+ * Uses crypto.getRandomValues() for cryptographically secure random generation
  */
 export const generatePartnerCode = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    const array = new Uint32Array(12);
+    crypto.getRandomValues(array);
     let code = '';
     for (let i = 0; i < 12; i++) {
-        code += chars.charAt(Math.floor(Math.random() * chars.length));
+        code += chars.charAt(array[i] % chars.length);
     }
     return code;
 };

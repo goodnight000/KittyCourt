@@ -11,11 +11,15 @@ const { TIMEOUT } = require('./timeoutHandlers');
 
 /**
  * Map judge type to usage tracking type
+ * Judge types: classic (Mochi), swift (Dash), wise (Whiskers)
  */
 function mapJudgeTypeToUsage(judgeType) {
-    if (judgeType === 'fast') return 'lightning';
-    if (judgeType === 'best') return 'whiskers';
-    return 'mittens';
+    // New judge types map directly to usage types
+    if (['classic', 'swift', 'wise'].includes(judgeType)) {
+        return judgeType;
+    }
+    // Default to swift (fastest, good quality)
+    return 'swift';
 }
 
 /**
@@ -108,7 +112,7 @@ async function runVerdictPipeline(session, deps) {
 
         console.log(`[Court] V2.0 Phase 1: Analyst + Repair for session ${session.id}`);
         const phase1Result = await judgeEngine.deliberatePhase1(caseData, {
-            judgeType: session.judgeType || 'logical'
+            judgeType: session.judgeType || 'swift'
         });
 
         // Store analysis and resolutions
@@ -120,7 +124,7 @@ async function runVerdictPipeline(session, deps) {
         // V2.0 Pipeline: Phase 2 - Priming + Joint Menu
         console.log(`[Court] V2.0 Phase 2: Priming + Joint Menu for session ${session.id}`);
         const phase2Result = await judgeEngine.deliberatePhase2(phase1Result, {
-            judgeType: session.judgeType || 'logical'
+            judgeType: session.judgeType || 'swift'
         });
 
         // Store priming and joint content

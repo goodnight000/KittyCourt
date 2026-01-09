@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Users, Sparkles, Heart, Leaf, ArrowRight, Clock } from 'lucide-react';
+import { Users, Star, Heart, Leaf, ArrowRight, Clock } from 'lucide-react';
 import { useI18n } from '../../i18n';
 
 const JointMenuPage = ({ jointMenu, myName, partnerName, isCreator, onReady, isSubmitting }) => {
@@ -28,9 +28,21 @@ const JointMenuPage = ({ jointMenu, myName, partnerName, isCreator, onReady, isS
     const partnerKey = isCreator ? 'userB' : 'userA';
 
     return (
-        <div className="max-w-2xl mx-auto space-y-5 pb-6">
+        <div className="max-w-2xl mx-auto space-y-5 pb-6 relative">
+            <motion.div
+                aria-hidden
+                animate={{ opacity: [0.25, 0.45, 0.25], y: [0, -6, 0] }}
+                transition={{ duration: 5.5, repeat: Infinity, ease: 'easeInOut' }}
+                className="absolute -top-12 -right-8 w-32 h-32 rounded-full bg-court-gold/15 blur-2xl pointer-events-none"
+            />
+            <motion.div
+                aria-hidden
+                animate={{ opacity: [0.2, 0.4, 0.2], scale: [1, 1.05, 1] }}
+                transition={{ duration: 6.2, repeat: Infinity, ease: 'easeInOut' }}
+                className="absolute top-1/3 -left-10 w-36 h-36 rounded-full bg-mint-200/20 blur-2xl pointer-events-none"
+            />
             <div className="sticky top-3 z-10">
-                <div className="glass-card p-3 bg-white/70 border border-court-tan/30">
+                <div className="glass-card p-3 bg-white/80 border border-court-gold/15">
                     <div className="text-[12px] uppercase tracking-[0.2em] text-court-brownLight">
                         {t('court.journey.title')}
                     </div>
@@ -56,7 +68,7 @@ const JointMenuPage = ({ jointMenu, myName, partnerName, isCreator, onReady, isS
             <motion.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="glass-card p-5 bg-gradient-to-br from-court-cream to-court-tan/30 relative overflow-hidden"
+                className="glass-card p-5 bg-gradient-to-br from-court-ivory via-white/95 to-court-tan/40 relative overflow-hidden border border-court-gold/15"
             >
                 <div className="absolute -top-12 -right-8 w-32 h-32 rounded-full bg-court-gold/10 blur-2xl" />
                 <div className="absolute -bottom-12 -left-8 w-40 h-40 rounded-full bg-court-tan/20 blur-2xl" />
@@ -80,7 +92,7 @@ const JointMenuPage = ({ jointMenu, myName, partnerName, isCreator, onReady, isS
                                 {t('court.jointMenu.header.badges.readTime')}
                             </span>
                             <span className="inline-flex items-center gap-1 rounded-full border border-court-tan/40 bg-white/60 px-2 py-1">
-                                <Sparkles className="w-3 h-3 text-court-gold" />
+                                <Star className="w-3 h-3 text-court-gold" />
                                 {t('court.jointMenu.header.badges.shared')}
                             </span>
                         </div>
@@ -92,19 +104,19 @@ const JointMenuPage = ({ jointMenu, myName, partnerName, isCreator, onReady, isS
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className="glass-card p-4 space-y-3 border-l-4 border-court-gold/40 relative overflow-hidden"
+                className="glass-card p-4 space-y-3 border-l-4 border-court-gold/50 relative overflow-hidden bg-gradient-to-br from-court-cream/70 via-white/85 to-court-tan/30"
             >
                 <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-court-gold/60 to-transparent" />
                 <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-xl bg-court-gold/20 flex items-center justify-center">
-                        <Sparkles className="w-4 h-4 text-court-gold" />
+                        <Star className="w-4 h-4 text-court-gold" />
                     </div>
                     <div>
                         <h3 className="text-sm font-bold text-court-brown">{t('court.jointMenu.realIssue.title')}</h3>
                         <p className="text-[10px] text-court-brownLight">{t('court.jointMenu.realIssue.subtitle')}</p>
                     </div>
                 </div>
-                <div className="rounded-2xl border border-court-tan/30 bg-white/70 p-3 text-sm text-court-brown leading-relaxed">
+                <div className="rounded-2xl border border-court-tan/30 bg-white/80 p-3 text-sm text-court-brown leading-relaxed">
                     {jointMenu.theSummary}
                 </div>
             </motion.div>
@@ -113,7 +125,7 @@ const JointMenuPage = ({ jointMenu, myName, partnerName, isCreator, onReady, isS
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.15 }}
-                className="glass-card p-4 space-y-4 relative overflow-hidden"
+                className="glass-card p-4 space-y-4 relative overflow-hidden bg-gradient-to-br from-green-50/70 via-white/85 to-emerald-50/70 border border-green-100/70"
             >
                 <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-green-400/70 to-transparent" />
                 <div className="flex items-center gap-2">
@@ -141,7 +153,7 @@ const JointMenuPage = ({ jointMenu, myName, partnerName, isCreator, onReady, isS
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="glass-card p-4 space-y-4 relative overflow-hidden"
+                className="glass-card p-4 space-y-4 relative overflow-hidden bg-gradient-to-br from-sky-50/70 via-white/85 to-court-cream/80 border border-sky-100/60"
             >
                 <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-court-tan/70 to-transparent" />
                 <div className="flex items-center gap-2">
@@ -169,12 +181,12 @@ const JointMenuPage = ({ jointMenu, myName, partnerName, isCreator, onReady, isS
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.25 }}
-                className="glass-card p-4 space-y-3 border-l-4 border-court-gold/40 relative overflow-hidden"
+                className="glass-card p-4 space-y-3 border-l-4 border-court-gold/50 relative overflow-hidden bg-gradient-to-br from-amber-50/70 via-white/85 to-court-cream/80 border border-amber-100/60"
             >
                 <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-court-gold/60 to-transparent" />
                 <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-xl bg-court-gold/10 flex items-center justify-center border border-court-gold/20">
-                        <Sparkles className="w-4 h-4 text-court-gold" />
+                        <Star className="w-4 h-4 text-court-gold" />
                     </div>
                     <div>
                         <h3 className="text-sm font-bold text-court-brown">{t('court.jointMenu.resolutionPreview.title')}</h3>
@@ -190,7 +202,7 @@ const JointMenuPage = ({ jointMenu, myName, partnerName, isCreator, onReady, isS
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
-                className="glass-card p-4 text-center bg-gradient-to-br from-court-cream to-court-tan/20 border border-court-tan/30 relative overflow-hidden"
+                className="glass-card p-4 text-center bg-gradient-to-br from-court-ivory via-white/95 to-court-tan/30 border border-court-tan/30 relative overflow-hidden"
             >
                 <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-court-tan/60 to-transparent" />
                 <div className="text-[10px] uppercase font-bold text-court-brownLight tracking-wide mb-2">
@@ -204,9 +216,7 @@ const JointMenuPage = ({ jointMenu, myName, partnerName, isCreator, onReady, isS
                 whileTap={{ scale: 0.98 }}
                 onClick={onReady}
                 disabled={isSubmitting}
-                className="w-full py-3 px-4 rounded-xl text-white font-extrabold flex items-center justify-center gap-2
-                    disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
-                style={{ background: 'linear-gradient(135deg, #1c1c84 0%, #000035 100%)' }}
+                className="court-btn-primary w-full disabled:opacity-60 disabled:cursor-not-allowed"
             >
                 {isSubmitting ? (
                     <motion.div

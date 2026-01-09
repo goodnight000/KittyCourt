@@ -309,17 +309,17 @@ const ProfilesPage = () => {
                                 <div className="space-y-2 mb-4">
                                     <div className="flex items-center justify-between text-sm">
                                         <span className="flex items-center gap-2 text-neutral-600">
-                                            <Zap className="w-4 h-4 text-amber-600" />
-                                            {t('profilePage.subscription.judgeLightning')}
+                                            <Scale className="w-4 h-4 text-amber-600" />
+                                            {t('profilePage.subscription.judgeMochi')}
                                         </span>
-                                        <span className="font-medium text-neutral-700">{getUsageDisplay('fast', t)}</span>
+                                        <span className="font-medium text-neutral-700">{getUsageDisplay('classic', t)}</span>
                                     </div>
                                     <div className="flex items-center justify-between text-sm">
                                         <span className="flex items-center gap-2 text-neutral-600">
-                                            <Scale className="w-4 h-4 text-amber-600" />
-                                            {t('profilePage.subscription.judgeMittens')}
+                                            <Zap className="w-4 h-4 text-amber-600" />
+                                            {t('profilePage.subscription.judgeDash')}
                                         </span>
-                                        <span className="font-medium text-neutral-700">{getUsageDisplay('logical', t)}</span>
+                                        <span className="font-medium text-neutral-700">{getUsageDisplay('swift', t)}</span>
                                     </div>
                                     <div className="flex items-center justify-between text-sm">
                                         <span className="flex items-center gap-2 text-neutral-600">
@@ -327,7 +327,7 @@ const ProfilesPage = () => {
                                             {t('profilePage.subscription.judgeWhiskers')}
                                         </span>
                                         <span className={`font-medium ${isGold ? 'text-neutral-700' : 'text-neutral-400'}`}>
-                                            {isGold ? getUsageDisplay('best', t) : t('profilePage.subscription.goldOnly')}
+                                            {isGold ? getUsageDisplay('wise', t) : t('profilePage.subscription.goldOnly')}
                                         </span>
                                     </div>
                                     <div className="flex items-center justify-between text-sm">

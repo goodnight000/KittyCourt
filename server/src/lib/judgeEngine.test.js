@@ -21,13 +21,13 @@ const validInput = {
             cameraFacts: 'I came home and the dishes were in the sink.',
             selectedPrimaryEmotion: 'Overwhelmed',
             theStoryIamTellingMyself: 'That I am not a priority.',
-            coreNeed: 'Support & Partnership',
+            unmetNeeds: 'I need to feel supported and like we are a team.',
         },
         userB: {
             cameraFacts: 'Alex came home and immediately commented on the dishes.',
             selectedPrimaryEmotion: 'Defensive',
             theStoryIamTellingMyself: 'That I am being attacked.',
-            coreNeed: 'Appreciation & Peace',
+            unmetNeeds: 'I need appreciation for what I do and some peace when I come home.',
         },
     },
 };
@@ -46,6 +46,16 @@ const validAnalystRepair = {
         userA_VulnerableEmotion: 'Overwhelmed',
         userB_VulnerableEmotion: 'Defensive',
         rootConflictTheme: 'Autonomy vs. Connection conflicts.',
+        needsAnalysis: {
+            userA_PrimaryNeed: 'connection',
+            userA_SecondaryNeeds: ['significance', 'security'],
+            userA_StatedNeedMapping: 'Their need for "support and teamwork" maps to connection',
+            userB_PrimaryNeed: 'autonomy',
+            userB_SecondaryNeeds: ['significance'],
+            userB_StatedNeedMapping: 'Their need for "appreciation and peace" maps to autonomy and significance',
+            needCollision: 'Alex needs connection and teamwork, while Sam needs space and appreciation. Alex interprets dishes in sink as lack of care; Sam interprets immediate comment as criticism.',
+            bridgingPath: 'Both need to feel valued - Alex through shared effort, Sam through acknowledgment of contributions',
+        },
     },
     caseMetadata: {
         caseTitle: 'Dish duty clash',
@@ -58,6 +68,11 @@ const validAnalystRepair = {
             repairAttemptIds: ['verbal_1'],
             combinedDescription: 'Set a timer and reset the conversation.',
             rationale: 'Creates safety and clarity.',
+            needsAddressed: {
+                userA: ['connection', 'security'],
+                userB: ['autonomy', 'significance'],
+            },
+            howItMeetsNeeds: 'Gives Alex the connection they crave through intentional conversation, while giving Sam time to decompress and feel heard.',
             estimatedDuration: '10 minutes',
         },
         {
@@ -66,6 +81,11 @@ const validAnalystRepair = {
             repairAttemptIds: ['practical_0'],
             combinedDescription: 'Agree on a simple chores plan.',
             rationale: 'Reduces ambiguity and resentment.',
+            needsAddressed: {
+                userA: ['connection', 'significance'],
+                userB: ['autonomy', 'significance'],
+            },
+            howItMeetsNeeds: 'Creates teamwork Alex needs while giving Sam clear expectations and appreciation for their contributions.',
             estimatedDuration: '15 minutes',
         },
         {
@@ -74,6 +94,11 @@ const validAnalystRepair = {
             repairAttemptIds: ['emotional_2'],
             combinedDescription: 'Start with validation and one request.',
             rationale: 'Turns conflict into collaboration.',
+            needsAddressed: {
+                userA: ['connection'],
+                userB: ['significance', 'autonomy'],
+            },
+            howItMeetsNeeds: 'Validates Sam feeling attacked while giving Alex the opportunity to express needs without criticism.',
             estimatedDuration: '12 minutes',
         },
     ],

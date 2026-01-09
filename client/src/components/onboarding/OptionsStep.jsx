@@ -57,9 +57,9 @@ const OptionsStep = ({
                             }`}
                         >
                             <div className="flex items-start gap-3">
-                                <span className="text-2xl">{option.emoji}</span>
-                                <div className="flex-1">
-                                    <p className={`font-bold ${selected ? 'text-court-brown' : 'text-neutral-700'}`}>
+                                <span className="text-2xl flex-shrink-0">{option.emoji}</span>
+                                <div className="flex-1 min-w-0">
+                                    <p className={`font-bold break-words ${selected ? 'text-court-brown' : 'text-neutral-700'}`}>
                                         {optionLabel}
                                     </p>
                                     {optionDesc && (

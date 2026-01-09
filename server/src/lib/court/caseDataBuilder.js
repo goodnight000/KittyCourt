@@ -28,11 +28,13 @@ function buildCaseData(session) {
         submissions: {
             userA: {
                 cameraFacts: session.creator.evidence,
-                theStoryIamTellingMyself: session.creator.feelings
+                theStoryIamTellingMyself: session.creator.feelings,
+                unmetNeeds: session.creator.needs || ''
             },
             userB: {
                 cameraFacts: session.partner.evidence,
-                theStoryIamTellingMyself: session.partner.feelings
+                theStoryIamTellingMyself: session.partner.feelings,
+                unmetNeeds: session.partner.needs || ''
             }
         },
         addendumHistory: session.addendumHistory || [],

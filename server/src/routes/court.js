@@ -18,14 +18,31 @@ const { asyncHandler } = require('../middleware/asyncHandler');
 const { processSecureInput, securityConfig } = require('../lib/security');
 
 const requireUserId = async (req, fallbackUserId) => {
+    // Always require proper authentication when Supabase is configured
     if (isSupabaseConfigured()) {
         return requireAuthUserId(req);
     }
+
+    // In production, require Supabase configuration
     if (process.env.NODE_ENV === 'production') {
         const error = new Error('Supabase is not configured');
         error.statusCode = 503;
         throw error;
     }
+
+    // Development mode: still require authentication if possible
+    // Only allow fallback for local testing without Supabase
+    if (process.env.REQUIRE_AUTH_IN_DEV === 'true') {
+        const error = new Error('Authentication required');
+        error.statusCode = 401;
+        throw error;
+    }
+
+    // Log warning when using development fallback
+    if (fallbackUserId) {
+        console.warn('[Security] Using development auth bypass - NOT FOR PRODUCTION');
+    }
+
     if (!fallbackUserId) {
         const error = new Error('userId required');
         error.statusCode = 400;
@@ -138,7 +155,7 @@ router.post('/cancel', async (req, res) => {
  */
 router.post('/evidence', async (req, res) => {
     try {
-        const { userId: fallbackUserId, evidence, feelings } = req.body;
+        const { userId: fallbackUserId, evidence, feelings, needs } = req.body;
         const userId = await requireUserId(req, fallbackUserId);
 
         // Security: Validate and sanitize evidence input
@@ -163,11 +180,23 @@ router.post('/evidence', async (req, res) => {
             return sendError(res, 400, 'SECURITY_BLOCK', 'Your input contains content that cannot be processed. Please rephrase using natural language.');
         }
 
+        // Security: Validate and sanitize needs input
+        const needsCheck = processSecureInput(needs, {
+            userId,
+            fieldName: 'unmetNeeds',
+            maxLength: securityConfig.fieldLimits.theStoryIamTellingMyself, // Use same limit as feelings
+            endpoint: 'court',
+        });
+        if (!needsCheck.safe) {
+            return sendError(res, 400, 'SECURITY_BLOCK', 'Your input contains content that cannot be processed. Please rephrase using natural language.');
+        }
+
         const safeEvidence = evidenceCheck.input || '';
         const safeFeelings = feelingsCheck.input || '';
+        const safeNeeds = needsCheck.input || '';
         if (!safeEvidence) return sendError(res, 400, 'EVIDENCE_REQUIRED', 'evidence is required');
 
-        await courtSessionManager.submitEvidence(userId, safeEvidence, safeFeelings);
+        await courtSessionManager.submitEvidence(userId, safeEvidence, safeFeelings, safeNeeds);
         const state = courtSessionManager.getStateForUser(userId);
         res.json(state);
     } catch (error) {

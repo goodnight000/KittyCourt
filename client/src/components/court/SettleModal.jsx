@@ -13,7 +13,7 @@ const SettleModal = ({ onConfirm, onCancel, partnerName, partnerWantsToSettle })
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4"
             onClick={onCancel}
         >
             <motion.div
@@ -21,8 +21,9 @@ const SettleModal = ({ onConfirm, onCancel, partnerName, partnerWantsToSettle })
                 animate={{ scale: 1, opacity: 1, y: 0 }}
                 exit={{ scale: 0.9, opacity: 0, y: 20 }}
                 onClick={(e) => e.stopPropagation()}
-                className="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl text-center"
+                className="relative glass-card bg-gradient-to-br from-court-ivory via-white/95 to-court-tan/30 border border-court-gold/20 rounded-3xl w-full max-w-sm p-6 shadow-2xl text-center"
             >
+                <div className="absolute inset-x-8 top-0 h-0.5 bg-gradient-to-r from-transparent via-court-gold/60 to-transparent" />
                 {/* Icon */}
                 <motion.div
                     animate={{
@@ -30,38 +31,38 @@ const SettleModal = ({ onConfirm, onCancel, partnerName, partnerWantsToSettle })
                         rotate: [0, 5, -5, 0]
                     }}
                     transition={{ duration: 2, repeat: Infinity }}
-                    className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-pink-100 to-rose-100 rounded-3xl flex items-center justify-center"
+                    className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-court-gold/20 to-court-tan/40 rounded-3xl flex items-center justify-center border border-court-gold/20"
                 >
-                    <Handshake className="w-10 h-10 text-pink-500" />
+                    <Handshake className="w-10 h-10 text-court-gold" />
                 </motion.div>
 
                 {/* Title */}
-                <h2 className="text-xl font-bold text-neutral-800 mb-2">
+                <h2 className="text-xl font-bold text-court-brown mb-2">
                     {partnerWantsToSettle ? t('court.settleModal.title.accept') : t('court.settleModal.title.request')}
                 </h2>
 
                 {/* Description */}
-                <p className="text-neutral-500 text-sm mb-6">
+                <p className="text-court-brownLight text-sm mb-6">
                     {partnerWantsToSettle ? (
                         <>
-                            <span className="font-bold text-pink-500">{partnerName}</span>{' '}
+                            <span className="font-bold text-court-gold">{partnerName}</span>{' '}
                             {t('court.settleModal.body.accept')}
                         </>
                     ) : (
                         <>
                             {t('court.settleModal.body.requestIntro')}{' '}
-                            <span className="font-bold text-pink-500">{partnerName}</span>{' '}
+                            <span className="font-bold text-court-gold">{partnerName}</span>{' '}
                             {t('court.settleModal.body.requestOutro')}
                         </>
                     )}
                 </p>
 
                 {/* Love Quote */}
-                <div className="bg-gradient-to-r from-pink-50 to-rose-50 rounded-2xl p-4 mb-6">
-                    <p className="text-sm text-pink-700 italic">
+                <div className="bg-gradient-to-r from-court-cream/70 to-court-tan/40 rounded-2xl p-4 mb-6 border border-court-tan/30">
+                    <p className="text-sm text-court-brown italic">
                         {t('court.settleModal.quote')}
                     </p>
-                    <p className="text-xs text-pink-400 mt-1">{t('court.settleModal.signature')}</p>
+                    <p className="text-xs text-court-brownLight mt-1">{t('court.settleModal.signature')}</p>
                 </div>
 
                 {/* Buttons */}
@@ -69,14 +70,14 @@ const SettleModal = ({ onConfirm, onCancel, partnerName, partnerWantsToSettle })
                     <motion.button
                         whileTap={{ scale: 0.97 }}
                         onClick={onCancel}
-                        className="flex-1 py-3 px-4 bg-neutral-100 text-neutral-600 rounded-2xl font-medium text-sm"
+                        className="court-btn-secondary flex-1"
                     >
                         {t('court.settleModal.keep')}
                     </motion.button>
                     <motion.button
                         whileTap={{ scale: 0.97 }}
                         onClick={onConfirm}
-                        className="flex-1 py-3 px-4 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-2xl font-bold text-sm shadow-lg flex items-center justify-center gap-2"
+                        className="court-btn-primary flex-1 flex items-center justify-center gap-2"
                     >
                         <Heart className="w-4 h-4" />
                         {partnerWantsToSettle ? t('court.settleModal.accept') : t('court.settleModal.request')}
