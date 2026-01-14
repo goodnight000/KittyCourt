@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowLeft, ImagePlus, Trash2, MessageCircle, Heart, X } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import useAuthStore from '../store/useAuthStore'
+import usePartnerStore from '../store/usePartnerStore'
 import useMemoryStore from '../store/useMemoryStore'
 import MemoryCard from '../components/MemoryCard'
 import { useI18n } from '../i18n'
@@ -58,7 +59,8 @@ const MemoriesPage = () => {
   const navigate = useNavigate()
   const { t, language } = useI18n()
   const handleBack = () => navigate('/profile', { state: { tab: 'us' } })
-  const { hasPartner, user } = useAuthStore()
+  const { user } = useAuthStore()
+  const { hasPartner } = usePartnerStore()
   const {
     memories,
     deletedMemories,

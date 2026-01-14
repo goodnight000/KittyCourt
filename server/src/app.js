@@ -44,6 +44,9 @@ const insightsRoutes = require('./routes/insights');
 const feedbackRoutes = require('./routes/feedback');
 const notificationsRoutes = require('./routes/notifications');
 const statsRoutes = require('./routes/stats');
+const accountRoutes = require('./routes/account');
+const profileRoutes = require('./routes/profile');
+const exportsRoutes = require('./routes/exports');
 
 // Court architecture
 const courtRoutes = require('./routes/court');
@@ -107,6 +110,11 @@ if (isProd) {
 }
 
 app.use(corsMiddleware());
+
+// Raw body parsing for webhook HMAC verification (must be BEFORE express.json())
+// This ensures req.body is a Buffer for signature verification
+app.use('/api/webhooks/revenuecat', express.raw({ type: 'application/json' }));
+
 app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || '256kb' }));
 app.use(express.urlencoded({ extended: false, limit: process.env.JSON_BODY_LIMIT || '256kb' }));
 const safeErrorMessage = (error) => (isProd ? 'Internal server error' : (error?.message || String(error)));
@@ -164,6 +172,15 @@ app.use('/api/notifications', notificationsRoutes);
 
 // Stats Routes
 app.use('/api/stats', statsRoutes);
+
+// Profile Routes
+app.use('/api/profile', profileRoutes);
+
+// Data Export Routes
+app.use('/api/exports', exportsRoutes);
+
+// Account Routes (account deletion, etc.)
+app.use('/api/account', accountRoutes);
 
 // Root endpoint - for easy verification
 app.get('/', (req, res) => {

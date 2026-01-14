@@ -18,16 +18,9 @@ describe('useAuthStore - Timeout Cleanup', () => {
     expect(() => cleanup()).not.toThrow();
   });
 
-  it('should have cleanupRealtimeSubscriptions method', async () => {
+  it('should not throw when cleanup is called', async () => {
     const { default: useAuthStore } = await import('./useAuthStore');
-
-    const cleanupRealtime = useAuthStore.getState().cleanupRealtimeSubscriptions;
-
-    // Verify cleanup method exists
-    expect(cleanupRealtime).toBeDefined();
-    expect(typeof cleanupRealtime).toBe('function');
-
-    // Should not throw when called
-    expect(() => cleanupRealtime()).not.toThrow();
+    const cleanup = useAuthStore.getState().cleanup;
+    expect(() => cleanup()).not.toThrow();
   });
 });

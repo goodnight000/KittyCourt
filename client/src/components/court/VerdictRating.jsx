@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Star, X } from 'lucide-react';
-import useCourtStore from '../../store/courtStore';
+import useCourtStore from '../../store/useCourtStore';
 import { useI18n } from '../../i18n';
 
 /**

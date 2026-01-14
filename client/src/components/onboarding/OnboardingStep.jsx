@@ -1,6 +1,5 @@
 import React from 'react';
 import { motion as Motion } from 'framer-motion';
-import PropTypes from 'prop-types';
 import { useI18n } from '../../i18n';
 
 const OnboardingStep = ({
@@ -45,19 +44,6 @@ const OnboardingStep = ({
             </div>
         </div>
     );
-};
-
-OnboardingStep.propTypes = {
-    stepData: PropTypes.shape({
-        id: PropTypes.string.isRequired,
-        titleKey: PropTypes.string.isRequired,
-        subtitleKey: PropTypes.string.isRequired,
-        icon: PropTypes.string,
-        field: PropTypes.string,
-    }).isRequired,
-    stepBadgeLabel: PropTypes.string.isRequired,
-    showConnectChoice: PropTypes.bool,
-    children: PropTypes.node.isRequired,
 };
 
 export default OnboardingStep;

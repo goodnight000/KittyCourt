@@ -1,6 +1,6 @@
 /**
  * Courtroom Page - Clean Architecture (WS-first)
- * Uses new courtStore + useCourtSocket.
+ * Uses new useCourtStore + useCourtSocket.
  */
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -9,7 +9,8 @@ import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { Gavel, MessageCircle, Heart, Target, Send } from 'lucide-react';
 
 import useAuthStore from '../store/useAuthStore';
-import useCourtStore, { VIEW_PHASE } from '../store/courtStore';
+import usePartnerStore from '../store/usePartnerStore';
+import useCourtStore, { VIEW_PHASE } from '../store/useCourtStore';
 import RequirePartner from '../components/RequirePartner';
 
 import {
@@ -34,7 +35,8 @@ export default function CourtroomPageV2() {
     const navigate = useNavigate();
     const { t } = useI18n();
 
-    const { user: authUser, profile, partner } = useAuthStore();
+    const { user: authUser, profile } = useAuthStore();
+    const { partner } = usePartnerStore();
 
     const {
         myViewPhase,

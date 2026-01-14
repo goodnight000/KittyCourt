@@ -12,7 +12,7 @@ vi.mock('../utils/socketActionHelper', () => ({
     createSocketAction: vi.fn(() => vi.fn())
 }));
 
-describe('courtStore', () => {
+describe('useCourtStore', () => {
     let useCourtStore;
     let apiMock;
     let socketActionHelperMock;
@@ -39,7 +39,7 @@ describe('courtStore', () => {
         // Re-import mocks and store
         apiMock = (await import('../services/api')).default;
         socketActionHelperMock = await import('../utils/socketActionHelper');
-        const storeModule = await import('./courtStore');
+        const storeModule = await import('./useCourtStore');
         useCourtStore = storeModule.default;
         setSocketRef = storeModule.setSocketRef;
         getSocketRef = storeModule.getSocketRef;

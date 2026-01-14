@@ -15,7 +15,8 @@ const { recordChallengeAction, CHALLENGE_ACTIONS } = require('../lib/challengeSe
 const { resolveRequestLanguage, getUserPreferredLanguage } = require('../lib/language');
 const { sendError } = require('../lib/http');
 const { asyncHandler } = require('../middleware/asyncHandler');
-const { processSecureInput, securityConfig } = require('../lib/security');
+const { processSecureInput, securityConfig, llmSecurityMiddleware } = require('../lib/security/index');
+const { safeErrorMessage } = require('../lib/shared/errorUtils');
 
 const requireUserId = async (req, fallbackUserId) => {
     // Always require proper authentication when Supabase is configured
@@ -80,7 +81,7 @@ router.get('/state', asyncHandler(async (req, res) => {
  * POST /api/court/serve
  * Create pending session (serve partner)
  */
-router.post('/serve', async (req, res) => {
+router.post('/serve', asyncHandler(async (req, res) => {
     try {
         const { userId: fallbackUserId, partnerId, coupleId, judgeType } = req.body;
         const userId = await requireUserId(req, fallbackUserId);
@@ -110,15 +111,15 @@ router.post('/serve', async (req, res) => {
         res.json(state);
     } catch (error) {
         console.error('[API] /serve error:', error);
-        res.status(error.statusCode || 400).json({ error: error.message });
+        res.status(error.statusCode || 400).json({ error: safeErrorMessage(error) });
     }
-});
+}));
 
 /**
  * POST /api/court/accept
  * Partner accepts pending session
  */
-router.post('/accept', async (req, res) => {
+router.post('/accept', asyncHandler(async (req, res) => {
     try {
         const { userId: fallbackUserId } = req.body;
         const userId = await requireUserId(req, fallbackUserId);
@@ -128,15 +129,15 @@ router.post('/accept', async (req, res) => {
         res.json(state);
     } catch (error) {
         console.error('[API] /accept error:', error);
-        res.status(error.statusCode || 400).json({ error: error.message });
+        res.status(error.statusCode || 400).json({ error: safeErrorMessage(error) });
     }
-});
+}));
 
 /**
  * POST /api/court/cancel
  * Cancel pending session (creator only)
  */
-router.post('/cancel', async (req, res) => {
+router.post('/cancel', asyncHandler(async (req, res) => {
     try {
         const { userId: fallbackUserId } = req.body;
         const userId = await requireUserId(req, fallbackUserId);
@@ -145,55 +146,34 @@ router.post('/cancel', async (req, res) => {
         res.json({ phase: PHASE.IDLE, myViewPhase: VIEW_PHASE.IDLE, session: null });
     } catch (error) {
         console.error('[API] /cancel error:', error);
-        res.status(error.statusCode || 400).json({ error: error.message });
+        res.status(error.statusCode || 400).json({ error: safeErrorMessage(error) });
     }
-});
+}));
 
 /**
  * POST /api/court/evidence
  * Submit evidence
+ *
+ * Security: llmSecurityMiddleware validates input before handler runs.
+ * The middleware attaches req.sanitizedBody and req.securityContext.
  */
-router.post('/evidence', async (req, res) => {
+router.post('/evidence', llmSecurityMiddleware('court'), asyncHandler(async (req, res) => {
     try {
-        const { userId: fallbackUserId, evidence, feelings, needs } = req.body;
+        // Use sanitizedBody from middleware, fallback to req.body for backwards compatibility
+        const body = req.sanitizedBody || req.body;
+        const { userId: fallbackUserId, evidence, feelings, needs } = body;
         const userId = await requireUserId(req, fallbackUserId);
 
-        // Security: Validate and sanitize evidence input
-        const evidenceCheck = processSecureInput(evidence, {
-            userId,
-            fieldName: 'cameraFacts',
-            maxLength: securityConfig.fieldLimits.cameraFacts,
-            endpoint: 'court',
-        });
-        if (!evidenceCheck.safe) {
-            return sendError(res, 400, 'SECURITY_BLOCK', 'Your input contains content that cannot be processed. Please rephrase using natural language.');
+        // Security context from middleware (for logging/debugging)
+        const securityContext = req.securityContext;
+        if (securityContext?.flaggedFields?.length > 0) {
+            console.warn('[Court] Flagged fields in evidence submission:', securityContext.flaggedFields);
         }
 
-        // Security: Validate and sanitize feelings input
-        const feelingsCheck = processSecureInput(feelings, {
-            userId,
-            fieldName: 'theStoryIamTellingMyself',
-            maxLength: securityConfig.fieldLimits.theStoryIamTellingMyself,
-            endpoint: 'court',
-        });
-        if (!feelingsCheck.safe) {
-            return sendError(res, 400, 'SECURITY_BLOCK', 'Your input contains content that cannot be processed. Please rephrase using natural language.');
-        }
-
-        // Security: Validate and sanitize needs input
-        const needsCheck = processSecureInput(needs, {
-            userId,
-            fieldName: 'unmetNeeds',
-            maxLength: securityConfig.fieldLimits.theStoryIamTellingMyself, // Use same limit as feelings
-            endpoint: 'court',
-        });
-        if (!needsCheck.safe) {
-            return sendError(res, 400, 'SECURITY_BLOCK', 'Your input contains content that cannot be processed. Please rephrase using natural language.');
-        }
-
-        const safeEvidence = evidenceCheck.input || '';
-        const safeFeelings = feelingsCheck.input || '';
-        const safeNeeds = needsCheck.input || '';
+        // Middleware already sanitized the input via 'court' field mappings
+        const safeEvidence = (evidence || '').trim();
+        const safeFeelings = (feelings || '').trim();
+        const safeNeeds = (needs || '').trim();
         if (!safeEvidence) return sendError(res, 400, 'EVIDENCE_REQUIRED', 'evidence is required');
 
         await courtSessionManager.submitEvidence(userId, safeEvidence, safeFeelings, safeNeeds);
@@ -201,15 +181,15 @@ router.post('/evidence', async (req, res) => {
         res.json(state);
     } catch (error) {
         console.error('[API] /evidence error:', error);
-        res.status(error.statusCode || 400).json({ error: error.message });
+        res.status(error.statusCode || 400).json({ error: safeErrorMessage(error) });
     }
-});
+}));
 
 /**
  * POST /api/court/verdict/accept
  * Accept verdict
  */
-router.post('/verdict/accept', async (req, res) => {
+router.post('/verdict/accept', asyncHandler(async (req, res) => {
     try {
         const { userId: fallbackUserId } = req.body;
         const userId = await requireUserId(req, fallbackUserId);
@@ -247,9 +227,9 @@ router.post('/verdict/accept', async (req, res) => {
         res.json(state);
     } catch (error) {
         console.error('[API] /verdict/accept error:', error);
-        res.status(error.statusCode || 400).json({ error: error.message });
+        res.status(error.statusCode || 400).json({ error: safeErrorMessage(error) });
     }
-});
+}));
 
 /**
  * POST /api/court/settle/request
@@ -268,7 +248,7 @@ router.post('/settle/request', asyncHandler(async (req, res) => {
  * POST /api/court/settle/accept
  * Accept settlement
  */
-router.post('/settle/accept', async (req, res) => {
+router.post('/settle/accept', asyncHandler(async (req, res) => {
     try {
         const { userId: fallbackUserId } = req.body;
         const userId = await requireUserId(req, fallbackUserId);
@@ -277,9 +257,9 @@ router.post('/settle/accept', async (req, res) => {
         res.json({ phase: PHASE.IDLE, myViewPhase: VIEW_PHASE.IDLE, session: null });
     } catch (error) {
         console.error('[API] /settle/accept error:', error);
-        res.status(error.statusCode || 400).json({ error: error.message });
+        res.status(error.statusCode || 400).json({ error: safeErrorMessage(error) });
     }
-});
+}));
 
 /**
  * POST /api/court/settle/decline
@@ -297,24 +277,25 @@ router.post('/settle/decline', asyncHandler(async (req, res) => {
 /**
  * POST /api/court/addendum
  * Submit addendum (re-run LLM)
+ *
+ * Security: llmSecurityMiddleware validates input before handler runs.
+ * The middleware attaches req.sanitizedBody and req.securityContext.
  */
-router.post('/addendum', async (req, res) => {
+router.post('/addendum', llmSecurityMiddleware('court'), asyncHandler(async (req, res) => {
     try {
-        const { userId: fallbackUserId, text } = req.body;
+        // Use sanitizedBody from middleware, fallback to req.body for backwards compatibility
+        const body = req.sanitizedBody || req.body;
+        const { userId: fallbackUserId, text } = body;
         const userId = await requireUserId(req, fallbackUserId);
 
-        // Security: Validate and sanitize addendum input
-        const textCheck = processSecureInput(text, {
-            userId,
-            fieldName: 'addendum',
-            maxLength: securityConfig.fieldLimits.addendum,
-            endpoint: 'court',
-        });
-        if (!textCheck.safe) {
-            return sendError(res, 400, 'SECURITY_BLOCK', 'Your input contains content that cannot be processed. Please rephrase using natural language.');
+        // Security context from middleware (for logging/debugging)
+        const securityContext = req.securityContext;
+        if (securityContext?.flaggedFields?.length > 0) {
+            console.warn('[Court] Flagged fields in addendum submission:', securityContext.flaggedFields);
         }
 
-        const safeText = textCheck.input || '';
+        // Middleware already sanitized the input via 'court' field mappings
+        const safeText = (text || '').trim();
         if (!safeText) return res.status(400).json({ error: 'text required' });
 
         await courtSessionManager.submitAddendum(userId, safeText);
@@ -322,9 +303,9 @@ router.post('/addendum', async (req, res) => {
         res.json(state);
     } catch (error) {
         console.error('[API] /addendum error:', error);
-        res.status(error.statusCode || 400).json({ error: error.message });
+        res.status(error.statusCode || 400).json({ error: safeErrorMessage(error) });
     }
-});
+}));
 
 // === V2.0 Pipeline Endpoints ===
 
@@ -332,7 +313,7 @@ router.post('/addendum', async (req, res) => {
  * POST /api/court/priming/complete
  * Mark priming page as read (v2.0 pipeline)
  */
-router.post('/priming/complete', async (req, res) => {
+router.post('/priming/complete', asyncHandler(async (req, res) => {
     try {
         const { userId: fallbackUserId } = req.body;
         const userId = await requireUserId(req, fallbackUserId);
@@ -342,15 +323,15 @@ router.post('/priming/complete', async (req, res) => {
         res.json(state);
     } catch (error) {
         console.error('[API] /priming/complete error:', error);
-        res.status(error.statusCode || 400).json({ error: error.message });
+        res.status(error.statusCode || 400).json({ error: safeErrorMessage(error) });
     }
-});
+}));
 
 /**
  * POST /api/court/joint/ready
  * Mark ready to proceed from joint menu (v2.0 pipeline)
  */
-router.post('/joint/ready', async (req, res) => {
+router.post('/joint/ready', asyncHandler(async (req, res) => {
     try {
         const { userId: fallbackUserId } = req.body;
         const userId = await requireUserId(req, fallbackUserId);
@@ -360,15 +341,15 @@ router.post('/joint/ready', async (req, res) => {
         res.json(state);
     } catch (error) {
         console.error('[API] /joint/ready error:', error);
-        res.status(error.statusCode || 400).json({ error: error.message });
+        res.status(error.statusCode || 400).json({ error: safeErrorMessage(error) });
     }
-});
+}));
 
 /**
  * POST /api/court/resolution/pick
  * Submit resolution choice (v2.0 pipeline)
  */
-router.post('/resolution/pick', async (req, res) => {
+router.post('/resolution/pick', asyncHandler(async (req, res) => {
     try {
         const { userId: fallbackUserId, resolutionId } = req.body;
         const userId = await requireUserId(req, fallbackUserId);
@@ -382,15 +363,15 @@ router.post('/resolution/pick', async (req, res) => {
         res.json(state);
     } catch (error) {
         console.error('[API] /resolution/pick error:', error);
-        res.status(error.statusCode || 400).json({ error: error.message });
+        res.status(error.statusCode || 400).json({ error: safeErrorMessage(error) });
     }
-});
+}));
 
 /**
  * POST /api/court/resolution/accept-partner
  * Accept partner's resolution choice (v2.0 pipeline)
  */
-router.post('/resolution/accept-partner', async (req, res) => {
+router.post('/resolution/accept-partner', asyncHandler(async (req, res) => {
     try {
         const { userId: fallbackUserId } = req.body;
         const userId = await requireUserId(req, fallbackUserId);
@@ -400,15 +381,15 @@ router.post('/resolution/accept-partner', async (req, res) => {
         res.json(state);
     } catch (error) {
         console.error('[API] /resolution/accept-partner error:', error);
-        res.status(error.statusCode || 400).json({ error: error.message });
+        res.status(error.statusCode || 400).json({ error: safeErrorMessage(error) });
     }
-});
+}));
 
 /**
  * POST /api/court/resolution/hybrid
  * Request hybrid resolution generation (v2.0 pipeline)
  */
-router.post('/resolution/hybrid', async (req, res) => {
+router.post('/resolution/hybrid', asyncHandler(async (req, res) => {
     try {
         const { userId: fallbackUserId } = req.body;
         const userId = await requireUserId(req, fallbackUserId);
@@ -418,9 +399,9 @@ router.post('/resolution/hybrid', async (req, res) => {
         res.json(state);
     } catch (error) {
         console.error('[API] /resolution/hybrid error:', error);
-        res.status(error.statusCode || 400).json({ error: error.message });
+        res.status(error.statusCode || 400).json({ error: safeErrorMessage(error) });
     }
-});
+}));
 
 // === Debug ===
 

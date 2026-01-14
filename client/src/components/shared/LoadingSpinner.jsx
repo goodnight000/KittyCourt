@@ -1,4 +1,3 @@
-import PropTypes from 'prop-types';
 
 /**
  * Reusable loading spinner component with size and color variants
@@ -38,9 +37,3 @@ export default function LoadingSpinner({
     </div>
   );
 }
-
-LoadingSpinner.propTypes = {
-  size: PropTypes.oneOf(['sm', 'md', 'lg', 'xl']),
-  color: PropTypes.string,
-  className: PropTypes.string
-};

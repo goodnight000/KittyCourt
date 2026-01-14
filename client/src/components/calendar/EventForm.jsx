@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { motion as Motion } from 'framer-motion';
 import { X, Plus, Check, AlertTriangle, Lock } from 'lucide-react';
-import PropTypes from 'prop-types';
 import { useI18n } from '../../i18n';
 import { validateDate } from '../../utils/helpers';
 
@@ -269,15 +268,6 @@ const EventForm = ({ selectedDate, onAdd, onClose }) => {
             </Motion.div>
         </Motion.div>
     );
-};
-
-EventForm.propTypes = {
-    selectedDate: PropTypes.oneOfType([
-        PropTypes.instanceOf(Date),
-        PropTypes.string,
-    ]),
-    onAdd: PropTypes.func.isRequired,
-    onClose: PropTypes.func.isRequired,
 };
 
 export default EventForm;

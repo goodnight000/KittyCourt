@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import useAppStore from '../store/useAppStore';
 import useAuthStore from '../store/useAuthStore';
+import usePartnerStore from '../store/usePartnerStore';
 import useCacheStore, { CACHE_TTL, CACHE_KEYS } from '../store/useCacheStore';
 import useSubscriptionStore from '../store/useSubscriptionStore';
 import useLevelStore from '../store/useLevelStore';
@@ -20,6 +21,7 @@ import ProfileCard from '../components/profile/ProfileCard';
 import ProfileEditForm from '../components/profile/ProfileEditForm';
 import PartnerConnection from '../components/profile/PartnerConnection';
 import MilestonesSection from '../components/profile/MilestonesSection';
+import DisconnectNotice from '../components/DisconnectNotice';
 import useProfileData from '../components/profile/useProfileData';
 import useCalendarEvents from '../components/calendar/useCalendarEvents';
 import api from '../services/api';
@@ -30,7 +32,8 @@ const ProfilesPage = () => {
     const location = useLocation();
     const { t, language } = useI18n();
     const { currentUser, users, fetchAppreciations } = useAppStore();
-    const { profile, partner: connectedPartner, hasPartner, signOut, refreshProfile, user: authUser } = useAuthStore();
+    const { profile, signOut, refreshProfile, user: authUser } = useAuthStore();
+    const { partner: connectedPartner, hasPartner, disconnectStatus } = usePartnerStore();
     const { isGold, usage, limits, getUsageDisplay, purchaseGold, restorePurchases, isLoading: subLoading } = useSubscriptionStore();
     const { level, currentXP, xpForNextLevel, title, fetchLevel, shouldShowChallenges, shouldShowInsights, serverAvailable } = useLevelStore();
     const { memories, deletedMemories, fetchMemories, serverAvailable: memoriesAvailable } = useMemoryStore();
@@ -378,6 +381,9 @@ const ProfilesPage = () => {
                             </motion.div>
 
                             {/* Partner Connection */}
+                            {!hasPartner && disconnectStatus?.status === 'disconnected' && (
+                                <DisconnectNotice disconnectStatus={disconnectStatus} />
+                            )}
                             <PartnerConnection
                                 hasPartner={hasPartner}
                                 profile={profile}

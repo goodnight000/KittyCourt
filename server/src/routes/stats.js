@@ -13,6 +13,7 @@ const router = express.Router();
 const { requireSupabase, requireAuthUserId, getPartnerIdForUser } = require('../lib/auth');
 const { sendError } = require('../lib/http');
 const { getStats, reviveStreak, getStatsForCouple, isGoldUser } = require('../lib/statsService');
+const { safeErrorMessage } = require('../lib/shared/errorUtils');
 
 /**
  * GET /api/stats
@@ -44,7 +45,7 @@ router.get('/', async (req, res) => {
         console.error('[Stats API] GET / error:', error);
         res.status(error.statusCode || 500).json({
             errorCode: error.errorCode || 'STATS_FETCH_FAILED',
-            error: error.message
+            error: safeErrorMessage(error)
         });
     }
 });
@@ -77,7 +78,7 @@ router.get('/couple', async (req, res) => {
         console.error('[Stats API] GET /couple error:', error);
         res.status(error.statusCode || 500).json({
             errorCode: error.errorCode || 'STATS_COUPLE_FETCH_FAILED',
-            error: error.message
+            error: safeErrorMessage(error)
         });
     }
 });
@@ -136,7 +137,7 @@ router.post('/revive', async (req, res) => {
         console.error('[Stats API] POST /revive error:', error);
         res.status(error.statusCode || 500).json({
             errorCode: error.errorCode || 'STREAK_REVIVE_FAILED',
-            error: error.message
+            error: safeErrorMessage(error)
         });
     }
 });

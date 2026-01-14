@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, X, Check, UserPlus, Loader2, Calendar, AlertCircle } from 'lucide-react';
-import useAuthStore from '../store/useAuthStore';
+import usePartnerStore from '../store/usePartnerStore';
 import { validateAnniversaryDate } from '../utils/helpers';
 import Paywall from './Paywall';
 import ProfilePicture from './ProfilePicture';
 
 const PartnerRequestModal = () => {
-    const { pendingRequests, acceptRequest, rejectRequest } = useAuthStore();
+    const { pendingRequests, acceptRequest, rejectRequest } = usePartnerStore();
     const [processingId, setProcessingId] = useState(null);
     const [action, setAction] = useState(null); // 'accept' or 'reject'
     const [showAnniversaryStep, setShowAnniversaryStep] = useState(false);

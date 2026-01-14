@@ -46,11 +46,60 @@ export const getSocketRef = () => socketRef;
 
 // API base path
 const COURT_API = '/court';
+const STALE_THRESHOLD_MS = 10000;
 
 // Event bus listener cleanup functions
 let eventCleanupFns = [];
 
-const useCourtStore = create((set, get) => ({
+const useCourtStore = create((set, get) => {
+    const fallbackFetch = () => get().fetchState({ force: true });
+    const createCourtAction = ({
+        socketEvent,
+        apiPath,
+        timeoutMs = 2500,
+        fallbackFn = fallbackFetch,
+        syncState = true,
+        onSocketError = null,
+        onApiError = null,
+        includeUserId = true
+    }) => async (payload = {}) => {
+        if (socketRef?.connected) {
+            const action = createSocketAction(socketEvent, { timeoutMs, fallbackFn });
+            const response = await action(socketRef, payload);
+
+            if (syncState && response?.state) get().onStateSync(response.state);
+            if (response?.error) {
+                if (onSocketError) {
+                    onSocketError(response.error);
+                } else {
+                    get().onError(response.error);
+                }
+            }
+
+            return response;
+        }
+
+        if (!apiPath) return null;
+
+        try {
+            const userId = get()._authUserId;
+            const body = includeUserId ? { userId, ...payload } : payload;
+            const response = await api.post(`${COURT_API}${apiPath}`, body);
+
+            if (syncState && response?.data) get().onStateSync(response.data);
+            return response?.data || null;
+        } catch (error) {
+            const message = error.response?.data?.error || error.message;
+            if (onApiError) {
+                onApiError(message);
+            } else {
+                get().onError(message);
+            }
+            return null;
+        }
+    };
+
+    return ({
     // === State (from server) ===
     phase: 'IDLE',
     myViewPhase: VIEW_PHASE.IDLE,
@@ -165,30 +214,11 @@ const useCourtStore = create((set, get) => ({
      */
     serve: async (partnerId, coupleId, judgeType = 'swift') => {
         set({ isSubmitting: true, error: null });
-
-        if (socketRef?.connected) {
-            const serveAction = createSocketAction('court:serve', {
-                timeoutMs: 2500,
-                fallbackFn: () => get().fetchState({ force: true })
-            });
-
-            const response = await serveAction(socketRef, { partnerId, coupleId, judgeType });
-
-            if (response?.state) get().onStateSync(response.state);
-            if (response?.error) get().onError(response.error);
-
-            set({ isSubmitting: false });
-        } else {
-            // API fallback
-            try {
-                const userId = get()._authUserId;
-                const response = await api.post(`${COURT_API}/serve`, { userId, partnerId, coupleId, judgeType });
-                get().onStateSync(response.data);
-            } catch (error) {
-                get().onError(error.response?.data?.error || error.message);
-            }
-            set({ isSubmitting: false });
-        }
+        await createCourtAction({
+            socketEvent: 'court:serve',
+            apiPath: '/serve'
+        })({ partnerId, coupleId, judgeType });
+        set({ isSubmitting: false });
     },
 
     /**
@@ -196,29 +226,11 @@ const useCourtStore = create((set, get) => ({
      */
     accept: async () => {
         set({ isSubmitting: true, error: null });
-
-        if (socketRef?.connected) {
-            const acceptAction = createSocketAction('court:accept', {
-                timeoutMs: 2500,
-                fallbackFn: () => get().fetchState({ force: true })
-            });
-
-            const response = await acceptAction(socketRef, {});
-
-            if (response?.state) get().onStateSync(response.state);
-            if (response?.error) get().onError(response.error);
-
-            set({ isSubmitting: false });
-        } else {
-            try {
-                const userId = get()._authUserId;
-                const response = await api.post(`${COURT_API}/accept`, { userId });
-                get().onStateSync(response.data);
-            } catch (error) {
-                get().onError(error.response?.data?.error || error.message);
-            }
-            set({ isSubmitting: false });
-        }
+        await createCourtAction({
+            socketEvent: 'court:accept',
+            apiPath: '/accept'
+        })();
+        set({ isSubmitting: false });
     },
 
     /**
@@ -226,29 +238,11 @@ const useCourtStore = create((set, get) => ({
      */
     cancel: async () => {
         set({ isSubmitting: true, error: null });
-
-        if (socketRef?.connected) {
-            const cancelAction = createSocketAction('court:cancel', {
-                timeoutMs: 2500,
-                fallbackFn: () => get().fetchState({ force: true })
-            });
-
-            const response = await cancelAction(socketRef, {});
-
-            if (response?.state) get().onStateSync(response.state);
-            if (response?.error) get().onError(response.error);
-
-            set({ isSubmitting: false });
-        } else {
-            try {
-                const userId = get()._authUserId;
-                const response = await api.post(`${COURT_API}/cancel`, { userId });
-                get().onStateSync(response.data);
-            } catch (error) {
-                get().onError(error.response?.data?.error || error.message);
-            }
-            set({ isSubmitting: false });
-        }
+        await createCourtAction({
+            socketEvent: 'court:cancel',
+            apiPath: '/cancel'
+        })();
+        set({ isSubmitting: false });
     },
 
     /**
@@ -257,30 +251,25 @@ const useCourtStore = create((set, get) => ({
     dismiss: async () => {
         set({ isSubmitting: true, error: null });
 
-        if (socketRef?.connected) {
-            const dismissAction = createSocketAction('court:dismiss', {
-                timeoutMs: 2500,
-                fallbackFn: () => {
-                    // Force reset local state even if server didn't respond
-                    get().reset();
-                    return Promise.resolve();
-                }
-            });
-
-            const response = await dismissAction(socketRef, {});
-
-            if (response?.state) get().onStateSync(response.state);
-            if (response?.error) {
-                // If dismiss fails (e.g., no session), just reset locally
-                get().reset();
-            }
-
-            set({ isSubmitting: false });
-        } else {
-            // No API fallback for dismiss - just reset locally
+        if (!socketRef?.connected) {
             get().reset();
             set({ isSubmitting: false });
+            return;
         }
+
+        await createCourtAction({
+            socketEvent: 'court:dismiss',
+            apiPath: null,
+            fallbackFn: () => {
+                get().reset();
+                return Promise.resolve();
+            },
+            onSocketError: () => {
+                get().reset();
+            }
+        })();
+
+        set({ isSubmitting: false });
     },
 
     /**
@@ -289,38 +278,23 @@ const useCourtStore = create((set, get) => ({
     submitEvidence: async () => {
         const { localEvidence, localFeelings, localNeeds } = get();
         set({ isSubmitting: true, error: null });
+        const payload = { evidence: localEvidence, feelings: localFeelings, needs: localNeeds };
+        const shouldClearBefore = socketRef?.connected;
 
-        if (socketRef?.connected) {
-            // Clear local inputs on submit (optimistic)
+        if (shouldClearBefore) {
             set({ localEvidence: '', localFeelings: '', localNeeds: '' });
-
-            const submitAction = createSocketAction('court:submit_evidence', {
-                timeoutMs: 2500,
-                fallbackFn: () => get().fetchState({ force: true })
-            });
-
-            const response = await submitAction(socketRef, { evidence: localEvidence, feelings: localFeelings, needs: localNeeds });
-
-            if (response?.state) get().onStateSync(response.state);
-            if (response?.error) get().onError(response.error);
-
-            set({ isSubmitting: false });
-        } else {
-            try {
-                const userId = get()._authUserId;
-                const response = await api.post(`${COURT_API}/evidence`, {
-                    userId,
-                    evidence: localEvidence,
-                    feelings: localFeelings,
-                    needs: localNeeds
-                });
-                get().onStateSync(response.data);
-                set({ localEvidence: '', localFeelings: '', localNeeds: '' });
-            } catch (error) {
-                get().onError(error.response?.data?.error || error.message);
-            }
-            set({ isSubmitting: false });
         }
+
+        await createCourtAction({
+            socketEvent: 'court:submit_evidence',
+            apiPath: '/evidence'
+        })(payload);
+
+        if (!shouldClearBefore) {
+            set({ localEvidence: '', localFeelings: '', localNeeds: '' });
+        }
+
+        set({ isSubmitting: false });
     },
 
     /**
@@ -328,29 +302,11 @@ const useCourtStore = create((set, get) => ({
      */
     acceptVerdict: async () => {
         set({ isSubmitting: true, error: null });
-
-        if (socketRef?.connected) {
-            const acceptVerdictAction = createSocketAction('court:accept_verdict', {
-                timeoutMs: 2500,
-                fallbackFn: () => get().fetchState({ force: true })
-            });
-
-            const response = await acceptVerdictAction(socketRef, {});
-
-            if (response?.state) get().onStateSync(response.state);
-            if (response?.error) get().onError(response.error);
-
-            set({ isSubmitting: false });
-        } else {
-            try {
-                const userId = get()._authUserId;
-                const response = await api.post(`${COURT_API}/verdict/accept`, { userId });
-                get().onStateSync(response.data);
-            } catch (error) {
-                get().onError(error.response?.data?.error || error.message);
-            }
-            set({ isSubmitting: false });
-        }
+        await createCourtAction({
+            socketEvent: 'court:accept_verdict',
+            apiPath: '/verdict/accept'
+        })();
+        set({ isSubmitting: false });
     },
 
     /**
@@ -358,24 +314,10 @@ const useCourtStore = create((set, get) => ({
      */
     requestSettlement: async () => {
         set({ error: null });
-
-        if (socketRef?.connected) {
-            const requestSettleAction = createSocketAction('court:request_settle', {
-                timeoutMs: 2500
-            });
-
-            const response = await requestSettleAction(socketRef, {});
-
-            if (response?.state) get().onStateSync(response.state);
-            if (response?.error) get().onError(response.error);
-        } else {
-            try {
-                const userId = get()._authUserId;
-                await api.post(`${COURT_API}/settle/request`, { userId });
-            } catch (error) {
-                get().onError(error.response?.data?.error || error.message);
-            }
-        }
+        await createCourtAction({
+            socketEvent: 'court:request_settle',
+            apiPath: '/settle/request'
+        })();
     },
 
     /**
@@ -383,29 +325,11 @@ const useCourtStore = create((set, get) => ({
      */
     acceptSettlement: async () => {
         set({ isSubmitting: true, error: null, showSettlementRequest: false });
-
-        if (socketRef?.connected) {
-            const acceptSettleAction = createSocketAction('court:accept_settle', {
-                timeoutMs: 2500,
-                fallbackFn: () => get().fetchState({ force: true })
-            });
-
-            const response = await acceptSettleAction(socketRef, {});
-
-            if (response?.state) get().onStateSync(response.state);
-            if (response?.error) get().onError(response.error);
-
-            set({ isSubmitting: false });
-        } else {
-            try {
-                const userId = get()._authUserId;
-                const response = await api.post(`${COURT_API}/settle/accept`, { userId });
-                get().onStateSync(response.data);
-            } catch (error) {
-                get().onError(error.response?.data?.error || error.message);
-            }
-            set({ isSubmitting: false });
-        }
+        await createCourtAction({
+            socketEvent: 'court:accept_settle',
+            apiPath: '/settle/accept'
+        })();
+        set({ isSubmitting: false });
     },
 
     /**
@@ -413,29 +337,11 @@ const useCourtStore = create((set, get) => ({
      */
     declineSettlement: async () => {
         set({ isSubmitting: true, error: null, showSettlementRequest: false });
-
-        if (socketRef?.connected) {
-            const declineSettleAction = createSocketAction('court:decline_settle', {
-                timeoutMs: 2500,
-                fallbackFn: () => get().fetchState({ force: true })
-            });
-
-            const response = await declineSettleAction(socketRef, {});
-
-            if (response?.state) get().onStateSync(response.state);
-            if (response?.error) get().onError(response.error);
-
-            set({ isSubmitting: false });
-        } else {
-            try {
-                const userId = get()._authUserId;
-                const response = await api.post(`${COURT_API}/settle/decline`, { userId });
-                get().onStateSync(response.data);
-            } catch (error) {
-                get().onError(error.response?.data?.error || error.message);
-            }
-            set({ isSubmitting: false });
-        }
+        await createCourtAction({
+            socketEvent: 'court:decline_settle',
+            apiPath: '/settle/decline'
+        })();
+        set({ isSubmitting: false });
     },
 
     /**
@@ -446,35 +352,22 @@ const useCourtStore = create((set, get) => ({
         if (!localAddendum.trim()) return;
 
         set({ isSubmitting: true, error: null });
-
-        if (socketRef?.connected) {
+        const shouldClearBefore = socketRef?.connected;
+        if (shouldClearBefore) {
             set({ localAddendum: '' });
-
-            const submitAddendumAction = createSocketAction('court:submit_addendum', {
-                timeoutMs: 4000,
-                fallbackFn: () => get().fetchState({ force: true })
-            });
-
-            const response = await submitAddendumAction(socketRef, { text: localAddendum });
-
-            if (response?.state) get().onStateSync(response.state);
-            if (response?.error) get().onError(response.error);
-
-            set({ isSubmitting: false });
-        } else {
-            try {
-                const userId = get()._authUserId;
-                const response = await api.post(`${COURT_API}/addendum`, {
-                    userId,
-                    text: localAddendum
-                });
-                get().onStateSync(response.data);
-                set({ localAddendum: '' });
-            } catch (error) {
-                get().onError(error.response?.data?.error || error.message);
-            }
-            set({ isSubmitting: false });
         }
+
+        await createCourtAction({
+            socketEvent: 'court:submit_addendum',
+            apiPath: '/addendum',
+            timeoutMs: 4000
+        })({ text: localAddendum });
+
+        if (!shouldClearBefore) {
+            set({ localAddendum: '' });
+        }
+
+        set({ isSubmitting: false });
     },
 
     /**
@@ -482,29 +375,11 @@ const useCourtStore = create((set, get) => ({
      */
     markPrimingComplete: async () => {
         set({ isSubmitting: true, error: null });
-
-        if (socketRef?.connected) {
-            const primingCompleteAction = createSocketAction('court:priming_complete', {
-                timeoutMs: 2500,
-                fallbackFn: () => get().fetchState({ force: true })
-            });
-
-            const response = await primingCompleteAction(socketRef, {});
-
-            if (response?.state) get().onStateSync(response.state);
-            if (response?.error) get().onError(response.error);
-
-            set({ isSubmitting: false });
-        } else {
-            try {
-                const userId = get()._authUserId;
-                const response = await api.post(`${COURT_API}/priming/complete`, { userId });
-                get().onStateSync(response.data);
-            } catch (error) {
-                get().onError(error.response?.data?.error || error.message);
-            }
-            set({ isSubmitting: false });
-        }
+        await createCourtAction({
+            socketEvent: 'court:priming_complete',
+            apiPath: '/priming/complete'
+        })();
+        set({ isSubmitting: false });
     },
 
     /**
@@ -512,29 +387,11 @@ const useCourtStore = create((set, get) => ({
      */
     markJointReady: async () => {
         set({ isSubmitting: true, error: null });
-
-        if (socketRef?.connected) {
-            const jointReadyAction = createSocketAction('court:joint_ready', {
-                timeoutMs: 2500,
-                fallbackFn: () => get().fetchState({ force: true })
-            });
-
-            const response = await jointReadyAction(socketRef, {});
-
-            if (response?.state) get().onStateSync(response.state);
-            if (response?.error) get().onError(response.error);
-
-            set({ isSubmitting: false });
-        } else {
-            try {
-                const userId = get()._authUserId;
-                const response = await api.post(`${COURT_API}/joint/ready`, { userId });
-                get().onStateSync(response.data);
-            } catch (error) {
-                get().onError(error.response?.data?.error || error.message);
-            }
-            set({ isSubmitting: false });
-        }
+        await createCourtAction({
+            socketEvent: 'court:joint_ready',
+            apiPath: '/joint/ready'
+        })();
+        set({ isSubmitting: false });
     },
 
     /**
@@ -543,29 +400,11 @@ const useCourtStore = create((set, get) => ({
     submitResolutionPick: async (resolutionId) => {
         if (!resolutionId) return;
         set({ isSubmitting: true, error: null });
-
-        if (socketRef?.connected) {
-            const resolutionPickAction = createSocketAction('court:resolution_pick', {
-                timeoutMs: 2500,
-                fallbackFn: () => get().fetchState({ force: true })
-            });
-
-            const response = await resolutionPickAction(socketRef, { resolutionId });
-
-            if (response?.state) get().onStateSync(response.state);
-            if (response?.error) get().onError(response.error);
-
-            set({ isSubmitting: false });
-        } else {
-            try {
-                const userId = get()._authUserId;
-                const response = await api.post(`${COURT_API}/resolution/pick`, { userId, resolutionId });
-                get().onStateSync(response.data);
-            } catch (error) {
-                get().onError(error.response?.data?.error || error.message);
-            }
-            set({ isSubmitting: false });
-        }
+        await createCourtAction({
+            socketEvent: 'court:resolution_pick',
+            apiPath: '/resolution/pick'
+        })({ resolutionId });
+        set({ isSubmitting: false });
     },
 
     /**
@@ -573,29 +412,11 @@ const useCourtStore = create((set, get) => ({
      */
     acceptPartnerResolution: async () => {
         set({ isSubmitting: true, error: null });
-
-        if (socketRef?.connected) {
-            const acceptPartnerAction = createSocketAction('court:resolution_accept_partner', {
-                timeoutMs: 2500,
-                fallbackFn: () => get().fetchState({ force: true })
-            });
-
-            const response = await acceptPartnerAction(socketRef, {});
-
-            if (response?.state) get().onStateSync(response.state);
-            if (response?.error) get().onError(response.error);
-
-            set({ isSubmitting: false });
-        } else {
-            try {
-                const userId = get()._authUserId;
-                const response = await api.post(`${COURT_API}/resolution/accept-partner`, { userId });
-                get().onStateSync(response.data);
-            } catch (error) {
-                get().onError(error.response?.data?.error || error.message);
-            }
-            set({ isSubmitting: false });
-        }
+        await createCourtAction({
+            socketEvent: 'court:resolution_accept_partner',
+            apiPath: '/resolution/accept-partner'
+        })();
+        set({ isSubmitting: false });
     },
 
     /**
@@ -603,29 +424,12 @@ const useCourtStore = create((set, get) => ({
      */
     requestHybridResolution: async () => {
         set({ isSubmitting: true, error: null });
-
-        if (socketRef?.connected) {
-            const hybridAction = createSocketAction('court:resolution_hybrid', {
-                timeoutMs: 5000,
-                fallbackFn: () => get().fetchState({ force: true })
-            });
-
-            const response = await hybridAction(socketRef, {});
-
-            if (response?.state) get().onStateSync(response.state);
-            if (response?.error) get().onError(response.error);
-
-            set({ isSubmitting: false });
-        } else {
-            try {
-                const userId = get()._authUserId;
-                const response = await api.post(`${COURT_API}/resolution/hybrid`, { userId });
-                get().onStateSync(response.data);
-            } catch (error) {
-                get().onError(error.response?.data?.error || error.message);
-            }
-            set({ isSubmitting: false });
-        }
+        await createCourtAction({
+            socketEvent: 'court:resolution_hybrid',
+            apiPath: '/resolution/hybrid',
+            timeoutMs: 5000
+        })();
+        set({ isSubmitting: false });
     },
 
     /**
@@ -677,7 +481,7 @@ const useCourtStore = create((set, get) => ({
 
             // If WebSocket is connected, server will push the authoritative state.
             const lastSyncAt = get().lastSyncAt;
-            const stale = !lastSyncAt || Date.now() - lastSyncAt > 10000;
+            const stale = !lastSyncAt || Date.now() - lastSyncAt > STALE_THRESHOLD_MS;
             if (!force && (socketRef?.connected || get().isConnected) && !stale) {
                 return;
             }
@@ -791,6 +595,7 @@ const useCourtStore = create((set, get) => ({
     getPhase: () => {
         return get().myViewPhase || get().phase || VIEW_PHASE.IDLE;
     }
-}));
+    });
+});
 
 export default useCourtStore;

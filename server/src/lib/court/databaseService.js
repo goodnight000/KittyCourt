@@ -4,7 +4,7 @@
  * Handles database checkpoint operations and session recovery.
  */
 
-const { PHASE } = require('./stateSerializer');
+const { PHASE } = require('./StateSerializer');
 
 /**
  * Database operation wrappers for court sessions.
@@ -80,6 +80,7 @@ function reconstructFromDB(db) {
     const settlementRequested = settle.creator && !settle.partner
         ? db.created_by
         : (settle.partner && !settle.creator ? db.partner_id : null);
+    const settlementRequestedAt = settle.requestedAt || null;
 
     const session = {
         id: db.id,
@@ -111,6 +112,7 @@ function reconstructFromDB(db) {
         addendumCount: db.addendum_count || (db.addendum_history ? db.addendum_history.length : 0),
         verdictHistory: db.verdict_history || [],
         settlementRequested,
+        settlementRequestedAt,
         timeoutId: null,
         settlementTimeoutId: null,
         createdAt: new Date(db.created_at).getTime(),

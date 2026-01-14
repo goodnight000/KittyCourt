@@ -6,7 +6,7 @@ import { motion } from 'framer-motion'
 import { ArrowLeft, Sparkles, PauseCircle, ThumbsUp, ThumbsDown, AlertCircle } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import useLevelStore from '../store/useLevelStore'
-import useAuthStore from '../store/useAuthStore'
+import usePartnerStore from '../store/usePartnerStore'
 import useInsightsStore from '../store/useInsightsStore'
 import useSubscriptionStore from '../store/useSubscriptionStore'
 import Paywall from '../components/Paywall'
@@ -31,7 +31,7 @@ const InsightsPage = () => {
   const navigate = useNavigate()
   const { t, language } = useI18n()
   const handleBack = () => navigate('/profile', { state: { tab: 'us' } })
-  const { hasPartner } = useAuthStore()
+  const { hasPartner } = usePartnerStore()
   const { level, shouldShowInsights, fetchLevel, serverAvailable } = useLevelStore()
   const { isGold, isLoading: subscriptionLoading } = useSubscriptionStore()
   const {

@@ -19,8 +19,8 @@ const ResolutionService = require('./court/ResolutionService');
 const SettlementService = require('./court/SettlementService');
 
 // Import helper modules
-const { PHASE, VIEW_PHASE, ADDENDUM_LIMIT, computeViewPhase, sanitizeSession } = require('./court/stateSerializer');
-const { TIMEOUT } = require('./court/timeoutHandlers');
+const { PHASE, VIEW_PHASE, ADDENDUM_LIMIT, computeViewPhase, sanitizeSession } = require('./court/StateSerializer');
+const { TIMEOUT, getRemainingTimeout } = require('./court/timeoutHandlers');
 const { reconstructFromDB } = require('./court/databaseService');
 const { runVerdictPipeline, mapJudgeTypeToUsage } = require('./court/verdictGenerator');
 const { buildCaseData } = require('./court/caseDataBuilder');
@@ -69,6 +69,51 @@ class CourtSessionManager {
         this.evidenceService = new EvidenceService();
         this.resolutionService = new ResolutionService(deps);
         this.settlementService = new SettlementService();
+
+        // Restore timeouts for any sessions already hydrated from Redis
+        this._restoreAllSessionTimeouts();
+    }
+
+    /**
+     * Restore timeouts for all currently active sessions
+     * Called after services are initialized to handle Redis-hydrated sessions
+     */
+    _restoreAllSessionTimeouts() {
+        const sessions = this.repository.getAllSessions();
+        for (const session of sessions) {
+            // Only restore if no timeout is already set
+            if (!session.timeoutId) {
+                this._restorePhaseTimeout(session);
+            }
+            // Restore settlement timeout if pending
+            if (!session.settlementTimeoutId) {
+                this._restoreSettlementTimeout(session);
+            }
+        }
+    }
+
+    /**
+     * Restore settlement timeout for a session if there was a pending settlement request
+     */
+    _restoreSettlementTimeout(session) {
+        if (!session.settlementRequested || !session.settlementRequestedAt) {
+            return;
+        }
+
+        const elapsed = Date.now() - session.settlementRequestedAt;
+        const remaining = TIMEOUT.SETTLE_REQUEST - elapsed;
+
+        if (remaining <= 0) {
+            // Settlement request expired during downtime
+            console.log(`[Court] Settlement request expired for ${session.coupleId}, handling timeout`);
+            this._handleSettlementTimeout(session.coupleId, session.settlementRequested);
+            return;
+        }
+
+        console.log(`[Court] Restoring settlement timeout for ${session.coupleId}, ${remaining}ms remaining`);
+        session.settlementTimeoutId = setTimeout(() => {
+            this._handleSettlementTimeout(session.coupleId, session.settlementRequested);
+        }, remaining);
     }
 
     // === Session Lookup ===
@@ -466,7 +511,7 @@ class CourtSessionManager {
         const session = this.repository.getSessionForUser(userId);
         if (!session) throw new Error('No active session');
 
-        const result = this.resolutionService.submitResolutionPick(session, userId, resolutionId);
+        const result = await this.resolutionService.submitResolutionPick(session, userId, resolutionId);
 
         if (result.bothPicked && result.sameChoice) {
             // Both picked same - finalize
@@ -692,11 +737,16 @@ class CourtSessionManager {
     // === Database Operations ===
 
     async _dbCheckpoint(session, action) {
-        if (!this.dbService) return;
-        try {
-            await this.dbService.checkpoint(session, action);
-        } catch (error) {
-            console.error('[Court] DB checkpoint failed:', error);
+        if (this.dbService) {
+            try {
+                await this.dbService.checkpoint(session, action);
+            } catch (error) {
+                console.error('[Court] DB checkpoint failed:', error);
+            }
+        }
+
+        if (this.repository?.saveSession) {
+            await this.repository.saveSession(session);
         }
     }
 
@@ -711,11 +761,98 @@ class CourtSessionManager {
 
     // === Recovery ===
 
+    /**
+     * Restore appropriate timeout for a session based on its current phase
+     * Called after session hydration from Redis or database
+     */
+    _restorePhaseTimeout(session) {
+        // Get the timeout duration for current phase
+        const timeoutDuration = TIMEOUT[session.phase];
+        if (!timeoutDuration) {
+            // Phase has no timeout (e.g., IDLE, CLOSED)
+            return;
+        }
+
+        const remaining = getRemainingTimeout(session, timeoutDuration);
+
+        if (remaining <= 0) {
+            // Timeout already expired during downtime - handle immediately
+            console.log(`[Court] Session ${session.coupleId} timeout expired during downtime, handling ${session.phase}`);
+            this._handleExpiredTimeout(session);
+            return;
+        }
+
+        // Set timeout for remaining time
+        console.log(`[Court] Restoring ${session.phase} timeout for ${session.coupleId}, ${remaining}ms remaining`);
+
+        switch (session.phase) {
+            case PHASE.PENDING:
+                session.timeoutId = setTimeout(() => this._handlePendingTimeout(session.coupleId), remaining);
+                break;
+            case PHASE.EVIDENCE:
+                session.timeoutId = setTimeout(() => this._handleEvidenceTimeout(session.coupleId), remaining);
+                break;
+            case PHASE.ANALYZING:
+                session.timeoutId = setTimeout(() => this._handleAnalyzingTimeout(session.coupleId), remaining);
+                break;
+            case PHASE.PRIMING:
+                session.timeoutId = setTimeout(() => this._handlePrimingTimeout(session.coupleId), remaining);
+                break;
+            case PHASE.JOINT_READY:
+                session.timeoutId = setTimeout(() => this._handleJointTimeout(session.coupleId), remaining);
+                break;
+            case PHASE.RESOLUTION:
+                session.timeoutId = setTimeout(() => this._handleResolutionTimeout(session.coupleId), remaining);
+                break;
+            case PHASE.VERDICT:
+                session.timeoutId = setTimeout(() => this._handleVerdictTimeout(session.coupleId), remaining);
+                break;
+        }
+    }
+
+    /**
+     * Handle timeout that expired during server downtime
+     */
+    _handleExpiredTimeout(session) {
+        switch (session.phase) {
+            case PHASE.PENDING:
+                this._handlePendingTimeout(session.coupleId);
+                break;
+            case PHASE.EVIDENCE:
+                this._handleEvidenceTimeout(session.coupleId);
+                break;
+            case PHASE.ANALYZING:
+                this._handleAnalyzingTimeout(session.coupleId);
+                break;
+            case PHASE.PRIMING:
+                this._handlePrimingTimeout(session.coupleId);
+                break;
+            case PHASE.JOINT_READY:
+                this._handleJointTimeout(session.coupleId);
+                break;
+            case PHASE.RESOLUTION:
+                this._handleResolutionTimeout(session.coupleId);
+                break;
+            case PHASE.VERDICT:
+                this._handleVerdictTimeout(session.coupleId);
+                break;
+            default:
+                // For phases without specific handlers (e.g., CLOSED), clean up the session
+                console.log(`[Court] Closing expired session ${session.coupleId} in phase ${session.phase}`);
+                this._deleteSession(session);
+                this._cleanup(session.coupleId);
+        }
+    }
+
     async recoverFromDatabase(sessions) {
         for (const dbSession of sessions) {
             try {
                 const session = reconstructFromDB(dbSession);
                 this.repository.restoreSession(session);
+                // Restore appropriate timeout for this phase
+                this._restorePhaseTimeout(session);
+                // Restore settlement timeout if pending
+                this._restoreSettlementTimeout(session);
                 console.log(`[Court] Recovered session ${session.id}`);
             } catch (error) {
                 console.error('[Court] Failed to recover session:', error);
@@ -735,6 +872,8 @@ const courtSessionManager = new CourtSessionManager();
 
 module.exports = {
     courtSessionManager,
+    CourtSessionManager,
+    createCourtSessionManager: () => new CourtSessionManager(),
     PHASE,
     VIEW_PHASE,
     TIMEOUT

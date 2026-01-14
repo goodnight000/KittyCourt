@@ -1,6 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
-import PropTypes from 'prop-types';
 
 /**
  * Reusable modal wrapper with animation and accessibility
@@ -107,13 +106,3 @@ export default function Modal({
     </AnimatePresence>
   );
 }
-
-Modal.propTypes = {
-  isOpen: PropTypes.bool.isRequired,
-  onClose: PropTypes.func.isRequired,
-  title: PropTypes.string,
-  children: PropTypes.node.isRequired,
-  size: PropTypes.oneOf(['sm', 'md', 'lg', 'xl']),
-  showCloseButton: PropTypes.bool,
-  closeOnBackdropClick: PropTypes.bool
-};

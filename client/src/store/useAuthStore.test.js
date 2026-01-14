@@ -111,13 +111,6 @@ describe('useAuthStore', () => {
             expect(state.session).toBeNull();
             expect(state.profile).toBeNull();
             expect(state.isAuthenticated).toBe(false);
-            expect(state.partner).toBeNull();
-            expect(state.pendingRequests).toEqual([]);
-            expect(state.sentRequest).toBeNull();
-            expect(state.hasPartner).toBe(false);
-            expect(state.onboardingComplete).toBe(false);
-            expect(state.onboardingStep).toBe(0);
-            expect(state.onboardingData).toEqual({});
             expect(state.preferredLanguage).toBe('en');
         });
 
@@ -130,17 +123,8 @@ describe('useAuthStore', () => {
             expect(typeof state.signInWithGoogle).toBe('function');
             expect(typeof state.signOut).toBe('function');
             expect(typeof state.refreshProfile).toBe('function');
-            expect(typeof state.sendPartnerRequestByCode).toBe('function');
-            expect(typeof state.acceptRequest).toBe('function');
-            expect(typeof state.rejectRequest).toBe('function');
-            expect(typeof state.cancelSentRequest).toBe('function');
-            expect(typeof state.completeOnboarding).toBe('function');
-            expect(typeof state.setOnboardingStep).toBe('function');
-            expect(typeof state.updateOnboardingData).toBe('function');
             expect(typeof state.setPreferredLanguage).toBe('function');
             expect(typeof state.cleanup).toBe('function');
-            expect(typeof state.cleanupRealtimeSubscriptions).toBe('function');
-            expect(typeof state.setupRealtimeSubscriptions).toBe('function');
         });
     });
 
@@ -183,15 +167,14 @@ describe('useAuthStore', () => {
             expect(state.session).toEqual(mockSession);
             expect(state.profile).toEqual(mockProfile);
             expect(state.isAuthenticated).toBe(true);
-            expect(state.onboardingComplete).toBe(true);
             expect(state.isLoading).toBe(false);
 
             // Verify AUTH_LOGIN event was emitted
-            expect(eventCallback).toHaveBeenCalledWith({
+            expect(eventCallback).toHaveBeenCalledWith(expect.objectContaining({
                 userId: 'user-123',
                 profile: mockProfile,
                 partner: null
-            });
+            }));
         });
 
         it('should handle sign in errors correctly', async () => {
@@ -270,7 +253,6 @@ describe('useAuthStore', () => {
             const state = useAuthStore.getState();
             expect(state.user).toEqual(mockUser);
             expect(state.isAuthenticated).toBe(true);
-            expect(state.onboardingComplete).toBe(false);
         });
 
         it('should handle sign up errors', async () => {
@@ -299,10 +281,7 @@ describe('useAuthStore', () => {
                 user: { id: 'user-123' },
                 session: { access_token: 'token' },
                 profile: { id: 'user-123', display_name: 'Test' },
-                partner: { id: 'partner-456' },
-                hasPartner: true,
                 isAuthenticated: true,
-                onboardingComplete: true,
                 preferredLanguage: 'zh-Hans'
             });
 
@@ -317,14 +296,7 @@ describe('useAuthStore', () => {
             expect(state.user).toBeNull();
             expect(state.session).toBeNull();
             expect(state.profile).toBeNull();
-            expect(state.partner).toBeNull();
-            expect(state.hasPartner).toBe(false);
             expect(state.isAuthenticated).toBe(false);
-            expect(state.pendingRequests).toEqual([]);
-            expect(state.sentRequest).toBeNull();
-            expect(state.onboardingComplete).toBe(false);
-            expect(state.onboardingStep).toBe(0);
-            expect(state.onboardingData).toEqual({});
             expect(state.preferredLanguage).toBe('en');
             expect(state.isLoading).toBe(false);
 
@@ -343,248 +315,12 @@ describe('useAuthStore', () => {
         });
     });
 
-    describe('Partner Request Actions', () => {
-        beforeEach(() => {
-            vi.useRealTimers();
-            useAuthStore.setState({
-                user: { id: 'user-123' },
-                profile: { id: 'user-123', partner_code: 'MY-CODE' }
-            });
-        });
-
-        describe('sendPartnerRequestByCode()', () => {
-            it('should send partner request successfully', async () => {
-                const targetUser = { id: 'target-456' };
-
-                supabaseMocks.findByPartnerCode.mockResolvedValue({
-                    data: targetUser,
-                    error: null
-                });
-
-                supabaseMocks.getProfile.mockResolvedValue({
-                    data: { id: 'target-456', partner_id: null },
-                    error: null
-                });
-
-                supabaseMocks.sendPartnerRequest.mockResolvedValue({
-                    data: { id: 'request-789', receiver_id: 'target-456' },
-                    error: null
-                });
-
-                const result = await useAuthStore.getState().sendPartnerRequestByCode('PARTNER-CODE');
-
-                expect(result.error).toBeUndefined();
-                expect(result.data).toBeDefined();
-                expect(useAuthStore.getState().sentRequest).toBeDefined();
-            });
-
-            it('should reject connecting with self', async () => {
-                const result = await useAuthStore.getState().sendPartnerRequestByCode('MY-CODE');
-
-                expect(result.error).toContain("can't connect with yourself");
-            });
-
-            it('should handle invalid partner code', async () => {
-                supabaseMocks.findByPartnerCode.mockResolvedValue({
-                    data: null,
-                    error: { message: 'Not found' }
-                });
-
-                const result = await useAuthStore.getState().sendPartnerRequestByCode('INVALID-CODE');
-
-                expect(result.error).toContain('Partner code not found');
-            });
-
-            it('should prevent connecting with someone who has a partner', async () => {
-                supabaseMocks.findByPartnerCode.mockResolvedValue({
-                    data: { id: 'target-456' },
-                    error: null
-                });
-
-                supabaseMocks.getProfile.mockResolvedValue({
-                    data: { id: 'target-456', partner_id: 'other-partner' },
-                    error: null
-                });
-
-                const result = await useAuthStore.getState().sendPartnerRequestByCode('TAKEN-CODE');
-
-                expect(result.error).toContain('already connected');
-            });
-        });
-
-        describe('acceptRequest()', () => {
-            it('should accept partner request and update state', async () => {
-                const updatedProfile = {
-                    id: 'user-123',
-                    partner_id: 'partner-456',
-                    anniversary_date: '2024-01-15'
-                };
-                const partnerProfile = {
-                    id: 'partner-456',
-                    display_name: 'Partner Name'
-                };
-
-                supabaseMocks.acceptPartnerRequest.mockResolvedValue({
-                    data: updatedProfile,
-                    error: null
-                });
-
-                supabaseMocks.getPartnerProfile.mockResolvedValue({
-                    data: partnerProfile,
-                    error: null
-                });
-
-                const result = await useAuthStore.getState().acceptRequest('request-123', '2024-01-15');
-
-                expect(result.error).toBeUndefined();
-
-                const state = useAuthStore.getState();
-                expect(state.profile).toEqual(updatedProfile);
-                expect(state.partner).toEqual(partnerProfile);
-                expect(state.hasPartner).toBe(true);
-                expect(state.pendingRequests).toEqual([]);
-                expect(state.sentRequest).toBeNull();
-            });
-
-            it('should handle accept request errors', async () => {
-                supabaseMocks.acceptPartnerRequest.mockResolvedValue({
-                    data: null,
-                    error: { message: 'Request expired' }
-                });
-
-                const result = await useAuthStore.getState().acceptRequest('expired-request');
-
-                expect(result.error).toBeDefined();
-            });
-        });
-
-        describe('rejectRequest()', () => {
-            it('should reject partner request and remove from pending', async () => {
-                useAuthStore.setState({
-                    pendingRequests: [
-                        { id: 'request-1', sender_id: 'user-A' },
-                        { id: 'request-2', sender_id: 'user-B' }
-                    ]
-                });
-
-                supabaseMocks.rejectPartnerRequest.mockResolvedValue({ error: null });
-
-                const result = await useAuthStore.getState().rejectRequest('request-1');
-
-                expect(result.success).toBe(true);
-                expect(useAuthStore.getState().pendingRequests).toEqual([
-                    { id: 'request-2', sender_id: 'user-B' }
-                ]);
-            });
-        });
-
-        describe('cancelSentRequest()', () => {
-            it('should cancel sent request', async () => {
-                useAuthStore.setState({
-                    sentRequest: { id: 'sent-request-123' }
-                });
-
-                supabaseMocks.cancelPartnerRequest.mockResolvedValue({ error: null });
-
-                const result = await useAuthStore.getState().cancelSentRequest();
-
-                expect(result.success).toBe(true);
-                expect(useAuthStore.getState().sentRequest).toBeNull();
-            });
-
-            it('should return error if no sent request exists', async () => {
-                useAuthStore.setState({ sentRequest: null });
-
-                const result = await useAuthStore.getState().cancelSentRequest();
-
-                expect(result.error).toBeDefined();
-            });
-        });
-    });
-
-    describe('Onboarding Actions', () => {
-        describe('setOnboardingStep()', () => {
-            it('should update onboarding step', () => {
-                useAuthStore.getState().setOnboardingStep(3);
-
-                expect(useAuthStore.getState().onboardingStep).toBe(3);
-            });
-        });
-
-        describe('updateOnboardingData()', () => {
-            it('should merge onboarding data', () => {
-                useAuthStore.getState().updateOnboardingData({ displayName: 'Test' });
-                useAuthStore.getState().updateOnboardingData({ birthday: '1990-01-01' });
-
-                const state = useAuthStore.getState();
-                expect(state.onboardingData).toEqual({
-                    displayName: 'Test',
-                    birthday: '1990-01-01'
-                });
-            });
-        });
-
-        describe('completeOnboarding()', () => {
-            it('should complete onboarding and save profile', async () => {
-                vi.useRealTimers();
-
-                useAuthStore.setState({
-                    user: { id: 'user-123', email: 'test@example.com' },
-                    profile: { id: 'user-123', partner_code: 'CODE123' },
-                    onboardingData: {
-                        displayName: 'Test User',
-                        birthday: '1990-01-01',
-                        loveLanguage: 'quality_time',
-                        communicationStyle: 'direct'
-                    },
-                    preferredLanguage: 'en'
-                });
-
-                const savedProfile = {
-                    id: 'user-123',
-                    display_name: 'Test User',
-                    birthday: '1990-01-01',
-                    love_language: 'quality_time',
-                    communication_style: 'direct',
-                    onboarding_complete: true
-                };
-
-                supabaseMocks.upsertProfile.mockResolvedValue({
-                    data: savedProfile,
-                    error: null
-                });
-
-                const result = await useAuthStore.getState().completeOnboarding();
-
-                expect(result.data).toBeDefined();
-                expect(result.error).toBeUndefined();
-
-                const state = useAuthStore.getState();
-                expect(state.profile).toEqual(savedProfile);
-                expect(state.onboardingComplete).toBe(true);
-                expect(state.onboardingStep).toBe(0);
-                expect(state.onboardingData).toEqual({});
-            });
-
-            it('should return error if user not logged in', async () => {
-                vi.useRealTimers();
-
-                useAuthStore.setState({ user: null });
-
-                const result = await useAuthStore.getState().completeOnboarding();
-
-                expect(result.error).toBeDefined();
-            });
-        });
-    });
-
     describe('refreshProfile()', () => {
-        it('should refresh profile and partner data', async () => {
+        it('should refresh profile data', async () => {
             vi.useRealTimers();
 
             useAuthStore.setState({
-                user: { id: 'user-123' },
-                hasPartner: false
+                user: { id: 'user-123' }
             });
 
             const updatedProfile = {
@@ -594,14 +330,9 @@ describe('useAuthStore', () => {
                 onboarding_complete: true,
                 preferred_language: 'en'
             };
-            const partnerData = {
-                id: 'partner-456',
-                display_name: 'Partner'
-            };
-
             profileLoaderMocks.loadUserContext.mockResolvedValue({
                 profile: updatedProfile,
-                partner: partnerData,
+                partner: null,
                 requests: [],
                 sent: null
             });
@@ -610,8 +341,6 @@ describe('useAuthStore', () => {
 
             const state = useAuthStore.getState();
             expect(state.profile).toEqual(updatedProfile);
-            expect(state.partner).toEqual(partnerData);
-            expect(state.hasPartner).toBe(true);
         });
 
         it('should do nothing if user not logged in', async () => {
@@ -693,24 +422,6 @@ describe('useAuthStore', () => {
     });
 
     describe('Cleanup Methods', () => {
-        describe('cleanupRealtimeSubscriptions()', () => {
-            it('should clean up subscriptions and reset subscription refs', () => {
-                const mockSub1 = {};
-                const mockSub2 = {};
-
-                useAuthStore.setState({
-                    _profileSubscription: mockSub1,
-                    _requestsSubscription: mockSub2
-                });
-
-                useAuthStore.getState().cleanupRealtimeSubscriptions();
-
-                const state = useAuthStore.getState();
-                expect(state._profileSubscription).toBeNull();
-                expect(state._requestsSubscription).toBeNull();
-            });
-        });
-
         describe('cleanup()', () => {
             it('should clean up all resources without error', () => {
                 expect(() => useAuthStore.getState().cleanup()).not.toThrow();
@@ -725,8 +436,7 @@ describe('useAuthStore', () => {
             useAuthStore.setState({
                 user: { id: 'user-123' },
                 isAuthenticated: true,
-                profile: { id: 'user-123' },
-                hasPartner: true
+                profile: { id: 'user-123' }
             });
 
             await useAuthStore.getState().handleSupabaseAuthEvent('SIGNED_OUT', null);
@@ -735,7 +445,6 @@ describe('useAuthStore', () => {
             expect(state.isAuthenticated).toBe(false);
             expect(state.user).toBeNull();
             expect(state.profile).toBeNull();
-            expect(state.hasPartner).toBe(false);
         });
 
         it('should handle TOKEN_REFRESHED event and update session', async () => {

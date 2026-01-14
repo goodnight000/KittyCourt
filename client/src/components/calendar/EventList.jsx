@@ -1,7 +1,6 @@
 import React, { memo, useMemo } from 'react';
 import { motion as Motion } from 'framer-motion';
 import { ChevronRight, Check, Wand2, Lock } from 'lucide-react';
-import PropTypes from 'prop-types';
 import { useI18n } from '../../i18n';
 
 const EVENT_TYPES = [
@@ -17,7 +16,14 @@ const EVENT_TYPES = [
  * Displays a single event card with plan button
  * Wrapped with React.memo to prevent unnecessary re-renders
  */
-const EventCard = memo(({ event, delay, onClick, onPlanClick, showPlanButton, hasSavedPlan }) => {
+const EventCard = memo(({
+    event,
+    delay = 0,
+    onClick,
+    onPlanClick = null,
+    showPlanButton = false,
+    hasSavedPlan = false
+}) => {
     const { t, language } = useI18n();
     const eventType = EVENT_TYPES.find((item) => item.id === event.type) || EVENT_TYPES[4];
 
@@ -213,27 +219,5 @@ const EventCard = memo(({ event, delay, onClick, onPlanClick, showPlanButton, ha
 });
 
 EventCard.displayName = 'EventCard';
-
-EventCard.propTypes = {
-    event: PropTypes.shape({
-        id: PropTypes.string.isRequired,
-        title: PropTypes.string.isRequired,
-        date: PropTypes.string.isRequired,
-        type: PropTypes.string.isRequired,
-        emoji: PropTypes.string,
-        isSecret: PropTypes.bool,
-    }).isRequired,
-    delay: PropTypes.number,
-    onClick: PropTypes.func.isRequired,
-    onPlanClick: PropTypes.func,
-    showPlanButton: PropTypes.bool,
-    hasSavedPlan: PropTypes.bool,
-};
-
-EventCard.defaultProps = {
-    delay: 0,
-    showPlanButton: false,
-    hasSavedPlan: false,
-};
 
 export default EventCard;

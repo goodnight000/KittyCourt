@@ -5,6 +5,7 @@ import {
     Calendar, BookOpen, Search
 } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
+import usePartnerStore from '../store/usePartnerStore';
 import useCacheStore, { CACHE_TTL, CACHE_KEYS } from '../store/useCacheStore';
 import api from '../services/api';
 import { ChevronLeft } from 'lucide-react';
@@ -50,7 +51,8 @@ const MoodIcon = ({ moodId, label, className = 'w-6 h-6' }) => {
 const DailyMeowHistoryPage = () => {
     const navigate = useNavigate();
     const { t, language } = useI18n();
-    const { user: authUser, profile, partner: connectedPartner } = useAuthStore();
+    const { user: authUser, profile } = useAuthStore();
+    const { partner: connectedPartner } = usePartnerStore();
 
     const myId = authUser?.id;
     const partnerId = connectedPartner?.id;

@@ -12,6 +12,7 @@ const { processSecureInput, securityConfig, logSecurityEvent } = require('./secu
 const { isSupabaseConfigured } = require('./supabase');
 const { requireSupabase, getPartnerIdForUser } = require('./auth');
 const { resolveLanguageFromHeader, getUserPreferredLanguage } = require('./language');
+const { safeErrorMessage } = require('./shared/errorUtils');
 
 /**
  * WebSocket Rate Limiter
@@ -220,8 +221,8 @@ class CourtWebSocketService {
                     if (typeof ack === 'function') ack({ ok: true, state });
                 } catch (error) {
                     console.error('[WS] serve error:', error.message);
-                    socket.emit('court:error', { message: error.message });
-                    if (typeof ack === 'function') ack({ ok: false, error: error.message });
+                    socket.emit('court:error', { message: safeErrorMessage(error) });
+                    if (typeof ack === 'function') ack({ ok: false, error: safeErrorMessage(error) });
                 }
             });
 
@@ -234,8 +235,8 @@ class CourtWebSocketService {
                     if (typeof ack === 'function') ack({ ok: true, state });
                 } catch (error) {
                     console.error('[WS] accept error:', error.message);
-                    socket.emit('court:error', { message: error.message });
-                    if (typeof ack === 'function') ack({ ok: false, error: error.message });
+                    socket.emit('court:error', { message: safeErrorMessage(error) });
+                    if (typeof ack === 'function') ack({ ok: false, error: safeErrorMessage(error) });
                 }
             });
 
@@ -248,8 +249,8 @@ class CourtWebSocketService {
                     if (typeof ack === 'function') ack({ ok: true, state });
                 } catch (error) {
                     console.error('[WS] cancel error:', error.message);
-                    socket.emit('court:error', { message: error.message });
-                    if (typeof ack === 'function') ack({ ok: false, error: error.message });
+                    socket.emit('court:error', { message: safeErrorMessage(error) });
+                    if (typeof ack === 'function') ack({ ok: false, error: safeErrorMessage(error) });
                 }
             });
 
@@ -261,8 +262,8 @@ class CourtWebSocketService {
                     if (typeof ack === 'function') ack({ ok: true });
                 } catch (error) {
                     console.error('[WS] dismiss error:', error.message);
-                    socket.emit('court:error', { message: error.message });
-                    if (typeof ack === 'function') ack({ ok: false, error: error.message });
+                    socket.emit('court:error', { message: safeErrorMessage(error) });
+                    if (typeof ack === 'function') ack({ ok: false, error: safeErrorMessage(error) });
                 }
             });
 
@@ -306,8 +307,8 @@ class CourtWebSocketService {
                     if (typeof ack === 'function') ack({ ok: true, state });
                 } catch (error) {
                     console.error('[WS] submit_evidence error:', error.message);
-                    socket.emit('court:error', { message: error.message });
-                    if (typeof ack === 'function') ack({ ok: false, error: error.message });
+                    socket.emit('court:error', { message: safeErrorMessage(error) });
+                    if (typeof ack === 'function') ack({ ok: false, error: safeErrorMessage(error) });
                 }
             });
 
@@ -320,8 +321,8 @@ class CourtWebSocketService {
                     if (typeof ack === 'function') ack({ ok: true, state });
                 } catch (error) {
                     console.error('[WS] accept_verdict error:', error.message);
-                    socket.emit('court:error', { message: error.message });
-                    if (typeof ack === 'function') ack({ ok: false, error: error.message });
+                    socket.emit('court:error', { message: safeErrorMessage(error) });
+                    if (typeof ack === 'function') ack({ ok: false, error: safeErrorMessage(error) });
                 }
             });
 
@@ -334,8 +335,8 @@ class CourtWebSocketService {
                     if (typeof ack === 'function') ack({ ok: true, state });
                 } catch (error) {
                     console.error('[WS] request_settle error:', error.message);
-                    socket.emit('court:error', { message: error.message });
-                    if (typeof ack === 'function') ack({ ok: false, error: error.message });
+                    socket.emit('court:error', { message: safeErrorMessage(error) });
+                    if (typeof ack === 'function') ack({ ok: false, error: safeErrorMessage(error) });
                 }
             });
 
@@ -348,8 +349,8 @@ class CourtWebSocketService {
                     if (typeof ack === 'function') ack({ ok: true, state });
                 } catch (error) {
                     console.error('[WS] accept_settle error:', error.message);
-                    socket.emit('court:error', { message: error.message });
-                    if (typeof ack === 'function') ack({ ok: false, error: error.message });
+                    socket.emit('court:error', { message: safeErrorMessage(error) });
+                    if (typeof ack === 'function') ack({ ok: false, error: safeErrorMessage(error) });
                 }
             });
 
@@ -362,8 +363,8 @@ class CourtWebSocketService {
                     if (typeof ack === 'function') ack({ ok: true, state });
                 } catch (error) {
                     console.error('[WS] decline_settle error:', error.message);
-                    socket.emit('court:error', { message: error.message });
-                    if (typeof ack === 'function') ack({ ok: false, error: error.message });
+                    socket.emit('court:error', { message: safeErrorMessage(error) });
+                    if (typeof ack === 'function') ack({ ok: false, error: safeErrorMessage(error) });
                 }
             });
 
@@ -383,8 +384,8 @@ class CourtWebSocketService {
                     if (typeof ack === 'function') ack({ ok: true, state });
                 } catch (error) {
                     console.error('[WS] submit_addendum error:', error.message);
-                    socket.emit('court:error', { message: error.message });
-                    if (typeof ack === 'function') ack({ ok: false, error: error.message });
+                    socket.emit('court:error', { message: safeErrorMessage(error) });
+                    if (typeof ack === 'function') ack({ ok: false, error: safeErrorMessage(error) });
                 }
             });
 
@@ -399,8 +400,8 @@ class CourtWebSocketService {
                     if (typeof ack === 'function') ack({ ok: true, state });
                 } catch (error) {
                     console.error('[WS] priming_complete error:', error.message);
-                    socket.emit('court:error', { message: error.message });
-                    if (typeof ack === 'function') ack({ ok: false, error: error.message });
+                    socket.emit('court:error', { message: safeErrorMessage(error) });
+                    if (typeof ack === 'function') ack({ ok: false, error: safeErrorMessage(error) });
                 }
             });
 
@@ -413,8 +414,8 @@ class CourtWebSocketService {
                     if (typeof ack === 'function') ack({ ok: true, state });
                 } catch (error) {
                     console.error('[WS] joint_ready error:', error.message);
-                    socket.emit('court:error', { message: error.message });
-                    if (typeof ack === 'function') ack({ ok: false, error: error.message });
+                    socket.emit('court:error', { message: safeErrorMessage(error) });
+                    if (typeof ack === 'function') ack({ ok: false, error: safeErrorMessage(error) });
                 }
             });
 
@@ -428,8 +429,8 @@ class CourtWebSocketService {
                     if (typeof ack === 'function') ack({ ok: true, state });
                 } catch (error) {
                     console.error('[WS] resolution_pick error:', error.message);
-                    socket.emit('court:error', { message: error.message });
-                    if (typeof ack === 'function') ack({ ok: false, error: error.message });
+                    socket.emit('court:error', { message: safeErrorMessage(error) });
+                    if (typeof ack === 'function') ack({ ok: false, error: safeErrorMessage(error) });
                 }
             });
 
@@ -442,8 +443,8 @@ class CourtWebSocketService {
                     if (typeof ack === 'function') ack({ ok: true, state });
                 } catch (error) {
                     console.error('[WS] resolution_accept_partner error:', error.message);
-                    socket.emit('court:error', { message: error.message });
-                    if (typeof ack === 'function') ack({ ok: false, error: error.message });
+                    socket.emit('court:error', { message: safeErrorMessage(error) });
+                    if (typeof ack === 'function') ack({ ok: false, error: safeErrorMessage(error) });
                 }
             });
 
@@ -463,8 +464,8 @@ class CourtWebSocketService {
                     if (typeof ack === 'function') ack({ ok: true, state });
                 } catch (error) {
                     console.error('[WS] resolution_hybrid error:', error.message);
-                    socket.emit('court:error', { message: error.message });
-                    if (typeof ack === 'function') ack({ ok: false, error: error.message });
+                    socket.emit('court:error', { message: safeErrorMessage(error) });
+                    if (typeof ack === 'function') ack({ ok: false, error: safeErrorMessage(error) });
                 }
             });
 
@@ -514,3 +515,5 @@ class CourtWebSocketService {
 const courtWebSocket = new CourtWebSocketService();
 
 module.exports = courtWebSocket;
+module.exports.CourtWebSocketService = CourtWebSocketService;
+module.exports.createCourtWebSocketService = () => new CourtWebSocketService();

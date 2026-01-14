@@ -6,7 +6,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import SettlementService from './SettlementService.js';
-import { PHASE } from './stateSerializer.js';
+import { PHASE } from './StateSerializer.js';
 
 describe('SettlementService', () => {
     let settlementService;
@@ -33,6 +33,16 @@ describe('SettlementService', () => {
             expect(session.settlementRequested).toBe('user1');
             expect(result.partnerId).toBe('user2');
             expect(session.settlementTimeoutId).toBeDefined();
+        });
+
+        it('should set settlementRequestedAt timestamp', () => {
+            const onTimeout = vi.fn();
+            const beforeTime = Date.now();
+            settlementService.requestSettlement(session, 'user1', onTimeout);
+            const afterTime = Date.now();
+
+            expect(session.settlementRequestedAt).toBeGreaterThanOrEqual(beforeTime);
+            expect(session.settlementRequestedAt).toBeLessThanOrEqual(afterTime);
         });
 
         it('should request settlement in ANALYZING phase', () => {
@@ -93,12 +103,14 @@ describe('SettlementService', () => {
     describe('declineSettlement', () => {
         it('should decline settlement request', () => {
             session.settlementRequested = 'user1';
+            session.settlementRequestedAt = Date.now();
             const timeoutId = setTimeout(() => {}, 1000);
             session.settlementTimeoutId = timeoutId;
 
             const result = settlementService.declineSettlement(session, 'user2');
 
             expect(session.settlementRequested).toBeNull();
+            expect(session.settlementRequestedAt).toBeNull();
             expect(session.settlementTimeoutId).toBeNull();
             expect(result.requesterId).toBe('user1');
         });
@@ -121,11 +133,13 @@ describe('SettlementService', () => {
     describe('handleSettlementTimeout', () => {
         it('should expire settlement request', () => {
             session.settlementRequested = 'user1';
+            session.settlementRequestedAt = Date.now();
 
             const expired = settlementService.handleSettlementTimeout(session, 'user1');
 
             expect(expired).toBe(true);
             expect(session.settlementRequested).toBeNull();
+            expect(session.settlementRequestedAt).toBeNull();
             expect(session.settlementTimeoutId).toBeNull();
         });
 

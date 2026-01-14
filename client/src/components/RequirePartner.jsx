@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Link2, Lock, Users } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
+import usePartnerStore from '../store/usePartnerStore';
 import { useI18n } from '../i18n';
 
 /**
@@ -16,7 +17,8 @@ import { useI18n } from '../i18n';
  */
 const RequirePartner = ({ children, feature, description }) => {
     const navigate = useNavigate();
-    const { hasPartner, profile } = useAuthStore();
+    const { profile } = useAuthStore();
+    const { hasPartner } = usePartnerStore();
     const { t } = useI18n();
 
     // If connected, show the actual content

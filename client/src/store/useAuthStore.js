@@ -8,19 +8,8 @@ import {
     signInWithGoogle as supabaseSignInWithGoogle,
     signOut as supabaseSignOut,
     getSession,
-    getProfile,
     upsertProfile,
-    generatePartnerCode,
-    findByPartnerCode,
-    sendPartnerRequest,
-    getPendingRequests,
-    getSentRequest,
-    acceptPartnerRequest,
-    rejectPartnerRequest,
-    cancelPartnerRequest,
-    getPartnerProfile,
-    subscribeToPartnerRequests,
-    subscribeToProfileChanges
+    generatePartnerCode
 } from '../services/supabase';
 import { loadUserContext } from '../services/profileLoader';
 import { eventBus, EVENTS } from '../lib/eventBus';
@@ -30,6 +19,7 @@ import useCacheStore from './useCacheStore';
 import { logOutUser as revenueCatLogOut } from '../services/revenuecat';
 import { deactivateDeviceToken } from '../services/pushNotifications';
 import { DEFAULT_LANGUAGE, normalizeLanguage } from '../i18n/languageConfig';
+import api from '../services/api';
 
 const resolvePreferredLanguage = (profile) => (
     normalizeLanguage(profile?.preferred_language) || DEFAULT_LANGUAGE
@@ -59,9 +49,6 @@ const handleSignedOut = (set, get) => {
     pendingTimeouts.forEach(timeoutId => clearTimeout(timeoutId));
     pendingTimeouts.clear();
 
-    // Clean up realtime subscriptions
-    get().cleanupRealtimeSubscriptions();
-
     // Deactivate push tokens (fire and forget - don't block signout on failure)
     deactivateDeviceToken().catch(err => {
         console.warn('[Auth] Failed to deactivate push tokens:', err);
@@ -77,18 +64,9 @@ const handleSignedOut = (set, get) => {
         user: null,
         session: null,
         profile: null,
-        partner: null,
-        pendingRequests: [],
-        sentRequest: null,
-        hasPartner: false,
         isAuthenticated: false,
         hasCheckedAuth: true, // Keep true after signout (auth was checked, user is signed out)
-        onboardingComplete: false,
-        onboardingStep: 0,
-        onboardingData: {},
         preferredLanguage: DEFAULT_LANGUAGE,
-        _profileSubscription: null,
-        _requestsSubscription: null,
         isLoading: false
     });
 };
@@ -129,13 +107,6 @@ const handleSignedIn = async (set, get, sessionUser, session) => {
     if (state.profile?.id && state.profile.id !== sessionUser.id) {
         set({
             profile: null,
-            partner: null,
-            pendingRequests: [],
-            sentRequest: null,
-            hasPartner: false,
-            onboardingComplete: false,
-            onboardingStep: 0,
-            onboardingData: {},
             preferredLanguage: DEFAULT_LANGUAGE
         });
     }
@@ -151,16 +122,20 @@ const handleSignedIn = async (set, get, sessionUser, session) => {
             isAuthenticated: true,
             hasCheckedAuth: true,
             isLoading: false,
-            hasPartner: !!cachedProfile.partner_id,
-            onboardingComplete: !!cachedProfile.onboarding_complete,
             preferredLanguage: resolvePreferredLanguage(cachedProfile),
         });
+
+        eventBus.emit(EVENTS.AUTH_LOGIN, {
+            userId: sessionUser.id,
+            profile: cachedProfile,
+        });
+
+        // Warm cache in background (don't await)
+        useCacheStore.getState().warmCache(sessionUser.id, cachedProfile?.partner_id);
 
         const timeoutId = setTimeout(() => {
             pendingTimeouts.delete(timeoutId);
             get().refreshProfile();
-            get().refreshPendingRequests();
-            get().setupRealtimeSubscriptions();
         }, 0);
         pendingTimeouts.add(timeoutId);
         return;
@@ -182,11 +157,6 @@ const handleSignedIn = async (set, get, sessionUser, session) => {
         // Set all auth state atomically to prevent flash
         set({
             profile,
-            partner,
-            pendingRequests: requests,
-            sentRequest: sent,
-            hasPartner: profile ? !!profile.partner_id : stateAfterHydrate.hasPartner,
-            onboardingComplete: profile ? !!profile.onboarding_complete : stateAfterHydrate.onboardingComplete,
             preferredLanguage: profile ? resolvePreferredLanguage(profile) : stateAfterHydrate.preferredLanguage,
             hasCheckedAuth: true,
             isLoading: false,
@@ -196,14 +166,18 @@ const handleSignedIn = async (set, get, sessionUser, session) => {
         eventBus.emit(EVENTS.AUTH_LOGIN, {
             userId: sessionUser.id,
             profile,
-            partner
+            partner,
+            requests,
+            sent
         });
+
+        // Warm cache in background (don't await)
+        useCacheStore.getState().warmCache(sessionUser.id, partner?.id || profile?.partner_id);
 
         // Initialize subscription store after auth
         const timeoutId = setTimeout(() => {
             pendingTimeouts.delete(timeoutId);
             useSubscriptionStore.getState().initialize(sessionUser.id);
-            get().setupRealtimeSubscriptions();
         }, 100);
         pendingTimeouts.add(timeoutId);
     } catch (e) {
@@ -277,22 +251,7 @@ const useAuthStore = create(
             isLoading: true,
             isAuthenticated: false,
             hasCheckedAuth: false, // Tracks if initial auth check completed (not persisted)
-
-            // Partner state
-            partner: null,
-            pendingRequests: [],
-            sentRequest: null,
-            hasPartner: false,
-
-            // Onboarding state
-            onboardingComplete: false,
-            onboardingStep: 0,
-            onboardingData: {},
             preferredLanguage: DEFAULT_LANGUAGE,
-
-            // Realtime subscription refs (not persisted)
-            _profileSubscription: null,
-            _requestsSubscription: null,
 
             handleSupabaseAuthEvent: async (event, session) => {
                 const sessionUser = session?.user || null;
@@ -355,15 +314,8 @@ const useAuthStore = create(
                             user: null,
                             session: null,
                             profile: null,
-                            partner: null,
-                            pendingRequests: [],
-                            sentRequest: null,
-                            hasPartner: false,
                             isAuthenticated: false,
                             hasCheckedAuth: true,
-                            onboardingComplete: false,
-                            onboardingStep: 0,
-                            onboardingData: {},
                             preferredLanguage: DEFAULT_LANGUAGE,
                             isLoading: false
                         });
@@ -394,20 +346,28 @@ const useAuthStore = create(
                     // Load user context using profile loader service
                     let profile = null;
                     let partner = null;
+                    let requests = [];
+                    let sent = null;
                     try {
                         console.log('[Auth] Loading user context for user:', data.user.id);
 
-                        const { profile: loadedProfile, partner: loadedPartner } = await loadUserContext(data.user, {
+                        const {
+                            profile: loadedProfile,
+                            partner: loadedPartner,
+                            requests: loadedRequests,
+                            sent: loadedSent
+                        } = await loadUserContext(data.user, {
                             preferredLanguage: resolveInitialProfileLanguage(get().preferredLanguage),
                             profileTimeout: 5000
                         });
 
                         profile = loadedProfile;
                         partner = loadedPartner;
+                        requests = loadedRequests || [];
+                        sent = loadedSent || null;
 
                         console.log('[Auth] User context loaded:', {
-                            hasProfile: !!profile,
-                            hasPartner: !!partner
+                            hasProfile: !!profile
                         });
                     } catch (e) {
                         console.warn('[Auth] Profile fetch exception:', e);
@@ -415,19 +375,14 @@ const useAuthStore = create(
 
                     console.log('[Auth] Setting state after sign-in:', {
                         userId: data.user?.id,
-                        hasProfile: !!profile,
-                        onboardingComplete: profile?.onboarding_complete || false,
-                        hasPartner: !!profile?.partner_id
+                        hasProfile: !!profile
                     });
 
                     set({
                         user: data.user,
                         session: data.session,
                         profile,
-                        partner,
-                        hasPartner: !!profile?.partner_id,
                         isAuthenticated: true,
-                        onboardingComplete: profile?.onboarding_complete || false,
                         preferredLanguage: profile ? resolvePreferredLanguage(profile) : DEFAULT_LANGUAGE,
                         isLoading: false
                     });
@@ -436,14 +391,18 @@ const useAuthStore = create(
                     eventBus.emit(EVENTS.AUTH_LOGIN, {
                         userId: data.user.id,
                         profile,
-                        partner
+                        partner,
+                        requests,
+                        sent
                     });
+
+                    // Warm cache in background (don't await)
+                    useCacheStore.getState().warmCache(data.user.id, partner?.id || profile?.partner_id);
 
                     // Set up real-time subscriptions and initialize subscription store
                     const timeoutId = setTimeout(() => {
                         pendingTimeouts.delete(timeoutId);
                         useSubscriptionStore.getState().initialize(data.user.id);
-                        get().setupRealtimeSubscriptions();
                     }, 100);
                     pendingTimeouts.add(timeoutId);
 
@@ -464,24 +423,38 @@ const useAuthStore = create(
                     return { error };
                 }
 
-                // Create initial profile with partner code
+                // Check if email confirmation is required (session will be null when confirmation needed)
+                const needsEmailConfirmation = data.user && !data.session;
+
+                // Create initial profile with partner code (even if confirmation needed)
                 if (data.user) {
-                const partnerCode = generatePartnerCode();
-                await upsertProfile({
-                    id: data.user.id,
-                    email: data.user.email,
-                    partner_code: partnerCode,
-                    onboarding_complete: false,
-                    created_at: new Date().toISOString(),
-                    preferred_language: resolveInitialProfileLanguage(get().preferredLanguage),
-                });
+                    const partnerCode = generatePartnerCode();
+                    await upsertProfile({
+                        id: data.user.id,
+                        email: data.user.email,
+                        partner_code: partnerCode,
+                        onboarding_complete: false,
+                        created_at: new Date().toISOString(),
+                        preferred_language: resolveInitialProfileLanguage(get().preferredLanguage),
+                    });
                 }
 
+                // Only set authenticated if we have a valid session
+                if (needsEmailConfirmation) {
+                    // Email confirmation required - don't set authenticated
+                    console.log('[Auth] Sign up successful, email confirmation required');
+                    return {
+                        data,
+                        needsEmailConfirmation: true,
+                        email: email
+                    };
+                }
+
+                // Session exists - fully authenticated
                 set({
                     user: data.user,
                     session: data.session,
                     isAuthenticated: true,
-                    onboardingComplete: false,
                     preferredLanguage: DEFAULT_LANGUAGE,
                     isLoading: false
                 });
@@ -508,9 +481,6 @@ const useAuthStore = create(
                 pendingTimeouts.forEach(timeoutId => clearTimeout(timeoutId));
                 pendingTimeouts.clear();
 
-                // Clean up realtime subscriptions
-                get().cleanupRealtimeSubscriptions();
-
                 // Deactivate push notification tokens
                 await deactivateDeviceToken();
 
@@ -525,243 +495,32 @@ const useAuthStore = create(
                     user: null,
                     session: null,
                     profile: null,
-                    partner: null,
-                    pendingRequests: [],
-                    sentRequest: null,
-                    hasPartner: false,
                     isAuthenticated: false,
                     hasCheckedAuth: true, // Keep true after signout (auth was checked, user is signed out)
-                    onboardingComplete: false,
-                    onboardingStep: 0,
-                    onboardingData: {},
                     preferredLanguage: DEFAULT_LANGUAGE,
-                    _profileSubscription: null,
-                    _requestsSubscription: null,
                     isLoading: false
                 });
             },
 
-            // ============================================
-            // PARTNER CONNECTION ACTIONS
-            // ============================================
-
-            // Send a partner request by partner code
-            sendPartnerRequestByCode: async (partnerCode) => {
-                const { user, profile } = get();
-                if (!user) return { error: 'Not authenticated' };
-
-                // Check if trying to connect with self
-                if (profile?.partner_code === partnerCode) {
-                    return { error: "You can't connect with yourself! 😹" };
-                }
-
-                // Find user ID by partner code (secure lookup - only returns ID)
-                const { data: targetUserLookup, error: findError } = await findByPartnerCode(partnerCode);
-                if (findError || !targetUserLookup) {
-                    return { error: 'Partner code not found. Please check and try again.' };
-                }
-
-                // Now fetch the target user's profile to check partner status
-                // This uses RLS which allows viewing your own profile and partner's profile
-                // For connection requests, we need to verify they don't already have a partner
-                const { data: targetUser, error: profileError } = await getProfile(targetUserLookup.id);
-
-                if (profileError) {
-                    // Expected - can't view their profile if not connected yet (RLS restricts access)
-                    // This is fine - we can still send the request and let them decide
-                    console.log('[Auth] Cannot view target profile (RLS restriction) - proceeding with request');
-                }
-
-                // If we could view their profile and they have a partner, reject
-                if (targetUser?.partner_id) {
-                    return { error: 'This user is already connected with someone.' };
-                }
-
-                // Send the request using just the ID
-                const { data, error } = await sendPartnerRequest(targetUserLookup.id);
-                if (error) {
-                    return { error: error.message || error };
-                }
-
-                // Set sent request - use ID since we may not have full profile access
-                set({ sentRequest: { ...data, receiver: targetUser || { id: targetUserLookup.id } } });
-                return { data, receiverName: targetUser?.display_name || 'your partner' };
-            },
-
-            // Refresh pending requests
-            refreshPendingRequests: async () => {
-                try {
-                    const { data: requests } = await getPendingRequests();
-                    const { data: sent } = await getSentRequest();
-                    set({
-                        pendingRequests: requests || [],
-                        sentRequest: sent
-                    });
-                } catch (e) {
-                    console.warn('Failed to refresh pending requests:', e);
-                }
-            },
-
-            // Accept a partner request
-            acceptRequest: async (requestId, anniversaryDate = null) => {
-                const { user } = get();
-                const { data: profile, error } = await acceptPartnerRequest(requestId, anniversaryDate);
-                if (error) {
-                    return { error };
-                }
-
-                // Get partner data
-                const { data: partner } = await getPartnerProfile();
-
+            setProfile: (profile) => {
+                const current = get();
                 set({
                     profile,
-                    partner,
-                    hasPartner: true,
-                    pendingRequests: [],
-                    sentRequest: null
+                    preferredLanguage: profile
+                        ? resolvePreferredLanguage(profile)
+                        : current.preferredLanguage,
                 });
 
-                // Emit partner connected event
-                eventBus.emit(EVENTS.PARTNER_CONNECTED, {
-                    userId: user?.id,
-                    partnerId: profile?.partner_id,
-                    partnerProfile: partner,
-                    anniversary_date: profile?.anniversary_date
-                });
-
-                return { data: profile };
-            },
-
-            // Reject a partner request
-            rejectRequest: async (requestId) => {
-                const { error } = await rejectPartnerRequest(requestId);
-                if (error) {
-                    return { error };
-                }
-
-                // Remove from pending requests
-                set((state) => ({
-                    pendingRequests: state.pendingRequests.filter(r => r.id !== requestId)
-                }));
-                return { success: true };
-            },
-
-            // Cancel sent request
-            cancelSentRequest: async () => {
-                const { sentRequest } = get();
-                if (!sentRequest) return { error: 'No sent request to cancel' };
-
-                const { error } = await cancelPartnerRequest(sentRequest.id);
-                if (error) {
-                    return { error };
-                }
-
-                set({ sentRequest: null });
-                return { success: true };
-            },
-
-            // Skip partner connection for now
-            skipPartnerConnection: () => {
-                // Just allow them to proceed without partner
-                // Features will be restricted
-            },
-
-            // ============================================
-            // ONBOARDING ACTIONS
-            // ============================================
-            setOnboardingStep: (step) => set({ onboardingStep: step }),
-
-            updateOnboardingData: (data) => set((state) => ({
-                onboardingData: { ...state.onboardingData, ...data }
-            })),
-
-            completeOnboarding: async () => {
-                const { user, profile: existingProfile, onboardingData } = get();
-                console.log('[completeOnboarding] Starting...', { user: user?.id, existingProfile: existingProfile?.id });
-
-                if (!user) {
-                    console.error('[completeOnboarding] No user logged in');
-                    return { error: 'No user logged in' };
-                }
-
-                try {
-                    // Use existing partner_code if profile exists, otherwise generate new one
-                    const partnerCode = existingProfile?.partner_code || generatePartnerCode();
-                    console.log('[completeOnboarding] Using partner code:', partnerCode);
-
-                    // Process avatar - upload to storage if it's a custom upload
-                    let avatarUrl = onboardingData.avatarUrl || null;
-                    if (avatarUrl && avatarUrl.startsWith('data:')) {
-                        // It's a base64 upload - need to upload to Supabase Storage
-                        try {
-                            const { processAvatarForSave } = await import('../services/avatarService');
-                            const { url, error: avatarError } = await processAvatarForSave(user.id, avatarUrl);
-                            if (avatarError) {
-                                console.warn('[completeOnboarding] Avatar upload failed:', avatarError);
-                                // Continue without avatar rather than failing onboarding
-                                avatarUrl = null;
-                            } else {
-                                avatarUrl = url;
-                            }
-                        } catch (e) {
-                            console.warn('[completeOnboarding] Avatar processing exception:', e);
-                            avatarUrl = null;
-                        }
-                    }
-
-                    const profileData = {
-                        id: user.id,
-                        email: user.email,
-                        partner_code: partnerCode,
-                        display_name: onboardingData.displayName,
-                        birthday: onboardingData.birthday,
-                        avatar_url: avatarUrl,
-                        love_language: onboardingData.loveLanguage,
-                        communication_style: onboardingData.communicationStyle,
-                        conflict_style: onboardingData.conflictStyle,
-                        favorite_date_activities: onboardingData.favoriteDateActivities || [],
-                        pet_peeves: onboardingData.petPeeves || [],
-                        appreciation_style: onboardingData.appreciationStyle,
-                        bio: onboardingData.bio || null,
-                        onboarding_complete: true,
-                        preferred_language: get().preferredLanguage || DEFAULT_LANGUAGE,
-                        updated_at: new Date().toISOString(),
-                    };
-
-                    console.log('[completeOnboarding] Profile data to save:', profileData);
-                    console.log('[completeOnboarding] Calling upsertProfile...');
-
-                    const { data, error } = await upsertProfile(profileData);
-
-                    console.log('[completeOnboarding] upsertProfile returned:', { data, error });
-
-                    if (error) {
-                        console.error('[completeOnboarding] Error:', error);
-                        return { error: error.message || 'Failed to save profile' };
-                    }
-
-                    if (!data) {
-                        console.error('[completeOnboarding] No data returned');
-                        return { error: 'Failed to save profile - no data returned' };
-                    }
-
-                    console.log('[completeOnboarding] Success! Setting state...');
-                    set({
-                        profile: data,
-                        onboardingComplete: true,
-                        onboardingStep: 0,
-                        onboardingData: {},
-                        preferredLanguage: resolvePreferredLanguage(data)
+                if (profile?.id || current.user?.id) {
+                    eventBus.emit(EVENTS.PROFILE_UPDATED, {
+                        userId: profile?.id || current.user?.id,
+                        changes: profile,
+                        profile,
                     });
-                    console.log('[completeOnboarding] State set, returning data');
-                    return { data };
-                } catch (err) {
-                    console.error('Exception in completeOnboarding:', err);
-                    return { error: err.message || 'An unexpected error occurred' };
                 }
             },
 
-            // Refresh profile from database (including partner state)
+            // Refresh profile from database
             refreshProfile: async () => {
                 const { user } = get();
                 if (!user) return;
@@ -773,36 +532,20 @@ const useAuthStore = create(
                         profileTimeout: 5000
                     });
 
-                    const previousHasPartner = get().hasPartner;
-
                     set({
                         profile,
-                        partner,
-                        pendingRequests: requests,
-                        sentRequest: profile?.partner_id ? null : sent,
-                        hasPartner: !!profile?.partner_id,
-                        onboardingComplete: profile?.onboarding_complete || false,
                         preferredLanguage: resolvePreferredLanguage(profile),
                     });
 
                     // Emit profile updated event
                     eventBus.emit(EVENTS.PROFILE_UPDATED, {
                         userId: user.id,
-                        changes: profile
+                        changes: profile,
+                        profile,
+                        partner,
+                        requests,
+                        sent
                     });
-
-                    // If partner was just connected, emit partner connected event
-                    if (profile?.partner_id && !previousHasPartner) {
-                        const partnerProfile = get().partner; // Partner should be loaded by now
-                        eventBus.emit(EVENTS.PARTNER_CONNECTED, {
-                            userId: user.id,
-                            partnerId: profile.partner_id,
-                            partnerProfile,
-                            anniversary_date: profile.anniversary_date
-                        });
-                    }
-
-                    console.log('[Auth] Profile refreshed, hasPartner:', !!profile?.partner_id);
                 } catch (e) {
                     console.warn('[Auth] Failed to refresh profile:', e);
                 }
@@ -838,15 +581,38 @@ const useAuthStore = create(
                 }
 
                 try {
-                    const { error } = await upsertProfile({
-                        id: user.id,
-                        preferred_language: normalizedLanguage,
-                        updated_at: new Date().toISOString(),
-                    });
-                    if (error) {
+                    const timestamp = new Date().toISOString();
+                    const { error } = await supabase
+                        .from('profiles')
+                        .update({
+                            preferred_language: normalizedLanguage,
+                            updated_at: timestamp,
+                        })
+                        .eq('id', user.id)
+                        .select()
+                        .single();
+
+                    if (error?.code === 'PGRST116') {
+                        const partnerCode = generatePartnerCode();
+                        const { error: createError } = await upsertProfile({
+                            id: user.id,
+                            email: user.email,
+                            partner_code: partnerCode,
+                            onboarding_complete: false,
+                            created_at: timestamp,
+                            preferred_language: normalizedLanguage,
+                            updated_at: timestamp,
+                        });
+
+                        if (createError) {
+                            console.warn('[Auth] Failed to create profile while updating language:', createError);
+                            return;
+                        }
+                    } else if (error) {
                         console.warn('[Auth] Failed to update language:', error);
                         return;
                     }
+
                     await get().refreshProfile();
                 } catch (err) {
                     console.warn('[Auth] Failed to persist language:', err);
@@ -857,69 +623,22 @@ const useAuthStore = create(
                 }
             },
 
-            // Clean up real-time subscriptions
-            cleanupRealtimeSubscriptions: () => {
-                const { _profileSubscription, _requestsSubscription } = get();
-
+            // Delete account (required for App Store compliance)
+            deleteAccount: async () => {
                 try {
-                    if (_profileSubscription) {
-                        console.log('[Auth] Unsubscribing from profile changes');
-                        supabase.removeChannel(_profileSubscription);
+                    set({ isLoading: true });
+                    const response = await api.delete('/account');
+                    if (response.data?.success) {
+                        // Clear all local state by signing out
+                        await get().signOut();
+                        return { success: true };
                     }
-                    if (_requestsSubscription) {
-                        console.log('[Auth] Unsubscribing from partner requests');
-                        supabase.removeChannel(_requestsSubscription);
-                    }
+                    set({ isLoading: false });
+                    return { error: 'Failed to delete account' };
                 } catch (error) {
-                    console.warn('[Auth] Error cleaning up subscriptions:', error);
-                }
-
-                set({
-                    _profileSubscription: null,
-                    _requestsSubscription: null
-                });
-            },
-
-            // Set up real-time subscriptions for partner connection updates
-            setupRealtimeSubscriptions: () => {
-                const { user } = get();
-                if (!user) return null;
-
-                console.log('[Auth] Setting up realtime subscriptions for user:', user.id);
-
-                // Clean up any existing subscriptions first to prevent memory leaks
-                get().cleanupRealtimeSubscriptions();
-
-                try {
-                    // Subscribe to profile changes (to detect when partner accepts)
-                    const profileSub = subscribeToProfileChanges(user.id, (payload) => {
-                        console.log('[Auth] Profile changed:', payload);
-                        const newProfile = payload.new;
-
-                        // If partner_id just became set, refresh to get partner details
-                        if (newProfile?.partner_id && !get().hasPartner) {
-                            console.log('[Auth] Partner connected! Refreshing profile...');
-                            get().refreshProfile();
-                        }
-                    });
-
-                    // Subscribe to partner requests (to detect new incoming requests)
-                    const requestsSub = subscribeToPartnerRequests(user.id, (payload) => {
-                        console.log('[Auth] Partner request changed:', payload);
-                        get().refreshPendingRequests();
-                    });
-
-                    // Store subscription references in state for cleanup
-                    set({
-                        _profileSubscription: profileSub,
-                        _requestsSubscription: requestsSub
-                    });
-
-                    console.log('[Auth] Realtime subscriptions established');
-                    return { profileSub, requestsSub };
-                } catch (error) {
-                    console.error('[Auth] Error setting up realtime subscriptions:', error);
-                    return null;
+                    console.error('[Auth] Delete account failed:', error);
+                    set({ isLoading: false });
+                    return { error: error.response?.data?.error || error.message };
                 }
             },
 
@@ -930,9 +649,6 @@ const useAuthStore = create(
                 // Clear all pending timeouts
                 pendingTimeouts.forEach(timeoutId => clearTimeout(timeoutId));
                 pendingTimeouts.clear();
-
-                // Clean up realtime subscriptions
-                get().cleanupRealtimeSubscriptions();
             },
         }),
         {
@@ -952,32 +668,8 @@ const useAuthStore = create(
                                 : state.profile.avatar_url,
                     }
                     : null,
-                partner: state.partner
-                    ? {
-                        ...state.partner,
-                        avatar_url:
-                            typeof state.partner.avatar_url === 'string' &&
-                                (state.partner.avatar_url.startsWith('data:') || state.partner.avatar_url.length > 2048)
-                                ? undefined
-                                : state.partner.avatar_url,
-                    }
-                    : null,
-                hasPartner: state.hasPartner,
-                onboardingComplete: state.onboardingComplete,
-                // Onboarding data sometimes contains avatarUrl (base64). Persist only small bits.
-                onboardingData: state.onboardingData
-                    ? {
-                        ...state.onboardingData,
-                        avatarUrl:
-                            typeof state.onboardingData.avatarUrl === 'string' &&
-                                (state.onboardingData.avatarUrl.startsWith('data:') || state.onboardingData.avatarUrl.length > 2048)
-                                ? undefined
-                                : state.onboardingData.avatarUrl,
-                    }
-                    : {},
-                onboardingStep: state.onboardingStep,
                 preferredLanguage: state.preferredLanguage,
-                // Note: _profileSubscription and _requestsSubscription are intentionally excluded
+                // Note: realtime subscription refs are intentionally excluded
             }),
         }
     )

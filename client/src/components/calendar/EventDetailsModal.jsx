@@ -1,7 +1,6 @@
 import React from 'react';
 import { motion as Motion } from 'framer-motion';
 import { X, Plus, Trash2 } from 'lucide-react';
-import PropTypes from 'prop-types';
 import { useI18n } from '../../i18n';
 
 const EVENT_TYPES = [
@@ -156,28 +155,6 @@ const EventDetailsModal = ({ events, onDelete, onClose, onAddMore, currentUserId
             </Motion.div>
         </Motion.div>
     );
-};
-
-EventDetailsModal.propTypes = {
-    events: PropTypes.arrayOf(PropTypes.shape({
-        id: PropTypes.string.isRequired,
-        title: PropTypes.string.isRequired,
-        date: PropTypes.string.isRequired,
-        type: PropTypes.string.isRequired,
-        emoji: PropTypes.string,
-        isSecret: PropTypes.bool,
-        isRecurring: PropTypes.bool,
-        isDefault: PropTypes.bool,
-        isPersonal: PropTypes.bool,
-        notes: PropTypes.string,
-        createdBy: PropTypes.string,
-    })).isRequired,
-    onDelete: PropTypes.func.isRequired,
-    onClose: PropTypes.func.isRequired,
-    onAddMore: PropTypes.func.isRequired,
-    currentUserId: PropTypes.string,
-    myDisplayName: PropTypes.string,
-    partnerDisplayName: PropTypes.string,
 };
 
 export default EventDetailsModal;

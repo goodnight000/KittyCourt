@@ -25,8 +25,8 @@ function llmSecurityMiddleware(endpointName) {
     const userId = req.user?.id || req.body?.userId || req.query?.userId || 'anonymous';
 
     try {
-      // Step 1: Check if user is blocked
-      const blockStatus = isUserBlocked(userId);
+      // Step 1: Check if user is blocked (async - Redis-backed)
+      const blockStatus = await isUserBlocked(userId);
       if (blockStatus.blocked) {
         auditLogger.logBlockedRequest(userId, blockStatus.reason, { endpoint: endpointName });
 
@@ -37,8 +37,8 @@ function llmSecurityMiddleware(endpointName) {
         });
       }
 
-      // Step 2: Check rate limits
-      const rateLimit = checkRateLimit(userId, endpointName);
+      // Step 2: Check rate limits (async - Redis-backed)
+      const rateLimit = await checkRateLimit(userId, endpointName);
       if (!rateLimit.allowed) {
         return res.status(429).json({
           error: 'Rate limit exceeded',
@@ -205,29 +205,35 @@ function validateLanguageMiddleware(req, res, next) {
  * For endpoints that just need rate limiting
  */
 function rateLimitMiddleware(endpointName) {
-  return (req, res, next) => {
+  return async (req, res, next) => {
     const userId = req.user?.id || req.body?.userId || req.query?.userId || req.ip || 'anonymous';
 
-    // Check if blocked
-    const blockStatus = isUserBlocked(userId);
-    if (blockStatus.blocked) {
-      return res.status(403).json({
-        error: 'Access temporarily restricted',
-        retryAfter: Math.ceil(blockStatus.remainingMs / 1000),
-      });
-    }
+    try {
+      // Check if blocked (async - Redis-backed)
+      const blockStatus = await isUserBlocked(userId);
+      if (blockStatus.blocked) {
+        return res.status(403).json({
+          error: 'Access temporarily restricted',
+          retryAfter: Math.ceil(blockStatus.remainingMs / 1000),
+        });
+      }
 
-    // Check rate limit
-    const rateLimit = checkRateLimit(userId, endpointName);
-    if (!rateLimit.allowed) {
-      return res.status(429).json({
-        error: 'Rate limit exceeded',
-        retryAfter: rateLimit.retryAfter,
-      });
-    }
+      // Check rate limit (async - Redis-backed)
+      const rateLimit = await checkRateLimit(userId, endpointName);
+      if (!rateLimit.allowed) {
+        return res.status(429).json({
+          error: 'Rate limit exceeded',
+          retryAfter: rateLimit.retryAfter,
+        });
+      }
 
-    res.set('X-RateLimit-Remaining', String(rateLimit.remaining));
-    next();
+      res.set('X-RateLimit-Remaining', String(rateLimit.remaining));
+      next();
+    } catch (error) {
+      // Fail open - allow request if rate limiting fails
+      console.error('[RateLimit Middleware] Error:', error);
+      next();
+    }
   };
 }
 
@@ -246,8 +252,14 @@ function identifyLLMFields(body, endpointName) {
       { fieldPath: 'submissions.userB.theStoryIamTellingMyself', maxLength: securityConfig.fieldLimits.theStoryIamTellingMyself },
     ],
     court: [
+      // Evidence submission fields (primary field names used by API)
+      { fieldPath: 'evidence', maxLength: securityConfig.fieldLimits.cameraFacts },
+      { fieldPath: 'feelings', maxLength: securityConfig.fieldLimits.theStoryIamTellingMyself },
+      { fieldPath: 'needs', maxLength: securityConfig.fieldLimits.theStoryIamTellingMyself },
+      // Legacy field names (for backwards compatibility)
       { fieldPath: 'cameraFacts', maxLength: securityConfig.fieldLimits.cameraFacts },
       { fieldPath: 'theStoryIamTellingMyself', maxLength: securityConfig.fieldLimits.theStoryIamTellingMyself },
+      // Addendum fields
       { fieldPath: 'text', maxLength: securityConfig.fieldLimits.addendum },
       { fieldPath: 'message', maxLength: securityConfig.fieldLimits.addendum },
     ],

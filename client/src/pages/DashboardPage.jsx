@@ -4,16 +4,19 @@ import { useNavigate } from 'react-router-dom';
 import { Heart, Sparkles, X, Check, Lock, BookOpen, Flame, ArrowRight } from 'lucide-react';
 import useAppStore from '../store/useAppStore';
 import useAuthStore from '../store/useAuthStore';
+import usePartnerStore from '../store/usePartnerStore';
 import useCacheStore, { CACHE_TTL, CACHE_KEYS } from '../store/useCacheStore';
 import api from '../services/api';
 import ProfilePicture from '../components/ProfilePicture';
+import DisconnectNotice from '../components/DisconnectNotice';
 import { useI18n } from '../i18n';
 
 const DashboardPage = () => {
     const navigate = useNavigate();
     const { t, language } = useI18n();
     const { currentUser, logGoodDeed } = useAppStore();
-    const { hasPartner, profile, partner: connectedPartner, user: authUser } = useAuthStore();
+    const { profile, user: authUser } = useAuthStore();
+    const { hasPartner, partner: connectedPartner, disconnectStatus, disconnectStatusLoaded } = usePartnerStore();
     const [showGoodDeedModal, setShowGoodDeedModal] = useState(false);
     const [questionStreak, setQuestionStreak] = useState(0);
     const [todaysQuestion, setTodaysQuestion] = useState(null);
@@ -162,7 +165,15 @@ const DashboardPage = () => {
     // ProfilePicture component handles fallbacks
     const myAvatarUrl = profile?.avatar_url;
     const partnerAvatarUrl = connectedPartner?.avatar_url;
-    const showPartnerPrompt = !hasPartner;
+    const showDisconnectNotice = !hasPartner && disconnectStatus?.status === 'disconnected';
+    const showPartnerPrompt = !hasPartner && disconnectStatusLoaded && !showDisconnectNotice;
+    const disconnectInitiatedByMe = showDisconnectNotice && disconnectStatus?.disconnected_by === authUser?.id;
+    const disconnectTitle = disconnectInitiatedByMe
+        ? t('disconnectNotice.titles.youDisconnected')
+        : t('disconnectNotice.titles.theyDisconnected', { name: disconnectStatus?.other_name || t('common.yourPartner') });
+    const disconnectMessage = disconnectInitiatedByMe
+        ? t('disconnectNotice.messages.youDisconnected', { days: disconnectStatus?.days_left || 0 })
+        : t('disconnectNotice.messages.theyDisconnected', { days: disconnectStatus?.days_left || 0 });
     const todayLabel = new Date().toLocaleDateString(language, {
         weekday: 'long',
         month: 'short',
@@ -305,11 +316,13 @@ const DashboardPage = () => {
                             </Motion.button>
                         </div>
 
-                        {showPartnerPrompt && (
+                        {showDisconnectNotice ? (
+                            <DisconnectNotice disconnectStatus={disconnectStatus} className="bg-white/70" />
+                        ) : showPartnerPrompt ? (
                             <div className="rounded-2xl border border-dashed border-neutral-200 bg-white/70 px-3 py-2 text-xs text-neutral-500">
                                 {t('dashboard.connectPrompt')}
                             </div>
-                        )}
+                        ) : null}
                     </div>
                 </Motion.div>
 
@@ -382,6 +395,28 @@ const DashboardPage = () => {
                                     </div>
                                 </div>
                                 <p className="mt-4 text-xs text-neutral-500">{t('dashboard.dailyQuestion.tapToConnect')}</p>
+                            </>
+                        ) : showDisconnectNotice ? (
+                            <>
+                                <div className="mb-4">
+                                    <span className="px-3 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase bg-white/80 text-slate-600 backdrop-blur-sm border border-white/60">
+                                        {t('disconnectNotice.kicker')}
+                                    </span>
+                                </div>
+                                <h3 className="text-xl font-bold text-[#4A3728] mb-3 leading-snug max-w-sm mx-auto" style={{ fontFamily: 'var(--font-display), Quicksand, sans-serif' }}>
+                                    {disconnectTitle}
+                                </h3>
+                                <p className="text-xs text-neutral-600 max-w-sm mx-auto">
+                                    {disconnectMessage}
+                                </p>
+                                <motion.button
+                                    whileTap={{ scale: 0.98 }}
+                                    onClick={() => navigate('/connect')}
+                                    className="mt-5 inline-flex items-center gap-2 rounded-full bg-neutral-900/85 px-5 py-3 text-xs font-bold text-white shadow-soft"
+                                >
+                                    {t('disconnectNotice.cta')}
+                                    <ArrowRight className="w-4 h-4" />
+                                </motion.button>
                             </>
                         ) : (
                             <>

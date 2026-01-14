@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import useAppStore from '../store/useAppStore';
 import useAuthStore from '../store/useAuthStore';
+import usePartnerStore from '../store/usePartnerStore';
 import RequirePartner from '../components/RequirePartner';
 import { ChevronLeft, Scale, ChevronRight, Calendar, AlertTriangle, Zap, Cloud, FileText } from 'lucide-react';
 import { useI18n } from '../i18n';
@@ -54,7 +55,7 @@ const HORSEMAN_LABELS = {
 const HistoryPage = () => {
     const navigate = useNavigate();
     const { caseHistory, fetchCaseHistory } = useAppStore();
-    const { hasPartner } = useAuthStore();
+    const { hasPartner } = usePartnerStore();
     const { t, language } = useI18n();
 
     useEffect(() => {

@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion as Motion } from 'framer-motion';
 import { X, Wand2, Sparkles, Loader2, AlertTriangle, Check } from 'lucide-react';
-import PropTypes from 'prop-types';
 import { useI18n } from '../../i18n';
 import api from '../../services/api';
 
@@ -480,24 +479,6 @@ const EventPlanningDialog = ({ event, eventKey, myId, partnerId, partnerDisplayN
             </Motion.div>
         </Motion.div>
     );
-};
-
-EventPlanningDialog.propTypes = {
-    event: PropTypes.shape({
-        title: PropTypes.string.isRequired,
-        date: PropTypes.string.isRequired,
-        type: PropTypes.string.isRequired,
-        emoji: PropTypes.string,
-        isSecret: PropTypes.bool,
-        notes: PropTypes.string,
-    }).isRequired,
-    eventKey: PropTypes.string.isRequired,
-    myId: PropTypes.string,
-    partnerId: PropTypes.string,
-    partnerDisplayName: PropTypes.string,
-    myDisplayName: PropTypes.string,
-    onClose: PropTypes.func.isRequired,
-    onSaved: PropTypes.func,
 };
 
 export default EventPlanningDialog;

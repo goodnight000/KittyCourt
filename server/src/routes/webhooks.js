@@ -9,6 +9,7 @@ const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
 const { getSupabase, isSupabaseConfigured } = require('../lib/supabase');
+const { safeErrorMessage } = require('../lib/shared/errorUtils');
 
 const REVENUECAT_WEBHOOK_TOKEN = process.env.REVENUECAT_WEBHOOK_TOKEN || '';
 const REVENUECAT_WEBHOOK_SECRET = process.env.REVENUECAT_WEBHOOK_SECRET || ''; // For HMAC verification
@@ -71,11 +72,11 @@ router.post('/revenuecat', async (req, res) => {
         }
 
         // Method 1: HMAC signature verification (preferred if configured)
+        // Note: express.raw() middleware provides req.body as a Buffer
         if (REVENUECAT_WEBHOOK_SECRET) {
             const signature = req.headers['x-revenuecat-signature'] || req.headers['x-signature'];
-            // Note: For HMAC verification, we need the raw body
-            // This requires express.raw() middleware or similar
-            const rawBody = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+            // req.body is a Buffer when using express.raw() middleware
+            const rawBody = Buffer.isBuffer(req.body) ? req.body : Buffer.from(JSON.stringify(req.body));
             if (!verifyHmacSignature(signature, rawBody, REVENUECAT_WEBHOOK_SECRET)) {
                 console.warn('[Webhook] HMAC signature verification failed');
                 return res.status(401).json({ error: 'Invalid signature' });
@@ -107,8 +108,22 @@ router.post('/revenuecat', async (req, res) => {
             console.warn('[Webhook] WARNING: Processing webhook without authentication (dev mode)');
         }
 
+        // Parse body for business logic after authentication
+        // When using express.raw(), req.body is a Buffer that needs to be parsed
+        // When using express.json() (Bearer token path), req.body is already an object
+        let event;
+        if (Buffer.isBuffer(req.body)) {
+            try {
+                event = JSON.parse(req.body.toString('utf8'));
+            } catch (parseError) {
+                console.error('[Webhook] Failed to parse request body:', parseError);
+                return res.status(400).json({ error: 'Invalid JSON body' });
+            }
+        } else {
+            event = req.body;
+        }
+
         const supabase = getSupabase();
-        const event = req.body;
         console.log('[Webhook] RevenueCat event received:', event.event?.type || 'unknown');
 
         // RevenueCat webhook payload structure
@@ -213,7 +228,7 @@ router.post('/revenuecat', async (req, res) => {
         res.status(200).json({ received: true, processed: true });
     } catch (error) {
         console.error('[Webhook] Error processing RevenueCat event:', error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: safeErrorMessage(error) });
     }
 });
 

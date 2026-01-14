@@ -6,7 +6,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import EvidenceService from './EvidenceService.js';
-import { PHASE } from './stateSerializer.js';
+import { PHASE } from './StateSerializer.js';
 
 describe('EvidenceService', () => {
     let evidenceService;

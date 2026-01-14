@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import useAuthStore from '../../store/useAuthStore';
+import usePartnerStore from '../../store/usePartnerStore';
 import useCacheStore, { CACHE_KEYS, CACHE_TTL } from '../../store/useCacheStore';
 import api from '../../services/api';
 
@@ -97,7 +98,8 @@ const getPersonalEvents = (profile, connectedPartner, myId, partnerId, myDisplay
  * @returns {Object} Calendar events state and operations
  */
 export default function useCalendarEvents(t) {
-    const { user: authUser, profile, partner: connectedPartner } = useAuthStore();
+    const { user: authUser, profile } = useAuthStore();
+    const { partner: connectedPartner } = usePartnerStore();
     const [dbEvents, setDbEvents] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const isMounted = useRef(true);

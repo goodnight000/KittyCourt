@@ -1,0 +1,376 @@
+openapi: 3.0.3
+info:
+  title: Pause API
+  version: 1.0.0
+  description: REST API for the Pause couples dispute resolution app.
+servers:
+  - url: http://localhost:3000
+    description: Local development
+  - url: https://api.pause.app
+    description: Production (placeholder)
+tags:
+  - name: health
+  - name: court
+  - name: cases
+  - name: webhooks
+paths:
+  /api/health:
+    get:
+      tags: [health]
+      summary: Health check
+      responses:
+        '200':
+          description: Health payload
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string }
+                  supabase: { type: boolean }
+                  openrouter: { type: boolean }
+                  timestamp: { type: string }
+  /api/court/state:
+    get:
+      tags: [court]
+      summary: Get current court state for a user
+      parameters:
+        - in: query
+          name: userId
+          schema: { type: string }
+          required: false
+      responses:
+        '200':
+          description: Court state
+          content:
+            application/json:
+              schema:
+                type: object
+  /api/court/serve:
+    post:
+      tags: [court]
+      summary: Serve partner (create pending session)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId: { type: string }
+                partnerId: { type: string }
+                coupleId: { type: string }
+                judgeType: { type: string }
+      responses:
+        '200':
+          description: Court state
+  /api/court/accept:
+    post:
+      tags: [court]
+      summary: Accept pending summons
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId: { type: string }
+      responses:
+        '200':
+          description: Court state
+  /api/court/cancel:
+    post:
+      tags: [court]
+      summary: Cancel pending session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId: { type: string }
+      responses:
+        '200':
+          description: Court state
+  /api/court/dismiss:
+    post:
+      tags: [court]
+      summary: Dismiss session (error recovery)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId: { type: string }
+      responses:
+        '200':
+          description: Dismissed
+  /api/court/evidence:
+    post:
+      tags: [court]
+      summary: Submit evidence
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId: { type: string }
+                evidence: { type: string }
+                feelings: { type: string }
+                needs: { type: string }
+      responses:
+        '200':
+          description: Court state
+  /api/court/verdict/accept:
+    post:
+      tags: [court]
+      summary: Accept verdict
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId: { type: string }
+      responses:
+        '200':
+          description: Court state
+  /api/court/settle/request:
+    post:
+      tags: [court]
+      summary: Request settlement
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId: { type: string }
+      responses:
+        '200':
+          description: Court state
+  /api/court/settle/accept:
+    post:
+      tags: [court]
+      summary: Accept settlement
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId: { type: string }
+      responses:
+        '200':
+          description: Court state
+  /api/court/settle/decline:
+    post:
+      tags: [court]
+      summary: Decline settlement
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId: { type: string }
+      responses:
+        '200':
+          description: Court state
+  /api/court/addendum:
+    post:
+      tags: [court]
+      summary: Submit addendum
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId: { type: string }
+                text: { type: string }
+      responses:
+        '200':
+          description: Court state
+  /api/court/priming/complete:
+    post:
+      tags: [court]
+      summary: Mark priming complete
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId: { type: string }
+      responses:
+        '200':
+          description: Court state
+  /api/court/joint/ready:
+    post:
+      tags: [court]
+      summary: Mark joint menu ready
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId: { type: string }
+      responses:
+        '200':
+          description: Court state
+  /api/court/resolution/pick:
+    post:
+      tags: [court]
+      summary: Submit resolution pick
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId: { type: string }
+                resolutionId: { type: string }
+      responses:
+        '200':
+          description: Court state
+  /api/court/resolution/accept-partner:
+    post:
+      tags: [court]
+      summary: Accept partner resolution
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId: { type: string }
+      responses:
+        '200':
+          description: Court state
+  /api/court/resolution/hybrid:
+    post:
+      tags: [court]
+      summary: Request hybrid resolution
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId: { type: string }
+      responses:
+        '200':
+          description: Court state
+  /api/cases:
+    get:
+      tags: [cases]
+      summary: List case history
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer }
+        - in: query
+          name: offset
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Case list
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { type: object }
+    post:
+      tags: [cases]
+      summary: Create or update a case
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Case payload
+  /api/cases/{id}:
+    get:
+      tags: [cases]
+      summary: Get a case by ID
+      parameters:
+        - in: path
+          name: id
+          schema: { type: string }
+          required: true
+      responses:
+        '200':
+          description: Case payload
+  /api/cases/{id}/addendum:
+    post:
+      tags: [cases]
+      summary: Add verdict addendum (dev-only)
+      parameters:
+        - in: path
+          name: id
+          schema: { type: string }
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Case payload
+  /api/cases/{id}/rate:
+    post:
+      tags: [cases]
+      summary: Rate latest verdict
+      parameters:
+        - in: path
+          name: id
+          schema: { type: string }
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId: { type: string }
+                rating: { type: integer, minimum: 1, maximum: 5 }
+      responses:
+        '200':
+          description: Rating response
+  /api/webhooks/revenuecat:
+    post:
+      tags: [webhooks]
+      summary: RevenueCat webhook
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Webhook processed

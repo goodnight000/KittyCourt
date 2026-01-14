@@ -14,6 +14,7 @@
     "waiting": "等待中",
     "edit": "编辑",
     "cancel": "取消",
+    "ok": "好的",
     "saveChanges": "保存更改",
     "or": "或",
     "back": "返回",
@@ -938,7 +939,13 @@
       "passwordPlaceholder": "设置密码",
       "confirmPasswordPlaceholder": "确认密码",
       "creating": "创建中...",
-      "createAccount": "创建账号"
+      "createAccount": "创建账号",
+      "emailConfirmation": {
+        "title": "请查收邮件",
+        "message": "我们已向 {email} 发送了确认链接。请点击链接验证您的邮箱地址。",
+        "hint": "如果没有收到邮件，请检查垃圾邮件文件夹。链接将在24小时后过期。",
+        "tryDifferent": "使用其他邮箱"
+      }
     },
     "name": {
       "placeholder": "你的名字或昵称",
@@ -1621,35 +1628,35 @@
       "title": "包含内容",
       "items": {
         "resolve": {
-          "title": "更多审理次数",
-          "description": "每月更多法官判案。"
+          "title": "无限审理",
+          "description": "需要帮助时，永不受限。"
         },
         "judge": {
           "title": "解锁胡须法官",
-          "description": "最细腻、最共情的裁决。"
+          "description": "心理治疗级的洞察，看穿他人看不到的。"
         },
         "planning": {
-          "title": "帮我规划",
-          "description": "可执行的行动方案。"
+          "title": "AI 约会规划",
+          "description": "根据你们的共同回忆定制方案。"
         },
-        "questions": {
-          "title": "每日喵问存档",
-          "description": "查看全部历史回答。"
+        "streak": {
+          "title": "连续签到复活",
+          "description": "生活总有意外——错过一天也能恢复连续记录。"
         },
         "insights": {
-          "title": "关系洞察",
-          "description": "每周模式与提示。"
+          "title": "模式识别",
+          "description": "AI 在问题恶化前发现关系模式。"
         }
       }
     },
     "withoutGold": {
       "title": "没有 Gold",
       "items": {
-        "limit": "法官次数有限",
-        "whiskersLocked": "胡须法官未解锁",
-        "noPlanning": "无法使用规划",
-        "noInsights": "洞察不可用",
-        "risk": "解决进度变慢"
+        "limit": "麻糬法官每月只能用 3 次",
+        "whiskersLocked": "无法使用胡须法官的深度智慧",
+        "noPlanning": "手动规划约会，没有 AI 帮助",
+        "noInsights": "看不到导致重复冲突的模式",
+        "risk": "断签后无法恢复连续记录"
       }
     },
     "plans": {
@@ -1669,8 +1676,8 @@
       "perMonth": "每月"
     },
     "pricingNote": {
-      "yearly": "年付更划算",
-      "monthly": "月付更灵活"
+      "yearly": "每月不到 2 ☕ 杯咖啡的钱",
+      "monthly": "每月不到 2 ☕ 杯咖啡的钱"
     },
     "cancelAnytime": "随时取消",
     "social": {
@@ -2007,6 +2014,12 @@
     "success": {
       "title": "账号已创建",
       "subtitle": "正在跳转到引导页..."
+    },
+    "emailConfirmation": {
+      "title": "请查收邮件",
+      "message": "我们已向 {email} 发送了确认链接。请点击链接验证您的邮箱地址。",
+      "hint": "如果没有收到邮件，请检查垃圾邮件文件夹。链接将在24小时后过期。",
+      "tryDifferent": "使用其他邮箱"
     }
   },
   "settings": {
@@ -2018,7 +2031,7 @@
       "email": "邮箱",
       "changePassword": "修改密码",
       "disconnectCouple": "解除情侣绑定",
-      "disconnectWarning": "这将解除与伴侣的连接，此操作不可撤销。",
+      "disconnectWarning": "解除绑定后将进入 30 天宽限期。在 30 天内与同一位伴侣重新连接可恢复一切。如果任何一方与他人建立连接或超过 30 天，你们的共同历史将被删除。",
       "disconnectConfirm": "确认解除",
       "disconnectCancel": "取消"
     },
@@ -2030,7 +2043,50 @@
     },
     "preferences": {
       "title": "偏好设置",
-      "language": "语言"
+      "language": "语言",
+      "confirmLanguage": "确认语言"
+    },
+    "relationship": {
+      "title": "关系偏好",
+      "description": "调整我们为你定制提示、洞察与建议的方式。",
+      "edit": "编辑偏好",
+      "modalTitle": "关系偏好",
+      "modalSubtitle": "更新我们为你定制的方式。",
+      "loveLanguage": "爱的语言",
+      "communicationStyle": "沟通方式",
+      "conflictStyle": "冲突应对方式",
+      "dateActivities": "喜欢的约会活动",
+      "petPeeves": "雷点",
+      "appreciationStyle": "表达感谢的方式",
+      "bio": "关于你",
+      "bioPlaceholder": "写一句让对方更懂你的话",
+      "save": "保存偏好",
+      "saving": "保存中...",
+      "saveError": "保存偏好失败。"
+    },
+    "export": {
+      "title": "数据导出",
+      "description": "请求导出你的数据，我们会通过邮件发送下载链接。",
+      "emailLabel": "发送到邮箱",
+      "emailPlaceholder": "you@example.com",
+      "cta": "请求导出",
+      "ctaLoading": "请求中...",
+      "success": "导出请求已提交，我们会在准备好后发送邮件。",
+      "invalidEmail": "请输入有效的邮箱地址。",
+      "requestError": "导出请求失败。",
+      "loadError": "加载导出状态失败。",
+      "statusLabel": "最近一次导出",
+      "statusQueued": "已排队",
+      "statusProcessing": "处理中",
+      "statusReady": "已准备发送",
+      "statusFailed": "失败",
+      "emailStatusLabel": "邮件状态",
+      "emailStatusPending": "邮件待发送",
+      "emailStatusStubbed": "邮件发送尚未配置",
+      "emailStatusSent": "邮件已发送",
+      "emailStatusFailed": "邮件发送失败",
+      "requestedAt": "请求于 {date}",
+      "emptyState": "尚未请求导出。"
     },
     "support": {
       "title": "支持与反馈",
@@ -2045,7 +2101,31 @@
     "howItWorks": {
       "title": "审判流程",
       "description": "双方分别提交证据，胡须法官审阅案件、识别深层感受，并给出公正、有同理心的裁决，帮助你们重建连接。"
+    },
+    "danger": {
+      "title": "危险区域",
+      "description": "永久删除你的账号和所有数据，此操作不可撤销。",
+      "deleteAccount": "删除账号",
+      "disconnectRequiredTitle": "需要先解除绑定",
+      "disconnectRequiredMessage": "删除账号前，你必须先与伴侣解除情侣绑定。",
+      "deleteModalTitle": "确定删除账号？",
+      "deleteModalMessage": "这将永久删除你的账号并移除你的个人数据。此操作不可撤销。",
+      "confirmLabel": "输入 DELETE 确认",
+      "confirmDelete": "删除账号"
     }
+  },
+  "disconnectNotice": {
+    "kicker": "关系更新",
+    "titles": {
+      "youDisconnected": "你已解除绑定",
+      "theyDisconnected": "{{name}} 已解除绑定"
+    },
+    "messages": {
+      "youDisconnected": "在 {{days}} 天内重新连接可恢复一切。如果你与他人建立连接或超出期限，你们的共同历史将被删除。",
+      "theyDisconnected": "在 {{days}} 天内重新连接可恢复一切。如果任何一方与他人建立连接或超出期限，你们的共同历史将被删除。"
+    },
+    "daysLeft": "剩余 {{days}} 天可恢复",
+    "cta": "重新连接"
   },
   "streak": {
     "gracePeriod": "宽限期",

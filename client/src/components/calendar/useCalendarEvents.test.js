@@ -23,6 +23,10 @@ vi.mock('../../store/useAuthStore', () => ({
     default: vi.fn(() => ({
         user: { id: 'user-1' },
         profile: { display_name: 'Test User', id: 'user-1' },
+    })),
+}));
+vi.mock('../../store/usePartnerStore', () => ({
+    default: vi.fn(() => ({
         partner: { display_name: 'Partner User', id: 'user-2' },
     })),
 }));

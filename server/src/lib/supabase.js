@@ -312,6 +312,7 @@ async function updateUserProfile(userId, profileUpdate) {
     if (profileUpdate.loveLanguages) updates.love_language = profileUpdate.loveLanguages[0];
     if (profileUpdate.communicationStyle) updates.communication_style = profileUpdate.communicationStyle;
     if (profileUpdate.conflictStyle) updates.conflict_style = profileUpdate.conflictStyle;
+    if (profileUpdate.favoriteDateActivities) updates.favorite_date_activities = profileUpdate.favoriteDateActivities;
     if (profileUpdate.petPeeves) updates.pet_peeves = profileUpdate.petPeeves;
     if (profileUpdate.appreciationStyle) updates.appreciation_style = profileUpdate.appreciationStyle;
     if (profileUpdate.bio) updates.bio = profileUpdate.bio;

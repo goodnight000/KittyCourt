@@ -10,7 +10,7 @@
  * - Manage settlement timeouts
  */
 
-const { PHASE } = require('./stateSerializer');
+const { PHASE } = require('./StateSerializer');
 const { TIMEOUT } = require('./timeoutHandlers');
 
 class SettlementService {
@@ -33,6 +33,7 @@ class SettlementService {
         }
 
         session.settlementRequested = userId;
+        session.settlementRequestedAt = Date.now();
 
         // Clear existing timeout
         if (session.settlementTimeoutId) {
@@ -105,6 +106,7 @@ class SettlementService {
         }
 
         session.settlementRequested = null;
+        session.settlementRequestedAt = null;
 
         console.log(`[Court] Settlement declined by ${userId}`);
 
@@ -119,6 +121,7 @@ class SettlementService {
         if (session.settlementRequested !== originalRequesterId) return false;
 
         session.settlementRequested = null;
+        session.settlementRequestedAt = null;
         session.settlementTimeoutId = null;
 
         console.log(`[Court] Settlement request expired for ${originalRequesterId}`);

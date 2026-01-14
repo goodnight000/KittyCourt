@@ -2,18 +2,11 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { HeartHandshake, Eye, MessageCircle, HelpCircle, ArrowRight, Star, Clock, Feather } from 'lucide-react';
 import { useI18n } from '../../i18n';
+import JourneyProgress from './JourneyProgress';
 
 const PrimingPage = ({ priming, myName, partnerName, onComplete, isSubmitting }) => {
     const { t } = useI18n();
     const displayPartnerName = partnerName || t('common.yourPartner');
-    const journeySteps = [
-        t('court.journey.priming'),
-        t('court.journey.joint'),
-        t('court.journey.resolution'),
-        t('court.journey.verdict')
-    ];
-    const currentStepIndex = 1;
-
     if (!priming) {
         return (
             <div className="max-w-md mx-auto glass-card p-4 text-center">
@@ -44,30 +37,7 @@ const PrimingPage = ({ priming, myName, partnerName, onComplete, isSubmitting })
                 className="absolute bottom-10 right-6 w-28 h-28 rounded-full bg-court-gold/15 blur-2xl pointer-events-none"
             />
 
-            <div className="sticky top-3 z-10">
-                <div className="glass-card p-3 bg-white/80 border border-court-gold/15">
-                    <div className="text-[12px] uppercase tracking-[0.2em] text-court-brownLight">
-                        {t('court.journey.title')}
-                    </div>
-                    <div className="mt-2 flex items-center gap-3 overflow-x-auto">
-                        {journeySteps.map((step, index) => {
-                            const isActive = index === currentStepIndex;
-                            const isComplete = index < currentStepIndex;
-                            return (
-                                <div key={step} className="flex items-center gap-2 shrink-0">
-                                    <span
-                                        className={`w-2 h-2 rounded-full ${isActive ? 'bg-court-gold' : isComplete ? 'bg-green-500/80' : 'bg-court-tan/40'}`}
-                                    />
-                                    <span className={`text-[12px] font-semibold ${isActive ? 'text-court-brown' : 'text-court-brownLight'}`}>
-                                        {step}
-                                    </span>
-                                    {index < journeySteps.length - 1 && <span className="h-px w-12 bg-court-tan/40" />}
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
-            </div>
+            <JourneyProgress currentStep={1} />
             <motion.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}

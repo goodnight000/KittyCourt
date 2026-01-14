@@ -425,6 +425,40 @@ export const subscribeToProfileChanges = (userId, callback) => {
 };
 
 /**
+ * Disconnect from partner
+ * Clears partner references on both profiles and removes any pending requests
+ */
+export const disconnectPartner = async () => {
+    const { data, error } = await supabase.rpc('disconnect_partner');
+    if (error) {
+        console.error('[Supabase] Disconnect partner error:', error);
+        return { error: error.message };
+    }
+    if (data?.error) {
+        return { error: data.error };
+    }
+    return { data };
+};
+
+/**
+ * Get current user's most recent disconnect status (30-day grace window)
+ */
+export const getDisconnectStatus = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { data: null, error: 'Not authenticated' };
+
+    const { data, error } = await supabase.rpc('get_my_disconnect_status');
+    if (error) {
+        console.error('[Supabase] get_my_disconnect_status error:', error);
+        return { data: null, error: error.message || 'Failed to load disconnect status' };
+    }
+    if (data?.error) {
+        return { data: null, error: data.error };
+    }
+    return { data, error: null };
+};
+
+/**
  * Subscribe to daily answer changes for real-time updates
  * Used to notify User 1 when User 2 submits their answer
  */

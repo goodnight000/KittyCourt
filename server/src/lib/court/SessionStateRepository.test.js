@@ -7,7 +7,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import SessionStateRepository from './SessionStateRepository.js';
-import { PHASE } from './stateSerializer.js';
+import { PHASE } from './StateSerializer.js';
 
 describe('SessionStateRepository', () => {
     let repository;

@@ -328,25 +328,53 @@ router.post('/:id/rate', async (req, res) => {
 router.get('/', requirePartner, async (req, res) => {
     try {
         const { userId: viewerId, partnerId, supabase } = req;
+        const limit = Math.min(Number.parseInt(req.query?.limit || '20', 10), 50);
+        const offset = Math.max(Number.parseInt(req.query?.offset || '0', 10), 0);
+        const windowSize = Math.max(limit + offset, limit);
 
-        let query = supabase
-            .from('cases')
-            .select(`*, verdicts(*)`)
-            .order('created_at', { ascending: false });
+        const buildQuery = () => (
+            supabase
+                .from('cases')
+                .select(`*, verdicts(*)`)
+                .order('created_at', { ascending: false })
+        );
 
+        let cases = [];
         if (partnerId) {
-            query = query.or(
-                `and(user_a_id.eq.${viewerId},user_b_id.eq.${partnerId}),and(user_a_id.eq.${partnerId},user_b_id.eq.${viewerId})`
-            );
+            const { data, error } = await buildQuery()
+                .in('user_a_id', [viewerId, partnerId])
+                .in('user_b_id', [viewerId, partnerId])
+                .range(0, windowSize - 1);
+            if (error) throw error;
+            cases = data || [];
         } else {
-            query = query.or(`user_a_id.eq.${viewerId},user_b_id.eq.${viewerId}`);
+            const [aResult, bResult] = await Promise.all([
+                buildQuery().eq('user_a_id', viewerId).range(0, windowSize - 1),
+                buildQuery().eq('user_b_id', viewerId).range(0, windowSize - 1),
+            ]);
+
+            if (aResult.error) throw aResult.error;
+            if (bResult.error) throw bResult.error;
+
+            const combined = [...(aResult.data || []), ...(bResult.data || [])];
+            const seen = new Set();
+            cases = combined.filter((item) => {
+                if (!item?.id || seen.has(item.id)) return false;
+                seen.add(item.id);
+                return true;
+            });
         }
 
-        const { data: cases, error } = await query;
+        cases.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        const paged = cases.slice(offset, offset + limit);
 
-        if (error) throw error;
-
-        res.json((cases || []).map(transformCase));
+        const nextOffset = cases.length > offset + limit ? offset + limit : null;
+        res.set('X-Page-Limit', String(limit));
+        res.set('X-Page-Offset', String(offset));
+        if (nextOffset !== null) {
+            res.set('X-Next-Offset', String(nextOffset));
+        }
+        res.json(paged.map(transformCase));
     } catch (error) {
         console.error('Error fetching cases:', error);
         res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });

@@ -1,7 +1,6 @@
 import React, { useMemo, useState, useEffect, useCallback, useRef, memo } from 'react';
 import { motion as Motion } from 'framer-motion';
 import { Calendar } from 'lucide-react';
-import PropTypes from 'prop-types';
 import { useI18n } from '../../i18n';
 import EventCard from './EventList';
 import api from '../../services/api';
@@ -36,8 +35,8 @@ const getEventKey = (event) => {
  */
 const UpcomingEvents = memo(({
     events,
-    partnerId,
-    isGold,
+    partnerId = null,
+    isGold = false,
     onEventClick,
     onPlanClick,
 }) => {
@@ -178,25 +177,5 @@ const UpcomingEvents = memo(({
 });
 
 UpcomingEvents.displayName = 'UpcomingEvents';
-
-UpcomingEvents.propTypes = {
-    events: PropTypes.arrayOf(PropTypes.shape({
-        id: PropTypes.string.isRequired,
-        title: PropTypes.string.isRequired,
-        date: PropTypes.string.isRequired,
-        type: PropTypes.string.isRequired,
-        emoji: PropTypes.string,
-        isSecret: PropTypes.bool,
-    })).isRequired,
-    partnerId: PropTypes.string,
-    isGold: PropTypes.bool,
-    onEventClick: PropTypes.func.isRequired,
-    onPlanClick: PropTypes.func.isRequired,
-};
-
-UpcomingEvents.defaultProps = {
-    partnerId: null,
-    isGold: false,
-};
 
 export default UpcomingEvents;

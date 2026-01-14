@@ -14,6 +14,9 @@ import { supabase } from './supabase';
 // Track listener registration to prevent duplicates
 let listenersRegistered = false;
 
+// Track the current device's token for scoped deactivation
+let currentDeviceToken = null;
+
 // UUID validation regex for safe navigation
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -142,7 +145,9 @@ export const saveDeviceToken = async (token) => {
             return false;
         }
 
-        console.log('[Push] Token saved successfully');
+        // Track this device's token for scoped deactivation on logout
+        currentDeviceToken = token;
+        console.log('[Push] Token saved and tracked:', token.substring(0, 20) + '...');
         return true;
     } catch (error) {
         console.error('[Push] Exception saving token:', error);
@@ -259,8 +264,8 @@ export const handleNotificationNavigation = (data) => {
 
 /**
  * Deactivate device token on logout.
- * Marks all tokens for the current user as inactive so they
- * won't receive notifications until they log in again.
+ * Only deactivates the current device's token so other devices
+ * continue to receive notifications.
  *
  * @returns {Promise<boolean>} true if deactivation was successful
  */
@@ -276,20 +281,30 @@ export const deactivateDeviceToken = async () => {
             return true;
         }
 
+        // Only deactivate current device's token, not all user's tokens
+        if (!currentDeviceToken) {
+            console.log('[Push] No current device token to deactivate');
+            return true;
+        }
+
         const { error } = await supabase
             .from('device_tokens')
-            .update({ active: false })
-            .eq('user_id', user.id);
+            .update({
+                active: false,
+                deactivated_at: new Date().toISOString()
+            })
+            .eq('token', currentDeviceToken);
 
         if (error) {
-            console.error('[Push] Error deactivating tokens:', error);
+            console.error('[Push] Error deactivating token:', error);
             return false;
         }
 
-        console.log('[Push] Tokens deactivated for user');
+        console.log('[Push] Current device token deactivated');
+        currentDeviceToken = null; // Clear the reference
         return true;
     } catch (error) {
-        console.error('[Push] Exception deactivating tokens:', error);
+        console.error('[Push] Exception deactivating token:', error);
         return false;
     }
 };

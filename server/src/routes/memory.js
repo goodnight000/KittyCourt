@@ -8,6 +8,7 @@
 const express = require('express');
 const { isSupabaseConfigured, getUserProfile, updateUserProfile, getUserMemories } = require('../lib/supabase');
 const { requireAuthUserId } = require('../lib/auth');
+const { safeErrorMessage } = require('../lib/shared/errorUtils');
 
 const router = express.Router();
 
@@ -54,7 +55,7 @@ router.get('/profile/:userId', async (req, res) => {
         });
     } catch (error) {
         console.error('[Memory API] Error getting profile:', error);
-        res.status(error.statusCode || 500).json({ error: error.message });
+        res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
     }
 });
 
@@ -94,7 +95,7 @@ router.patch('/profile/:userId', async (req, res) => {
         });
     } catch (error) {
         console.error('[Memory API] Error updating profile:', error);
-        res.status(error.statusCode || 500).json({ error: error.message });
+        res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
     }
 });
 
@@ -132,7 +133,7 @@ router.get('/memories/:userId', async (req, res) => {
         });
     } catch (error) {
         console.error('[Memory API] Error getting memories:', error);
-        res.status(error.statusCode || 500).json({ error: error.message });
+        res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
     }
 });
 
@@ -179,7 +180,7 @@ router.get('/insights/:userId', async (req, res) => {
         });
     } catch (error) {
         console.error('[Memory API] Error getting insights:', error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: safeErrorMessage(error) });
     }
 });
 

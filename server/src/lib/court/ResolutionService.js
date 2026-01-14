@@ -10,7 +10,8 @@
  * - Find resolutions by ID
  */
 
-const { PHASE } = require('./stateSerializer');
+const { PHASE } = require('./StateSerializer');
+const { acquireLock } = require('../redis');
 
 const HYBRID_RESOLUTION_ID = 'resolution_hybrid';
 
@@ -27,9 +28,9 @@ class ResolutionService {
      * @param {Object} session - Session object (mutated in place)
      * @param {string} userId - User ID
      * @param {string} resolutionId - Resolution ID selected
-     * @returns {Object} - { bothPicked, sameChoice, mismatch }
+     * @returns {Promise<Object>} - { bothPicked, sameChoice, mismatch }
      */
-    submitResolutionPick(session, userId, resolutionId) {
+    async submitResolutionPick(session, userId, resolutionId) {
         // Validate user is part of this session
         if (session.creatorId !== userId && session.partnerId !== userId) {
             throw new Error('User not authorized for this session');
@@ -41,9 +42,9 @@ class ResolutionService {
 
         const isCreator = session.creatorId === userId;
 
-        // Handle mismatch state separately
+        // Handle mismatch state separately (uses distributed locking)
         if (this.isMismatchActive(session)) {
-            return this._handleMismatchPick(session, userId, resolutionId, isCreator);
+            return await this._handleMismatchPick(session, userId, resolutionId, isCreator);
         }
 
         // Regular picking
@@ -121,46 +122,59 @@ class ResolutionService {
 
     /**
      * Handle resolution pick during mismatch state
+     * Uses distributed locking to prevent race conditions in multi-instance deployments
      */
-    _handleMismatchPick(session, userId, resolutionId, isCreator) {
-        this._ensureMismatchState(session);
+    async _handleMismatchPick(session, userId, resolutionId, isCreator) {
+        // Acquire lock for this session's mismatch handling
+        const lockKey = `court:mismatch:${session.coupleId}`;
+        const lock = await acquireLock(lockKey);
 
-        const myKey = isCreator ? 'userA' : 'userB';
-        const partnerKey = isCreator ? 'userB' : 'userA';
-        const mismatchPicks = session.mismatchPicks || { userA: null, userB: null };
-        const lockId = session.mismatchLock;
-        const lockOwner = session.mismatchLockBy;
-
-        // If partner locked a choice, validate we're picking the same
-        if (lockId && lockOwner && lockOwner !== userId) {
-            if (lockId !== resolutionId) {
-                throw new Error('You both need to pick the same resolution to continue.');
-            }
-            mismatchPicks[myKey] = resolutionId;
-        } else {
-            // Validate we match partner's pick if they already picked
-            if (mismatchPicks[partnerKey] && mismatchPicks[partnerKey] !== resolutionId) {
-                throw new Error('You both need to pick the same resolution to continue.');
-            }
-            mismatchPicks[myKey] = resolutionId;
-            session.mismatchLock = resolutionId;
-            session.mismatchLockBy = userId;
+        if (!lock.acquired) {
+            throw new Error('Another pick is being processed. Please try again.');
         }
 
-        session.mismatchPicks = mismatchPicks;
+        try {
+            this._ensureMismatchState(session);
 
-        const bothPicked = mismatchPicks.userA && mismatchPicks.userB;
-        const sameChoice = bothPicked && mismatchPicks.userA === mismatchPicks.userB;
+            const myKey = isCreator ? 'userA' : 'userB';
+            const partnerKey = isCreator ? 'userB' : 'userA';
+            const mismatchPicks = session.mismatchPicks || { userA: null, userB: null };
+            const lockId = session.mismatchLock;
+            const lockOwner = session.mismatchLockBy;
 
-        if (sameChoice) {
-            const chosenResolution = this.findResolutionById(session, mismatchPicks.userA);
-            if (!chosenResolution) {
-                throw new Error('Selected resolution not found');
+            // If partner locked a choice, validate we're picking the same
+            if (lockId && lockOwner && lockOwner !== userId) {
+                if (lockId !== resolutionId) {
+                    throw new Error('You both need to pick the same resolution to continue.');
+                }
+                mismatchPicks[myKey] = resolutionId;
+            } else {
+                // Validate we match partner's pick if they already picked
+                if (mismatchPicks[partnerKey] && mismatchPicks[partnerKey] !== resolutionId) {
+                    throw new Error('You both need to pick the same resolution to continue.');
+                }
+                mismatchPicks[myKey] = resolutionId;
+                session.mismatchLock = resolutionId;
+                session.mismatchLockBy = userId;
             }
-            session.finalResolution = chosenResolution;
-        }
 
-        return { bothPicked, sameChoice, mismatch: true };
+            session.mismatchPicks = mismatchPicks;
+
+            const bothPicked = mismatchPicks.userA && mismatchPicks.userB;
+            const sameChoice = bothPicked && mismatchPicks.userA === mismatchPicks.userB;
+
+            if (sameChoice) {
+                const chosenResolution = this.findResolutionById(session, mismatchPicks.userA);
+                if (!chosenResolution) {
+                    throw new Error('Selected resolution not found');
+                }
+                session.finalResolution = chosenResolution;
+            }
+
+            return { bothPicked, sameChoice, mismatch: true };
+        } finally {
+            await lock.release();
+        }
     }
 
     _ensureMismatchState(session) {

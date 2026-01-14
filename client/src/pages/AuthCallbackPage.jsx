@@ -1,12 +1,14 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../store/useAuthStore';
+import useOnboardingStore from '../store/useOnboardingStore';
 import LoadingScreen from '../components/LoadingScreen';
 import { useI18n } from '../i18n';
 
 const AuthCallbackPage = () => {
     const navigate = useNavigate();
-    const { initialize, onboardingComplete } = useAuthStore();
+    const { initialize } = useAuthStore();
+    const { onboardingComplete } = useOnboardingStore();
     const { t } = useI18n();
 
     useEffect(() => {
@@ -22,12 +24,13 @@ const AuthCallbackPage = () => {
 
             const checkState = setInterval(() => {
                 const state = useAuthStore.getState();
+                const onboardingState = useOnboardingStore.getState();
                 attempts++;
 
                 // If authenticated, we're good to go!
                 if (state.isAuthenticated) {
                     clearInterval(checkState);
-                    if (state.onboardingComplete) {
+                    if (onboardingState.onboardingComplete) {
                         navigate('/');
                     } else {
                         navigate('/onboarding');

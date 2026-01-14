@@ -3,6 +3,7 @@ import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
 import useAppStore from '../store/useAppStore';
 import useAuthStore from '../store/useAuthStore';
+import usePartnerStore from '../store/usePartnerStore';
 import useSubscriptionStore from '../store/useSubscriptionStore';
 import Paywall from '../components/Paywall';
 import { useI18n } from '../i18n';
@@ -17,7 +18,8 @@ import EventPlanningDialog from '../components/calendar/EventPlanningDialog';
 
 const CalendarPage = () => {
     const { currentUser } = useAppStore();
-    const { user: authUser, profile, partner: connectedPartner } = useAuthStore();
+    const { user: authUser, profile } = useAuthStore();
+    const { partner: connectedPartner } = usePartnerStore();
     const { canUsePlanFeature, isGold } = useSubscriptionStore();
     const { t } = useI18n();
 

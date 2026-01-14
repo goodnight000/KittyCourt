@@ -3,7 +3,7 @@
  *
  * Utility for wrapping WebSocket action patterns with timeout handling and fallback logic.
  * This module provides a clean abstraction for the repetitive Promise-based socket emit
- * patterns found throughout the courtStore.
+ * patterns found throughout useCourtStore.
  *
  * @module socketActionHelper
  */

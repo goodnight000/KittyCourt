@@ -1,14 +1,23 @@
 import React, { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { X, Check, User, AlertTriangle } from 'lucide-react';
-import PropTypes from 'prop-types';
 import { validateBirthdayDate } from '../../utils/helpers';
 import { PRESET_AVATARS } from '../../services/avatarService';
 import { useI18n } from '../../i18n';
+import { DEFAULT_LANGUAGE } from '../../i18n/languageConfig';
+
+const buildFormState = (data) => ({
+    nickname: data?.nickname || '',
+    birthday: data?.birthday || '',
+    loveLanguage: data?.loveLanguage || '',
+    avatarUrl: data?.avatarUrl || null,
+    anniversaryDate: data?.anniversaryDate || '',
+    preferredLanguage: data?.preferredLanguage || DEFAULT_LANGUAGE,
+});
 
 const ProfileEditForm = ({ profileData, loveLanguages, onSave, onClose }) => {
-    const { t } = useI18n();
-    const [formData, setFormData] = useState({ ...profileData });
+    const { t, supportedLanguages } = useI18n();
+    const [formData, setFormData] = useState(() => buildFormState(profileData));
     const [birthdayError, setBirthdayError] = useState(null);
     const [uploading, setUploading] = useState(false);
     const fileInputRef = useRef(null);
@@ -230,6 +239,30 @@ const ProfileEditForm = ({ profileData, loveLanguages, onSave, onClose }) => {
                     </div>
                 </div>
 
+                {/* Preferred Language */}
+                <div>
+                    <label htmlFor="preferred-language" className="text-xs font-bold text-neutral-500 mb-2 block">
+                        {t('profile.languageLabel')}
+                    </label>
+                    <select
+                        id="preferred-language"
+                        value={formData.preferredLanguage || DEFAULT_LANGUAGE}
+                        onChange={(e) => setFormData({ ...formData, preferredLanguage: e.target.value })}
+                        className="w-full bg-neutral-50 border-2 border-neutral-100 rounded-xl p-3 text-neutral-700 focus:ring-2 focus:ring-amber-200 focus:border-amber-300 focus:outline-none text-sm"
+                    >
+                        {(supportedLanguages || []).map((languageOption) => {
+                            const label = languageOption.labelKey
+                                ? t(languageOption.labelKey)
+                                : (languageOption.label || languageOption.nativeLabel || languageOption.code);
+                            return (
+                                <option key={languageOption.code} value={languageOption.code}>
+                                    {label}
+                                </option>
+                            );
+                        })}
+                    </select>
+                </div>
+
                 <button
                     onClick={handleSave}
                     disabled={birthdayError || uploading}
@@ -244,24 +277,6 @@ const ProfileEditForm = ({ profileData, loveLanguages, onSave, onClose }) => {
             </motion.div>
         </motion.div>
     );
-};
-
-ProfileEditForm.propTypes = {
-    profileData: PropTypes.shape({
-        nickname: PropTypes.string,
-        birthday: PropTypes.string,
-        loveLanguage: PropTypes.string,
-        avatarUrl: PropTypes.string,
-        anniversaryDate: PropTypes.string,
-        preferredLanguage: PropTypes.string,
-    }).isRequired,
-    loveLanguages: PropTypes.arrayOf(PropTypes.shape({
-        id: PropTypes.string.isRequired,
-        label: PropTypes.string.isRequired,
-        emoji: PropTypes.string.isRequired,
-    })).isRequired,
-    onSave: PropTypes.func.isRequired,
-    onClose: PropTypes.func.isRequired,
 };
 
 export default ProfileEditForm;

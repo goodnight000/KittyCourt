@@ -6,7 +6,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import ResolutionService from './ResolutionService.js';
-import { PHASE } from './stateSerializer.js';
+import { PHASE } from './StateSerializer.js';
 
 describe('ResolutionService', () => {
     let resolutionService;
@@ -34,43 +34,43 @@ describe('ResolutionService', () => {
     });
 
     describe('submitResolutionPick', () => {
-        it('should submit pick for user A', () => {
-            const result = resolutionService.submitResolutionPick(session, 'user1', 'res1');
+        it('should submit pick for user A', async () => {
+            const result = await resolutionService.submitResolutionPick(session, 'user1', 'res1');
 
             expect(session.userAResolutionPick).toBe('res1');
             expect(result.bothPicked).toBeFalsy();
         });
 
-        it('should submit pick for user B', () => {
-            const result = resolutionService.submitResolutionPick(session, 'user2', 'res2');
+        it('should submit pick for user B', async () => {
+            const result = await resolutionService.submitResolutionPick(session, 'user2', 'res2');
 
             expect(session.userBResolutionPick).toBe('res2');
             expect(result.bothPicked).toBeFalsy();
         });
 
-        it('should detect when both picked same resolution', () => {
-            resolutionService.submitResolutionPick(session, 'user1', 'res1');
-            const result = resolutionService.submitResolutionPick(session, 'user2', 'res1');
+        it('should detect when both picked same resolution', async () => {
+            await resolutionService.submitResolutionPick(session, 'user1', 'res1');
+            const result = await resolutionService.submitResolutionPick(session, 'user2', 'res1');
 
             expect(result.bothPicked).toBeTruthy();
             expect(result.sameChoice).toBe(true);
         });
 
-        it('should detect when both picked different resolutions', () => {
-            resolutionService.submitResolutionPick(session, 'user1', 'res1');
-            const result = resolutionService.submitResolutionPick(session, 'user2', 'res2');
+        it('should detect when both picked different resolutions', async () => {
+            await resolutionService.submitResolutionPick(session, 'user1', 'res1');
+            const result = await resolutionService.submitResolutionPick(session, 'user2', 'res2');
 
             expect(result.bothPicked).toBeTruthy();
             expect(result.sameChoice).toBe(false);
             expect(result.mismatch).toBe(true);
         });
 
-        it('should throw error if not in RESOLUTION phase', () => {
+        it('should throw error if not in RESOLUTION phase', async () => {
             session.phase = PHASE.EVIDENCE;
 
-            expect(() => {
-                resolutionService.submitResolutionPick(session, 'user1', 'res1');
-            }).toThrow('Not in RESOLUTION phase');
+            await expect(
+                resolutionService.submitResolutionPick(session, 'user1', 'res1')
+            ).rejects.toThrow('Not in RESOLUTION phase');
         });
     });
 

@@ -7,7 +7,7 @@
 
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { io } from 'socket.io-client';
-import useCourtStore, { setSocketRef } from '../store/courtStore';
+import useCourtStore, { setSocketRef } from '../store/useCourtStore';
 import useAuthStore from '../store/useAuthStore';
 
 // Get socket server URL

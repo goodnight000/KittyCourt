@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion as Motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, ArrowRight, Sparkles, Check } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, ArrowRight, Sparkles, Check, ArrowLeft } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 import { useI18n } from '../i18n';
 
@@ -17,6 +17,7 @@ const SignUpPage = () => {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [emailConfirmationPending, setEmailConfirmationPending] = useState(null);
 
     const passwordRequirements = [
         { text: t('signUp.requirements.length'), met: password.length >= 8 },
@@ -47,7 +48,7 @@ const SignUpPage = () => {
             return;
         }
 
-        const { error } = await signUp(email, password);
+        const { error, needsEmailConfirmation, email: signUpEmail } = await signUp(email, password);
         setIsSubmitting(false);
         if (error) {
             if (error.message.includes('already registered') || error.status === 422) {
@@ -55,11 +56,18 @@ const SignUpPage = () => {
             } else {
                 setError(error.message || t('signUp.errors.generic'));
             }
-        } else {
-            setSuccess(true);
-            // Force navigation to onboarding immediately to avoid any state race conditions
-            navigate('/welcome');
+            return;
         }
+
+        if (needsEmailConfirmation) {
+            // Show email confirmation pending UI
+            setEmailConfirmationPending(signUpEmail);
+            return;
+        }
+
+        setSuccess(true);
+        // Force navigation to onboarding immediately to avoid any state race conditions
+        navigate('/welcome');
     };
 
     const handleGoogleSignUp = async () => {
@@ -71,6 +79,47 @@ const SignUpPage = () => {
             setError(error.message || t('signUp.errors.generic'));
         }
     };
+
+    // Show email confirmation pending UI
+    if (emailConfirmationPending) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-court-cream via-white to-court-tan/30 flex flex-col items-center justify-center p-6 safe-top">
+                <Motion.div
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    className="text-center max-w-md"
+                >
+                    <Motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: 'spring', delay: 0.2 }}
+                        className="w-24 h-24 mx-auto mb-6 rounded-full flex items-center justify-center"
+                        style={{ background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' }}
+                    >
+                        <Mail className="w-12 h-12 text-white" />
+                    </Motion.div>
+                    <h2 className="text-2xl font-bold text-neutral-800 mb-2">
+                        {t('signUp.emailConfirmation.title')}
+                    </h2>
+                    <p className="text-neutral-600 mb-4">
+                        {t('signUp.emailConfirmation.message', { email: emailConfirmationPending })}
+                    </p>
+                    <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-4 border border-white/50 mb-6">
+                        <p className="text-sm text-neutral-500">
+                            {t('signUp.emailConfirmation.hint')}
+                        </p>
+                    </div>
+                    <button
+                        onClick={() => setEmailConfirmationPending(null)}
+                        className="inline-flex items-center gap-2 text-sm font-semibold text-court-gold hover:text-court-goldDark transition-colors"
+                    >
+                        <ArrowLeft className="w-4 h-4" />
+                        {t('signUp.emailConfirmation.tryDifferent')}
+                    </button>
+                </Motion.div>
+            </div>
+        );
+    }
 
     if (success) {
         return (

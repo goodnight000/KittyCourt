@@ -11,6 +11,7 @@ import ChallengeCard from '../components/ChallengeCard';
 import useLevelStore from '../store/useLevelStore';
 import useChallengeStore from '../store/useChallengeStore';
 import useAuthStore from '../store/useAuthStore';
+import usePartnerStore from '../store/usePartnerStore';
 import { useI18n } from '../i18n';
 
 // Loading skeleton component
@@ -46,7 +47,8 @@ const ChallengesPage = () => {
     const navigate = useNavigate();
     const { t, language } = useI18n();
     const handleBack = () => navigate('/profile', { state: { tab: 'us' } });
-    const { hasPartner, user } = useAuthStore();
+    const { user } = useAuthStore();
+    const { hasPartner } = usePartnerStore();
     const { level, shouldShowChallenges, fetchLevel } = useLevelStore();
     const {
         active,

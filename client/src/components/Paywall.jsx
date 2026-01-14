@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Crown, Heart, Check, Sparkles, Users, Zap, Gavel, Wand2, ChevronRight, Clock, Star, BookHeart, Brain } from 'lucide-react';
+import { X, Crown, Heart, Check, Users, Zap, Gavel, Wand2, ChevronRight, Clock, Star, RotateCcw, Brain } from 'lucide-react';
 import useSubscriptionStore from '../store/useSubscriptionStore';
 import { useI18n } from '../i18n';
 
@@ -75,9 +75,9 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
             bgColor: 'rgba(139, 112, 25, 0.14)',
         },
         {
-            icon: BookHeart,
-            titleKey: 'paywall.benefits.items.questions.title',
-            descriptionKey: 'paywall.benefits.items.questions.description',
+            icon: RotateCcw,
+            titleKey: 'paywall.benefits.items.streak.title',
+            descriptionKey: 'paywall.benefits.items.streak.description',
             color: '#5B8B6E',
             bgColor: 'rgba(91, 139, 110, 0.14)',
         },
@@ -573,9 +573,6 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                                     </div>
                                 ) : (
                                     <div className="relative flex items-center gap-3">
-                                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-amber-200/70 bg-amber-100/70">
-                                            <Sparkles className="w-5 h-5 text-amber-600" />
-                                        </div>
                                         <div className="flex-1">
                                             <div className="text-sm font-bold text-neutral-800">
                                                 {trialEligible ? t('paywall.cta.trial') : t('paywall.cta.subscribe')}

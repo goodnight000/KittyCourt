@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Star, Plus, X, Check, Edit3, Trash2, ShoppingBag, Bell, CheckCircle2 } from 'lucide-react';
 import useAppStore from '../store/useAppStore';
 import useAuthStore from '../store/useAuthStore';
+import usePartnerStore from '../store/usePartnerStore';
 import RequirePartner from '../components/RequirePartner';
 import { supabase } from '../services/supabase';
 import { useNavigate } from 'react-router-dom';
@@ -35,7 +36,8 @@ export default function EconomyPage() {
     const navigate = useNavigate();
     const { t, language } = useI18n();
     const { currentUser, redeemCoupon } = useAppStore();
-    const { hasPartner, user: authUser, profile, partner: connectedPartner } = useAuthStore();
+    const { user: authUser, profile } = useAuthStore();
+    const { hasPartner, partner: connectedPartner } = usePartnerStore();
     
     // Use auth store for user/partner info
     const myId = authUser?.id || currentUser?.id;

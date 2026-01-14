@@ -124,6 +124,53 @@ const useCacheStore = create(
                     keys: Object.keys(cache),
                 };
             },
+
+            /**
+             * Pre-fetch and cache all commonly needed data on app load
+             * Runs in background - errors are silently ignored
+             * @param {string} userId - Current user ID
+             * @param {string} partnerId - Partner ID (optional)
+             */
+            warmCache: async (userId, partnerId) => {
+                if (!userId) return;
+
+                const { setCache } = get();
+
+                try {
+                    const api = (await import('../services/api')).default;
+
+                    const fetches = [];
+
+                    // Partner-required data (most features need a partner)
+                    if (partnerId) {
+                        fetches.push(
+                            api.get('/stats').then(res =>
+                                setCache(CACHE_KEYS.STREAK, res.data, CACHE_TTL.STREAK)
+                            ).catch(() => {}),
+
+                            api.get('/daily-questions/today').then(res =>
+                                setCache(CACHE_KEYS.DAILY_QUESTION, res.data, CACHE_TTL.DAILY_HISTORY)
+                            ).catch(() => {}),
+
+                            api.get('/calendar/events').then(res =>
+                                setCache(CACHE_KEYS.CALENDAR_EVENTS, res.data, CACHE_TTL.CALENDAR_EVENTS)
+                            ).catch(() => {}),
+
+                            api.get('/cases', { params: { userAId: userId, userBId: partnerId } }).then(res =>
+                                setCache(`${CACHE_KEYS.CASE_HISTORY}:${userId}:${partnerId}`, res.data, CACHE_TTL.CASE_HISTORY)
+                            ).catch(() => {}),
+
+                            api.get(`/appreciations/${userId}`).then(res =>
+                                setCache(`${CACHE_KEYS.APPRECIATIONS}:${userId}`, res.data, CACHE_TTL.APPRECIATIONS)
+                            ).catch(() => {})
+                        );
+                    }
+
+                    await Promise.allSettled(fetches);
+                } catch {
+                    // Silently ignore - cache warming is best-effort
+                }
+            },
         }),
         {
             name: 'pause-cache',

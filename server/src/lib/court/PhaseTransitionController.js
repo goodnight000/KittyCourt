@@ -13,7 +13,7 @@
  * - Handle verdict acceptance and session closure
  */
 
-const { PHASE } = require('./stateSerializer');
+const { PHASE } = require('./StateSerializer');
 const { TIMEOUT } = require('./timeoutHandlers');
 const { buildCaseData } = require('./caseDataBuilder');
 
@@ -43,6 +43,7 @@ class PhaseTransitionController {
 
         // Transition to EVIDENCE
         session.phase = PHASE.EVIDENCE;
+        session.phaseStartedAt = Date.now();
 
         console.log(`[Court] Session ${session.id} accepted (EVIDENCE)`);
 
@@ -74,6 +75,7 @@ class PhaseTransitionController {
 
         // Transition to analysis phase (v2)
         session.phase = PHASE.ANALYZING;
+        session.phaseStartedAt = Date.now();
         console.log(`[Court] Session ${session.id} → ANALYZING`);
 
         return session;
@@ -96,6 +98,7 @@ class PhaseTransitionController {
         }
 
         session.phase = PHASE.PRIMING;
+        session.phaseStartedAt = Date.now();
         console.log(`[Court] Session ${session.id} → PRIMING`);
 
         return session;
@@ -125,6 +128,7 @@ class PhaseTransitionController {
         }
 
         session.phase = PHASE.JOINT_READY;
+        session.phaseStartedAt = Date.now();
         console.log(`[Court] Session ${session.id} → JOINT_READY`);
 
         return session;
@@ -154,6 +158,7 @@ class PhaseTransitionController {
         }
 
         session.phase = PHASE.RESOLUTION;
+        session.phaseStartedAt = Date.now();
         console.log(`[Court] Session ${session.id} → RESOLUTION`);
 
         return session;
@@ -213,6 +218,7 @@ class PhaseTransitionController {
 
         session.resolvedAt = Date.now();
         session.phase = PHASE.VERDICT;
+        session.phaseStartedAt = Date.now();
 
         console.log(`[Court] Session ${session.id} → VERDICT`);
 
@@ -243,6 +249,7 @@ class PhaseTransitionController {
         }
 
         session.phase = PHASE.CLOSED;
+        session.phaseStartedAt = Date.now();
 
         // Persist to case history (best-effort)
         try {
@@ -300,6 +307,7 @@ class PhaseTransitionController {
         session.verdict = null;
         session.resolvedAt = null;
         session.phase = PHASE.ANALYZING;
+        session.phaseStartedAt = Date.now();
 
         return session;
     }

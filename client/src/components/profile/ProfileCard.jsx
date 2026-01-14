@@ -2,7 +2,6 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Edit3, Calendar, Heart, Settings, LogOut, Coffee, Scale, MessageSquare } from 'lucide-react';
-import PropTypes from 'prop-types';
 import ProfilePicture from '../ProfilePicture';
 import { useI18n } from '../../i18n';
 
@@ -155,30 +154,6 @@ const ProfileCard = ({
             </div>
         </>
     );
-};
-
-ProfileCard.propTypes = {
-    profileData: PropTypes.shape({
-        nickname: PropTypes.string,
-        birthday: PropTypes.string,
-        anniversaryDate: PropTypes.string,
-        loveLanguage: PropTypes.string,
-        avatarUrl: PropTypes.string,
-    }).isRequired,
-    currentUser: PropTypes.shape({
-        name: PropTypes.string,
-        kibbleBalance: PropTypes.number,
-    }),
-    selectedLoveLanguage: PropTypes.shape({
-        id: PropTypes.string,
-        label: PropTypes.string,
-        emoji: PropTypes.string,
-    }),
-    onEditClick: PropTypes.func.isRequired,
-    onSignOut: PropTypes.func.isRequired,
-    totalCases: PropTypes.number.isRequired,
-    totalAppreciations: PropTypes.number.isRequired,
-    questionsAnswered: PropTypes.number.isRequired,
 };
 
 export default ProfileCard;

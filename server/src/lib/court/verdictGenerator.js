@@ -6,7 +6,7 @@
  * - Phase 2: Priming + Joint Menu
  */
 
-const { PHASE } = require('./stateSerializer');
+const { PHASE } = require('./StateSerializer');
 const { TIMEOUT } = require('./timeoutHandlers');
 
 /**
@@ -56,6 +56,7 @@ async function runVerdictPipeline(session, deps) {
         session.verdict = { status: 'error', error: 'Judge engine unavailable. Please restart the server.' };
         session.resolvedAt = Date.now();
         session.phase = PHASE.VERDICT;
+        session.phaseStartedAt = Date.now();
         await dbCheckpoint(session, 'engine_unavailable');
         notifyBoth(session);
         return;
@@ -81,6 +82,7 @@ async function runVerdictPipeline(session, deps) {
                 session.verdict = { status: 'error', error: 'Usage limit reached. Please upgrade to continue.', usage };
                 session.resolvedAt = Date.now();
                 session.phase = PHASE.VERDICT;
+                session.phaseStartedAt = Date.now();
                 await dbCheckpoint(session, 'usage_blocked');
                 notifyBoth(session);
                 return;
@@ -98,6 +100,7 @@ async function runVerdictPipeline(session, deps) {
             session.verdict = { status: 'error', error: 'V2 pipeline unavailable. Please restart the server.' };
             session.resolvedAt = Date.now();
             session.phase = PHASE.VERDICT;
+            session.phaseStartedAt = Date.now();
             await dbCheckpoint(session, 'pipeline_unavailable');
             notifyBoth(session);
             return;
@@ -105,6 +108,7 @@ async function runVerdictPipeline(session, deps) {
 
         // V2.0 Pipeline: Phase 1 - Analyst + Repair Selection
         session.phase = PHASE.ANALYZING;
+        session.phaseStartedAt = Date.now();
         notifyBoth(session);
 
         // Safety timeout for long-running analysis
@@ -146,6 +150,7 @@ async function runVerdictPipeline(session, deps) {
 
         // Transition to PRIMING phase
         session.phase = PHASE.PRIMING;
+        session.phaseStartedAt = Date.now();
 
         // Set priming timeout
         session.timeoutId = setPrimingTimeout(session.coupleId);
@@ -159,6 +164,7 @@ async function runVerdictPipeline(session, deps) {
         session.verdict = { status: 'error', error: error?.message || 'Verdict generation failed' };
         session.resolvedAt = Date.now();
         session.phase = PHASE.VERDICT;
+        session.phaseStartedAt = Date.now();
         await dbCheckpoint(session, 'verdict_failed');
         notifyBoth(session);
     }

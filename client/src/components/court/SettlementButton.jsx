@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence, useMotionValue, useTransform, useSpring } from 'framer-motion';
 import { Handshake, Heart, X } from 'lucide-react';
-import useCourtStore from '../../store/courtStore';
+import useCourtStore from '../../store/useCourtStore';
 import useAuthStore from '../../store/useAuthStore';
+import usePartnerStore from '../../store/usePartnerStore';
 import { useI18n } from '../../i18n';
 
 /**
@@ -42,7 +43,8 @@ export default function SettlementButton({ className = '' }) {
         settlementDeclinedNotice,
         clearSettlementDeclinedNotice
     } = useCourtStore();
-    const { user, partner } = useAuthStore();
+    const { user } = useAuthStore();
+    const { partner } = usePartnerStore();
 
     useEffect(() => {
         if (!settlementDeclinedNotice?.at) return;

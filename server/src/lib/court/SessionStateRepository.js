@@ -12,7 +12,13 @@
  */
 
 const { v4: uuidv4 } = require('uuid');
-const { PHASE } = require('./stateSerializer');
+const { PHASE } = require('./StateSerializer');
+const { getRedisClient, getRedisSubscriber } = require('../redis');
+
+const SESSION_KEY_PREFIX = 'court:session:';
+const USER_KEY_PREFIX = 'court:user:';
+const SESSION_SET_KEY = 'court:sessions';
+const SESSION_CHANNEL = 'court:sessions:events';
 
 class SessionStateRepository {
     constructor() {
@@ -21,6 +27,25 @@ class SessionStateRepository {
 
         // userId → coupleId (quick lookup)
         this.userToCouple = new Map();
+
+        this.redis = getRedisClient();
+        this.redisSubscriber = getRedisSubscriber();
+        this.instanceId = uuidv4();
+
+        if (this.redisSubscriber) {
+            this.redisSubscriber.subscribe(SESSION_CHANNEL).catch((error) => {
+                console.error('[Redis] Subscribe failed:', error?.message || error);
+            });
+            this.redisSubscriber.on('message', (_channel, message) => {
+                this._handleRedisMessage(message);
+            });
+        }
+
+        if (this.redis) {
+            this._hydrateFromRedis().catch((error) => {
+                console.error('[Redis] Session hydration failed:', error?.message || error);
+            });
+        }
     }
 
     // === Lookups ===
@@ -73,6 +98,7 @@ class SessionStateRepository {
         const effectiveCoupleId = coupleId || `${creatorId}-${partnerId}`;
         const sessionId = uuidv4();
 
+        const now = Date.now();
         const session = {
             id: sessionId,
             coupleId: effectiveCoupleId,
@@ -91,9 +117,11 @@ class SessionStateRepository {
             addendumCount: 0,
             verdictHistory: [],
             settlementRequested: null,
+            settlementRequestedAt: null,
             settlementTimeoutId: null,
             timeoutId: null,
-            createdAt: Date.now(),
+            createdAt: now,
+            phaseStartedAt: now,
             // V2.0 fields
             analysis: null,
             resolutions: null,
@@ -112,9 +140,8 @@ class SessionStateRepository {
             historicalContext: null
         };
 
-        this.sessions.set(effectiveCoupleId, session);
-        this.userToCouple.set(creatorId, effectiveCoupleId);
-        this.userToCouple.set(partnerId, effectiveCoupleId);
+        this._cacheSession(session);
+        this.saveSession(session);
 
         return session;
     }
@@ -123,9 +150,8 @@ class SessionStateRepository {
      * Restore session from database (for crash recovery)
      */
     restoreSession(session) {
-        this.sessions.set(session.coupleId, session);
-        this.userToCouple.set(session.creatorId, session.coupleId);
-        this.userToCouple.set(session.partnerId, session.coupleId);
+        this._cacheSession(session);
+        this.saveSession(session);
     }
 
     // === Session Cleanup ===
@@ -149,6 +175,7 @@ class SessionStateRepository {
         this.userToCouple.delete(session.creatorId);
         this.userToCouple.delete(session.partnerId);
         this.sessions.delete(coupleId);
+        this._removeSessionFromRedis(session);
 
         return session;
     }
@@ -161,7 +188,8 @@ class SessionStateRepository {
     getStats() {
         return {
             activeSessions: this.sessions.size,
-            userMappings: this.userToCouple.size
+            userMappings: this.userToCouple.size,
+            redisEnabled: !!this.redis
         };
     }
 
@@ -177,6 +205,114 @@ class SessionStateRepository {
             primingReady: false,
             jointReady: false
         };
+    }
+
+    _serializeSession(session) {
+        return {
+            ...session,
+            timeoutId: null,
+            settlementTimeoutId: null,
+        };
+    }
+
+    _hydrateSession(session) {
+        return {
+            ...session,
+            timeoutId: null,
+            settlementTimeoutId: null,
+        };
+    }
+
+    _cacheSession(session) {
+        this.sessions.set(session.coupleId, session);
+        this.userToCouple.set(session.creatorId, session.coupleId);
+        this.userToCouple.set(session.partnerId, session.coupleId);
+    }
+
+    async saveSession(session) {
+        if (!this.redis) return;
+        try {
+            const payload = this._serializeSession(session);
+            const serialized = JSON.stringify(payload);
+            const multi = this.redis.multi();
+            multi.set(`${SESSION_KEY_PREFIX}${session.coupleId}`, serialized);
+            multi.sadd(SESSION_SET_KEY, session.coupleId);
+            multi.set(`${USER_KEY_PREFIX}${session.creatorId}`, session.coupleId);
+            multi.set(`${USER_KEY_PREFIX}${session.partnerId}`, session.coupleId);
+            await multi.exec();
+            await this._publishRedisEvent({
+                type: 'upsert',
+                session: payload,
+            });
+        } catch (error) {
+            console.error('[Redis] Failed to persist session:', error?.message || error);
+        }
+    }
+
+    async _removeSessionFromRedis(session) {
+        if (!this.redis) return;
+        try {
+            const multi = this.redis.multi();
+            multi.del(`${SESSION_KEY_PREFIX}${session.coupleId}`);
+            multi.del(`${USER_KEY_PREFIX}${session.creatorId}`);
+            multi.del(`${USER_KEY_PREFIX}${session.partnerId}`);
+            multi.srem(SESSION_SET_KEY, session.coupleId);
+            await multi.exec();
+            await this._publishRedisEvent({
+                type: 'delete',
+                coupleId: session.coupleId,
+            });
+        } catch (error) {
+            console.error('[Redis] Failed to delete session:', error?.message || error);
+        }
+    }
+
+    async _publishRedisEvent(event) {
+        if (!this.redis) return;
+        const payload = JSON.stringify({
+            ...event,
+            sourceId: this.instanceId,
+        });
+        await this.redis.publish(SESSION_CHANNEL, payload);
+    }
+
+    async _hydrateFromRedis() {
+        const coupleIds = await this.redis.smembers(SESSION_SET_KEY);
+        if (!coupleIds || coupleIds.length === 0) return;
+
+        const keys = coupleIds.map((id) => `${SESSION_KEY_PREFIX}${id}`);
+        const rawSessions = await this.redis.mget(keys);
+        rawSessions.forEach((raw) => {
+            if (!raw) return;
+            try {
+                const parsed = JSON.parse(raw);
+                const session = this._hydrateSession(parsed);
+                this._cacheSession(session);
+            } catch (error) {
+                console.warn('[Redis] Skipping invalid session payload:', error?.message || error);
+            }
+        });
+    }
+
+    _handleRedisMessage(message) {
+        if (!message) return;
+        try {
+            const event = JSON.parse(message);
+            if (event.sourceId === this.instanceId) return;
+            if (event.type === 'upsert' && event.session) {
+                const session = this._hydrateSession(event.session);
+                this._cacheSession(session);
+            } else if (event.type === 'delete' && event.coupleId) {
+                const session = this.sessions.get(event.coupleId);
+                if (session) {
+                    this.userToCouple.delete(session.creatorId);
+                    this.userToCouple.delete(session.partnerId);
+                }
+                this.sessions.delete(event.coupleId);
+            }
+        } catch (error) {
+            console.warn('[Redis] Failed to process session event:', error?.message || error);
+        }
     }
 }
 

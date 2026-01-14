@@ -6,7 +6,9 @@ import {
     Send, Loader2, AlertCircle, Clock, UserPlus
 } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
+import usePartnerStore from '../store/usePartnerStore';
 import { useI18n } from '../i18n';
+import DisconnectNotice from '../components/DisconnectNotice';
 
 const ConnectPartnerPage = () => {
     const navigate = useNavigate();
@@ -14,13 +16,16 @@ const ConnectPartnerPage = () => {
     const {
         profile,
         signOut,
-        sendPartnerRequestByCode,
-        sentRequest,
-        cancelSentRequest,
-        refreshPendingRequests,
         refreshProfile,
-        hasPartner
     } = useAuthStore();
+    const {
+        hasPartner,
+        disconnectStatus,
+        sendPartnerRequestByCode,
+        cancelSentRequest,
+        sentRequest,
+        refreshPendingRequests
+    } = usePartnerStore();
 
     const [copied, setCopied] = useState(false);
     const [partnerCode, setPartnerCode] = useState('');
@@ -128,6 +133,9 @@ const ConnectPartnerPage = () => {
             </div>
 
             <div className="w-full max-w-md space-y-6">
+                {!hasPartner && disconnectStatus?.status === 'disconnected' && (
+                    <DisconnectNotice disconnectStatus={disconnectStatus} />
+                )}
                 {/* Header */}
                 <motion.div
                     initial={{ opacity: 0, y: -20 }}

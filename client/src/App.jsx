@@ -1,43 +1,46 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 
 // Layout
 import MainLayout from './layouts/MainLayout';
 
-// Auth Pages
-import SignInPage from './pages/SignInPage';
-import SignUpPage from './pages/SignUpPage';
-import OnboardingPage from './pages/OnboardingPage';
-import AuthCallbackPage from './pages/AuthCallbackPage';
-import ConnectPartnerPage from './pages/ConnectPartnerPage';
-import ForgotPasswordPage from './pages/ForgotPasswordPage';
-import ResetPasswordPage from './pages/ResetPasswordPage';
+// Auth Pages (lazy)
+const SignInPage = lazy(() => import('./pages/SignInPage'));
+const SignUpPage = lazy(() => import('./pages/SignUpPage'));
+const OnboardingPage = lazy(() => import('./pages/OnboardingPage'));
+const AuthCallbackPage = lazy(() => import('./pages/AuthCallbackPage'));
+const ConnectPartnerPage = lazy(() => import('./pages/ConnectPartnerPage'));
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
 
-// App Pages
-import CourtroomPage from './pages/CourtroomPage';
-import HistoryPage from './pages/HistoryPage';
-import CaseDetailPage from './pages/CaseDetailPage';
-import AppreciationsPage from './pages/AppreciationsPage';
-import ProfilesPage from './pages/ProfilesPage';
-import CalendarPage from './pages/CalendarPage';
-import DashboardPage from './pages/DashboardPage';
-import DailyMeowPage from './pages/DailyMeowPage';
-import DailyMeowHistoryPage from './pages/DailyMeowHistoryPage';
-import EconomyPage from './pages/EconomyPage';
-import ChallengesPage from './pages/ChallengesPage';
-import MemoriesPage from './pages/MemoriesPage';
-import InsightsPage from './pages/InsightsPage';
-import SettingsPage from './pages/SettingsPage';
-import FeedbackPage from './pages/FeedbackPage';
+// App Pages (lazy)
+const CourtroomPage = lazy(() => import('./pages/CourtroomPage'));
+const HistoryPage = lazy(() => import('./pages/HistoryPage'));
+const CaseDetailPage = lazy(() => import('./pages/CaseDetailPage'));
+const AppreciationsPage = lazy(() => import('./pages/AppreciationsPage'));
+const ProfilesPage = lazy(() => import('./pages/ProfilesPage'));
+const CalendarPage = lazy(() => import('./pages/CalendarPage'));
+const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const DailyMeowPage = lazy(() => import('./pages/DailyMeowPage'));
+const DailyMeowHistoryPage = lazy(() => import('./pages/DailyMeowHistoryPage'));
+const EconomyPage = lazy(() => import('./pages/EconomyPage'));
+const ChallengesPage = lazy(() => import('./pages/ChallengesPage'));
+const MemoriesPage = lazy(() => import('./pages/MemoriesPage'));
+const InsightsPage = lazy(() => import('./pages/InsightsPage'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+const FeedbackPage = lazy(() => import('./pages/FeedbackPage'));
 
 // Components
 import PartnerRequestModal from './components/PartnerRequestModal';
 import LoadingScreen from './components/LoadingScreen';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // Store
 import useAuthStore from './store/useAuthStore';
 import useAppStore from './store/useAppStore';
-import useCourtStore from './store/courtStore';
+import useCourtStore from './store/useCourtStore';
+import usePartnerStore from './store/usePartnerStore';
+import useOnboardingStore from './store/useOnboardingStore';
 import { startAuthLifecycle } from './services/authLifecycle';
 
 // RevenueCat
@@ -48,7 +51,8 @@ import { initializePushNotifications, removePushListeners } from './services/pus
 
 // Protected Route Component - Now allows access without partner (with restrictions)
 const ProtectedRoute = ({ children }) => {
-    const { isAuthenticated, isLoading, hasCheckedAuth, onboardingComplete } = useAuthStore();
+    const { isAuthenticated, isLoading, hasCheckedAuth } = useAuthStore();
+    const { onboardingComplete } = useOnboardingStore();
     const location = useLocation();
 
     // Show loading until auth check completes
@@ -71,8 +75,15 @@ const ProtectedRoute = ({ children }) => {
 
 // App Routes Component
 const AppRoutes = () => {
-    const { initialize, isLoading, hasCheckedAuth, isAuthenticated, onboardingComplete, pendingRequests, hasPartner, refreshPendingRequests } = useAuthStore();
+    const { initialize, isLoading, hasCheckedAuth, isAuthenticated } = useAuthStore();
+    const { onboardingComplete } = useOnboardingStore();
+    const { pendingRequests, hasPartner, refreshPendingRequests } = usePartnerStore();
     const initializedRef = useRef(false);
+    const wrap = (element, message) => (
+        <ErrorBoundary message={message}>
+            {element}
+        </ErrorBoundary>
+    );
 
     useEffect(() => {
         const stop = startAuthLifecycle();
@@ -89,6 +100,7 @@ const AppRoutes = () => {
             stop?.();
             // Cleanup all stores (event bus listeners, pending timeouts, subscriptions)
             useAuthStore.getState().cleanup?.();
+            usePartnerStore.getState().cleanupRealtimeSubscriptions?.();
             useAppStore.getState().cleanup();
             useCourtStore.getState().cleanup();
             // Cleanup push notification listeners
@@ -150,30 +162,31 @@ const AppRoutes = () => {
             {/* Partner Request Modal - shown globally when there are pending requests */}
             {isAuthenticated && pendingRequests?.length > 0 && <PartnerRequestModal />}
 
-            <Routes>
+            <Suspense fallback={<LoadingScreen />}>
+                <Routes>
                 {/* Public Routes */}
                 <Route path="/signin" element={
                     isAuthenticated ? (
                         onboardingComplete ? <Navigate to="/" replace /> : <Navigate to="/welcome" replace />
-                    ) : <SignInPage />
+                    ) : wrap(<SignInPage />, 'Unable to load sign-in')
                 } />
                 <Route path="/signup" element={
                     isAuthenticated ? (
                         onboardingComplete ? <Navigate to="/" replace /> : <Navigate to="/welcome" replace />
-                    ) : <SignUpPage />
+                    ) : wrap(<SignUpPage />, 'Unable to load sign-up')
                 } />
-                <Route path="/auth/callback" element={<AuthCallbackPage />} />
+                <Route path="/auth/callback" element={wrap(<AuthCallbackPage />, 'Unable to complete authentication')} />
                 <Route path="/welcome" element={
                     isAuthenticated
-                        ? (onboardingComplete ? <Navigate to="/" replace /> : <OnboardingPage />)
-                        : <OnboardingPage />
+                        ? (onboardingComplete ? <Navigate to="/" replace /> : wrap(<OnboardingPage />, 'Unable to load onboarding'))
+                        : wrap(<OnboardingPage />, 'Unable to load onboarding')
                 } />
 
                 {/* Password Reset Routes */}
                 <Route path="/forgot-password" element={
-                    isAuthenticated ? <Navigate to="/" replace /> : <ForgotPasswordPage />
+                    isAuthenticated ? <Navigate to="/" replace /> : wrap(<ForgotPasswordPage />, 'Unable to load password reset')
                 } />
-                <Route path="/reset-password" element={<ResetPasswordPage />} />
+                <Route path="/reset-password" element={wrap(<ResetPasswordPage />, 'Unable to load reset password')} />
 
                 {/* Onboarding (requires auth, but not full onboarding) */}
                 <Route path="/onboarding" element={
@@ -185,33 +198,34 @@ const AppRoutes = () => {
                     !isAuthenticated ? <Navigate to="/signin" replace /> :
                         !onboardingComplete ? <Navigate to="/onboarding" replace /> :
                             hasPartner ? <Navigate to="/" replace /> :
-                                <ConnectPartnerPage />
+                                wrap(<ConnectPartnerPage />, 'Unable to load partner connection')
                 } />
 
                 {/* Protected App Routes - accessible without partner (features restricted) */}
                 <Route path="/" element={
                     <ProtectedRoute>
-                        <MainLayout />
+                        {wrap(<MainLayout />, 'Unable to load the app')}
                     </ProtectedRoute>
                 }>
-                    <Route index element={<DashboardPage />} />
-                    <Route path="courtroom" element={<CourtroomPage />} />
-                    <Route path="history" element={<HistoryPage />} />
-                    <Route path="history/:caseId" element={<CaseDetailPage />} />
-                    <Route path="appreciations" element={<AppreciationsPage />} />
-                    <Route path="profile" element={<ProfilesPage />} />
-                    <Route path="calendar" element={<CalendarPage />} />
-                    <Route path="daily-meow" element={<DailyMeowPage />} />
-                    <Route path="daily-meow/history" element={<DailyMeowHistoryPage />} />
-                    <Route path="economy" element={<EconomyPage />} />
-                    <Route path="challenges" element={<ChallengesPage />} />
-                    <Route path="memories" element={<MemoriesPage />} />
-                    <Route path="insights" element={<InsightsPage />} />
-                    <Route path="settings" element={<SettingsPage />} />
-                    <Route path="feedback" element={<FeedbackPage />} />
+                    <Route index element={wrap(<DashboardPage />, 'Unable to load dashboard')} />
+                    <Route path="courtroom" element={wrap(<CourtroomPage />, 'Unable to load court')} />
+                    <Route path="history" element={wrap(<HistoryPage />, 'Unable to load history')} />
+                    <Route path="history/:caseId" element={wrap(<CaseDetailPage />, 'Unable to load case details')} />
+                    <Route path="appreciations" element={wrap(<AppreciationsPage />, 'Unable to load appreciations')} />
+                    <Route path="profile" element={wrap(<ProfilesPage />, 'Unable to load profile')} />
+                    <Route path="calendar" element={wrap(<CalendarPage />, 'Unable to load calendar')} />
+                    <Route path="daily-meow" element={wrap(<DailyMeowPage />, 'Unable to load Daily Meow')} />
+                    <Route path="daily-meow/history" element={wrap(<DailyMeowHistoryPage />, 'Unable to load Daily Meow history')} />
+                    <Route path="economy" element={wrap(<EconomyPage />, 'Unable to load economy')} />
+                    <Route path="challenges" element={wrap(<ChallengesPage />, 'Unable to load challenges')} />
+                    <Route path="memories" element={wrap(<MemoriesPage />, 'Unable to load memories')} />
+                    <Route path="insights" element={wrap(<InsightsPage />, 'Unable to load insights')} />
+                    <Route path="settings" element={wrap(<SettingsPage />, 'Unable to load settings')} />
+                    <Route path="feedback" element={wrap(<FeedbackPage />, 'Unable to load feedback')} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Route>
-            </Routes>
+                </Routes>
+            </Suspense>
         </>
     );
 };

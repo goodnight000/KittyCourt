@@ -1,7 +1,7 @@
 {
   "name": "server",
   "version": "1.0.0",
-  "description": "Cat Judge Backend - Judge Mittens' Court (Supabase)",
+  "description": "Cat Judge Backend - Judge Whiskers' Court (Supabase)",
   "main": "src/app.js",
   "scripts": {
     "start": "node src/app.js",
@@ -19,13 +19,17 @@
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "firebase-admin": "^13.6.0",
+    "ioredis": "^5.9.1",
     "openai": "^6.9.1",
     "socket.io": "^4.8.1",
     "uuid": "^13.0.0",
-    "zod": "^4.1.13"
+    "zod": "^4.1.13",
+    "zod-to-json-schema": "^3.25.1"
   },
   "devDependencies": {
     "nodemon": "^3.1.11",
+    "socket.io-client": "^4.8.3",
+    "supertest": "^7.2.2",
     "vitest": "^2.1.9"
   }
 }

@@ -125,8 +125,8 @@ const useAppStore = create(
                     ? JSON.parse(caseItem.verdict)
                     : caseItem.verdict;
 
-                // This updates courtStore's session for viewing
-                import('./courtStore').then(m => {
+                // This updates useCourtStore's session for viewing
+                import('./useCourtStore').then(m => {
                     m.default.setState({
                         activeCase: {
                             id: caseItem.id,

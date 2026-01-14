@@ -16,9 +16,15 @@ const { recordChallengeAction, CHALLENGE_ACTIONS } = require('../lib/challengeSe
 const { checkMemoriesBySource } = require('../lib/supabase');
 const { triggerDailyQuestionExtraction } = require('../lib/stenographer');
 const { resolveRequestLanguage, normalizeLanguage } = require('../lib/language');
+const {
+    loadQuestionTranslations,
+    resolveQuestionTranslation,
+    applyQuestionTranslation,
+} = require('../lib/dailyQuestionTranslations');
 const { sendError, createHttpError } = require('../lib/http');
 const { sendNotificationToUser } = require('../lib/notificationService');
-const { processSecureInput, securityConfig } = require('../lib/security');
+const { processSecureInput, securityConfig, llmSecurityMiddleware } = require('../lib/security/index');
+const { safeErrorMessage } = require('../lib/shared/errorUtils');
 
 const normalizeLimit = (limit) => {
     const parsed = parseInt(limit, 10);
@@ -37,31 +43,9 @@ const normalizeMoods = (mood, moods) => {
     return Array.from(new Set(merged)).slice(0, 3);
 };
 
-const loadQuestionTranslations = async (supabase, questionIds, language) => {
-    const ids = Array.isArray(questionIds) ? questionIds.filter(Boolean) : [];
-    if (!ids.length) return new Map();
-    const { data, error } = await supabase
-        .from('question_bank_translations')
-        .select('question_id, language, question, emoji, category')
-        .in('question_id', ids)
-        .in('language', [language, 'en']);
-    if (error) {
-        console.warn('[Daily Questions] Failed to fetch translations:', error);
-        return new Map();
-    }
-    const map = new Map();
-    for (const row of data || []) {
-        if (!map.has(row.question_id)) {
-            map.set(row.question_id, {});
-        }
-        map.get(row.question_id)[row.language] = row;
-    }
-    return map;
-};
-
-const resolveQuestionTranslation = (translationMap, questionId, language) => {
-    const entry = translationMap.get(questionId) || {};
-    return entry[language] || entry.en || null;
+const resolveDailyQuestionLanguage = async (req, supabase, authUserId) => {
+    const resolved = await resolveRequestLanguage(req, supabase, authUserId);
+    return resolved || 'en';
 };
 
 const requirePartnerForAuthUser = async (supabase, authUserId, partnerIdFromClient) => {
@@ -88,7 +72,8 @@ router.get('/today', async (req, res) => {
 
         const supabase = requireSupabase();
         const authUserId = await requireAuthUserId(req);
-        const language = await resolveRequestLanguage(req, supabase, authUserId);
+        const language = await resolveDailyQuestionLanguage(req, supabase, authUserId);
+        const normalizedLanguage = normalizeLanguage(language) || 'en';
 
         if (userId && userId !== authUserId) {
             return sendError(res, 403, 'USER_ID_MISMATCH', 'userId does not match authenticated user');
@@ -100,12 +85,12 @@ router.get('/today', async (req, res) => {
         const { data, error } = await supabase.rpc('get_todays_question', {
             p_user_id: authUserId,
             p_partner_id: resolvedPartnerId,
-            p_language: language || 'en'
+            p_language: normalizedLanguage
         });
 
         if (error) {
             console.error('Error getting today\'s question:', error);
-            return sendError(res, 500, 'DAILY_QUESTION_FETCH_FAILED', error.message);
+            return sendError(res, 500, 'DAILY_QUESTION_FETCH_FAILED', safeErrorMessage(error));
         }
 
         if (!data || data.length === 0) {
@@ -131,11 +116,13 @@ router.get('/today', async (req, res) => {
             is_backlog: rawQuestion.out_is_backlog ?? rawQuestion.is_backlog
         };
 
+        const translatedQuestion = await applyQuestionTranslation(supabase, question, normalizedLanguage);
+
         // Also fetch both users' answers for this assignment
         const { data: answers, error: answersError } = await supabase
             .from('daily_answers')
             .select('*')
-            .eq('assignment_id', question.assignment_id);
+            .eq('assignment_id', translatedQuestion.assignment_id);
 
         if (answersError) {
             console.error('Error fetching answers:', answersError);
@@ -146,14 +133,14 @@ router.get('/today', async (req, res) => {
         const partnerAnswer = answers?.find(a => a.user_id === resolvedPartnerId);
 
         res.json({
-            assignment_id: question.assignment_id,
-            question_id: question.question_id,
-            question: question.question,
-            emoji: question.emoji,
-            category: question.category,
-            assigned_date: question.assigned_date,
-            status: question.status,
-            is_backlog: question.is_backlog,
+            assignment_id: translatedQuestion.assignment_id,
+            question_id: translatedQuestion.question_id,
+            question: translatedQuestion.question,
+            emoji: translatedQuestion.emoji,
+            category: translatedQuestion.category,
+            assigned_date: translatedQuestion.assigned_date,
+            status: translatedQuestion.status,
+            is_backlog: translatedQuestion.is_backlog,
             my_answer: myAnswer || null,
             partner_answer: myAnswer ? (partnerAnswer || null) : null, // Only show partner answer CONTENT if user has answered
             partner_has_answered: !!partnerAnswer, // Always show whether partner has answered (for dashboard status)
@@ -163,7 +150,7 @@ router.get('/today', async (req, res) => {
         console.error('Error in /today:', error);
         res.status(error.statusCode || 500).json({
             errorCode: error.errorCode || 'DAILY_QUESTION_ERROR',
-            error: error.message,
+            error: safeErrorMessage(error),
         });
     }
 });
@@ -172,31 +159,32 @@ router.get('/today', async (req, res) => {
  * POST /api/daily-questions/answer
  * Submit or update an answer
  * Body: { userId, assignmentId, answer, mood }
+ *
+ * Security: llmSecurityMiddleware validates input before handler runs.
+ * The middleware attaches req.sanitizedBody and req.securityContext.
  */
-router.post('/answer', async (req, res) => {
+router.post('/answer', llmSecurityMiddleware('dailyQuestions'), async (req, res) => {
     try {
-        const { userId, assignmentId, answer, mood, moods } = req.body;
+        // Use sanitizedBody from middleware, fallback to req.body for backwards compatibility
+        const body = req.sanitizedBody || req.body;
+        const { userId, assignmentId, answer, mood, moods } = body;
 
         const supabase = requireSupabase();
         const authUserId = await requireAuthUserId(req);
-        const language = await resolveRequestLanguage(req, supabase, authUserId);
+        const language = await resolveDailyQuestionLanguage(req, supabase, authUserId);
 
         if (userId && userId !== authUserId) {
             return sendError(res, 403, 'USER_ID_MISMATCH', 'userId does not match authenticated user');
         }
 
-        // Security: Validate and sanitize answer input
-        const answerCheck = processSecureInput(answer, {
-            userId: authUserId,
-            fieldName: 'dailyQuestionAnswer',
-            maxLength: securityConfig.fieldLimits.dailyQuestionAnswer,
-            endpoint: 'dailyQuestions',
-        });
-        if (!answerCheck.safe) {
-            return sendError(res, 400, 'SECURITY_BLOCK', 'Your answer contains content that cannot be processed. Please rephrase using natural language.');
+        // Security context from middleware (for logging/debugging)
+        const securityContext = req.securityContext;
+        if (securityContext?.flaggedFields?.length > 0) {
+            console.warn('[Daily Questions] Flagged fields in answer submission:', securityContext.flaggedFields);
         }
 
-        const trimmedAnswer = answerCheck.input || '';
+        // Middleware already sanitized the input, use directly
+        const trimmedAnswer = (answer || '').trim();
         if (!assignmentId || trimmedAnswer.length === 0) {
             return sendError(res, 400, 'ANSWER_REQUIRED', 'assignmentId and non-empty answer are required');
         }
@@ -466,7 +454,7 @@ router.post('/answer', async (req, res) => {
         console.error('Error submitting answer:', error);
         res.status(error.statusCode || 500).json({
             errorCode: error.errorCode || 'ANSWER_SUBMIT_FAILED',
-            error: error.message,
+            error: safeErrorMessage(error),
         });
     }
 });
@@ -481,7 +469,8 @@ router.get('/history', async (req, res) => {
         const { userId, partnerId, limit } = req.query;
         const supabase = requireSupabase();
         const authUserId = await requireAuthUserId(req);
-        const language = await resolveRequestLanguage(req, supabase, authUserId);
+        const language = await resolveDailyQuestionLanguage(req, supabase, authUserId);
+        const normalizedLanguage = normalizeLanguage(language) || 'en';
 
         if (userId && userId !== authUserId) {
             return sendError(res, 403, 'USER_ID_MISMATCH', 'userId does not match authenticated user');
@@ -516,7 +505,7 @@ router.get('/history', async (req, res) => {
 
         if (error) {
             console.error('Error fetching history:', error);
-            return sendError(res, 500, 'HISTORY_FETCH_FAILED', error.message);
+            return sendError(res, 500, 'HISTORY_FETCH_FAILED', safeErrorMessage(error));
         }
 
         if (!assignments || assignments.length === 0) {
@@ -526,7 +515,7 @@ router.get('/history', async (req, res) => {
         // Fetch all answers for these assignments
         const assignmentIds = assignments.map(a => a.id);
         const questionIds = assignments.map(a => a.question_id);
-        const translationMap = await loadQuestionTranslations(supabase, questionIds, language || 'en');
+        const translationMap = await loadQuestionTranslations(supabase, questionIds, normalizedLanguage);
 
         const { data: answers, error: answersError } = await supabase
             .from('daily_answers')
@@ -546,11 +535,11 @@ router.get('/history', async (req, res) => {
             return {
                 id: a.id,
                 question_id: a.question_id,
-                question: resolveQuestionTranslation(translationMap, a.question_id, language || 'en')?.question
+                question: resolveQuestionTranslation(translationMap, a.question_id, normalizedLanguage)?.question
                     || a.question_bank?.question,
-                emoji: resolveQuestionTranslation(translationMap, a.question_id, language || 'en')?.emoji
+                emoji: resolveQuestionTranslation(translationMap, a.question_id, normalizedLanguage)?.emoji
                     || a.question_bank?.emoji,
-                category: resolveQuestionTranslation(translationMap, a.question_id, language || 'en')?.category
+                category: resolveQuestionTranslation(translationMap, a.question_id, normalizedLanguage)?.category
                     || a.question_bank?.category,
                 assigned_date: a.assigned_date,
                 completed_at: a.completed_at,
@@ -576,7 +565,7 @@ router.get('/history', async (req, res) => {
         console.error('Error in /history:', error);
         res.status(error.statusCode || 500).json({
             errorCode: error.errorCode || 'HISTORY_FETCH_FAILED',
-            error: error.message,
+            error: safeErrorMessage(error),
         });
     }
 });
@@ -585,27 +574,28 @@ router.get('/history', async (req, res) => {
  * PUT /api/daily-questions/answer/:id
  * Edit an existing answer
  * Body: { answer, mood }
+ *
+ * Security: llmSecurityMiddleware validates input before handler runs.
+ * The middleware attaches req.sanitizedBody and req.securityContext.
  */
-router.put('/answer/:id', async (req, res) => {
+router.put('/answer/:id', llmSecurityMiddleware('dailyQuestions'), async (req, res) => {
     try {
         const { id } = req.params;
-        const { answer } = req.body;
+        // Use sanitizedBody from middleware, fallback to req.body for backwards compatibility
+        const body = req.sanitizedBody || req.body;
+        const { answer } = body;
 
         const supabase = requireSupabase();
         const authUserId = await requireAuthUserId(req);
 
-        // Security: Validate and sanitize answer input
-        const answerCheck = processSecureInput(answer, {
-            userId: authUserId,
-            fieldName: 'dailyQuestionAnswer',
-            maxLength: securityConfig.fieldLimits.dailyQuestionAnswer,
-            endpoint: 'dailyQuestions',
-        });
-        if (!answerCheck.safe) {
-            return sendError(res, 400, 'SECURITY_BLOCK', 'Your answer contains content that cannot be processed. Please rephrase using natural language.');
+        // Security context from middleware (for logging/debugging)
+        const securityContext = req.securityContext;
+        if (securityContext?.flaggedFields?.length > 0) {
+            console.warn('[Daily Questions] Flagged fields in answer edit:', securityContext.flaggedFields);
         }
 
-        const trimmedAnswer = answerCheck.input || '';
+        // Middleware already sanitized the input, use directly
+        const trimmedAnswer = (answer || '').trim();
         if (!trimmedAnswer) {
             return sendError(res, 400, 'ANSWER_REQUIRED', 'answer is required');
         }
@@ -637,7 +627,7 @@ router.put('/answer/:id', async (req, res) => {
 
         if (error) {
             console.error('Error updating answer:', error);
-            return sendError(res, 500, 'ANSWER_UPDATE_FAILED', error.message);
+            return sendError(res, 500, 'ANSWER_UPDATE_FAILED', safeErrorMessage(error));
         }
 
         res.json({ success: true, answer: data });
@@ -645,7 +635,7 @@ router.put('/answer/:id', async (req, res) => {
         console.error('Error in PUT /answer/:id:', error);
         res.status(error.statusCode || 500).json({
             errorCode: error.errorCode || 'ANSWER_UPDATE_FAILED',
-            error: error.message,
+            error: safeErrorMessage(error),
         });
     }
 });
@@ -660,7 +650,8 @@ router.get('/pending', async (req, res) => {
         const { userId, partnerId } = req.query;
         const supabase = requireSupabase();
         const authUserId = await requireAuthUserId(req);
-        const language = await resolveRequestLanguage(req, supabase, authUserId);
+        const language = await resolveDailyQuestionLanguage(req, supabase, authUserId);
+        const normalizedLanguage = normalizeLanguage(language) || 'en';
 
         if (userId && userId !== authUserId) {
             return sendError(res, 403, 'USER_ID_MISMATCH', 'userId does not match authenticated user');
@@ -692,7 +683,7 @@ router.get('/pending', async (req, res) => {
 
         if (error) {
             console.error('Error checking pending:', error);
-            return sendError(res, 500, 'PENDING_FETCH_FAILED', error.message);
+            return sendError(res, 500, 'PENDING_FETCH_FAILED', safeErrorMessage(error));
         }
 
         if (!data || data.length === 0) {
@@ -700,9 +691,9 @@ router.get('/pending', async (req, res) => {
         }
 
         const questionIds = data.map(row => row.question_bank?.id || row.question_id).filter(Boolean);
-        const translationMap = await loadQuestionTranslations(supabase, questionIds, language || 'en');
+        const translationMap = await loadQuestionTranslations(supabase, questionIds, normalizedLanguage);
         const pending = data?.[0];
-        const translation = resolveQuestionTranslation(translationMap, pending.question_id, language || 'en');
+        const translation = resolveQuestionTranslation(translationMap, pending.question_id, normalizedLanguage);
 
         return res.json({
             has_pending: true,
@@ -719,7 +710,7 @@ router.get('/pending', async (req, res) => {
         console.error('Error in /pending:', error);
         res.status(error.statusCode || 500).json({
             errorCode: error.errorCode || 'PENDING_FETCH_FAILED',
-            error: error.message,
+            error: safeErrorMessage(error),
         });
     }
 });

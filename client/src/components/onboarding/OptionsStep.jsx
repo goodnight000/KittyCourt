@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { motion as Motion } from 'framer-motion';
 import { Check } from 'lucide-react';
-import PropTypes from 'prop-types';
 import { useI18n } from '../../i18n';
 
 const OptionsStep = ({
@@ -101,25 +100,6 @@ const OptionsStep = ({
             )}
         </Motion.div>
     );
-};
-
-OptionsStep.propTypes = {
-    options: PropTypes.arrayOf(PropTypes.shape({
-        id: PropTypes.string.isRequired,
-        emoji: PropTypes.string,
-        label: PropTypes.string,
-        labelKey: PropTypes.string,
-        desc: PropTypes.string,
-        descKey: PropTypes.string,
-    })).isRequired,
-    selectedValue: PropTypes.oneOfType([
-        PropTypes.string,
-        PropTypes.arrayOf(PropTypes.string),
-    ]),
-    onOptionSelect: PropTypes.func.isRequired,
-    multiSelect: PropTypes.bool,
-    allowCustom: PropTypes.bool,
-    fieldName: PropTypes.string,
 };
 
 export default OptionsStep;

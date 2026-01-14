@@ -1,7 +1,6 @@
 import React, { useMemo, memo } from 'react';
 import { motion as Motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import PropTypes from 'prop-types';
 import { useI18n } from '../../i18n';
 
 /**
@@ -206,6 +205,12 @@ const CalendarGrid = memo(({
                                 <div
                                     className={`relative w-full h-full rounded-[18px] border border-white/70 flex flex-col items-center justify-center transition-shadow duration-150 ${innerClass} ${today ? 'shadow-soft-lg' : 'shadow-inner-soft'} ${!today && !hasEvents ? 'group-hover:bg-white/90' : ''}`}
                                 >
+                                    {today && (
+                                        <span
+                                            aria-hidden="true"
+                                            className="absolute inset-0 rounded-[18px] animate-pulse-soft pointer-events-none"
+                                        />
+                                    )}
                                     <span
                                         className={`text-sm font-black tabular-nums ${today
                                             ? 'text-white'
@@ -244,17 +249,5 @@ const CalendarGrid = memo(({
 });
 
 CalendarGrid.displayName = 'CalendarGrid';
-
-CalendarGrid.propTypes = {
-    currentDate: PropTypes.instanceOf(Date).isRequired,
-    events: PropTypes.arrayOf(PropTypes.shape({
-        id: PropTypes.string.isRequired,
-        title: PropTypes.string.isRequired,
-        date: PropTypes.string.isRequired,
-        isSecret: PropTypes.bool,
-    })).isRequired,
-    onDateSelect: PropTypes.func.isRequired,
-    onMonthNavigate: PropTypes.func.isRequired,
-};
 
 export default CalendarGrid;

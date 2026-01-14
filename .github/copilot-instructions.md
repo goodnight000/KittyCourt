@@ -2,13 +2,13 @@
 
 ## Architecture Overview
 
-Couples dispute resolution app with AI "Judge Mittens" persona. Monorepo structure:
+Couples dispute resolution app with AI "Judge Whiskers" persona. Monorepo structure:
 
 - **`client/`** - React 19 + Vite SPA (mobile-first PWA)
 - **`server/`** - Express 5 API with Judge Engine pipeline
 - **`supabase/`** - Production database schema (auth + profiles + pgvector)
 
-**Core Flow**: Partners connect via partner codes → set anniversary date → submit disputes asynchronously → Judge Mittens delivers psychologically-grounded verdicts using Gottman Method + NVC principles.
+**Core Flow**: Partners connect via partner codes → set anniversary date → submit disputes asynchronously → Judge Whiskers delivers psychologically-grounded verdicts using Gottman Method + NVC principles.
 
 ## Development Commands
 
@@ -21,11 +21,11 @@ cd client && npm test    # Vitest + React Testing Library
 
 ## Judge Engine Pipeline (Critical Path)
 
-The AI verdict system in `server/src/lib/judgeEngine.js` runs a **3-step sequential chain**:
+The AI verdict system in `server/src/lib/judgeEngine.js` runs a **3-step chain** with moderation + RAG in parallel:
 
 1. **Safety Guardrail** - OpenAI Moderation API filters harmful content
 2. **Analytical Phase** - Kimi K2 (via OpenRouter) performs clinical psychological analysis using JSON schema mode
-3. **Verdict Generation** - Same model with Judge Mittens persona injection
+3. **Verdict Generation** - Same model with Judge Whiskers persona injection
 
 Key files: `prompts.js` (psychological framework), `jsonSchemas.js` (structured output), `repairAttempts.js` (Gottman repair exercises).
 
@@ -44,8 +44,14 @@ Key files: `prompts.js` (psychological framework), `jsonSchemas.js` (structured 
 Two Zustand stores with `persist` middleware:
 
 ```javascript
-// useAuthStore.js - Supabase auth, partner connection, onboarding, anniversary
-const { user, profile, partner, hasPartner, signIn, acceptRequest } = useAuthStore();
+// useAuthStore.js - Supabase auth + profile
+const { user, profile, signIn, refreshProfile } = useAuthStore();
+
+// usePartnerStore.js - partner connection flow
+const { partner, hasPartner, acceptRequest } = usePartnerStore();
+
+// useOnboardingStore.js - onboarding flow state
+const { onboardingComplete } = useOnboardingStore();
 
 // useAppStore.js - Court sessions, cases, verdicts, kibble economy
 // IMPORTANT: Uses auth store for user identification, NOT legacy User A/B pattern

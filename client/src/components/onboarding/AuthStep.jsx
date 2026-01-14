@@ -2,14 +2,13 @@ import React, { useState } from 'react';
 import { motion as Motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Mail, Lock, Eye, EyeOff } from 'lucide-react';
-import PropTypes from 'prop-types';
 import { useI18n } from '../../i18n';
 
 const AuthStep = ({
     onGoogleSignUp,
     onEmailSignUp,
-    authError,
-    authSubmitting
+    authError = null,
+    authSubmitting = false
 }) => {
     const { t } = useI18n();
     const navigate = useNavigate();
@@ -126,18 +125,6 @@ const AuthStep = ({
             </button>
         </Motion.div>
     );
-};
-
-AuthStep.propTypes = {
-    onGoogleSignUp: PropTypes.func.isRequired,
-    onEmailSignUp: PropTypes.func.isRequired,
-    authError: PropTypes.string,
-    authSubmitting: PropTypes.bool,
-};
-
-AuthStep.defaultProps = {
-    authError: null,
-    authSubmitting: false,
 };
 
 export default AuthStep;

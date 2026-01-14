@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Users, Link2, Copy, Check } from 'lucide-react';
-import PropTypes from 'prop-types';
 import ProfilePicture from '../ProfilePicture';
 import { useI18n } from '../../i18n';
 
@@ -131,23 +130,6 @@ const PartnerConnection = ({ hasPartner, profile, partner, loveLanguages }) => {
             </div>
         </motion.div>
     );
-};
-
-PartnerConnection.propTypes = {
-    hasPartner: PropTypes.bool.isRequired,
-    profile: PropTypes.shape({
-        partner_code: PropTypes.string,
-    }),
-    partner: PropTypes.shape({
-        display_name: PropTypes.string,
-        avatar_url: PropTypes.string,
-        love_language: PropTypes.string,
-    }),
-    loveLanguages: PropTypes.arrayOf(PropTypes.shape({
-        id: PropTypes.string.isRequired,
-        label: PropTypes.string.isRequired,
-        emoji: PropTypes.string.isRequired,
-    })).isRequired,
 };
 
 export default PartnerConnection;

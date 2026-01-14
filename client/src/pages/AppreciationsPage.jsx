@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Heart, Calendar, Sparkles } from 'lucide-react';
 import useAppStore from '../store/useAppStore';
 import useAuthStore from '../store/useAuthStore';
+import usePartnerStore from '../store/usePartnerStore';
 import useCacheStore, { CACHE_TTL, CACHE_KEYS } from '../store/useCacheStore';
 import RequirePartner from '../components/RequirePartner';
 import api from '../services/api';
@@ -12,7 +13,8 @@ import { useI18n } from '../i18n';
 const AppreciationsPage = () => {
     const navigate = useNavigate();
     const { appreciations, fetchAppreciations } = useAppStore();
-    const { hasPartner, partner: connectedPartner, user: authUser } = useAuthStore();
+    const { user: authUser } = useAuthStore();
+    const { hasPartner, partner: connectedPartner } = usePartnerStore();
     const { t, language } = useI18n();
     const [totalAppreciations, setTotalAppreciations] = useState(null);
     

@@ -6,6 +6,7 @@ import {
     Cat, Edit3, Send, Lock, AlertCircle, RefreshCw, BookOpen, ChevronRight
 } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
+import usePartnerStore from '../store/usePartnerStore';
 import useCacheStore, { CACHE_KEYS } from '../store/useCacheStore';
 import RequirePartner from '../components/RequirePartner';
 import api from '../services/api';
@@ -41,7 +42,8 @@ const MOOD_OPTIONS = [
 const DailyMeowPage = () => {
     const navigate = useNavigate();
     const { t, language } = useI18n();
-    const { hasPartner, user: authUser, partner: connectedPartner } = useAuthStore();
+    const { user: authUser } = useAuthStore();
+    const { hasPartner, partner: connectedPartner } = usePartnerStore();
 
     const myId = authUser?.id;
     const partnerId = connectedPartner?.id;

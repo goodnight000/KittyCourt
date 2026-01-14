@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, ArrowLeft, Sparkles, Check } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Sparkles, Check, Mail } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
+import useOnboardingStore from '../store/useOnboardingStore';
 import { validateDate } from '../utils/helpers';
 import Paywall from '../components/Paywall';
 import { useI18n } from '../i18n';
@@ -169,17 +170,19 @@ const OnboardingPage = () => {
     const { t, supportedLanguages } = useI18n();
     const {
         isAuthenticated,
-        onboardingStep,
-        setOnboardingStep,
-        onboardingData,
-        updateOnboardingData,
-        completeOnboarding,
         profile,
         signUp,
         signInWithGoogle,
         preferredLanguage,
         setPreferredLanguage
     } = useAuthStore();
+    const {
+        onboardingStep,
+        setOnboardingStep,
+        onboardingData,
+        updateOnboardingData,
+        completeOnboarding
+    } = useOnboardingStore();
 
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showConnectChoice, setShowConnectChoice] = useState(false);
@@ -189,6 +192,7 @@ const OnboardingPage = () => {
     const [postPaywallPath, setPostPaywallPath] = useState(null);
     const [authError, setAuthError] = useState(null);
     const [authSubmitting, setAuthSubmitting] = useState(false);
+    const [emailConfirmationPending, setEmailConfirmationPending] = useState(null);
     const logDebug = (...args) => {
         if (import.meta.env.DEV) console.log(...args);
     };
@@ -396,10 +400,17 @@ const OnboardingPage = () => {
             return;
         }
 
-        const { error } = await signUp(trimmedEmail, password);
+        const { error, needsEmailConfirmation, email: signUpEmail } = await signUp(trimmedEmail, password);
         setAuthSubmitting(false);
+
         if (error) {
             setAuthError(t('onboarding.errors.signUpFailed'));
+            return;
+        }
+
+        if (needsEmailConfirmation) {
+            // Show email confirmation pending UI instead of proceeding
+            setEmailConfirmationPending(signUpEmail);
             return;
         }
     };
@@ -463,6 +474,45 @@ const OnboardingPage = () => {
                 return <WelcomeStep />;
 
             case 'auth':
+                // Show email confirmation pending UI if user needs to verify email
+                if (emailConfirmationPending) {
+                    return (
+                        <Motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="text-center space-y-6"
+                        >
+                            <Motion.div
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                transition={{ type: 'spring', delay: 0.2 }}
+                                className="w-20 h-20 mx-auto rounded-full flex items-center justify-center"
+                                style={{ background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' }}
+                            >
+                                <Mail className="w-10 h-10 text-white" />
+                            </Motion.div>
+                            <div className="space-y-2">
+                                <h3 className="text-xl font-bold text-neutral-800">
+                                    {t('onboarding.auth.emailConfirmation.title')}
+                                </h3>
+                                <p className="text-neutral-600">
+                                    {t('onboarding.auth.emailConfirmation.message', { email: emailConfirmationPending })}
+                                </p>
+                            </div>
+                            <div className="glass-card p-4 border border-[#E2D6C7]">
+                                <p className="text-sm text-neutral-500">
+                                    {t('onboarding.auth.emailConfirmation.hint')}
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => setEmailConfirmationPending(null)}
+                                className="text-sm font-semibold text-court-brown hover:text-[#8B7019] transition-colors"
+                            >
+                                {t('onboarding.auth.emailConfirmation.tryDifferent')}
+                            </button>
+                        </Motion.div>
+                    );
+                }
                 return (
                     <AuthStep
                         onGoogleSignUp={handleGoogleSignUp}

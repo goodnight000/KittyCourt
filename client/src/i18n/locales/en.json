@@ -15,6 +15,7 @@
     "waiting": "Waiting",
     "edit": "Edit",
     "cancel": "Cancel",
+    "ok": "OK",
     "saveChanges": "Save changes",
     "or": "or",
     "back": "Back",
@@ -938,7 +939,13 @@
       "passwordPlaceholder": "Create password",
       "confirmPasswordPlaceholder": "Confirm password",
       "creating": "Creating...",
-      "createAccount": "Create account"
+      "createAccount": "Create account",
+      "emailConfirmation": {
+        "title": "Check your email",
+        "message": "We sent a confirmation link to {email}. Please click the link to verify your email address.",
+        "hint": "Check your spam folder if you don't see the email. The link will expire in 24 hours.",
+        "tryDifferent": "Use a different email"
+      }
     },
     "name": {
       "placeholder": "Your name or nickname",
@@ -1621,35 +1628,35 @@
       "title": "What you get",
       "items": {
         "resolve": {
-          "title": "More verdicts",
-          "description": "More judge sessions each month."
+          "title": "Unlimited resolutions",
+          "description": "Never hit a limit when you need help most."
         },
         "judge": {
-          "title": "Unlock Judge Whiskers",
-          "description": "Our deepest, most empathetic verdicts."
+          "title": "Judge Whiskers unlocked",
+          "description": "Therapist-level wisdom that sees what others miss."
         },
         "planning": {
-          "title": "Help Me Plan",
-          "description": "Actionable plans tailored to you."
+          "title": "AI date planning",
+          "description": "Personalized plans using your shared memories."
         },
-        "questions": {
-          "title": "Daily Meow archive",
-          "description": "Full history of your answers."
+        "streak": {
+          "title": "Streak revival",
+          "description": "Life happens — revive your streak when you miss a day."
         },
         "insights": {
-          "title": "Relationship insights",
-          "description": "Weekly patterns and nudges."
+          "title": "Pattern detection",
+          "description": "AI spots relationship patterns before they become problems."
         }
       }
     },
     "withoutGold": {
       "title": "Without Gold",
       "items": {
-        "limit": "Limited judge sessions",
-        "whiskersLocked": "Judge Whiskers locked",
-        "noPlanning": "No planning assistance",
-        "noInsights": "Insights are locked",
-        "risk": "Slower progress through tough moments"
+        "limit": "Only 3 sessions with Judge Mochi per month",
+        "whiskersLocked": "No access to Judge Whiskers' deeper wisdom",
+        "noPlanning": "Manual date planning without AI help",
+        "noInsights": "Blind to patterns that cause repeat conflicts",
+        "risk": "Broken streaks stay broken forever"
       }
     },
     "plans": {
@@ -1669,8 +1676,8 @@
       "perMonth": "per month"
     },
     "pricingNote": {
-      "yearly": "Yearly plan saves the most",
-      "monthly": "Monthly plan keeps things flexible"
+      "yearly": "Less than 2 ☕ cups of coffee a month",
+      "monthly": "Less than 2 ☕ cups of coffee a month"
     },
     "cancelAnytime": "Cancel anytime",
     "social": {
@@ -2007,6 +2014,12 @@
     "success": {
       "title": "Account created",
       "subtitle": "Redirecting you to onboarding..."
+    },
+    "emailConfirmation": {
+      "title": "Check your email",
+      "message": "We sent a confirmation link to {email}. Please click the link to verify your email address.",
+      "hint": "Check your spam folder if you don't see the email. The link will expire in 24 hours.",
+      "tryDifferent": "Use a different email"
     }
   },
   "settings": {
@@ -2018,7 +2031,7 @@
       "email": "Email",
       "changePassword": "Change password",
       "disconnectCouple": "Disconnect from couple",
-      "disconnectWarning": "This will remove your partner connection. This action cannot be undone.",
+      "disconnectWarning": "Disconnecting starts a 30-day grace period. Reconnect with the same partner within 30 days to restore everything. If either of you connects with someone else or the 30 days pass, your shared history will be deleted.",
       "disconnectConfirm": "Yes, disconnect",
       "disconnectCancel": "Cancel"
     },
@@ -2030,7 +2043,50 @@
     },
     "preferences": {
       "title": "Preferences",
-      "language": "Language"
+      "language": "Language",
+      "confirmLanguage": "Confirm language"
+    },
+    "relationship": {
+      "title": "Relationship Preferences",
+      "description": "Tune how we personalize prompts, insights, and suggestions.",
+      "edit": "Edit preferences",
+      "modalTitle": "Relationship preferences",
+      "modalSubtitle": "Update how we personalize your experience.",
+      "loveLanguage": "Love language",
+      "communicationStyle": "Communication style",
+      "conflictStyle": "Conflict style",
+      "dateActivities": "Favorite date activities",
+      "petPeeves": "Pet peeves",
+      "appreciationStyle": "Appreciation style",
+      "bio": "About you",
+      "bioPlaceholder": "Share a short note about what makes you feel supported",
+      "save": "Save preferences",
+      "saving": "Saving...",
+      "saveError": "Could not save preferences."
+    },
+    "export": {
+      "title": "Data Export",
+      "description": "Request a copy of your data and we will email you a download link.",
+      "emailLabel": "Send to email",
+      "emailPlaceholder": "you@example.com",
+      "cta": "Request export",
+      "ctaLoading": "Requesting...",
+      "success": "Export requested. We will email you when it is ready.",
+      "invalidEmail": "Enter a valid email address.",
+      "requestError": "Failed to request export.",
+      "loadError": "Failed to load export status.",
+      "statusLabel": "Latest export",
+      "statusQueued": "Queued",
+      "statusProcessing": "Processing",
+      "statusReady": "Ready to email",
+      "statusFailed": "Failed",
+      "emailStatusLabel": "Email status",
+      "emailStatusPending": "Email pending",
+      "emailStatusStubbed": "Email delivery not configured",
+      "emailStatusSent": "Email sent",
+      "emailStatusFailed": "Email failed",
+      "requestedAt": "Requested {date}",
+      "emptyState": "No exports requested yet."
     },
     "support": {
       "title": "Support & Feedback",
@@ -2045,7 +2101,31 @@
     "howItWorks": {
       "title": "How Judge Whiskers Works",
       "description": "Both partners submit their perspective. Judge Whiskers reviews the evidence, identifies hidden feelings, and delivers a fair, empathetic verdict designed to help you reconnect."
+    },
+    "danger": {
+      "title": "Danger Zone",
+      "description": "Permanently delete your account and all data. This cannot be undone.",
+      "deleteAccount": "Delete Account",
+      "disconnectRequiredTitle": "Disconnect Required",
+      "disconnectRequiredMessage": "You must disconnect from your partner before deleting your account.",
+      "deleteModalTitle": "Delete Your Account?",
+      "deleteModalMessage": "This will permanently delete your account and remove your personal data. This cannot be undone.",
+      "confirmLabel": "Type DELETE to confirm",
+      "confirmDelete": "Delete Account"
     }
+  },
+  "disconnectNotice": {
+    "kicker": "Relationship update",
+    "titles": {
+      "youDisconnected": "You disconnected",
+      "theyDisconnected": "{{name}} disconnected"
+    },
+    "messages": {
+      "youDisconnected": "Reconnect within {{days}} days to restore everything. If you connect with someone else or the timer runs out, your shared history will be deleted.",
+      "theyDisconnected": "Reconnect within {{days}} days to restore everything. If either of you connects with someone else or the timer runs out, your shared history will be deleted."
+    },
+    "daysLeft": "{{days}} days left to restore",
+    "cta": "Reconnect"
   },
   "streak": {
     "gracePeriod": "Grace period",

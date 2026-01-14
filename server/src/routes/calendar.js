@@ -13,7 +13,7 @@ const { awardXP, ACTION_TYPES } = require('../lib/xpService');
 const { recordChallengeAction, CHALLENGE_ACTIONS } = require('../lib/challengeService');
 const { resolveRequestLanguage } = require('../lib/language');
 const { safeErrorMessage } = require('../lib/shared/errorUtils');
-const { processSecureInput, securityConfig } = require('../lib/security');
+const { processSecureInput, securityConfig, llmSecurityMiddleware } = require('../lib/security/index');
 
 // Get calendar events
 router.get('/events', requirePartner, async (req, res) => {
@@ -318,8 +318,14 @@ router.patch('/event-plans/:id', async (req, res) => {
 });
 
 // AI-powered event planning suggestions
-router.post('/plan-event', requirePartner, async (req, res) => {
+//
+// Security: llmSecurityMiddleware validates input before handler runs.
+// The middleware attaches req.sanitizedBody and req.securityContext.
+// Note: requirePartner runs first to ensure authentication.
+router.post('/plan-event', requirePartner, llmSecurityMiddleware('eventPlanner'), async (req, res) => {
     try {
+        // Use sanitizedBody from middleware, fallback to req.body for backwards compatibility
+        const body = req.sanitizedBody || req.body || {};
         const {
             event,
             partnerId: partnerIdFromClient,
@@ -331,44 +337,23 @@ router.post('/plan-event', requirePartner, async (req, res) => {
             eventType,
             eventDate,
             eventKey,
-        } = req.body || {};
+        } = body;
 
         const { userId: viewerId, partnerId, supabase } = req;
         const language = await resolveRequestLanguage(req, supabase, viewerId);
 
+        // Security context from middleware (for logging/debugging)
+        const securityContext = req.securityContext;
+        if (securityContext?.flaggedFields?.length > 0) {
+            console.warn('[Calendar] Flagged fields in event planning:', securityContext.flaggedFields);
+        }
+
+        // Middleware already sanitized nested event fields via eventPlanner field mappings
         const normalizedEvent = event || {
             title: eventTitle,
             type: eventType,
             date: eventDate,
         };
-
-        // Security: Validate and sanitize event title
-        if (normalizedEvent.title) {
-            const titleCheck = processSecureInput(normalizedEvent.title, {
-                userId: viewerId,
-                fieldName: 'eventTitle',
-                maxLength: securityConfig.fieldLimits.eventTitle,
-                endpoint: 'eventPlanner',
-            });
-            if (!titleCheck.safe) {
-                return res.status(400).json({ error: 'Event title contains invalid content. Please use plain text.' });
-            }
-            normalizedEvent.title = titleCheck.input;
-        }
-
-        // Security: Validate and sanitize event notes if present
-        if (normalizedEvent.notes) {
-            const notesCheck = processSecureInput(normalizedEvent.notes, {
-                userId: viewerId,
-                fieldName: 'eventNotes',
-                maxLength: securityConfig.fieldLimits.eventNotes,
-                endpoint: 'eventPlanner',
-            });
-            if (!notesCheck.safe) {
-                return res.status(400).json({ error: 'Event notes contain invalid content. Please use plain text.' });
-            }
-            normalizedEvent.notes = notesCheck.input;
-        }
 
         if (partnerIdFromClient && String(partnerIdFromClient) !== String(partnerId)) {
             return res.status(400).json({ error: 'Invalid partnerId for current user' });

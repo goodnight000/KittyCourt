@@ -2,11 +2,11 @@
 
 ## Overview
 
-The `socketActionHelper.js` utility consolidates the repetitive Promise wrapper pattern used throughout `courtStore.js`. It provides clean abstractions for WebSocket actions with timeout handling and fallback logic.
+The `socketActionHelper.js` utility consolidates the repetitive Promise wrapper pattern used throughout `useCourtStore.js`. It provides clean abstractions for WebSocket actions with timeout handling and fallback logic.
 
 ## Problem Solved
 
-**Before** (in courtStore.js):
+**Before** (in useCourtStore.js):
 ```javascript
 accept: async () => {
   set({ isSubmitting: true, error: null });
@@ -156,7 +156,7 @@ accept: async () => {
 
 ## Migration Guide
 
-To refactor existing courtStore actions:
+To refactor existing useCourtStore actions:
 
 1. **Import the utility:**
    ```javascript

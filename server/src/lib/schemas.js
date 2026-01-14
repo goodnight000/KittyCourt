@@ -12,7 +12,7 @@
  * - Emotionally Focused Therapy (EFT)
  */
 
-const { z } = require('zod');
+const { z } = require('zod/v3');
 
 // ============================================================================
 // INPUT SCHEMAS

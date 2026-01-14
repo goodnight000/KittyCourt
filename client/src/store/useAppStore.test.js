@@ -486,12 +486,12 @@ describe('useAppStore', () => {
 
     describe('loadCase()', () => {
         it('should load case into court store', async () => {
-            // Mock the dynamic import of courtStore
+            // Mock the dynamic import of useCourtStore
             const mockCourtStore = {
                 setState: vi.fn()
             };
 
-            vi.doMock('./courtStore', () => ({
+            vi.doMock('./useCourtStore', () => ({
                 default: mockCourtStore
             }));
 
@@ -511,7 +511,7 @@ describe('useAppStore', () => {
             useAppStore.getState().loadCase(caseItem);
 
             // Since loadCase uses dynamic import, we can verify the case was parsed correctly
-            // The actual courtStore update would happen asynchronously
+            // The actual useCourtStore update would happen asynchronously
             expect(caseItem.id).toBe('case-123');
         });
     });

@@ -1,7 +1,6 @@
 import React from 'react';
 import { motion as Motion } from 'framer-motion';
 import { User, Calendar, Camera, Upload, AlertTriangle } from 'lucide-react';
-import PropTypes from 'prop-types';
 import { useI18n } from '../../i18n';
 import { PRESET_AVATARS } from '../../services/avatarService';
 
@@ -233,15 +232,6 @@ const ProfileFieldStep = ({
     }
 
     return null;
-};
-
-ProfileFieldStep.propTypes = {
-    fieldType: PropTypes.oneOf(['name', 'birthday', 'avatar']).isRequired,
-    value: PropTypes.string,
-    onChange: PropTypes.func.isRequired,
-    error: PropTypes.string,
-    onFileSelect: PropTypes.func,
-    onError: PropTypes.func,
 };
 
 export default ProfileFieldStep;

@@ -112,7 +112,8 @@ async function checkpoint(session, action) {
 
     const settleRequests = {
         creator: session.settlementRequested === session.creatorId,
-        partner: session.settlementRequested === session.partnerId
+        partner: session.settlementRequested === session.partnerId,
+        requestedAt: session.settlementRequestedAt || null
     };
 
     // Map phase to database status (compatible with existing table)

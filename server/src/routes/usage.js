@@ -9,6 +9,7 @@ const router = express.Router();
 const { getSupabase, isSupabaseConfigured } = require('../lib/supabase');
 const { getAuthUserIdOrNull } = require('../lib/auth');
 const { getCurrentPeriodStartUTC, incrementUsage } = require('../lib/usageTracking');
+const { safeErrorMessage } = require('../lib/shared/errorUtils');
 
 const requireSupabase = () => {
     if (!isSupabaseConfigured()) throw new Error('Supabase not configured');
@@ -143,7 +144,7 @@ router.get('/', async (req, res) => {
         });
     } catch (error) {
         console.error('[Usage API] GET error:', error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: safeErrorMessage(error) });
     }
 });
 
@@ -175,7 +176,7 @@ router.post('/increment', async (req, res) => {
         }
     } catch (error) {
         console.error('[Usage API] POST increment error:', error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: safeErrorMessage(error) });
     }
 });
 
@@ -224,7 +225,7 @@ router.get('/can-use', async (req, res) => {
         });
     } catch (error) {
         console.error('[Usage API] GET can-use error:', error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: safeErrorMessage(error) });
     }
 });
 

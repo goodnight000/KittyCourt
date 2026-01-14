@@ -1,7 +1,6 @@
 import React from 'react';
 import { motion as Motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import PropTypes from 'prop-types';
 import { useI18n } from '../../i18n';
 
 const welcomeHighlights = [
@@ -56,7 +55,5 @@ const WelcomeStep = () => {
         </Motion.div>
     );
 };
-
-WelcomeStep.propTypes = {};
 
 export default WelcomeStep;

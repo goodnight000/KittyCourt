@@ -4,7 +4,7 @@
  * Handles session timeouts for various phases.
  */
 
-const { PHASE, VIEW_PHASE } = require('./stateSerializer');
+const { PHASE, VIEW_PHASE } = require('./StateSerializer');
 
 // Timeout durations (in ms)
 const TIMEOUT = {
@@ -17,6 +17,23 @@ const TIMEOUT = {
     VERDICT: 60 * 60 * 1000,        // 1 hour
     SETTLE_REQUEST: 5 * 60 * 1000   // 5 minutes
 };
+
+/**
+ * Calculate remaining timeout for a phase based on when it started
+ * @param {Object} session - The session object with phaseStartedAt
+ * @param {number} timeoutDuration - The full timeout duration for this phase
+ * @returns {number} Remaining milliseconds, or 0 if expired
+ */
+function getRemainingTimeout(session, timeoutDuration) {
+    if (!session.phaseStartedAt) {
+        // Fallback to createdAt if phaseStartedAt not set
+        const startTime = session.createdAt || Date.now();
+        const elapsed = Date.now() - startTime;
+        return Math.max(timeoutDuration - elapsed, 0);
+    }
+    const elapsed = Date.now() - session.phaseStartedAt;
+    return Math.max(timeoutDuration - elapsed, 0);
+}
 
 /**
  * Create timeout handler functions for a session manager instance.
@@ -115,5 +132,6 @@ function createTimeoutHandlers(manager) {
 
 module.exports = {
     TIMEOUT,
-    createTimeoutHandlers
+    createTimeoutHandlers,
+    getRemainingTimeout
 };

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useParams } from 'react-router-dom';
 import useAuthStore from '../store/useAuthStore';
+import usePartnerStore from '../store/usePartnerStore';
 import { useI18n } from '../i18n';
 import { formatDate } from '../utils/helpers';
 import {
@@ -118,7 +119,8 @@ const CaseDetailPage = () => {
         verdict: true
     });
     const { t, language } = useI18n();
-    const { profile, partner } = useAuthStore();
+    const { profile } = useAuthStore();
+    const { partner } = usePartnerStore();
 
     // Determine partner A and B based on case data
     const isUserA = caseData?.userAId === profile?.id;

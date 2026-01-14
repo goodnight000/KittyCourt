@@ -1,17 +1,16 @@
 import React from 'react';
 import { motion as Motion } from 'framer-motion';
 import { Check, Heart, AlertTriangle } from 'lucide-react';
-import PropTypes from 'prop-types';
 import { useI18n } from '../../i18n';
 
 const CompleteStep = ({
     onboardingData,
-    loveLanguageOption,
-    showConnectChoice,
-    partnerCode,
-    saveError,
-    onConnectNow,
-    onConnectLater
+    loveLanguageOption = null,
+    showConnectChoice = false,
+    partnerCode = null,
+    saveError = null,
+    onConnectNow = null,
+    onConnectLater = null
 }) => {
     const { t } = useI18n();
 
@@ -147,31 +146,6 @@ const CompleteStep = ({
             )}
         </Motion.div>
     );
-};
-
-CompleteStep.propTypes = {
-    onboardingData: PropTypes.shape({
-        displayName: PropTypes.string,
-        loveLanguage: PropTypes.string,
-    }).isRequired,
-    loveLanguageOption: PropTypes.shape({
-        emoji: PropTypes.string,
-        labelKey: PropTypes.string,
-    }),
-    showConnectChoice: PropTypes.bool,
-    partnerCode: PropTypes.string,
-    saveError: PropTypes.string,
-    onConnectNow: PropTypes.func,
-    onConnectLater: PropTypes.func,
-};
-
-CompleteStep.defaultProps = {
-    loveLanguageOption: null,
-    showConnectChoice: false,
-    partnerCode: null,
-    saveError: null,
-    onConnectNow: null,
-    onConnectLater: null,
 };
 
 export default CompleteStep;

@@ -35,6 +35,7 @@ const {
 } = require('./prompts');
 const { retrieveHistoricalContext, formatContextForPrompt, hasHistoricalContext } = require('./memoryRetrieval');
 const { callLLMWithRetry } = require('./shared/llmRetryHandler');
+const { validateOutput, shouldBlockOutput } = require('./security/outputValidator');
 
 const DEBUG_LOGS = process.env.NODE_ENV !== 'production';
 
@@ -79,7 +80,7 @@ async function runAnalystRepair(input, historicalContext = '', judgeType = 'swif
     const model = JUDGE_MODELS[judgeType] || CONFIG.model;
     const userPrompt = buildAnalystRepairUserPrompt(input, historicalContext);
 
-    return callLLMWithRetry(
+    const result = await callLLMWithRetry(
         {
             llmFunction: () => createChatCompletion({
                 model,
@@ -105,6 +106,25 @@ async function runAnalystRepair(input, historicalContext = '', judgeType = 'swif
             },
         }
     );
+
+    // Validate LLM output for compromise indicators
+    if (shouldBlockOutput(result)) {
+        console.error('[Judge Engine] Blocking compromised Analyst+Repair output');
+        throw new Error('Generated content failed safety validation');
+    }
+
+    const validationResult = validateOutput(result, {
+        type: 'analysis',
+        sanitize: true,
+    });
+
+    if (!validationResult.valid) {
+        console.warn('[Judge Engine] Analyst+Repair output validation issues:', {
+            issues: validationResult.issues,
+        });
+    }
+
+    return validationResult.sanitizedOutput || result;
 }
 
 /**
@@ -128,7 +148,7 @@ async function runPrimingJoint(input, analysis, historicalContext = '', judgeTyp
         historicalContext
     );
 
-    return callLLMWithRetry(
+    const result = await callLLMWithRetry(
         {
             llmFunction: () => createChatCompletion({
                 model,
@@ -156,6 +176,26 @@ async function runPrimingJoint(input, analysis, historicalContext = '', judgeTyp
             },
         }
     );
+
+    // Validate LLM output for compromise indicators
+    if (shouldBlockOutput(result)) {
+        console.error('[Judge Engine] Blocking compromised Priming+Joint output');
+        throw new Error('Generated content failed safety validation');
+    }
+
+    // Use 'verdict' type since this contains user-facing therapeutic content
+    const validationResult = validateOutput(result, {
+        type: 'verdict',
+        sanitize: true,
+    });
+
+    if (!validationResult.valid) {
+        console.warn('[Judge Engine] Priming+Joint output validation issues:', {
+            issues: validationResult.issues,
+        });
+    }
+
+    return validationResult.sanitizedOutput || result;
 }
 
 /**
@@ -182,7 +222,7 @@ async function runHybridResolution(input, analysis, userAChoice, userBChoice, hi
         historicalContext
     );
 
-    return callLLMWithRetry(
+    const result = await callLLMWithRetry(
         {
             llmFunction: () => createChatCompletion({
                 model: HYBRID_MODEL,
@@ -205,6 +245,26 @@ async function runHybridResolution(input, analysis, userAChoice, userBChoice, hi
             },
         }
     );
+
+    // Validate LLM output for compromise indicators
+    if (shouldBlockOutput(result)) {
+        console.error('[Judge Engine] Blocking compromised Hybrid Resolution output');
+        throw new Error('Generated content failed safety validation');
+    }
+
+    // Use 'verdict' type since this is resolution content shown to users
+    const validationResult = validateOutput(result, {
+        type: 'verdict',
+        sanitize: true,
+    });
+
+    if (!validationResult.valid) {
+        console.warn('[Judge Engine] Hybrid Resolution output validation issues:', {
+            issues: validationResult.issues,
+        });
+    }
+
+    return validationResult.sanitizedOutput || result;
 }
 
 /**
@@ -240,24 +300,24 @@ async function deliberatePhase1(rawInput, options = {}) {
         input.language = options.language;
     }
 
-    // Step 1: Moderation
-    console.log('[Judge Engine v2] Running moderation...');
-    const modResult = await runModerationCheck(input);
+    // Step 1 + 2: Moderation and RAG can run in parallel
+    console.log('[Judge Engine v2] Running moderation + context retrieval...');
+    const ragPromise = retrieveHistoricalContext(input).catch((error) => {
+        console.log('[Judge Engine v2] RAG failed (non-blocking):', error.message);
+        return null;
+    });
+    const [modResult, historicalContext] = await Promise.all([
+        runModerationCheck(input),
+        ragPromise,
+    ]);
+
     if (modResult.requiresCounseling) {
         throw new Error('Content flagged for safety. Counseling recommended.');
     }
 
-    // Step 2: RAG
-    console.log('[Judge Engine v2] Retrieving historical context...');
-    let historicalContext = null;
     let formattedContext = '';
-    try {
-        historicalContext = await retrieveHistoricalContext(input);
-        if (hasHistoricalContext(historicalContext)) {
-            formattedContext = formatContextForPrompt(historicalContext, input.participants);
-        }
-    } catch (error) {
-        console.log('[Judge Engine v2] RAG failed (non-blocking):', error.message);
+    if (hasHistoricalContext(historicalContext)) {
+        formattedContext = formatContextForPrompt(historicalContext, input.participants);
     }
 
     // Step 3: Analyst + Repair

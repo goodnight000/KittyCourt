@@ -55,35 +55,21 @@ router.get('/', requirePartner, async (req, res) => {
 
         if (error) throw error;
 
-        const autoConsentIds = (profiles || [])
-            .filter(profile => profile.ai_insights_consent_at == null)
-            .map(profile => profile.id);
+        // Check consent status without auto-consenting
+        const consent = buildConsentState(profiles || [], userId, partnerId);
 
-        if (autoConsentIds.length > 0) {
-            const nowIso = new Date().toISOString();
-            const { error: autoConsentError } = await supabase
-                .from('profiles')
-                .update({
-                    ai_insights_consent: true,
-                    ai_insights_consent_at: nowIso,
-                })
-                .in('id', autoConsentIds);
-
-            if (autoConsentError) throw autoConsentError;
-
-            profiles = (profiles || []).map((profile) => (
-                autoConsentIds.includes(profile.id)
-                    ? {
-                        ...profile,
-                        ai_insights_consent: true,
-                        ai_insights_consent_at: nowIso,
-                    }
-                    : profile
-            ));
+        // If either user hasn't explicitly consented, return requiresConsent flag
+        if (!consent.selfConsent || !consent.partnerConsent) {
+            return res.json({
+                insights: [],
+                consent,
+                requiresConsent: true,
+                message: 'AI insights require consent from both partners'
+            });
         }
 
-        const consent = buildConsentState(profiles || [], userId, partnerId);
-        if (!consent.selfConsent || !consent.partnerConsent || consent.selfPaused || consent.partnerPaused) {
+        // Check for paused state
+        if (consent.selfPaused || consent.partnerPaused) {
             return res.json({ insights: [], consent });
         }
 

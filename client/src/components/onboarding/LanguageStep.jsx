@@ -1,12 +1,11 @@
 import React from 'react';
 import { motion as Motion } from 'framer-motion';
 import { Check } from 'lucide-react';
-import PropTypes from 'prop-types';
 import { useI18n } from '../../i18n';
 
 const LanguageStep = ({
     supportedLanguages,
-    selectedLanguage,
+    selectedLanguage = null,
     onLanguageSelect
 }) => {
     const { t } = useI18n();
@@ -75,21 +74,6 @@ const LanguageStep = ({
             </p>
         </Motion.div>
     );
-};
-
-LanguageStep.propTypes = {
-    supportedLanguages: PropTypes.arrayOf(PropTypes.shape({
-        code: PropTypes.string.isRequired,
-        label: PropTypes.string,
-        labelKey: PropTypes.string,
-        nativeLabel: PropTypes.string,
-    })).isRequired,
-    selectedLanguage: PropTypes.string,
-    onLanguageSelect: PropTypes.func.isRequired,
-};
-
-LanguageStep.defaultProps = {
-    selectedLanguage: null,
 };
 
 export default LanguageStep;
