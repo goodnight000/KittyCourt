@@ -500,6 +500,26 @@ const useSubscriptionStore = create((set, get) => ({
             error: null,
         });
     },
+
+    /**
+     * Debug: Force Gold status for testing (non-prod only)
+     * @private
+     */
+    _forceGold: async () => {
+        try {
+            // Use debug endpoint that bypasses RevenueCat
+            await api.post('/subscription/debug-grant');
+
+            set({
+                isGold: true,
+                limits: GOLD_LIMITS,
+                isLoading: false,
+            });
+            console.log('[SubscriptionStore] Debug: Forced Gold status');
+        } catch (error) {
+            console.error('[SubscriptionStore] Debug: Failed to force Gold:', error);
+        }
+    },
 }));
 
 export default useSubscriptionStore;

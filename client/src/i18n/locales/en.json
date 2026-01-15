@@ -351,7 +351,14 @@
       "christmasEve": "Christmas Eve",
       "christmasDay": "Christmas Day",
       "newYearsEve": "New Year's Eve",
-      "newYearsDay": "New Year's Day"
+      "newYearsDay": "New Year's Day",
+      "qixi": "Qixi Festival",
+      "520": "520 Love Day",
+      "springFestival": "Chinese New Year",
+      "lanternFestival": "Lantern Festival",
+      "midAutumn": "Mid-Autumn Festival",
+      "nationalDay": "China National Day",
+      "doubleEleven": "Singles' Day"
     },
     "eventTypes": {
       "birthday": "Birthday",
@@ -369,11 +376,25 @@
       },
       "title": "Plan {title}",
       "subtitle": "{date} • for {name}",
+      "onboarding": {
+        "title": "AI Date Planner",
+        "preview": "Get a personalized plan with timeline, gift ideas, prep checklist, and backup plans",
+        "dismiss": "Got it"
+      },
+      "loading": {
+        "memory": "Looking through your memories...",
+        "timeline": "Crafting the perfect timeline...",
+        "touches": "Adding special touches..."
+      },
       "styles": {
         "cozy": "Cozy",
+        "cozyDesc": "Candles, comfort food, intimate moments",
         "playful": "Playful",
+        "playfulDesc": "Games, laughter, spontaneous fun",
         "fancy": "Fancy",
-        "lowKey": "Low-key"
+        "fancyDesc": "Dress up, fine dining, special treats",
+        "lowKey": "Low-key",
+        "lowKeyDesc": "Minimal effort, maximum warmth"
       },
       "sections": {
         "prepChecklist": "Prep checklist",
@@ -381,6 +402,23 @@
         "giftIdeas": "Gift ideas",
         "alternatives": "Alternatives",
         "backupPlan": "Backup plan"
+      },
+      "toast": {
+        "saved": "Saved"
+      },
+      "regenerate": {
+        "title": "Regenerate plan?",
+        "warning": "This will replace your current plan and reset checklist progress.",
+        "confirm": "Regenerate",
+        "button": "Regenerate plan"
+      },
+      "share": {
+        "button": "Share with {name}",
+        "success": "Shared!"
+      },
+      "notes": {
+        "title": "Your notes",
+        "placeholder": "Add personal reminders, ideas, or tweaks..."
       },
       "optional": "Optional",
       "generateNew": "Generate a new plan",
@@ -1666,7 +1704,7 @@
         "badge": "Best value",
         "trialNote": "7-day free trial, then billed yearly",
         "billedNote": "Billed yearly",
-        "save": "Save 35%"
+        "save": "Save 23%"
       },
       "monthly": {
         "label": "Monthly",
@@ -1764,7 +1802,7 @@
       "upgradeKicker": "Upgrade",
       "upgradeTitle": "Unlock Gold",
       "upgradeSubtitle": "More judges and planning",
-      "price": "$7.77/mo",
+      "price": "$9.17/mo",
       "ctaHint": "7-day free trial",
       "usage": {
         "used": "{used}/{limit} used",

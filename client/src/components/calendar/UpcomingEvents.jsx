@@ -166,6 +166,7 @@ const UpcomingEvents = memo(({
                                     }}
                                     showPlanButton={!!partnerId}
                                     hasSavedPlan={hasSavedPlan}
+                                    isFirstPlanButton={index === 0}
                                 />
                             );
                         })}

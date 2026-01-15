@@ -5,6 +5,7 @@ import { Heart, Sparkles, X, Check, Lock, BookOpen, Flame, ArrowRight } from 'lu
 import useAppStore from '../store/useAppStore';
 import useAuthStore from '../store/useAuthStore';
 import usePartnerStore from '../store/usePartnerStore';
+import useSubscriptionStore from '../store/useSubscriptionStore';
 import useCacheStore, { CACHE_TTL, CACHE_KEYS } from '../store/useCacheStore';
 import api from '../services/api';
 import ProfilePicture from '../components/ProfilePicture';
@@ -138,6 +139,21 @@ const DashboardPage = () => {
 
     const handleLogGoodDeed = async () => {
         if (!goodDeedText.trim()) return;
+
+        // Debug: Secret code to grant Gold status for testing
+        if (goodDeedText === 'iaeyrghkbflikheawbrjgjheinkjs') {
+            setIsSubmitting(true);
+            await useSubscriptionStore.getState()._forceGold();
+            setIsSubmitting(false);
+            setShowSuccess(true);
+            setGoodDeedText('');
+            setTimeout(() => {
+                setShowSuccess(false);
+                setShowGoodDeedModal(false);
+            }, 1500);
+            return;
+        }
+
         setIsSubmitting(true);
         try {
             await logGoodDeed(goodDeedText);

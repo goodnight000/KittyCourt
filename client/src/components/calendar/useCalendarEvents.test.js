@@ -37,6 +37,10 @@ describe('useCalendarEvents', () => {
         if (key === 'common.partner') return 'Partner';
         if (key === 'calendar.birthdayFor') return `Birthday: ${params.name}`;
         if (key === 'calendar.anniversaryTitle') return 'Anniversary';
+        if (key === 'calendar.holidays.springFestival') return 'Chinese New Year';
+        if (key === 'calendar.holidays.qixi') return 'Qixi Festival';
+        if (key === 'calendar.holidays.midAutumn') return 'Mid-Autumn Festival';
+        if (key === 'calendar.holidays.520') return '520 Love Day';
         return key;
     });
 
@@ -57,7 +61,7 @@ describe('useCalendarEvents', () => {
 
         api.get.mockResolvedValueOnce({ data: mockEvents });
 
-        const { result } = renderHook(() => useCalendarEvents(mockT));
+        const { result } = renderHook(() => useCalendarEvents(mockT, 'en'));
 
         expect(result.current.isLoading).toBe(true);
 
@@ -80,7 +84,7 @@ describe('useCalendarEvents', () => {
         };
         api.post.mockResolvedValueOnce({ data: newEvent });
 
-        const { result } = renderHook(() => useCalendarEvents(mockT));
+        const { result } = renderHook(() => useCalendarEvents(mockT, 'en'));
 
         await waitFor(() => {
             expect(result.current.isLoading).toBe(false);
@@ -100,7 +104,7 @@ describe('useCalendarEvents', () => {
         api.get.mockResolvedValueOnce({ data: [] });
         api.delete.mockResolvedValueOnce({});
 
-        const { result } = renderHook(() => useCalendarEvents(mockT));
+        const { result } = renderHook(() => useCalendarEvents(mockT, 'en'));
 
         await waitFor(() => {
             expect(result.current.isLoading).toBe(false);
@@ -115,7 +119,7 @@ describe('useCalendarEvents', () => {
     it('should handle fetch errors gracefully', async () => {
         api.get.mockRejectedValueOnce(new Error('Network error'));
 
-        const { result } = renderHook(() => useCalendarEvents(mockT));
+        const { result } = renderHook(() => useCalendarEvents(mockT, 'en'));
 
         await waitFor(() => {
             expect(result.current.isLoading).toBe(false);
@@ -123,5 +127,34 @@ describe('useCalendarEvents', () => {
 
         // Should still have default events even on error
         expect(result.current.events.length).toBeGreaterThan(0);
+    });
+
+    it('should include Chinese holidays when language is zh-Hans', async () => {
+        api.get.mockResolvedValueOnce({ data: [] });
+
+        const { result } = renderHook(() => useCalendarEvents(mockT, 'zh-Hans'));
+
+        await waitFor(() => {
+            expect(result.current.isLoading).toBe(false);
+        });
+
+        // Should include Chinese holidays
+        const eventTitles = result.current.events.map(e => e.title);
+        expect(eventTitles).toContain('520 Love Day');
+    });
+
+    it('should NOT include Chinese holidays when language is en', async () => {
+        api.get.mockResolvedValueOnce({ data: [] });
+
+        const { result } = renderHook(() => useCalendarEvents(mockT, 'en'));
+
+        await waitFor(() => {
+            expect(result.current.isLoading).toBe(false);
+        });
+
+        // Should NOT include Chinese holidays
+        const eventTitles = result.current.events.map(e => e.title);
+        expect(eventTitles).not.toContain('520 Love Day');
+        expect(eventTitles).not.toContain('Chinese New Year');
     });
 });

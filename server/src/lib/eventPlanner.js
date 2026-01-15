@@ -3,7 +3,7 @@
  *
  * Generates a cozy, premium plan for a calendar event by:
  * 1) Retrieving relevant partner memories (pgvector RAG)
- * 2) Feeding that context to an LLM (DeepSeek v3.2 via OpenRouter)
+ * 2) Feeding that context to an LLM (Gemini 3 Flash via OpenRouter)
  * 3) Returning structured JSON for consistent UI rendering
  */
 
@@ -19,8 +19,7 @@ const {
 const { repairAndParseJSON } = require('./jsonRepair');
 const { normalizeLanguage, getLanguageLabel } = require('./language');
 
-const PLANNER_MODEL = 'deepseek/deepseek-v3.2';
-const PLANNER_REASONING_EFFORT = 'medium';
+const PLANNER_MODEL = 'google/gemini-3-flash-preview';
 
 const CONFIG = {
     maxMemoriesToRetrieve: 6,
@@ -433,7 +432,6 @@ async function generateEventPlan({
             plan: buildFallbackPlan({ style, language: normalizedLanguage }),
             meta: {
                 model: null,
-                reasoningEffort: PLANNER_REASONING_EFFORT,
                 rag: { enabled: rag.enabled, memoriesUsed: rag.used.length },
                 fallback: true,
             },
@@ -498,7 +496,6 @@ async function generateEventPlan({
                 temperature: attempt === 1 ? CONFIG.temperature : 0.4,
                 maxTokens: CONFIG.maxTokens,
                 jsonSchema: EVENT_PLAN_JSON_SCHEMA,
-                reasoningEffort: PLANNER_REASONING_EFFORT,
             });
 
             const choice = response?.choices?.[0] || {};
@@ -524,7 +521,6 @@ async function generateEventPlan({
                 plan,
                 meta: {
                     model: PLANNER_MODEL,
-                    reasoningEffort: PLANNER_REASONING_EFFORT,
                     rag: {
                         enabled: rag.enabled,
                         memoriesUsed: rag.used.length,
@@ -546,7 +542,6 @@ async function generateEventPlan({
         plan: buildFallbackPlan({ style, language: normalizedLanguage }),
         meta: {
             model: PLANNER_MODEL,
-            reasoningEffort: PLANNER_REASONING_EFFORT,
             rag: { enabled: rag.enabled, memoriesUsed: rag.used.length },
             fallback: true,
             error: lastError?.message || 'Unknown planner error',

@@ -1,7 +1,23 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion as Motion } from 'framer-motion';
-import { X, Plus, Trash2 } from 'lucide-react';
+import { X, Plus, Trash2, Wand2, Check } from 'lucide-react';
 import { useI18n } from '../../i18n';
+import api from '../../services/api';
+
+/**
+ * Helper to generate event key for plan lookup
+ */
+const getEventKey = (event) => {
+    const id = event?.id;
+    const isUuid = typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(id);
+    if (isUuid) return `db:${id}`;
+
+    const title = String(event?.title || '').trim().toLowerCase();
+    const type = String(event?.type || 'custom').trim().toLowerCase();
+    const date = String(event?.date || '').trim();
+    const emoji = String(event?.emoji || '').trim();
+    return `computed:${type}:${date}:${title}:${emoji}`;
+};
 
 const EVENT_TYPES = [
     { id: 'birthday', labelKey: 'calendar.eventTypes.birthday', emoji: '🎂', color: 'pink' },
@@ -23,8 +39,44 @@ const EVENT_GRADIENTS = {
  * EventDetailsModal Component
  * Displays details for one or more events on a selected date
  */
-const EventDetailsModal = ({ events, onDelete, onClose, onAddMore, currentUserId, myDisplayName, partnerDisplayName }) => {
+const EventDetailsModal = ({ events, onDelete, onClose, onAddMore, onPlanClick, partnerId, currentUserId, myDisplayName, partnerDisplayName }) => {
     const { t, language } = useI18n();
+    const [plannedEventKeys, setPlannedEventKeys] = useState(() => new Set());
+
+    // Check which events already have saved plans
+    useEffect(() => {
+        if (!events?.length || !partnerId) {
+            setPlannedEventKeys(new Set());
+            return;
+        }
+
+        const eventKeys = events.map(getEventKey).filter(Boolean);
+        if (!eventKeys.length) return;
+
+        let cancelled = false;
+        (async () => {
+            try {
+                const response = await api.post('/calendar/event-plans/exists', { eventKeys });
+                const exists = response.data?.exists || {};
+                if (cancelled) return;
+                setPlannedEventKeys(new Set(Object.keys(exists).filter((k) => exists[k])));
+            } catch {
+                if (cancelled) return;
+                setPlannedEventKeys(new Set());
+            }
+        })();
+
+        return () => { cancelled = true; };
+    }, [events, partnerId]);
+
+    // Callback to update state when a plan is saved
+    const handleSavedPlan = useCallback((eventKey) => {
+        setPlannedEventKeys((prev) => {
+            const next = new Set(prev);
+            next.add(eventKey);
+            return next;
+        });
+    }, []);
 
     // Guard against empty events array
     if (!events?.length) {
@@ -139,6 +191,61 @@ const EventDetailsModal = ({ events, onDelete, onClose, onAddMore, currentUserId
                                         </button>
                                     )}
                                 </div>
+
+                                {/* Help me plan / View my plan button */}
+                                {partnerId && event.date && onPlanClick && (() => {
+                                    const eventKey = getEventKey(event);
+                                    const hasSavedPlan = plannedEventKeys.has(eventKey);
+                                    const isSecret = event.isSecret;
+
+                                    // Border gradient based on secret/shared
+                                    const planBorder = isSecret
+                                        ? 'from-indigo-300/55 via-court-goldLight/35 to-violet-300/55'
+                                        : 'from-rose-300/60 via-amber-300/45 to-pink-300/55';
+
+                                    // Fill gradient based on saved plan state
+                                    const planFill = hasSavedPlan
+                                        ? 'from-white/80 via-amber-50/65 to-white/75'
+                                        : 'from-white/80 via-rose-50/55 to-amber-50/55';
+
+                                    // Icon circle styling
+                                    const iconStyle = hasSavedPlan
+                                        ? 'bg-amber-50/70 border-amber-200/60 text-amber-800'
+                                        : 'bg-rose-50/70 border-rose-200/60 text-rose-800';
+
+                                    // AI badge styling based on secret/shared
+                                    const aiBadgeStyle = isSecret
+                                        ? 'bg-indigo-50/60 text-indigo-800 border-indigo-200/50'
+                                        : 'bg-white/60 text-neutral-700 border-white/60';
+
+                                    return (
+                                        <Motion.button
+                                            whileTap={{ scale: 0.98 }}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onPlanClick(event, eventKey, handleSavedPlan);
+                                            }}
+                                            className={`relative w-full mt-3 rounded-full p-[1px] shadow-soft hover:shadow-soft-lg transition-shadow duration-200 ${hasSavedPlan ? 'ring-1 ring-amber-200/30' : ''}`}
+                                        >
+                                            <span aria-hidden="true" className={`absolute inset-0 rounded-full bg-gradient-to-r ${planBorder}`} />
+
+                                            <span className={`relative z-10 flex items-center justify-between gap-3 w-full h-10 rounded-full px-3.5 bg-gradient-to-r ${planFill} border border-white/70`}>
+                                                <span className="flex items-center gap-2.5 min-w-0">
+                                                    <span className={`grid place-items-center w-7 h-7 rounded-full border shadow-inner-soft ${iconStyle}`}>
+                                                        {hasSavedPlan ? <Check className="w-4 h-4" /> : <Wand2 className="w-4 h-4" />}
+                                                    </span>
+                                                    <span className="text-[12px] font-extrabold tracking-tight text-neutral-800 truncate">
+                                                        {hasSavedPlan ? t('calendar.plan.view') : t('calendar.plan.help')}
+                                                    </span>
+                                                </span>
+
+                                                <span className={`text-[10px] font-extrabold px-2 py-1 rounded-full border shadow-soft ${aiBadgeStyle}`}>
+                                                    AI
+                                                </span>
+                                            </span>
+                                        </Motion.button>
+                                    );
+                                })()}
                             </Motion.div>
                         );
                     })}

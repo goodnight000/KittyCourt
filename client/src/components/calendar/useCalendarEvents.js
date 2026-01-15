@@ -17,6 +17,34 @@ const getDefaultHolidays = (year, t) => [
     { title: t('calendar.holidays.newYearsDay'), date: `${year + 1}-01-01`, type: 'holiday', emoji: '🎊', isRecurring: true, isDefault: true, isSecret: false },
 ];
 
+// Lunar calendar holiday dates by year (these shift annually)
+const LUNAR_DATES = {
+    2025: { springFestival: '01-29', lanternFestival: '02-12', qixi: '08-29', midAutumn: '10-06' },
+    2026: { springFestival: '02-17', lanternFestival: '03-03', qixi: '08-19', midAutumn: '09-25' },
+    2027: { springFestival: '02-06', lanternFestival: '02-20', qixi: '08-08', midAutumn: '09-15' },
+};
+
+const getLunarHolidays = (year, t) => {
+    const dates = LUNAR_DATES[year];
+    if (!dates) return [];
+
+    return [
+        { title: t('calendar.holidays.springFestival'), date: `${year}-${dates.springFestival}`, type: 'holiday', emoji: '🧧', isRecurring: false, isDefault: true, isSecret: false },
+        { title: t('calendar.holidays.lanternFestival'), date: `${year}-${dates.lanternFestival}`, type: 'holiday', emoji: '🏮', isRecurring: false, isDefault: true, isSecret: false },
+        { title: t('calendar.holidays.qixi'), date: `${year}-${dates.qixi}`, type: 'holiday', emoji: '💑', isRecurring: false, isDefault: true, isSecret: false },
+        { title: t('calendar.holidays.midAutumn'), date: `${year}-${dates.midAutumn}`, type: 'holiday', emoji: '🥮', isRecurring: false, isDefault: true, isSecret: false },
+    ];
+};
+
+const getChineseHolidays = (year, t) => [
+    // Fixed Gregorian date holidays
+    { title: t('calendar.holidays.520'), date: `${year}-05-20`, type: 'holiday', emoji: '💕', isRecurring: true, isDefault: true, isSecret: false },
+    { title: t('calendar.holidays.nationalDay'), date: `${year}-10-01`, type: 'holiday', emoji: '🇨🇳', isRecurring: true, isDefault: true, isSecret: false },
+    { title: t('calendar.holidays.doubleEleven'), date: `${year}-11-11`, type: 'holiday', emoji: '🛒', isRecurring: true, isDefault: true, isSecret: false },
+    // Lunar calendar holidays
+    ...getLunarHolidays(year, t),
+];
+
 const getEventKey = (event) => `${event?.title || ''}::${event?.date || ''}`;
 
 const getPersonalEvents = (profile, connectedPartner, myId, partnerId, myDisplayName, partnerDisplayName, t) => {
@@ -94,10 +122,11 @@ const getPersonalEvents = (profile, connectedPartner, myId, partnerId, myDisplay
 
 /**
  * Custom hook for managing calendar events data and operations
- * @param {Object} t - Translation function from useI18n
+ * @param {Function} t - Translation function from useI18n
+ * @param {string} language - Current language code (e.g., 'en', 'zh-Hans')
  * @returns {Object} Calendar events state and operations
  */
-export default function useCalendarEvents(t) {
+export default function useCalendarEvents(t, language = 'en') {
     const { user: authUser, profile } = useAuthStore();
     const { partner: connectedPartner } = usePartnerStore();
     const [dbEvents, setDbEvents] = useState([]);
@@ -125,10 +154,22 @@ export default function useCalendarEvents(t) {
     }, [myId, partnerId]);
 
     const currentYear = new Date().getFullYear();
-    const defaultEvents = useMemo(() => ([
-        ...getDefaultHolidays(currentYear, t),
-        ...getDefaultHolidays(currentYear + 1, t)
-    ]), [currentYear, t]);
+    const defaultEvents = useMemo(() => {
+        const baseHolidays = [
+            ...getDefaultHolidays(currentYear, t),
+            ...getDefaultHolidays(currentYear + 1, t)
+        ];
+
+        // Add Chinese holidays only for Chinese language users
+        if (language === 'zh-Hans') {
+            baseHolidays.push(
+                ...getChineseHolidays(currentYear, t),
+                ...getChineseHolidays(currentYear + 1, t)
+            );
+        }
+
+        return baseHolidays;
+    }, [currentYear, t, language]);
 
     const personalEvents = useMemo(() => getPersonalEvents(
         profile,

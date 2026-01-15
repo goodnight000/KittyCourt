@@ -21,7 +21,7 @@ const CalendarPage = () => {
     const { user: authUser, profile } = useAuthStore();
     const { partner: connectedPartner } = usePartnerStore();
     const { canUsePlanFeature, isGold } = useSubscriptionStore();
-    const { t } = useI18n();
+    const { t, language } = useI18n();
 
     // Build users from auth store
     const myId = authUser?.id || currentUser?.id;
@@ -30,7 +30,7 @@ const CalendarPage = () => {
     const partnerDisplayName = connectedPartner?.display_name || connectedPartner?.name || t('common.partner');
 
     // Calendar data hook
-    const { events, isLoading, addEvent, deleteEvent } = useCalendarEvents(t);
+    const { events, isLoading, addEvent, deleteEvent } = useCalendarEvents(t, language);
 
     // Local UI state
     const [currentDate, setCurrentDate] = useState(new Date());
@@ -182,6 +182,11 @@ const CalendarPage = () => {
                             setShowEventDetails(null);
                             setShowAddModal(true);
                         }}
+                        onPlanClick={(event, eventKey, onSavedCallback) => {
+                            setShowEventDetails(null);
+                            handlePlanClick(event, eventKey, onSavedCallback);
+                        }}
+                        partnerId={partnerId}
                         currentUserId={myId}
                         myDisplayName={myDisplayName}
                         partnerDisplayName={partnerDisplayName}

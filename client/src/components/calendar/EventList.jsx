@@ -1,7 +1,10 @@
-import React, { memo, useMemo } from 'react';
-import { motion as Motion } from 'framer-motion';
+import React, { memo, useMemo, useState, useEffect } from 'react';
+import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { ChevronRight, Check, Wand2, Lock } from 'lucide-react';
 import { useI18n } from '../../i18n';
+import PlanOnboardingTooltip from './PlanOnboardingTooltip';
+
+const ONBOARDING_STORAGE_KEY = 'pause_plan_onboarding_seen';
 
 const EVENT_TYPES = [
     { id: 'birthday', labelKey: 'calendar.eventTypes.birthday', emoji: '🎂', color: 'pink' },
@@ -22,10 +25,30 @@ const EventCard = memo(({
     onClick,
     onPlanClick = null,
     showPlanButton = false,
-    hasSavedPlan = false
+    hasSavedPlan = false,
+    isFirstPlanButton = false
 }) => {
     const { t, language } = useI18n();
     const eventType = EVENT_TYPES.find((item) => item.id === event.type) || EVENT_TYPES[4];
+
+    // Onboarding tooltip state
+    const [showOnboarding, setShowOnboarding] = useState(false);
+
+    useEffect(() => {
+        // Only show onboarding for the first plan button that hasn't been dismissed
+        if (isFirstPlanButton && showPlanButton && !hasSavedPlan) {
+            const hasSeenOnboarding = localStorage.getItem(ONBOARDING_STORAGE_KEY);
+            if (!hasSeenOnboarding) {
+                setShowOnboarding(true);
+            }
+        }
+    }, [isFirstPlanButton, showPlanButton, hasSavedPlan]);
+
+    const handleDismissOnboarding = (e) => {
+        e.stopPropagation();
+        localStorage.setItem(ONBOARDING_STORAGE_KEY, 'true');
+        setShowOnboarding(false);
+    };
 
     // Memoize date parsing and timing calculations - these are expensive
     const dateInfo = useMemo(() => {
@@ -174,7 +197,14 @@ const EventCard = memo(({
                 </div>
 
                 {showPlanButton && (
-                    <div className="px-3 pb-3">
+                    <div className="px-3 pb-3 relative">
+                        {/* Onboarding tooltip */}
+                        <AnimatePresence>
+                            {showOnboarding && (
+                                <PlanOnboardingTooltip onDismiss={handleDismissOnboarding} />
+                            )}
+                        </AnimatePresence>
+
                         <Motion.button
                             whileHover={{ y: -1 }}
                             whileTap={{ scale: 0.98 }}

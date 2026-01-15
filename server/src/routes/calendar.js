@@ -253,7 +253,7 @@ router.get('/event-plans', async (req, res) => {
         const supabase = requireSupabase();
         const { data, error } = await supabase
             .from('event_plans')
-            .select('id,event_key,style,plan,checklist_state,updated_at')
+            .select('id,event_key,style,plan,checklist_state,notes,updated_at')
             .eq('user_id', viewerId)
             .eq('event_key', eventKey)
             .order('updated_at', { ascending: false });
@@ -269,6 +269,7 @@ router.get('/event-plans', async (req, res) => {
             style: p.style,
             plan: p.plan,
             checklistState: p.checklist_state || {},
+            notes: p.notes || '',
             updatedAt: p.updated_at,
         }));
 
@@ -279,24 +280,33 @@ router.get('/event-plans', async (req, res) => {
     }
 });
 
-// Update event plan checklist state
+// Update event plan checklist state and/or notes
 router.patch('/event-plans/:id', async (req, res) => {
     try {
         const viewerId = await requireAuthUserId(req);
         const { id } = req.params;
-        const { checklistState } = req.body || {};
+        const { checklistState, notes } = req.body || {};
 
-        if (!checklistState || typeof checklistState !== 'object') {
-            return res.status(400).json({ error: 'checklistState must be an object' });
+        // Build update payload
+        const updatePayload = {};
+        if (checklistState && typeof checklistState === 'object') {
+            updatePayload.checklist_state = checklistState;
+        }
+        if (typeof notes === 'string') {
+            updatePayload.notes = notes.slice(0, 500); // Limit notes length
+        }
+
+        if (Object.keys(updatePayload).length === 0) {
+            return res.status(400).json({ error: 'checklistState or notes is required' });
         }
 
         const supabase = requireSupabase();
         const { data, error } = await supabase
             .from('event_plans')
-            .update({ checklist_state: checklistState })
+            .update(updatePayload)
             .eq('id', id)
             .eq('user_id', viewerId)
-            .select('id,event_key,style,checklist_state,updated_at')
+            .select('id,event_key,style,checklist_state,notes,updated_at')
             .single();
 
         if (error) {
@@ -309,10 +319,56 @@ router.patch('/event-plans/:id', async (req, res) => {
             eventKey: data.event_key,
             style: data.style,
             checklistState: data.checklist_state || {},
+            notes: data.notes || '',
             updatedAt: data.updated_at,
         });
     } catch (error) {
-        console.error('Error updating plan checklist:', error);
+        console.error('Error updating plan:', error);
+        res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
+    }
+});
+
+// Share event plan with partner
+router.post('/event-plans/:id/share', requirePartner, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { userId: viewerId, partnerId, supabase } = req;
+
+        // Get plan and verify ownership
+        const { data: plan, error: planError } = await supabase
+            .from('event_plans')
+            .select('event_snapshot, style, partner_id')
+            .eq('id', id)
+            .eq('user_id', viewerId)
+            .single();
+
+        if (planError || !plan) {
+            return res.status(404).json({ error: 'Plan not found' });
+        }
+
+        // Get user's display name for notification
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('display_name')
+            .eq('id', viewerId)
+            .single();
+
+        // Send push notification to partner
+        try {
+            const { sendNotificationToUser } = require('../lib/notificationService');
+            await sendNotificationToUser(partnerId, {
+                title: 'Plan Shared',
+                body: `${profile?.display_name || 'Your partner'} shared a plan for ${plan.event_snapshot?.title || 'an event'}`,
+                data: { screen: 'calendar' }
+            });
+        } catch (notifError) {
+            console.warn('[Calendar] Failed to send share notification:', notifError?.message || notifError);
+            // Continue even if notification fails
+        }
+
+        return res.json({ success: true });
+    } catch (error) {
+        console.error('Error sharing plan:', error);
         res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
     }
 });

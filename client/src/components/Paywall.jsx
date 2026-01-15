@@ -407,8 +407,8 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                                                 </div>
                                                 <div className="text-right">
                                                     <div className="flex items-baseline gap-1.5">
-                                                        <del className="text-sm text-court-brownLight/60 line-through">$9.99</del>
-                                                        <span className="text-2xl font-bold text-court-brown font-display">$7.77</span>
+                                                        <del className="text-sm text-court-brownLight/60 line-through">$11.99</del>
+                                                        <span className="text-2xl font-bold text-court-brown font-display">$9.17</span>
                                                         <span className="text-sm text-court-brownLight">{t('paywall.plans.perMonth')}</span>
                                                     </div>
                                                     <p className="text-xs text-green-600 font-semibold">{t('paywall.plans.yearly.save')}</p>
@@ -457,7 +457,7 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                                                 </div>
                                                 <div className="text-right">
                                                     <div className="flex items-baseline gap-1">
-                                                        <span className="text-2xl font-bold text-court-brown font-display">$9.99</span>
+                                                        <span className="text-2xl font-bold text-court-brown font-display">$11.99</span>
                                                         <span className="text-sm text-court-brownLight">{t('paywall.plans.perMonth')}</span>
                                                     </div>
                                                 </div>
@@ -583,7 +583,7 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <div className="rounded-full border border-amber-200/70 bg-amber-100/70 px-3 py-1 text-xs font-bold text-amber-700">
-                                                {t('paywall.cta.price', { price: selectedPlan === 'yearly' ? '$7.77' : '$9.99' })}
+                                                {t('paywall.cta.price', { price: selectedPlan === 'yearly' ? '$9.17' : '$11.99' })}
                                             </div>
                                             <ChevronRight className="w-5 h-5 text-amber-600" />
                                         </div>

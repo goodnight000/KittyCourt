@@ -152,16 +152,19 @@ const TabItem = ({ to, icon, label, isAlerting }) => (
                 {isActive && (
                     <motion.div
                         layoutId="activeDockBubble"
-                        className="absolute -inset-1 bg-gradient-to-br from-violet-100 via-purple-50 to-pink-50 rounded-2xl border border-violet-200/50 shadow-lg"
+                        className="absolute -inset-1 rounded-3xl border border-court-gold/35 bg-gradient-to-br from-court-goldLight via-court-gold/35 to-court-tan pointer-events-none"
                         style={{ zIndex: 0 }}
                         transition={{
                             type: "spring",
-                            stiffness: 300,
-                            damping: 20,
-                            mass: 0.8,
-                            bounce: 0.5
+                            stiffness: 260,
+                            damping: 18,
+                            mass: 0.7,
+                            bounce: 0.7
                         }}
-                    />
+                    >
+                        <span className="absolute inset-0 rounded-3xl bg-gradient-to-b from-white/45 via-white/10 to-transparent opacity-60" />
+                        <span className="absolute top-1 left-2 right-2 h-2 rounded-full bg-white/60 blur-[1px] opacity-50" />
+                    </motion.div>
                 )}
 
                 {/* Icon container */}

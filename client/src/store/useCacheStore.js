@@ -139,14 +139,18 @@ const useCacheStore = create(
                 try {
                     const api = (await import('../services/api')).default;
 
-                    const fetches = [];
+                    const fetches = [
+                        // Stats (always fetch - used in profile section)
+                        api.get('/stats').then(res => {
+                            setCache(`${CACHE_KEYS.STATS}:${userId}`, res.data, CACHE_TTL.STATS);
+                            // Also cache as streak since it contains streak data
+                            setCache(CACHE_KEYS.STREAK, res.data, CACHE_TTL.STREAK);
+                        }).catch(() => {}),
+                    ];
 
                     // Partner-required data (most features need a partner)
                     if (partnerId) {
                         fetches.push(
-                            api.get('/stats').then(res =>
-                                setCache(CACHE_KEYS.STREAK, res.data, CACHE_TTL.STREAK)
-                            ).catch(() => {}),
 
                             api.get('/daily-questions/today').then(res =>
                                 setCache(CACHE_KEYS.DAILY_QUESTION, res.data, CACHE_TTL.DAILY_HISTORY)

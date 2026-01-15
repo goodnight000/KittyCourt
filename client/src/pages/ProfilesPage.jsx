@@ -65,7 +65,7 @@ const ProfilesPage = () => {
     const { profileData, saveProfile } = useProfileData();
 
     // Calendar events for milestones tracking (only user-created events, not defaults)
-    const { events: calendarEvents } = useCalendarEvents(t);
+    const { events: calendarEvents } = useCalendarEvents(t, language);
     const userCreatedCalendarEvents = calendarEvents?.filter(e => !e.isDefault && !e.isPersonal) || [];
 
     const [showEditModal, setShowEditModal] = useState(false);

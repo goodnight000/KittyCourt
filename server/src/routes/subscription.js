@@ -234,4 +234,49 @@ router.post('/sync', syncRateLimiter, async (req, res) => {
     }
 });
 
+/**
+ * POST /api/subscription/debug-grant
+ * Debug endpoint to force Gold status (non-production only)
+ * Bypasses RevenueCat entirely for testing purposes
+ */
+router.post('/debug-grant', async (req, res) => {
+    try {
+        if (isProd) {
+            return res.status(403).json({ error: 'Not available in production' });
+        }
+
+        if (!isSupabaseConfigured()) {
+            return res.status(503).json({ error: 'Supabase not configured' });
+        }
+
+        const userId = await getAuthUserIdOrNull(req);
+        if (!userId) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        // Grant 1 year of Gold
+        const expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
+
+        const supabase = getSupabase();
+        const { error } = await supabase
+            .from('profiles')
+            .update({
+                subscription_tier: 'pause_gold',
+                subscription_expires_at: expiresAt,
+            })
+            .eq('id', userId);
+
+        if (error) {
+            console.error('[Subscription API] Debug grant error:', error);
+            return res.status(500).json({ error: 'Database update failed' });
+        }
+
+        console.log(`[Subscription API] Debug: Granted Gold to ${userId}`);
+        res.json({ success: true, tier: 'pause_gold', expiresAt });
+    } catch (error) {
+        console.error('[Subscription API] Debug grant error:', error);
+        res.status(500).json({ error: safeErrorMessage(error) });
+    }
+});
+
 module.exports = router;

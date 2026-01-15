@@ -619,6 +619,9 @@ const useAuthStore = create(
                 } finally {
                     if (shouldInvalidateCache) {
                         useCacheStore.getState().clearAll();
+                        // Re-warm cache after clearing
+                        const { profile: updatedProfile } = get();
+                        useCacheStore.getState().warmCache(user.id, updatedProfile?.partner_id);
                     }
                 }
             },
