@@ -11,7 +11,10 @@
 export const parseLocalDate = (dateString) => {
   if (!dateString || typeof dateString !== 'string') return null;
 
-  const parts = dateString.split('-');
+  const normalized = dateString.match(/^(\d{4}-\d{2}-\d{2})/)?.[1];
+  if (!normalized) return null;
+
+  const parts = normalized.split('-');
   if (parts.length !== 3) return null;
 
   const [year, month, day] = parts.map(Number);

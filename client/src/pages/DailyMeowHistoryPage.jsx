@@ -2,14 +2,14 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
-    Calendar, BookOpen, Search
+    Calendar, BookOpen, Search, Lock
 } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 import usePartnerStore from '../store/usePartnerStore';
-import useCacheStore, { CACHE_TTL, CACHE_KEYS } from '../store/useCacheStore';
+import useCacheStore, { CACHE_POLICY, cacheKey } from '../store/useCacheStore';
 import api from '../services/api';
-import { ChevronLeft } from 'lucide-react';
 import RequirePartner from '../components/RequirePartner';
+import BackButton from '../components/shared/BackButton';
 import { useI18n } from '../i18n';
 
 // Mood options with custom images (matching DailyMeowPage.jsx)
@@ -31,11 +31,11 @@ const MOOD_OPTIONS = [
     { id: 'anxious', image: '/assets/emotions/anxious.png', labelKey: 'moods.anxious' },
     { id: 'sad', image: '/assets/emotions/sad.png', labelKey: 'moods.sad' },
     { id: 'frustrated', image: '/assets/emotions/frustrated.png', labelKey: 'moods.frustrated' },
-    { id: 'overwhelmed', image: '/assets/emotions/overwhelmed.png', labelKey: 'moods.overwhelmed' },
     { id: 'lonely', image: '/assets/emotions/lonely.png', labelKey: 'moods.lonely' },
+    { id: 'hangry', image: '/assets/emotions/hangry.png', labelKey: 'moods.hangry' },
     { id: 'confused', image: '/assets/emotions/confused.png', labelKey: 'moods.confused' },
     { id: 'meh', image: '/assets/emotions/meh.png', labelKey: 'moods.meh' },
-    { id: 'hangry', image: '/assets/emotions/hangry.png', labelKey: 'moods.hangry' },
+    { id: 'overwhelmed', image: '/assets/emotions/overwhelmed.png', labelKey: 'moods.overwhelmed' },
 ];
 
 // MoodIcon component to render custom images
@@ -70,26 +70,28 @@ const DailyMeowHistoryPage = () => {
     const fetchHistory = useCallback(async () => {
         if (!myId || !partnerId) return;
 
-        const cacheKey = `${CACHE_KEYS.DAILY_HISTORY}:${myId}:${partnerId}:${language}`;
-
-        // Check cache first
-        const cached = useCacheStore.getState().getCached(cacheKey);
-        if (cached !== null) {
-            setHistory(cached);
-            setLoading(false);
-            return;
-        }
-
         try {
+            const cacheStore = useCacheStore.getState();
             setLoading(true);
-            const response = await api.get('/daily-questions/history', {
-                params: { userId: myId, partnerId, limit: 100 }
+            const key = cacheKey.dailyHistory(myId, partnerId, language);
+            const { data, promise } = await cacheStore.getOrFetch({
+                key,
+                fetcher: async () => {
+                    const response = await api.get('/daily-questions/history', {
+                        params: { userId: myId, partnerId, limit: 100 }
+                    });
+                    return response.data || [];
+                },
+                ...CACHE_POLICY.DAILY_HISTORY,
             });
-            const data = response.data || [];
 
-            // Cache the history
-            useCacheStore.getState().setCache(cacheKey, data, CACHE_TTL.DAILY_HISTORY);
-            setHistory(data);
+            setHistory(Array.isArray(data) ? data : []);
+
+            if (promise) {
+                promise.then((fresh) => {
+                    setHistory(Array.isArray(fresh) ? fresh : []);
+                }).catch(() => {});
+            }
         } catch (err) {
             console.error('Error fetching history:', err);
         } finally {
@@ -105,18 +107,53 @@ const DailyMeowHistoryPage = () => {
         }
     }, [fetchHistory, myId, partnerId, language]);
 
+    useEffect(() => {
+        if (!myId || !partnerId) return;
+        const cacheStore = useCacheStore.getState();
+        const key = cacheKey.dailyHistory(myId, partnerId, language);
+        const unsubscribe = cacheStore.subscribeKey(key, (next) => {
+            setHistory(Array.isArray(next) ? next : []);
+        });
+        return unsubscribe;
+    }, [myId, partnerId, language]);
+
     // Fetch user stats from unified API
     useEffect(() => {
         const fetchStats = async () => {
             if (!myId) return;
             try {
-                const response = await api.get('/stats');
-                setUserStats(response.data);
+                const cacheStore = useCacheStore.getState();
+                const key = cacheKey.stats(myId);
+                const { data, promise } = await cacheStore.getOrFetch({
+                    key,
+                    fetcher: async () => {
+                        const response = await api.get('/stats');
+                        return response.data || null;
+                    },
+                    ...CACHE_POLICY.STATS,
+                    revalidateOnInterval: true,
+                });
+
+                setUserStats(data);
+
+                if (promise) {
+                    promise.then((fresh) => setUserStats(fresh || null)).catch(() => {});
+                }
             } catch (err) {
                 console.error('Failed to fetch stats:', err);
             }
         };
         fetchStats();
+    }, [myId]);
+
+    useEffect(() => {
+        if (!myId) return;
+        const cacheStore = useCacheStore.getState();
+        const key = cacheKey.stats(myId);
+        const unsubscribe = cacheStore.subscribeKey(key, (next) => {
+            setUserStats(next || null);
+        });
+        return unsubscribe;
     }, [myId]);
 
     const getMoodData = (moodId) => MOOD_OPTIONS.find(m => m.id === moodId);
@@ -187,14 +224,21 @@ const DailyMeowHistoryPage = () => {
     const totalAnswered = userStats?.questions_completed ?? historyAnsweredCount;
     const streak = userStats?.current_streak ?? 0;
     const isGracePeriod = userStats?.is_grace_period ?? false;
+    const selectedMyMoods = selectedEntry ? getMoodList(selectedEntry.my_answer) : [];
+    const selectedPartnerMoods = selectedEntry ? getMoodList(selectedEntry.partner_answer) : [];
+    const selectedPartnerHasAnswered = !!selectedEntry?.partner_answer;
 
     return (
         <RequirePartner
             feature={t('dailyMeowHistory.feature')}
             description={t('dailyMeowHistory.requirePartnerDescription')}
         >
-            <div className="relative min-h-screen overflow-hidden pb-6">
-            <QuestionBackdrop />
+            <div className="relative min-h-screen pb-6">
+            {/* Background gradient */}
+            <div className="fixed inset-0 pointer-events-none">
+                <div className="absolute -top-20 -right-20 h-64 w-64 rounded-full bg-amber-200/30 blur-3xl" />
+                <div className="absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-rose-200/25 blur-3xl" />
+            </div>
             <div className="relative space-y-6">
             {/* Header */}
             <Motion.div
@@ -203,13 +247,7 @@ const DailyMeowHistoryPage = () => {
 
             >
                 <div className="flex items-start gap-3">
-                    <Motion.button
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => navigate(-1)}
-                        className="rounded-2xl border border-white/80 bg-white/80 p-2 shadow-soft"
-                    >
-                        <ChevronLeft className="w-5 h-5 text-neutral-600" />
-                    </Motion.button>
+                    <BackButton onClick={() => navigate(-1)} ariaLabel={t('common.back')} />
                     <div>
                         <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-amber-600">
                             {t('dailyMeowHistory.headerLabel')}
@@ -259,7 +297,7 @@ const DailyMeowHistoryPage = () => {
                 className="mt-4"
             >
                 <div className="relative">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
                     <input
                         type="text"
                         value={searchQuery}
@@ -287,57 +325,122 @@ const DailyMeowHistoryPage = () => {
                                 <div className="absolute -top-10 -right-8 h-24 w-24 rounded-full bg-amber-200/30 blur-2xl" />
                                 <div className="absolute -bottom-12 -left-10 h-28 w-28 rounded-full bg-rose-200/25 blur-3xl" />
                             </div>
-                            <div className="relative p-5 text-center border-b border-white/50">
-                                <h1 className="text-lg font-display font-bold text-neutral-800 tracking-tight mb-2">{t('dailyMeowHistory.dailyQuestionTitle')}</h1>
-                                <div className="flex items-center justify-center gap-2 mb-3">
+                            <div className="relative p-5 text-center border-b border-white/60">
+                                <div className="text-[10px] uppercase tracking-[0.35em] text-neutral-500 font-semibold mb-2">
+                                    {t('dailyMeowHistory.title')}
+                                </div>
+                                <h1 className="text-lg font-bold text-neutral-800 tracking-tight mb-3">
+                                    {t('dailyMeowHistory.dailyQuestionTitle')}
+                                </h1>
+                                <div className="flex flex-wrap items-center justify-center gap-2 mb-4">
+                                    <span className="inline-flex items-center px-3 py-1 bg-white/70 rounded-full text-xs font-bold text-neutral-700 shadow-sm">
+                                        {formatFullDate(selectedEntry.assigned_date)}
+                                    </span>
                                     {selectedEntry.category && (
-                                        <span className="inline-flex items-center px-3 py-1 bg-white/80 rounded-full text-xs font-bold text-neutral-700 shadow-sm">
+                                        <span className="inline-flex items-center px-3 py-1 bg-white/70 rounded-full text-xs font-bold text-neutral-700 shadow-sm">
                                             {selectedEntry.category}
                                         </span>
                                     )}
-                                    <span className="inline-flex items-center px-3 py-1 bg-white/80 rounded-full text-xs font-bold text-neutral-700 shadow-sm">
-                                        {formatFullDate(selectedEntry.assigned_date)}
-                                    </span>
                                 </div>
-                                <h2 className="text-xl font-bold text-neutral-800 leading-relaxed">{selectedEntry.question}</h2>
+                                <h2 className="text-xl font-display font-bold text-neutral-800 leading-relaxed">
+                                    {selectedEntry.question}
+                                </h2>
                             </div>
 
                             <div className="relative p-5 space-y-4">
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div className="bg-white/80 rounded-2xl border border-white/80 p-3 shadow-sm">
-                                        <div className="text-[11px] font-bold text-neutral-600 mb-2">{t('dailyMeowHistory.felt', { name: myDisplayName })}</div>
-                                        <div className="flex items-center gap-1.5 flex-wrap">
-                                            {getMoodList(selectedEntry.my_answer).map(id => {
-                                                const mood = getMoodData(id)
-                                                const label = mood ? t(mood.labelKey) : id
-                                                return <MoodIcon key={id} moodId={id} label={label} className="w-8 h-8" />
-                                            })}
+                                <div className="relative flex items-center justify-center py-1">
+                                    <span className="absolute inset-x-0 h-px bg-gradient-to-r from-transparent via-amber-200/60 to-transparent" />
+                                    <span className="relative z-10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-amber-600 bg-white/85 border border-amber-200/60 rounded-full shadow-soft">
+                                        {myDisplayName}
+                                    </span>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <div className="rounded-3xl border border-white/80 bg-white/80 p-4 shadow-soft">
+                                        <div className="text-[10px] uppercase tracking-[0.3em] text-neutral-500 font-semibold mb-3">
+                                            {t('dailyMeowHistory.felt', { name: myDisplayName })}
                                         </div>
+                                        {selectedMyMoods.length > 0 ? (
+                                            <div className="grid grid-cols-3 gap-3 text-center">
+                                                {selectedMyMoods.map((id) => {
+                                                    const mood = getMoodData(id);
+                                                    const label = mood ? t(mood.labelKey) : id;
+                                                    return (
+                                                        <div key={id} className="flex flex-col items-center gap-1.5 w-full">
+                                                            <MoodIcon moodId={id} label={label} className="w-14 h-14" />
+                                                            <span className="text-[13px] font-semibold text-neutral-600 leading-tight">
+                                                                {label}
+                                                            </span>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        ) : (
+                                            <div className="text-xs text-neutral-500">—</div>
+                                        )}
                                     </div>
-                                    <div className="bg-white/80 rounded-2xl border border-white/80 p-3 shadow-sm">
-                                        <div className="text-[11px] font-bold text-neutral-600 mb-2">{t('dailyMeowHistory.felt', { name: partnerDisplayName })}</div>
-                                        <div className="flex items-center gap-1.5 flex-wrap">
-                                            {getMoodList(selectedEntry.partner_answer).map(id => {
-                                                const mood = getMoodData(id)
-                                                const label = mood ? t(mood.labelKey) : id
-                                                return <MoodIcon key={id} moodId={id} label={label} className="w-8 h-8" />
-                                            })}
+
+                                    <div className="rounded-3xl p-4 border border-amber-200/60 bg-amber-50/60 shadow-soft">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="text-sm font-bold text-amber-700">
+                                                {t('dailyMeowHistory.answerLabel', { name: myDisplayName })}
+                                            </span>
                                         </div>
+                                        <p className="text-neutral-700 leading-relaxed">
+                                            {selectedEntry.my_answer?.answer || '—'}
+                                        </p>
                                     </div>
                                 </div>
 
-                                <div className="bg-white/80 rounded-2xl p-4 border border-white/80 shadow-sm">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <span className="text-sm font-bold text-amber-700">{t('dailyMeowHistory.answerLabel', { name: myDisplayName })}</span>
-                                    </div>
-                                    <p className="text-neutral-700 leading-relaxed">{selectedEntry.my_answer?.answer}</p>
+                                <div className="relative flex items-center justify-center py-1">
+                                    <span className="absolute inset-x-0 h-px bg-gradient-to-r from-transparent via-amber-200/60 to-transparent" />
+                                    <span className="relative z-10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-amber-600 bg-white/85 border border-amber-200/60 rounded-full shadow-soft">
+                                        {partnerDisplayName}
+                                    </span>
                                 </div>
 
-                                <div className="bg-white/80 rounded-2xl p-4 border border-rose-200/70 shadow-sm">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <span className="text-sm font-bold text-rose-700">{t('dailyMeowHistory.answerLabel', { name: partnerDisplayName })}</span>
+                                <div className="space-y-3">
+                                    <div className="rounded-3xl border border-white/80 bg-white/80 p-4 shadow-soft">
+                                        <div className="text-[10px] uppercase tracking-[0.3em] text-neutral-500 font-semibold mb-3">
+                                            {t('dailyMeowHistory.felt', { name: partnerDisplayName })}
+                                        </div>
+                                        {selectedPartnerHasAnswered ? (
+                                            selectedPartnerMoods.length > 0 ? (
+                                                <div className="grid grid-cols-3 gap-3 text-center">
+                                                    {selectedPartnerMoods.map((id) => {
+                                                        const mood = getMoodData(id);
+                                                        const label = mood ? t(mood.labelKey) : id;
+                                                        return (
+                                                            <div key={id} className="flex flex-col items-center gap-1.5 w-full">
+                                                                <MoodIcon moodId={id} label={label} className="w-14 h-14" />
+                                                                <span className="text-[13px] font-semibold text-neutral-600 leading-tight">
+                                                                    {label}
+                                                                </span>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            ) : (
+                                                <div className="text-xs text-neutral-500">—</div>
+                                            )
+                                        ) : (
+                                            <div className="flex items-center gap-2 text-xs text-neutral-500">
+                                                <Lock className="w-4 h-4 text-neutral-500" />
+                                                {t('common.waiting')}
+                                            </div>
+                                        )}
                                     </div>
-                                    <p className="text-neutral-700 leading-relaxed">{selectedEntry.partner_answer?.answer}</p>
+
+                                    <div className="rounded-3xl p-4 border border-rose-200/60 bg-rose-50/60 shadow-soft">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="text-sm font-bold text-rose-700">
+                                                {t('dailyMeowHistory.answerLabel', { name: partnerDisplayName })}
+                                            </span>
+                                        </div>
+                                        <p className="text-neutral-700 leading-relaxed">
+                                            {selectedEntry.partner_answer?.answer || '—'}
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -408,7 +511,7 @@ const DailyMeowHistoryPage = () => {
                                                         </span>
                                                     )}
                                                 </div>
-                                                <div className="text-[10px] text-neutral-400">
+                                                <div className="text-[10px] text-neutral-500">
                                                     {formatDate(item.assigned_date)}
                                                 </div>
                                             </div>
@@ -427,17 +530,9 @@ const DailyMeowHistoryPage = () => {
 };
 
 const QuestionBackdrop = () => (
-    <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute -top-24 -right-16 h-56 w-56 rounded-full bg-amber-200/30 blur-3xl" />
-        <div className="absolute top-16 -left-20 h-60 w-60 rounded-full bg-rose-200/25 blur-3xl" />
-        <div className="absolute bottom-6 right-8 h-64 w-64 rounded-full bg-amber-100/40 blur-3xl" />
-        <div
-            className="absolute inset-0 opacity-45"
-            style={{
-                backgroundImage:
-                    'radial-gradient(circle at 18% 20%, rgba(255,255,255,0.75) 0%, transparent 55%), radial-gradient(circle at 80% 10%, rgba(255,235,210,0.8) 0%, transparent 60%)'
-            }}
-        />
+    <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute -top-20 -right-20 h-64 w-64 rounded-full bg-amber-200/30 blur-3xl" />
+        <div className="absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-rose-200/25 blur-3xl" />
     </div>
 );
 

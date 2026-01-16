@@ -1,12 +1,89 @@
 /**
  * OpenRouter Client Configuration
- * 
+ *
  * JSON Mode: Uses response_format with json_schema for structured output
+ * Rate Limiting: Implements exponential backoff with retry on 429 errors
  */
 
 let _openRouterClient = null;
 const DEFAULT_TIMEOUT_MS = Number(process.env.OPENROUTER_TIMEOUT_MS || 60000);
 const DEFAULT_MODERATION_TIMEOUT_MS = Number(process.env.OPENAI_MODERATION_TIMEOUT_MS || 15000);
+
+// Rate limit configuration
+const RATE_LIMIT_CONFIG = {
+    maxRetries: 3,                    // Maximum retries on rate limit
+    baseDelayMs: 1000,               // Base delay for exponential backoff
+    maxDelayMs: 30000,               // Maximum delay cap
+    jitterFactor: 0.2,               // Add randomness to avoid thundering herd
+};
+
+/**
+ * Rate limit state tracking per model
+ * Stores last rate limit hit time and current backoff level
+ */
+const rateLimitState = new Map();
+
+/**
+ * Calculate delay with exponential backoff and jitter
+ * @param {number} attempt - Current attempt number (1-indexed)
+ * @param {number} retryAfter - Optional retry-after header value in seconds
+ * @returns {number} Delay in milliseconds
+ */
+function calculateBackoffDelay(attempt, retryAfter = null) {
+    // If server specifies retry-after, respect it
+    if (retryAfter && retryAfter > 0) {
+        return Math.min(retryAfter * 1000, RATE_LIMIT_CONFIG.maxDelayMs);
+    }
+
+    // Exponential backoff: base * 2^(attempt-1)
+    const exponentialDelay = RATE_LIMIT_CONFIG.baseDelayMs * Math.pow(2, attempt - 1);
+
+    // Add jitter to prevent thundering herd
+    const jitter = exponentialDelay * RATE_LIMIT_CONFIG.jitterFactor * Math.random();
+
+    // Cap at maximum delay
+    return Math.min(exponentialDelay + jitter, RATE_LIMIT_CONFIG.maxDelayMs);
+}
+
+/**
+ * Check if a response indicates rate limiting
+ * @param {Response} response - Fetch response object
+ * @returns {boolean}
+ */
+function isRateLimited(response) {
+    return response.status === 429;
+}
+
+/**
+ * Extract retry-after value from response headers
+ * @param {Response} response - Fetch response object
+ * @returns {number|null} Retry-after in seconds, or null if not specified
+ */
+function getRetryAfter(response) {
+    const retryAfter = response.headers.get('retry-after');
+    if (!retryAfter) return null;
+
+    // Can be a number of seconds or a date
+    const seconds = parseInt(retryAfter, 10);
+    if (!isNaN(seconds)) return seconds;
+
+    // Try parsing as date
+    const date = new Date(retryAfter);
+    if (!isNaN(date.getTime())) {
+        return Math.max(0, Math.ceil((date.getTime() - Date.now()) / 1000));
+    }
+
+    return null;
+}
+
+/**
+ * Sleep for specified milliseconds
+ * @param {number} ms - Milliseconds to sleep
+ * @returns {Promise<void>}
+ */
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 /**
  * Get the OpenRouter client instance
@@ -40,7 +117,8 @@ function isOpenRouterConfigured() {
 /**
  * Make a chat completion request to OpenRouter
  * Uses JSON mode with json_schema response format for consistent output
- * 
+ * Implements automatic retry with exponential backoff on rate limiting (429)
+ *
  * @param {object} options - The completion options
  * @param {string} options.model - The model to use
  * @param {array} options.messages - The chat messages
@@ -48,9 +126,10 @@ function isOpenRouterConfigured() {
  * @param {number} options.maxTokens - Maximum tokens to generate
  * @param {object} options.jsonSchema - The JSON schema for structured output
  * @param {string} options.reasoningEffort - Optional reasoning effort: low|medium|high
+ * @param {boolean} options.skipRateLimitRetry - Skip rate limit retry (for internal use)
  * @returns {Promise<object>} The completion response
  */
-async function createChatCompletion({ model, messages, temperature = 0.7, maxTokens = 2000, jsonSchema = null, reasoningEffort = null }) {
+async function createChatCompletion({ model, messages, temperature = 0.7, maxTokens = 2000, jsonSchema = null, reasoningEffort = null, skipRateLimitRetry = false }) {
     const client = getOpenRouter();
 
     const body = {
@@ -78,37 +157,99 @@ async function createChatCompletion({ model, messages, temperature = 0.7, maxTok
 
     console.log(`[OpenRouter] Calling ${model} with JSON schema: ${jsonSchema ? 'yes' : 'no'}, reasoning: ${body.reasoning ? `yes (effort=${body.reasoning.effort})` : 'no'}`);
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
-    let response;
-    try {
-        response = await fetch(`${client.baseUrl}/chat/completions`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${client.apiKey}`,
-                'HTTP-Referer': 'https://catjudge.app',
-                'X-Title': 'Cat Judge - Relationship Dispute Resolution',
-            },
-            body: JSON.stringify(body),
-            signal: controller.signal,
-        });
-    } finally {
-        clearTimeout(timeoutId);
+    // Retry loop for rate limiting
+    let lastError = null;
+    const maxAttempts = skipRateLimitRetry ? 1 : RATE_LIMIT_CONFIG.maxRetries + 1;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
+        let response;
+
+        try {
+            response = await fetch(`${client.baseUrl}/chat/completions`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${client.apiKey}`,
+                    'HTTP-Referer': 'https://catjudge.app',
+                    'X-Title': 'Cat Judge - Relationship Dispute Resolution',
+                },
+                body: JSON.stringify(body),
+                signal: controller.signal,
+            });
+        } catch (fetchError) {
+            clearTimeout(timeoutId);
+            // Network error or abort - don't retry on abort
+            if (fetchError.name === 'AbortError') {
+                throw new Error(`OpenRouter API timeout after ${DEFAULT_TIMEOUT_MS}ms`);
+            }
+            throw fetchError;
+        } finally {
+            clearTimeout(timeoutId);
+        }
+
+        // Handle rate limiting with retry
+        if (isRateLimited(response)) {
+            const retryAfter = getRetryAfter(response);
+            const delayMs = calculateBackoffDelay(attempt, retryAfter);
+
+            // Update rate limit state for this model
+            rateLimitState.set(model, {
+                lastHit: Date.now(),
+                consecutiveHits: (rateLimitState.get(model)?.consecutiveHits || 0) + 1,
+            });
+
+            // Log rate limit hit
+            const errorText = await response.text().catch(() => '');
+            console.warn(`[OpenRouter] Rate limited (429) on ${model}, attempt ${attempt}/${maxAttempts}. Retry-After: ${retryAfter || 'not specified'}. Waiting ${delayMs}ms...`);
+
+            // If this is not the last attempt, wait and retry
+            if (attempt < maxAttempts) {
+                await sleep(delayMs);
+                continue;
+            }
+
+            // All retries exhausted
+            lastError = new Error(`OpenRouter rate limit exceeded after ${maxAttempts} attempts: ${errorText}`);
+            lastError.isRateLimited = true;
+            lastError.model = model;
+            throw lastError;
+        }
+
+        // Handle other errors
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('[OpenRouter] API Error:', errorText);
+
+            // Check for specific error types that might benefit from retry
+            const isServerError = response.status >= 500 && response.status < 600;
+            if (isServerError && attempt < maxAttempts && !skipRateLimitRetry) {
+                const delayMs = calculateBackoffDelay(attempt);
+                console.warn(`[OpenRouter] Server error (${response.status}), retrying in ${delayMs}ms...`);
+                await sleep(delayMs);
+                continue;
+            }
+
+            throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
+        }
+
+        // Success - clear rate limit state for this model
+        if (rateLimitState.has(model)) {
+            rateLimitState.delete(model);
+        }
+
+        const data = await response.json();
+
+        return {
+            choices: data.choices,
+            usage: data.usage,
+            _rateLimitRetries: attempt - 1, // Metadata: how many retries were needed
+        };
     }
 
-    if (!response.ok) {
-        const errorText = await response.text();
-        console.error('[OpenRouter] API Error:', errorText);
-        throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
-    }
-
-    const data = await response.json();
-
-    return {
-        choices: data.choices,
-        usage: data.usage,
-    };
+    // Should not reach here, but safety fallback
+    throw lastError || new Error('OpenRouter request failed unexpectedly');
 }
 
 /**
@@ -154,7 +295,14 @@ async function createModeration(text) {
         return await response.json();
     } catch (error) {
         console.error('[OpenRouter] Moderation check failed:', error);
-        return { results: [{ flagged: false, categories: {} }] };
+        // Fail-closed: treat as flagged when API fails
+        return {
+            results: [{
+                flagged: true,
+                categories: { error: true },
+                _moderationError: true
+            }]
+        };
     }
 }
 
@@ -163,4 +311,10 @@ module.exports = {
     isOpenRouterConfigured,
     createChatCompletion,
     createModeration,
+    // Rate limit utilities (exported for testing and monitoring)
+    RATE_LIMIT_CONFIG,
+    rateLimitState,
+    calculateBackoffDelay,
+    isRateLimited,
+    getRetryAfter,
 };

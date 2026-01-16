@@ -64,4 +64,39 @@ api.interceptors.request.use(async (config) => {
     return config;
 });
 
+// Response interceptor for 401 handling with token refresh (CRITICAL-008 fix)
+api.interceptors.response.use(
+    (response) => response,
+    async (error) => {
+        const originalRequest = error.config;
+
+        // If 401 and not already retrying
+        if (error.response?.status === 401 && !originalRequest._retry) {
+            originalRequest._retry = true;
+
+            try {
+                // Attempt to refresh session
+                const { data: { session }, error: refreshError } = await supabase.auth.refreshSession();
+
+                if (refreshError || !session) {
+                    // Refresh failed, trigger logout
+                    console.warn('[API] Token refresh failed, logging out');
+                    useAuthStore.getState().signOut();
+                    return Promise.reject(error);
+                }
+
+                // Update token and retry
+                originalRequest.headers.Authorization = `Bearer ${session.access_token}`;
+                return api(originalRequest);
+            } catch (refreshError) {
+                console.error('[API] Token refresh exception:', refreshError);
+                useAuthStore.getState().signOut();
+                return Promise.reject(error);
+            }
+        }
+
+        return Promise.reject(error);
+    }
+);
+
 export default api;

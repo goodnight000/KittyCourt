@@ -73,7 +73,7 @@ export const loadUserContext = async (user, options = {}) => {
             profile = profileData;
         } else if (profileError?.code === 'PGRST116') {
             // Profile not found - create a new one
-            console.log('[ProfileLoader] Profile not found (PGRST116), creating new profile');
+            if (import.meta.env.DEV) console.log('[ProfileLoader] Profile not found (PGRST116), creating new profile');
             const partnerCode = generatePartnerCode();
             const { data: newProfile, error: createError } = await upsertProfile({
                 id: user.id,
@@ -86,7 +86,7 @@ export const loadUserContext = async (user, options = {}) => {
 
             if (!createError && newProfile) {
                 profile = newProfile;
-                console.log('[ProfileLoader] Created new profile successfully');
+                if (import.meta.env.DEV) console.log('[ProfileLoader] Created new profile successfully');
             } else {
                 console.error('[ProfileLoader] Failed to create profile:', createError);
             }
@@ -185,7 +185,7 @@ export const loadProfile = async (user, options = {}) => {
 
         if (profileError?.code === 'PGRST116') {
             // Profile not found - create a new one
-            console.log('[ProfileLoader] Profile not found, creating new profile');
+            if (import.meta.env.DEV) console.log('[ProfileLoader] Profile not found, creating new profile');
             const partnerCode = generatePartnerCode();
             const { data: newProfile, error: createError } = await upsertProfile({
                 id: user.id,

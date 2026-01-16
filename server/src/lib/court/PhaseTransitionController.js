@@ -176,10 +176,6 @@ class PhaseTransitionController {
         }
 
         // Build verdict from final resolution
-        const isHybrid = session.finalResolution?.id
-            ? session.finalResolution.id === session.hybridResolution?.id
-            : false;
-
         // Get the actual resolution objects for user picks
         const userAPickedResolution = session.userAResolutionPick
             ? this._findResolutionById(session, session.userAResolutionPick)
@@ -187,15 +183,28 @@ class PhaseTransitionController {
         const userBPickedResolution = session.userBResolutionPick
             ? this._findResolutionById(session, session.userBResolutionPick)
             : null;
+        const resolvedFinalResolution = session.finalResolution
+            || userAPickedResolution
+            || userBPickedResolution
+            || session.hybridResolution
+            || null;
+
+        if (!session.finalResolution && resolvedFinalResolution) {
+            session.finalResolution = resolvedFinalResolution;
+        }
+
+        const isHybrid = resolvedFinalResolution?.id
+            ? resolvedFinalResolution.id === session.hybridResolution?.id
+            : false;
 
         session.verdict = {
             status: 'success',
             judgeContent: {
                 theSummary: session.jointMenu?.theSummary || 'Resolution found.',
                 theSentence: {
-                    title: session.finalResolution?.title || 'Resolution',
-                    description: session.finalResolution?.description || session.finalResolution?.combinedDescription,
-                    rationale: session.finalResolution?.rationale
+                    title: resolvedFinalResolution?.title || 'Resolution',
+                    description: resolvedFinalResolution?.description || resolvedFinalResolution?.combinedDescription,
+                    rationale: resolvedFinalResolution?.rationale
                 },
                 closingStatement: session.jointMenu?.closingWisdom || 'May this resolution bring you closer together.'
             },
@@ -205,7 +214,7 @@ class PhaseTransitionController {
                 resolutions: session.resolutions,
                 primingContent: session.primingContent || null,
                 jointMenu: session.jointMenu || null,
-                finalResolution: session.finalResolution,
+                finalResolution: resolvedFinalResolution,
                 isHybrid,
                 // Track individual resolution picks for history
                 userAResolutionPick: userAPickedResolution,

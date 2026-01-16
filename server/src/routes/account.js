@@ -9,6 +9,7 @@ const express = require('express');
 const { getSupabase, isSupabaseConfigured } = require('../lib/supabase');
 const { requireAuthUserId } = require('../lib/auth');
 const { safeErrorMessage } = require('../lib/shared/errorUtils');
+const { sendError } = require('../lib/http');
 
 const router = express.Router();
 
@@ -23,7 +24,7 @@ const router = express.Router();
  */
 router.delete('/', async (req, res) => {
     if (!isSupabaseConfigured()) {
-        return res.status(503).json({ error: 'Service not configured' });
+        return sendError(res, 503, 'SERVICE_UNAVAILABLE', 'Service not configured');
     }
 
     try {
@@ -44,7 +45,7 @@ router.delete('/', async (req, res) => {
         }
 
         if (profile?.partner_id) {
-            return res.status(400).json({ error: 'You must disconnect from your partner before deleting your account.' });
+            return sendError(res, 400, 'PARTNER_CONNECTED', 'You must disconnect from your partner before deleting your account.');
         }
 
         const nowIso = new Date().toISOString();
@@ -128,7 +129,7 @@ router.delete('/', async (req, res) => {
         res.json({ success: true, message: 'Account deleted' });
     } catch (error) {
         console.error('[Account] Delete failed:', error);
-        res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
+        return sendError(res, error.statusCode || 500, 'SERVER_ERROR', safeErrorMessage(error));
     }
 });
 

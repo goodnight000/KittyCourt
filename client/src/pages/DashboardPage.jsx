@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Heart, Sparkles, X, Check, Lock, BookOpen, Flame, ArrowRight } from 'lucide-react';
+import { Heart, X, Check, Lock, BookOpen, Flame, ArrowRight } from 'lucide-react';
 import useAppStore from '../store/useAppStore';
 import useAuthStore from '../store/useAuthStore';
 import usePartnerStore from '../store/usePartnerStore';
 import useSubscriptionStore from '../store/useSubscriptionStore';
-import useCacheStore, { CACHE_TTL, CACHE_KEYS } from '../store/useCacheStore';
+import useCacheStore, { CACHE_POLICY, cacheKey } from '../store/useCacheStore';
 import api from '../services/api';
 import ProfilePicture from '../components/ProfilePicture';
 import DisconnectNotice from '../components/DisconnectNotice';
@@ -30,6 +30,14 @@ const DashboardPage = () => {
     const [, setStreakExpired] = useState(false);
     const [, setCanRevive] = useState(false);
 
+    const applyStats = useCallback((stats) => {
+        setQuestionStreak(stats?.current_streak || 0);
+        setIsGracePeriod(stats?.is_grace_period || false);
+        setGraceDaysRemaining(stats?.grace_days_remaining || 0);
+        setStreakExpired(stats?.streak_expired || false);
+        setCanRevive(stats?.can_revive || false);
+    }, []);
+
     // Get partner name - prefer connected partner from auth store
     const partnerName = connectedPartner?.display_name || t('common.partner');
     // Get current user's display name
@@ -45,37 +53,40 @@ const DashboardPage = () => {
         const fetchStreakStats = async () => {
             if (!authUser?.id || !connectedPartner?.id) return;
 
-            const cacheKey = `${CACHE_KEYS.STREAK}:${authUser.id}:${connectedPartner.id}`;
-
-            // Check cache first
-            const cached = useCacheStore.getState().getCached(cacheKey);
-            if (cached !== null) {
-                setQuestionStreak(cached.current_streak || 0);
-                setIsGracePeriod(cached.is_grace_period || false);
-                setGraceDaysRemaining(cached.grace_days_remaining || 0);
-                setStreakExpired(cached.streak_expired || false);
-                setCanRevive(cached.can_revive || false);
-                return;
-            }
-
             try {
-                const response = await api.get('/stats');
-                const stats = response.data || {};
+                const cacheStore = useCacheStore.getState();
+                const key = cacheKey.stats(authUser.id);
+                const { data, promise } = await cacheStore.getOrFetch({
+                    key,
+                    fetcher: async () => {
+                        const response = await api.get('/stats');
+                        return response.data || {};
+                    },
+                    ...CACHE_POLICY.STATS,
+                    revalidateOnInterval: true,
+                });
 
-                // Cache the stats object
-                useCacheStore.getState().setCache(cacheKey, stats, CACHE_TTL.STREAK);
+                applyStats(data || {});
 
-                setQuestionStreak(stats.current_streak || 0);
-                setIsGracePeriod(stats.is_grace_period || false);
-                setGraceDaysRemaining(stats.grace_days_remaining || 0);
-                setStreakExpired(stats.streak_expired || false);
-                setCanRevive(stats.can_revive || false);
+                if (promise) {
+                    promise.then((fresh) => applyStats(fresh || {})).catch(() => {});
+                }
             } catch (err) {
                 console.error('Failed to fetch streak stats:', err);
             }
         };
         fetchStreakStats();
-    }, [authUser?.id, connectedPartner?.id, language]);
+    }, [authUser?.id, connectedPartner?.id, language, applyStats]);
+
+    useEffect(() => {
+        if (!authUser?.id) return;
+        const cacheStore = useCacheStore.getState();
+        const key = cacheKey.stats(authUser.id);
+        const unsubscribe = cacheStore.subscribeKey(key, (stats) => {
+            applyStats(stats || {});
+        });
+        return unsubscribe;
+    }, [authUser?.id, applyStats]);
 
     // Fetch today's question for dashboard preview (with caching)
     useEffect(() => {
@@ -85,24 +96,28 @@ const DashboardPage = () => {
                 return;
             }
 
-            const cacheKey = `${CACHE_KEYS.DAILY_QUESTION}:${authUser.id}:${connectedPartner.id}:${language}`;
-
-            // Check cache first
-            const cached = useCacheStore.getState().getCached(cacheKey);
-            if (cached !== null) {
-                setTodaysQuestion(cached);
-                setQuestionLoading(false);
-                return;
-            }
-
             try {
+                const cacheStore = useCacheStore.getState();
+                const key = cacheKey.dailyQuestion(authUser.id, connectedPartner.id, language);
                 setQuestionLoading(true);
-                const response = await api.get('/daily-questions/today', {
-                    params: { userId: authUser.id, partnerId: connectedPartner.id }
+
+                const { data, promise } = await cacheStore.getOrFetch({
+                    key,
+                    fetcher: async () => {
+                        const response = await api.get('/daily-questions/today', {
+                            params: { userId: authUser.id, partnerId: connectedPartner.id }
+                        });
+                        return response.data;
+                    },
+                    ...CACHE_POLICY.DAILY_QUESTION,
+                    revalidateOnInterval: true,
                 });
-                // Cache for 2 minutes (shorter TTL since this can change when partner answers)
-                useCacheStore.getState().setCache(cacheKey, response.data, 2 * 60 * 1000);
-                setTodaysQuestion(response.data);
+
+                setTodaysQuestion(data || null);
+
+                if (promise) {
+                    promise.then((fresh) => setTodaysQuestion(fresh || null)).catch(() => {});
+                }
             } catch (err) {
                 console.error('Failed to fetch daily question:', err);
             } finally {
@@ -110,6 +125,16 @@ const DashboardPage = () => {
             }
         };
         fetchTodaysQuestion();
+    }, [authUser?.id, connectedPartner?.id, language]);
+
+    useEffect(() => {
+        if (!authUser?.id || !connectedPartner?.id) return;
+        const cacheStore = useCacheStore.getState();
+        const key = cacheKey.dailyQuestion(authUser.id, connectedPartner.id, language);
+        const unsubscribe = cacheStore.subscribeKey(key, (nextQuestion) => {
+            setTodaysQuestion(nextQuestion || null);
+        });
+        return unsubscribe;
     }, [authUser?.id, connectedPartner?.id, language]);
 
     // Calculate actual days together from anniversary date (prefer Supabase profile)
@@ -234,7 +259,7 @@ const DashboardPage = () => {
         },
     ];
     return (
-        <div className="relative min-h-screen overflow-hidden pb-6">
+        <div className="relative min-h-screen pb-6">
             <HomeBackdrop />
             <div className="relative space-y-6">
                 <Motion.div
@@ -256,7 +281,7 @@ const DashboardPage = () => {
                     <div className="relative space-y-4">
                         <div className="flex items-start justify-between gap-4">
                             <div>
-                                <div className="text-[11px] uppercase tracking-[0.35em] text-neutral-400 font-semibold">
+                                <div className="text-[11px] uppercase tracking-[0.35em] text-neutral-500 font-semibold">
                                     {todayLabel}
                                 </div>
                                 <h1 className="text-2xl font-display font-bold text-neutral-800">
@@ -274,13 +299,14 @@ const DashboardPage = () => {
                             <Motion.button
                                 whileTap={{ scale: 0.98 }}
                                 onClick={() => navigate('/profile')}
+                                aria-label={t('dashboard.stats.daysTogether')}
                                 className="relative overflow-hidden rounded-2xl border border-rose-200/70 bg-white/85 px-3 py-3 text-left shadow-inner-soft"
                             >
                                 <div className="absolute -top-8 -right-6 h-16 w-16 rounded-full bg-rose-200/40 blur-2xl" />
                                 <div className="relative">
                                     <div className="flex items-center justify-between">
                                         <Heart className="w-4 h-4 text-rose-500 fill-current" />
-                                        <span className="text-[10px] font-semibold uppercase tracking-[0.3em] text-neutral-400">
+                                        <span className="text-[10px] font-semibold uppercase tracking-[0.3em] text-neutral-500">
                                             {t('dashboard.stats.daysLabel')}
                                         </span>
                                     </div>
@@ -294,13 +320,14 @@ const DashboardPage = () => {
                             <Motion.button
                                 whileTap={{ scale: 0.98 }}
                                 onClick={() => navigate(hasPartner ? '/daily-meow/history' : '/connect')}
+                                aria-label={t('dashboard.stats.questionStreak')}
                                 className={`relative overflow-hidden rounded-2xl border ${isGracePeriod ? 'border-neutral-200/70' : 'border-amber-200/70'} bg-white/85 px-3 py-3 text-left shadow-inner-soft`}
                             >
                                 <div className={`absolute -top-8 -right-6 h-16 w-16 rounded-full ${isGracePeriod ? 'bg-neutral-200/40' : 'bg-amber-200/40'} blur-2xl`} />
                                 <div className="relative">
                                     <div className="flex items-center justify-between">
                                         <div className="relative">
-                                            <Flame className={`w-4 h-4 ${isGracePeriod ? 'text-neutral-400' : 'text-amber-500'} fill-current`} />
+                                            <Flame className={`w-4 h-4 ${isGracePeriod ? 'text-neutral-500' : 'text-amber-500'} fill-current`} />
                                             {/* Grace period warning badge */}
                                             {isGracePeriod && (
                                                 <Motion.div
@@ -312,7 +339,7 @@ const DashboardPage = () => {
                                                 </Motion.div>
                                             )}
                                         </div>
-                                        <span className="text-[10px] font-semibold uppercase tracking-[0.3em] text-neutral-400">
+                                        <span className="text-[10px] font-semibold uppercase tracking-[0.3em] text-neutral-500">
                                             {t('dashboard.stats.streakLabel')}
                                         </span>
                                     </div>
@@ -349,6 +376,10 @@ const DashboardPage = () => {
                     transition={{ delay: 0.1 }}
                     whileTap={{ scale: 0.995 }}
                     onClick={() => navigate(hasPartner ? '/daily-meow' : '/connect')}
+                    onKeyDown={(e) => e.key === 'Enter' && navigate(hasPartner ? '/daily-meow' : '/connect')}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={questionLoading ? t('dashboard.dailyQuestion.loading') : (todaysQuestion?.question || t('dashboard.dailyQuestion.fallbackQuestion'))}
                     className="relative overflow-hidden rounded-[32px] cursor-pointer shadow-xl flex-1 min-h-[260px] flex flex-col"
                 >
                     {/* Background Image */}
@@ -361,23 +392,11 @@ const DashboardPage = () => {
                     {/* Dark overlay for better text readability */}
                     <div className="absolute inset-0 bg-black/10" />
 
-                    {bothAnswered && (
-                        <Motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            className="absolute inset-0 overflow-hidden pointer-events-none"
-                        >
-                            <Sparkles className="absolute top-6 right-16 w-5 h-5 text-white/40 animate-pulse" />
-                            <Sparkles className="absolute top-12 right-8 w-4 h-4 text-white/30 animate-pulse" style={{ animationDelay: '0.5s' }} />
-                            <Sparkles className="absolute bottom-20 right-12 w-4 h-4 text-white/30 animate-pulse" style={{ animationDelay: '1s' }} />
-                        </Motion.div>
-                    )}
-
                     <div className="relative z-10 p-6 flex flex-col h-full items-center justify-center text-center">
                         {showPartnerPrompt ? (
                             <>
                                 <div className="mb-4">
-                                    <span className="px-3 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase bg-white/80 text-[#8B6F47] backdrop-blur-sm border border-white/60">
+                                    <span className="px-3 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase bg-white/80 text-[#6B5635] backdrop-blur-sm border border-white/60">
                                         {t('dashboard.dailyQuestion.connectBadge')}
                                     </span>
                                 </div>
@@ -394,19 +413,19 @@ const DashboardPage = () => {
                                         />
                                         <div className="text-left">
                                             <p className="text-[10px] font-bold leading-tight text-neutral-700">{t('common.you')}</p>
-                                            <p className="text-[9px] leading-tight text-neutral-400">{t('dashboard.dailyQuestion.ready')}</p>
+                                            <p className="text-[9px] leading-tight text-neutral-500">{t('dashboard.dailyQuestion.ready')}</p>
                                         </div>
                                     </div>
                                     <div className="relative z-20 mx-[-6px]">
-                                        <div className="w-9 h-9 bg-white rounded-full flex items-center justify-center shadow-sm border-[3px] border-[#8B6F47]/60">
-                                            <Heart className="w-3.5 h-3.5 text-[#8B6F47]" />
+                                        <div className="w-9 h-9 bg-white rounded-full flex items-center justify-center shadow-sm border-[3px] border-[#6B5635]/60">
+                                            <Heart className="w-3.5 h-3.5 text-[#6B5635]" />
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2 pl-4 pr-2 py-2 rounded-full bg-white/60 border border-white/70 shadow-sm -translate-x-3">
                                         <div className="w-8 h-8 rounded-full border-2 border-dashed border-neutral-300 bg-white/70" />
                                         <div className="text-left">
                                             <p className="text-[10px] font-bold leading-tight text-neutral-600">{t('common.partner')}</p>
-                                            <p className="text-[9px] leading-tight text-neutral-400">{t('dashboard.dailyQuestion.notConnected')}</p>
+                                            <p className="text-[9px] leading-tight text-neutral-500">{t('dashboard.dailyQuestion.notConnected')}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -428,6 +447,7 @@ const DashboardPage = () => {
                                 <motion.button
                                     whileTap={{ scale: 0.98 }}
                                     onClick={() => navigate('/connect')}
+                                    aria-label={t('disconnectNotice.cta')}
                                     className="mt-5 inline-flex items-center gap-2 rounded-full bg-neutral-900/85 px-5 py-3 text-xs font-bold text-white shadow-soft"
                                 >
                                     {t('disconnectNotice.cta')}
@@ -438,7 +458,7 @@ const DashboardPage = () => {
                             <>
                                 {/* Header Badge */}
                                 <div className="mb-4">
-                                    <span className={`px-3 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase bg-[#8B6F47]/80 text-white backdrop-blur-sm border border-[#6B5635]/30`}>
+                                    <span className={`px-3 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase bg-[#6B5635]/80 text-white backdrop-blur-sm border border-[#6B5635]/30`}>
                                         {bothAnswered
                                             ? t('dashboard.dailyQuestion.badge.completed')
                                             : hasAnswered
@@ -457,7 +477,7 @@ const DashboardPage = () => {
                                 {/* Status Indicators - Fully Rounded Capsule Pills with Overlapping Heart */}
                                 <div className="flex items-center justify-center">
                                     {/* User Status Pill - Using warm brown to match parchment */}
-                                    <div className={`flex items-center gap-2 pl-2 pr-5 py-2 rounded-full relative z-0 translate-x-3 ${hasAnswered ? 'bg-white' : 'bg-[#8B6F47]'}`}>
+                                    <div className={`flex items-center gap-2 pl-2 pr-5 py-2 rounded-full relative z-0 translate-x-3 ${hasAnswered ? 'bg-white' : 'bg-[#6B5635]'}`}>
                                         {/* User Avatar */}
                                         <ProfilePicture
                                             avatarUrl={myAvatarUrl}
@@ -469,7 +489,7 @@ const DashboardPage = () => {
                                             <p className={`text-[10px] font-bold leading-tight ${hasAnswered ? 'text-neutral-800' : 'text-white'}`}>
                                                 {t('dashboard.dailyQuestion.youLabel', { status: hasAnswered ? '✓' : '' })}
                                             </p>
-                                            <p className={`text-[9px] leading-tight ${hasAnswered ? 'text-neutral-500' : 'text-white/70'}`}>
+                                            <p className={`text-[11px] leading-tight ${hasAnswered ? 'text-neutral-600' : 'text-white/90'}`}>
                                                 {hasAnswered ? t('dashboard.dailyQuestion.answered') : t('dashboard.dailyQuestion.waiting')}
                                             </p>
                                         </div>
@@ -477,13 +497,13 @@ const DashboardPage = () => {
 
                                     {/* Heart Connector - Overlaps both pills */}
                                     <div className="relative z-20 mx-[-6px]">
-                                        <div className="w-9 h-9 bg-white rounded-full flex items-center justify-center shadow-sm border-[3px] border-[#8B6F47]">
-                                            <Heart className={`w-3.5 h-3.5 ${bothAnswered ? 'text-[#6B5635] fill-current' : 'text-[#8B6F47]'}`} />
+                                        <div className="w-9 h-9 bg-white rounded-full flex items-center justify-center shadow-sm border-[3px] border-[#6B5635]">
+                                            <Heart className={`w-3.5 h-3.5 ${bothAnswered ? 'text-[#6B5635] fill-current' : 'text-[#6B5635]'}`} />
                                         </div>
                                     </div>
 
                                     {/* Partner Status Pill - Using warm brown to match parchment */}
-                                    <div className={`flex items-center gap-2 pl-5 pr-2 py-2 rounded-full relative z-0 -translate-x-3 ${partnerHasAnswered ? 'bg-white' : 'bg-[#8B6F47]'}`}>
+                                    <div className={`flex items-center gap-2 pl-5 pr-2 py-2 rounded-full relative z-0 -translate-x-3 ${partnerHasAnswered ? 'bg-white' : 'bg-[#6B5635]'}`}>
                                         <div className="text-right">
                                             <p className={`text-[10px] font-bold leading-tight ${partnerHasAnswered ? 'text-neutral-800' : 'text-white'}`}>
                                                 {t('dashboard.dailyQuestion.partnerLabel', {
@@ -491,7 +511,7 @@ const DashboardPage = () => {
                                                     status: partnerHasAnswered ? '✓' : ''
                                                 })}
                                             </p>
-                                            <p className={`text-[9px] leading-tight ${partnerHasAnswered ? 'text-neutral-500' : 'text-white/70'}`}>
+                                            <p className={`text-[11px] leading-tight ${partnerHasAnswered ? 'text-neutral-600' : 'text-white/90'}`}>
                                                 {partnerHasAnswered ? t('dashboard.dailyQuestion.answered') : (
                                                     <span className="inline-flex items-center">
                                                         {t('dashboard.dailyQuestion.waiting')}
@@ -553,6 +573,10 @@ const DashboardPage = () => {
                     transition={{ delay: 0.2 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => navigate(hasPartner ? '/daily-meow/history' : '/connect')}
+                    onKeyDown={(e) => e.key === 'Enter' && navigate(hasPartner ? '/daily-meow/history' : '/connect')}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={t('dashboard.archive.title')}
                     className="glass-card relative overflow-hidden cursor-pointer border border-amber-200/60"
                 >
                     <div className="absolute inset-0 pointer-events-none">
@@ -568,7 +592,7 @@ const DashboardPage = () => {
                             <BookOpen className="w-6 h-6 text-amber-600" />
                         </div>
                         <div className="flex-1">
-                            <div className="text-[10px] uppercase tracking-[0.35em] text-neutral-400 font-semibold">
+                            <div className="text-[10px] uppercase tracking-[0.35em] text-neutral-500 font-semibold">
                                 {t('dashboard.archive.kicker')}
                             </div>
                             <h3 className="font-bold text-neutral-800 text-sm">{t('dashboard.archive.title')}</h3>
@@ -576,10 +600,10 @@ const DashboardPage = () => {
                         </div>
                         {!hasPartner && (
                             <div className="w-7 h-7 rounded-full bg-neutral-100 border border-neutral-200 flex items-center justify-center">
-                                <Lock className="w-3.5 h-3.5 text-neutral-400" />
+                                <Lock className="w-3.5 h-3.5 text-neutral-500" />
                             </div>
                         )}
-                        {hasPartner && <ArrowRight className="w-5 h-5 text-neutral-400" />}
+                        {hasPartner && <ArrowRight className="w-5 h-5 text-neutral-500" />}
                     </div>
                 </Motion.div>
 
@@ -637,7 +661,7 @@ const DashboardPage = () => {
                                                     <Heart className="w-5 h-5 text-rose-500 fill-current" />
                                                 </div>
                                                 <div>
-                                                    <div className="text-[10px] uppercase tracking-[0.35em] text-neutral-400 font-semibold">
+                                                    <div className="text-[10px] uppercase tracking-[0.35em] text-neutral-500 font-semibold">
                                                         {t('dashboard.goodDeed.kicker')}
                                                     </div>
                                                     <h3 className="font-display font-bold text-neutral-800 text-lg">
@@ -647,6 +671,7 @@ const DashboardPage = () => {
                                             </div>
                                             <button
                                                 onClick={() => setShowGoodDeedModal(false)}
+                                                aria-label={t('common.close') || 'Close'}
                                                 className="w-8 h-8 bg-white/80 border border-neutral-200/70 rounded-full flex items-center justify-center shadow-soft"
                                             >
                                                 <X className="w-4 h-4 text-neutral-500" />
@@ -665,9 +690,9 @@ const DashboardPage = () => {
                                                 value={goodDeedText}
                                                 onChange={(e) => setGoodDeedText(e.target.value)}
                                                 placeholder={t('dashboard.goodDeed.placeholder', { name: partnerName })}
-                                                className="w-full h-28 bg-white/80 border border-rose-100 rounded-2xl p-3 text-neutral-700 placeholder:text-neutral-400 focus:ring-2 focus:ring-rose-200 focus:border-rose-300 focus:outline-none resize-none text-sm shadow-inner-soft"
+                                                className="w-full h-28 bg-white/80 border border-rose-100 rounded-2xl p-3 text-neutral-700 placeholder:text-neutral-500 focus:ring-2 focus:ring-rose-200 focus:border-rose-300 focus:outline-none resize-none text-sm shadow-inner-soft"
                                             />
-                                            <div className="flex items-center justify-between text-[11px] text-neutral-400">
+                                            <div className="flex items-center justify-between text-[11px] text-neutral-500">
                                                 <span>{t('dashboard.goodDeed.helper')}</span>
                                                 <span>{goodDeedText.length} / 120</span>
                                             </div>
@@ -766,7 +791,7 @@ const ActionTile = ({ icon, label, detail, locked, accent, onClick }) => {
             {/* Lock indicator */}
             {locked && (
                 <div className="absolute top-3 right-3 flex h-6 w-6 items-center justify-center rounded-full bg-white/90 border border-neutral-200 shadow-sm">
-                    <Lock className="w-3 h-3 text-neutral-400" />
+                    <Lock className="w-3 h-3 text-neutral-500" />
                 </div>
             )}
 
@@ -792,17 +817,9 @@ const ActionTile = ({ icon, label, detail, locked, accent, onClick }) => {
 };
 
 const HomeBackdrop = () => (
-    <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute -top-24 -right-16 h-56 w-56 rounded-full bg-rose-200/25 blur-3xl" />
-        <div className="absolute top-24 -left-20 h-60 w-60 rounded-full bg-amber-200/30 blur-3xl" />
-        <div className="absolute bottom-10 right-8 h-64 w-64 rounded-full bg-amber-100/40 blur-3xl" />
-        <div
-            className="absolute inset-0 opacity-45"
-            style={{
-                backgroundImage:
-                    'radial-gradient(circle at 18% 20%, rgba(255,255,255,0.75) 0%, transparent 55%), radial-gradient(circle at 80% 10%, rgba(255,235,210,0.8) 0%, transparent 60%)'
-            }}
-        />
+    <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute -top-20 -right-20 h-64 w-64 rounded-full bg-amber-200/30 blur-3xl" />
+        <div className="absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-rose-200/25 blur-3xl" />
     </div>
 );
 

@@ -7,7 +7,7 @@ import {
 import { useI18n } from '../../i18n';
 
 /**
- * VerdictView - Displays Judge Whiskers' verdict
+ * VerdictView - Displays the selected judge's verdict
  * Shows summary, purr (validation), hiss (accountability), sentence (repair), and actions
  */
 const HORSEMAN_LABELS = {
@@ -23,9 +23,11 @@ const VerdictView = ({
     resetCase, currentUser, onAcceptVerdict, isInitiator,
     addendumRemaining = null,
     addendumLimit = null,
-    judgeAvatar
+    judgeAvatar,
+    judgeName
 }) => {
     const { t } = useI18n();
+    const resolvedJudgeName = judgeName || t('court.judges.swift.name');
     const avatarSrc = judgeAvatar || '/assets/avatars/judge_whiskers.png';
     const isUserA = isInitiator;
     const hasAccepted = isUserA ? activeCase.userAAccepted : activeCase.userBAccepted;
@@ -57,12 +59,14 @@ const VerdictView = ({
                 >
                     <img
                         src={avatarSrc}
-                        alt={t('court.verdict.judgeAlt')}
+                        alt={t('court.verdict.judgeAlt', { judgeName: resolvedJudgeName })}
                         className="w-full h-full object-cover"
                     />
                 </motion.div>
 
-                <h2 className="text-xl font-bold text-court-brown mb-1">{t('court.verdict.title')}</h2>
+                <h2 className="text-xl font-bold text-court-brown mb-1">
+                    {t('court.verdict.title', { judgeName: resolvedJudgeName })}
+                </h2>
                 <p className="text-xs text-court-brownLight">{t('court.verdict.subtitle')}</p>
 
                 {/* Verdict Version Selector */}
@@ -231,7 +235,9 @@ const VerdictView = ({
                     <p className="text-court-brownLight text-sm italic leading-relaxed">
                         "{verdict.closingStatement}"
                     </p>
-                    <p className="text-court-tan text-xs mt-2">{t('court.verdict.signature')}</p>
+                    <p className="text-court-tan text-xs mt-2">
+                        {t('court.verdict.signature', { judgeName: resolvedJudgeName })}
+                    </p>
                 </motion.div>
             )}
 

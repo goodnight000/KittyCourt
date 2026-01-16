@@ -76,8 +76,14 @@ router.post('/', async (req, res) => {
         const supabase = requireSupabase();
         const partnerId = await getPartnerIdForUser(supabase, viewerId);
 
-        if (isProd && verdict) {
-            return sendError(res, 400, 'VERDICT_NOT_ALLOWED', 'Client-supplied verdicts are not allowed');
+        // SECURITY: Block any client-supplied verdict in production
+        // Verdicts must only come from the judge engine pipeline
+        if (verdict) {
+            if (isProd) {
+                console.warn('[Security] Blocked client-supplied verdict attempt from user:', viewerId);
+                return sendError(res, 400, 'VERDICT_NOT_ALLOWED', 'Client-supplied verdicts are not allowed');
+            }
+            console.warn('[Security] DEV ONLY: Accepting client-supplied verdict - blocked in production');
         }
 
         if (id) {
@@ -197,11 +203,15 @@ router.post('/', async (req, res) => {
 });
 
 // Add an addendum verdict to a case
+// SECURITY: This endpoint is DEV ONLY - disabled in production
 router.post('/:id/addendum', async (req, res) => {
     try {
+        // CRITICAL: Block in production - verdicts must come from judge engine only
         if (isProd) {
+            console.warn('[Security] Blocked addendum endpoint access in production');
             return res.status(404).json({ error: 'Not found' });
         }
+        console.warn('[Security] DEV ONLY: Addendum endpoint accessed - disabled in production');
 
         const viewerId = await requireAuthUserId(req);
         const { addendumText, verdict, caseTitle, severityLevel, primaryHissTag, shortResolution } = req.body;

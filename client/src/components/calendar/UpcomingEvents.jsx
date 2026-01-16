@@ -2,16 +2,9 @@ import React, { useMemo, useState, useEffect, useCallback, useRef, memo } from '
 import { motion as Motion } from 'framer-motion';
 import { Calendar } from 'lucide-react';
 import { useI18n } from '../../i18n';
+import { parseLocalDate, startOfDay } from '../../utils/dateFormatters';
 import EventCard from './EventList';
 import api from '../../services/api';
-
-/**
- * Helper to parse date strings as local dates (not UTC)
- */
-const parseLocalDate = (dateStr) => {
-    if (!dateStr) return new Date();
-    return dateStr.includes('T') ? new Date(dateStr) : new Date(dateStr + 'T00:00:00');
-};
 
 /**
  * Helper to generate event key for plan lookup
@@ -30,8 +23,8 @@ const getEventKey = (event) => {
 
 /**
  * UpcomingEvents Component
- * Displays upcoming events in the next 7 days with plan buttons
- * Wrapped with React.memo to prevent unnecessary re-renders
+ * Displays upcoming events in the next 7 days with plan buttons.
+ * Wrapped with React.memo to prevent unnecessary re-renders.
  */
 const UpcomingEvents = memo(({
     events,
@@ -45,15 +38,19 @@ const UpcomingEvents = memo(({
     const debounceTimerRef = useRef(null);
 
     // Get upcoming events (next 7 days)
-    const upcomingEvents = useMemo(() => events
-        .filter(event => {
-            const eventDate = parseLocalDate(event.date);
-            const today = new Date();
-            today.setHours(0, 0, 0, 0); // Start of today
-            const weekFromNow = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
-            return eventDate >= today && eventDate <= weekFromNow;
-        })
-        .sort((a, b) => parseLocalDate(a.date) - parseLocalDate(b.date)), [events]);
+    const upcomingEvents = useMemo(() => {
+        const today = startOfDay(new Date());
+        if (!today) return [];
+        const weekFromNow = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+        return events
+            .map((event) => ({
+                event,
+                eventDate: parseLocalDate(event.date)
+            }))
+            .filter((item) => item.eventDate && item.eventDate >= today && item.eventDate <= weekFromNow)
+            .sort((a, b) => a.eventDate - b.eventDate)
+            .map((item) => item.event);
+    }, [events]);
 
     // Create a stable key from upcoming event IDs to prevent excessive API calls
     // This only changes when the actual event composition changes, not on every render

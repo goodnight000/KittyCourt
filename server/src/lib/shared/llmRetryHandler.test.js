@@ -58,7 +58,11 @@ describe('llmRetryHandler', () => {
                 { operationName: 'Test call' }
             );
 
-            expect(result).toEqual({ message: 'test', count: 42 });
+            // Result includes metadata fields from model fallback feature
+            expect(result.message).toBe('test');
+            expect(result.count).toBe(42);
+            expect(result._modelUsed).toBeDefined();
+            expect(result._usedFallback).toBe(false);
             expect(llmFunction).toHaveBeenCalledTimes(1);
         });
 
@@ -86,7 +90,7 @@ describe('llmRetryHandler', () => {
                 { operationName: 'Test repair', maxRetries: 1 }
             );
 
-            expect(result).toEqual({ data: 'repaired value' });
+            expect(result.data).toBe('repaired value');
             // Check the console log message which proves the repair path was taken
             expect(consoleLog).toHaveBeenCalledWith(
                 expect.stringContaining('direct parse failed, attempting repair')
@@ -114,7 +118,7 @@ describe('llmRetryHandler', () => {
                 { operationName: 'Test truncation' }
             );
 
-            expect(result).toEqual({ message: 'truncated' });
+            expect(result.message).toBe('truncated');
             expect(consoleWarn).toHaveBeenCalledWith(
                 expect.stringContaining('response was truncated')
             );
@@ -137,7 +141,10 @@ describe('llmRetryHandler', () => {
                 { onSuccess }
             );
 
-            expect(onSuccess).toHaveBeenCalledWith({ value: 100 });
+            // onSuccess receives validated result (with metadata) and model used
+            expect(onSuccess).toHaveBeenCalled();
+            const [successResult] = onSuccess.mock.calls[0];
+            expect(successResult.value).toBe(100);
         });
     });
 
@@ -175,7 +182,7 @@ describe('llmRetryHandler', () => {
             // Third attempt succeeds
             const result = await promise;
 
-            expect(result).toEqual({ data: 'success' });
+            expect(result.data).toBe('success');
             expect(llmFunction).toHaveBeenCalledTimes(3);
         });
 
@@ -220,7 +227,7 @@ describe('llmRetryHandler', () => {
             // Attempt 4 succeeds
             const result = await promise;
 
-            expect(result).toEqual({ data: 'success' });
+            expect(result.data).toBe('success');
             expect(llmFunction).toHaveBeenCalledTimes(4);
         });
 
@@ -353,7 +360,7 @@ describe('llmRetryHandler', () => {
 
             const result = await promise;
 
-            expect(result).toEqual({ data: 'valid' });
+            expect(result.data).toBe('valid');
             expect(llmFunction).toHaveBeenCalledTimes(2);
         });
     });
@@ -466,7 +473,7 @@ describe('llmRetryHandler', () => {
             // No options provided - should use defaults
             const result = await callLLMWithRetry({ llmFunction, schema });
 
-            expect(result).toEqual({ data: 'test' });
+            expect(result.data).toBe('test');
         });
     });
 
@@ -495,7 +502,10 @@ describe('llmRetryHandler', () => {
                 { operationName: 'Wrapper test' }
             );
 
-            expect(result).toEqual({ message: 'wrapper test' });
+            // Result includes metadata from model fallback feature
+            expect(result.message).toBe('wrapper test');
+            expect(result._modelUsed).toBe('test-model');
+            expect(result._usedFallback).toBe(false);
             expect(createChatCompletion).toHaveBeenCalledWith(llmConfig);
         });
 
@@ -525,7 +535,9 @@ describe('llmRetryHandler', () => {
 
             const result = await promise;
 
-            expect(result).toEqual({ value: 42 });
+            // Result includes metadata from model fallback feature
+            expect(result.value).toBe(42);
+            expect(result._modelUsed).toBeDefined();
             expect(onRetry).toHaveBeenCalled();
         });
     });

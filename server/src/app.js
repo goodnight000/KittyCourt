@@ -26,6 +26,8 @@ if (fs.existsSync(serverEnvPath)) {
 const { isSupabaseConfigured } = require('./lib/supabase');
 const { isOpenRouterConfigured } = require('./lib/openrouter');
 const { corsMiddleware, securityHeaders } = require('./lib/security');
+const { initSentry, setupSentryErrorHandler, captureException } = require('./lib/sentry');
+const { isRedisConfigured } = require('./lib/redis');
 
 // Import routes
 const memoryRoutes = require('./routes/memory');
@@ -80,18 +82,27 @@ const app = express();
 const server = http.createServer(app);
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
+const isProd = process.env.NODE_ENV === 'production';
+
+initSentry(app);
 
 app.set('trust proxy', 1);
 app.disable('x-powered-by');
 app.use(securityHeaders);
 
+if (isProd && !isRedisConfigured()) {
+    console.error('[Security] CRITICAL: Redis is required in production for session persistence.');
+    console.error('[Security] Set REDIS_URL or REDIS_HOST before starting the server.');
+    process.exit(1);
+}
+
 // Initialize court services (WebSocket, SessionManager, DB recovery)
 initializeCourtServices(server).catch(err => {
     console.error('[App] Court services initialization failed:', err);
+    captureException(err);
 });
 
 // Security: Verify production environment is properly configured
-const isProd = process.env.NODE_ENV === 'production';
 if (isProd) {
     // Verify critical security settings in production
     if (!process.env.CORS_ORIGIN) {
@@ -206,6 +217,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // Centralized error handling (CORS + unexpected errors)
+setupSentryErrorHandler(app);
 app.use((err, req, res, _next) => {
     if (err?.message === 'CORS blocked') {
         return res.status(403).json({ error: 'CORS blocked' });
@@ -220,6 +232,7 @@ server.on('error', (error) => {
         console.error('[App] Try freeing the port or running with PORT=<free_port> npm run dev');
     } else {
         console.error('[App] Server error:', error);
+        captureException(error);
     }
     process.exit(1);
 });

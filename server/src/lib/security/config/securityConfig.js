@@ -32,6 +32,8 @@ const securityConfig = {
     stenographer: { requests: 50, windowMs: 60 * 60 * 1000 }, // 50/hour (internal)
     moderation: { requests: 100, windowMs: 60 * 60 * 1000 }, // 100/hour
     dailyQuestions: { requests: 20, windowMs: 60 * 60 * 1000 }, // 20/hour
+    insights: { requests: 10, windowMs: 60 * 60 * 1000 }, // 10/hour - LLM insights generation
+    court: { requests: 30, windowMs: 60 * 60 * 1000 }, // 30/hour - court evidence/addendum submissions
   },
 
   // Abuse detection thresholds

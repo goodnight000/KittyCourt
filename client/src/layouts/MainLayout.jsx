@@ -8,6 +8,8 @@ import useAuthStore from '../store/useAuthStore';
 import usePartnerStore from '../store/usePartnerStore';
 import useLevelStore from '../store/useLevelStore';
 import useCourtSocket from '../hooks/useCourtSocket';
+import useKeyboardAvoidance from '../hooks/useKeyboardAvoidance';
+import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
 import clsx from 'clsx';
 import LevelUpOverlay from '../components/LevelUpOverlay';
 import { useI18n } from '../i18n';
@@ -22,6 +24,12 @@ const MainLayout = () => {
     const mainRef = useRef(null);
     const activeLevelUp = pendingLevelUps?.[0];
     const { t } = useI18n();
+    const { keyboardVisible, keyboardHeight } = useKeyboardAvoidance();
+    const prefersReducedMotion = usePrefersReducedMotion();
+    const baseBottomPadding = 80;
+    const contentBottomPadding = keyboardVisible
+        ? `${baseBottomPadding + keyboardHeight}px`
+        : undefined;
 
     // Keep the court WebSocket alive across navigation so verdict/settlement updates
     // (and dock indicators) work even when the user isn't on the courtroom page.
@@ -87,7 +95,10 @@ const MainLayout = () => {
         <div className="min-h-screen min-h-[100dvh] flex flex-col font-sans">
             {/* Main Scrollable Content - with safe area for Dynamic Island/notch */}
             <main ref={mainRef} className="flex-1 overflow-y-auto overscroll-contain safe-top" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
-                <div className="px-4 py-5 pb-20 max-w-lg mx-auto">
+                <div
+                    className="px-4 py-5 pb-20 max-w-lg mx-auto"
+                    style={contentBottomPadding ? { paddingBottom: contentBottomPadding } : undefined}
+                >
                     <AnimatePresence mode="wait">
                         <motion.div
                             key={location.pathname}
@@ -104,21 +115,25 @@ const MainLayout = () => {
 
             {/* Bottom Tab Bar */}
             <motion.nav
-                initial={{ y: 100 }}
-                animate={{ y: 0 }}
-                transition={{ delay: 0.1, type: "spring", stiffness: 300, damping: 30 }}
+                initial={{ y: prefersReducedMotion ? 0 : 100 }}
+                animate={{ y: keyboardVisible ? 120 : 0, opacity: keyboardVisible ? 0 : 1 }}
+                transition={prefersReducedMotion
+                    ? { duration: 0.1 }
+                    : { delay: 0.1, type: "spring", stiffness: 300, damping: 30 }}
                 className="fixed bottom-0 left-1/2 -translate-x-1/2 z-40 w-full max-w-lg bg-white/80 backdrop-blur-xl border-t border-court-tan/30 shadow-soft-lg pb-2 rounded-t-2xl"
+                style={{ pointerEvents: keyboardVisible ? 'none' : 'auto' }}
             >
                 <div className="flex items-center justify-around h-18 px-2">
-                    <TabItem to="/" icon={<Home size={26} />} label={t('nav.home')} />
+                    <TabItem to="/" icon={<Home size={26} />} label={t('nav.home')} prefersReducedMotion={prefersReducedMotion} />
                     <TabItem
                         to="/courtroom"
                         icon={<Gavel size={26} />}
                         label={t('nav.court')}
                         isAlerting={isCourtAlerting}
+                        prefersReducedMotion={prefersReducedMotion}
                     />
-                    <TabItem to="/calendar" icon={<Calendar size={26} />} label={t('nav.calendar')} />
-                    <TabItem to="/profile" icon={<User size={26} />} label={t('nav.profile')} />
+                    <TabItem to="/calendar" icon={<Calendar size={26} />} label={t('nav.calendar')} prefersReducedMotion={prefersReducedMotion} />
+                    <TabItem to="/profile" icon={<User size={26} />} label={t('nav.profile')} prefersReducedMotion={prefersReducedMotion} />
                 </div>
             </motion.nav>
 
@@ -134,12 +149,13 @@ const MainLayout = () => {
     );
 };
 
-const TabItem = ({ to, icon, label, isAlerting }) => (
+const TabItem = ({ to, icon, label, isAlerting, prefersReducedMotion }) => (
     <NavLink
         to={to}
         className={({ isActive }) =>
             clsx(
                 "flex flex-col items-center justify-center gap-1 transition-all duration-200 relative",
+                "min-w-[48px] min-h-[48px]", // WCAG 2.2 AA minimum touch target
                 isActive
                     ? "text-court-gold"
                     : "text-court-brownLight active:text-court-brown"
@@ -152,15 +168,17 @@ const TabItem = ({ to, icon, label, isAlerting }) => (
                 {isActive && (
                     <motion.div
                         layoutId="activeDockBubble"
-                        className="absolute -inset-1 rounded-3xl border border-court-gold/35 bg-gradient-to-br from-court-goldLight via-court-gold/35 to-court-tan pointer-events-none"
+                        className="absolute -inset-1 translate-y-1 rounded-3xl border border-court-gold/35 bg-gradient-to-br from-court-goldLight via-court-gold/35 to-court-tan pointer-events-none"
                         style={{ zIndex: 0 }}
-                        transition={{
-                            type: "spring",
-                            stiffness: 260,
-                            damping: 18,
-                            mass: 0.7,
-                            bounce: 0.7
-                        }}
+                        transition={prefersReducedMotion
+                            ? { duration: 0.1 }
+                            : {
+                                type: "spring",
+                                stiffness: 260,
+                                damping: 18,
+                                mass: 0.7,
+                                bounce: 0.7
+                            }}
                     >
                         <span className="absolute inset-0 rounded-3xl bg-gradient-to-b from-white/45 via-white/10 to-transparent opacity-60" />
                         <span className="absolute top-1 left-2 right-2 h-2 rounded-full bg-white/60 blur-[1px] opacity-50" />
@@ -176,11 +194,11 @@ const TabItem = ({ to, icon, label, isAlerting }) => (
                 )}>
                     <motion.span
                         className="relative z-10"
-                        animate={isAlerting ? {
+                        animate={isAlerting && !prefersReducedMotion ? {
                             rotate: [0, -15, 15, -15, 15, 0],
                             scale: [1, 1.2, 1.2, 1.2, 1.2, 1]
                         } : {}}
-                        transition={isAlerting ? {
+                        transition={isAlerting && !prefersReducedMotion ? {
                             duration: 2,
                             repeat: Infinity,
                             repeatDelay: 1,
@@ -189,7 +207,10 @@ const TabItem = ({ to, icon, label, isAlerting }) => (
                     >
                         {icon}
                         {isAlerting && (
-                            <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white animate-pulse" />
+                            <span className={clsx(
+                                "absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white",
+                                !prefersReducedMotion && "animate-pulse"
+                            )} />
                         )}
                     </motion.span>
                 </div>

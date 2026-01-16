@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, Heart, Calendar, Sparkles } from 'lucide-react';
+import { Heart, Calendar, HeartHandshake } from 'lucide-react';
 import useAppStore from '../store/useAppStore';
 import useAuthStore from '../store/useAuthStore';
 import usePartnerStore from '../store/usePartnerStore';
-import useCacheStore, { CACHE_TTL, CACHE_KEYS } from '../store/useCacheStore';
+import useCacheStore, { CACHE_POLICY, cacheKey } from '../store/useCacheStore';
 import RequirePartner from '../components/RequirePartner';
 import api from '../services/api';
 import { useI18n } from '../i18n';
+import BackButton from '../components/shared/BackButton';
 
 const AppreciationsPage = () => {
     const navigate = useNavigate();
@@ -30,18 +31,28 @@ const AppreciationsPage = () => {
         const fetchStats = async () => {
             if (!authUser?.id) return;
 
-            const cacheKey = `${CACHE_KEYS.STATS}:${authUser.id}`;
-            const cached = useCacheStore.getState().getCached(cacheKey);
-            if (cached !== null) {
-                setTotalAppreciations(cached.appreciations_received ?? 0);
-                return;
-            }
-
             try {
-                const response = await api.get('/stats');
-                const stats = response.data;
-                useCacheStore.getState().setCache(cacheKey, stats, CACHE_TTL.STATS);
-                setTotalAppreciations(stats.appreciations_received ?? 0);
+                const cacheStore = useCacheStore.getState();
+                const key = cacheKey.stats(authUser.id);
+                const applyStats = (stats) => {
+                    setTotalAppreciations(stats?.appreciations_received ?? 0);
+                };
+
+                const { data, promise } = await cacheStore.getOrFetch({
+                    key,
+                    fetcher: async () => {
+                        const response = await api.get('/stats');
+                        return response.data || null;
+                    },
+                    ...CACHE_POLICY.STATS,
+                    revalidateOnInterval: true,
+                });
+
+                applyStats(data);
+
+                if (promise) {
+                    promise.then((fresh) => applyStats(fresh)).catch(() => {});
+                }
             } catch (err) {
                 console.error('Failed to fetch stats:', err);
                 // Fallback to appreciations array length if stats fail
@@ -49,6 +60,16 @@ const AppreciationsPage = () => {
             }
         };
         fetchStats();
+    }, [authUser?.id, appreciations.length]);
+
+    useEffect(() => {
+        if (!authUser?.id) return;
+        const cacheStore = useCacheStore.getState();
+        const key = cacheKey.stats(authUser.id);
+        const unsubscribe = cacheStore.subscribeKey(key, (stats) => {
+            setTotalAppreciations(stats?.appreciations_received ?? appreciations.length);
+        });
+        return unsubscribe;
     }, [authUser?.id, appreciations.length]);
 
     // Require partner for appreciations
@@ -134,20 +155,17 @@ const AppreciationsPage = () => {
             <div className="relative space-y-6">
             {/* Header */}
             <div className="flex items-start gap-3">
-                <motion.button
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => navigate(-1)}
-                    className="rounded-2xl border border-white/80 bg-white/80 p-2 shadow-soft"
-                >
-                    <ChevronLeft className="w-5 h-5 text-neutral-600" />
-                </motion.button>
+                <BackButton onClick={() => navigate(-1)} ariaLabel={t('common.back')} />
                 <div>
                     <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-amber-600">
                         {t('appreciations.header.kicker')}
                     </p>
                     <h1 className="text-2xl font-display font-bold text-neutral-800">{t('appreciations.header.title')}</h1>
-                    <p className="text-neutral-500 text-sm">
-                        {t('appreciations.header.subtitle', { name: partnerName })}
+                    <p className="text-neutral-500 text-sm flex items-center gap-2">
+                        <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-rose-100/70 border border-rose-200/70 shadow-inner-soft shrink-0">
+                            <HeartHandshake className="w-3.5 h-3.5 text-rose-500" />
+                        </span>
+                        <span>{t('appreciations.header.subtitle', { name: partnerName })}</span>
                     </p>
                 </div>
             </div>
@@ -164,12 +182,14 @@ const AppreciationsPage = () => {
                 </div>
                 <div className="flex items-center justify-between">
                     <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-neutral-400 mb-1">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-neutral-500 mb-1">
                             {t('appreciations.summary.title')}
                         </p>
                         <div className="flex items-baseline gap-2">
                             <span className="text-4xl font-display font-bold text-neutral-800">{totalAppreciations ?? appreciations.length}</span>
-                            <span className="text-neutral-500 text-lg">💕</span>
+                            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-rose-100/80 border border-rose-200/70 shadow-inner-soft">
+                                <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500" />
+                            </span>
                         </div>
                         <p className="text-xs text-neutral-500 mt-1">
                             {t('appreciations.summary.from', { name: partnerName })}
@@ -178,9 +198,12 @@ const AppreciationsPage = () => {
                     <motion.div 
                         animate={{ scale: [1, 1.1, 1] }}
                         transition={{ duration: 2, repeat: Infinity }}
-                        className="text-5xl"
+                        className="relative"
                     >
-                        🥰
+                        <div className="absolute -inset-2 rounded-[28px] bg-gradient-to-br from-rose-200/35 via-white/40 to-amber-200/35 blur-xl opacity-70" />
+                        <div className="relative h-16 w-16 rounded-[22px] bg-gradient-to-br from-rose-50 via-white to-amber-50 border border-white/80 shadow-soft grid place-items-center">
+                            <HeartHandshake className="w-8 h-8 text-rose-500" />
+                        </div>
                     </motion.div>
                 </div>
             </motion.div>
@@ -252,11 +275,10 @@ const AppreciationsPage = () => {
                                                 
                                                 {/* Footer */}
                                                 <div className="flex items-center gap-3 mt-2">
-                                                    <span className="text-xs text-neutral-400">
+                                                    <span className="text-xs text-neutral-500">
                                                         {formatDate(appreciation.createdAt)}
                                                     </span>
-                                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-amber-100/70 text-amber-700 rounded-full text-[10px] font-bold border border-amber-200/70">
-                                                        <Sparkles className="w-3 h-3" />
+                                                    <span className="inline-flex items-center px-2.5 py-0.5 bg-amber-100/70 text-amber-700 rounded-full text-[10px] font-bold border border-amber-200/70">
                                                         {t('appreciations.kibbleReward', { count: appreciation.kibbleAmount })}
                                                     </span>
                                                 </div>
@@ -275,17 +297,9 @@ const AppreciationsPage = () => {
 };
 
 const AppreciationBackdrop = () => (
-    <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute -top-24 -right-16 h-56 w-56 rounded-full bg-amber-200/30 blur-3xl" />
-        <div className="absolute top-16 -left-20 h-60 w-60 rounded-full bg-rose-200/25 blur-3xl" />
-        <div className="absolute bottom-6 right-8 h-64 w-64 rounded-full bg-amber-100/40 blur-3xl" />
-        <div
-            className="absolute inset-0 opacity-45"
-            style={{
-                backgroundImage:
-                    'radial-gradient(circle at 18% 20%, rgba(255,255,255,0.75) 0%, transparent 55%), radial-gradient(circle at 80% 10%, rgba(255,235,210,0.8) 0%, transparent 60%)'
-            }}
-        />
+    <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute -top-20 -right-20 h-64 w-64 rounded-full bg-amber-200/30 blur-3xl" />
+        <div className="absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-rose-200/25 blur-3xl" />
     </div>
 );
 

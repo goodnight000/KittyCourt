@@ -17,6 +17,23 @@
     "StatusBar": {
       "style": "dark",
       "backgroundColor": "#FAF7F2"
+    },
+    "App": {
+      "appUrlOpen": {
+        "handlers": [
+          {
+            "url": "pauseapp.com",
+            "include": ["/*"]
+          },
+          {
+            "url": "*.pauseapp.com",
+            "include": ["/*"]
+          }
+        ]
+      }
     }
+  },
+  "server": {
+    "allowNavigation": ["pauseapp.com", "*.pauseapp.com", "*.supabase.co"]
   }
 }

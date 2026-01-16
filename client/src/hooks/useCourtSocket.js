@@ -58,12 +58,12 @@ export default function useCourtSocket() {
         }
 
         if (reconnectAttempts.current >= MAX_RECONNECT_ATTEMPTS) {
-            console.log('[WS] Max reconnection attempts reached');
+            if (import.meta.env.DEV) console.log('[WS] Max reconnection attempts reached');
             return null;
         }
 
         const url = getSocketUrl();
-        console.log('[WS] Connecting to:', url);
+        if (import.meta.env.DEV) console.log('[WS] Connecting to:', url);
 
         const socket = io(url, {
             transports: ['websocket', 'polling'],
@@ -77,7 +77,7 @@ export default function useCourtSocket() {
         // === Connection Events ===
 
         socket.on('connect', () => {
-            console.log('[WS] Connected:', socket.id);
+            if (import.meta.env.DEV) console.log('[WS] Connected:', socket.id);
             reconnectAttempts.current = 0;
             setIsConnected(true);
             handlersRef.current.storeSetConnected(true);
@@ -93,7 +93,7 @@ export default function useCourtSocket() {
         });
 
         socket.on('disconnect', (reason) => {
-            console.log('[WS] Disconnected:', reason);
+            if (import.meta.env.DEV) console.log('[WS] Disconnected:', reason);
             setIsConnected(false);
             handlersRef.current.storeSetConnected(false);
 
@@ -118,7 +118,7 @@ export default function useCourtSocket() {
         // === Court Events ===
 
         socket.on('court:state', (data) => {
-            console.log('[WS] State sync:', data.myViewPhase);
+            if (import.meta.env.DEV) console.log('[WS] State sync:', data.myViewPhase);
             handlersRef.current.onStateSync(data);
         });
 
@@ -128,12 +128,12 @@ export default function useCourtSocket() {
         });
 
         socket.on('court:settlement_requested', () => {
-            console.log('[WS] Settlement requested');
+            if (import.meta.env.DEV) console.log('[WS] Settlement requested');
             handlersRef.current.onSettlementRequested();
         });
 
         socket.on('court:settlement_declined', (payload) => {
-            console.log('[WS] Settlement declined');
+            if (import.meta.env.DEV) console.log('[WS] Settlement declined');
             handlersRef.current.onSettlementDeclined(payload);
         });
 

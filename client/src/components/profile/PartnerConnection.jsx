@@ -98,7 +98,7 @@ const PartnerConnection = ({ hasPartner, profile, partner, loveLanguages }) => {
 
                 {/* Partner Code */}
                 <div className="rounded-2xl border border-white/80 bg-white/80 p-3">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-neutral-400 text-center mb-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-neutral-500 text-center mb-2">
                         {t('profilePage.connect.partnerCode')}
                     </p>
                     <div className="flex items-center justify-center gap-2">

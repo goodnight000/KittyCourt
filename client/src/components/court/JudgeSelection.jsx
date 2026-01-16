@@ -144,7 +144,7 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4 pb-24"
                     >
                         {/* Backdrop */}
                         <motion.div
@@ -200,8 +200,13 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
                             <div className="absolute inset-x-8 top-0 h-0.5 bg-gradient-to-r from-transparent via-court-gold/30 to-transparent" />
                             {/* Close button */}
                             <button
-                                onClick={handleClose}
-                                className="absolute top-4 right-4 p-2 rounded-full hover:bg-court-tan/50 transition-colors"
+                                type="button"
+                                aria-label={t('common.cancel')}
+                                onClick={(event) => {
+                                    event.stopPropagation();
+                                    handleClose();
+                                }}
+                                className="absolute top-4 right-4 z-20 p-2 rounded-full hover:bg-court-tan/50 transition-colors"
                             >
                                 <X className="w-5 h-5 text-court-brown" />
                             </button>
@@ -367,15 +372,12 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
 
                             {/* Serve Button - Premium Gold Gradient */}
                             <motion.button
+                                type="button"
                                 onClick={handleServe}
                                 disabled={!canServe}
                                 whileHover={canServe ? { scale: 1.01 } : {}}
                                 whileTap={canServe ? { scale: 0.98 } : {}}
-                                className={`relative w-full py-3.5 rounded-2xl font-bold flex items-center justify-center gap-3
-                                    transition-all duration-300 overflow-hidden ${canServe
-                                    ? 'text-white bg-gradient-to-br from-court-maroon via-court-brown to-court-brownDark shadow-lg shadow-court-maroon/30 border border-court-gold/20'
-                                    : 'bg-court-tan/40 cursor-not-allowed text-court-brownLight/70'
-                                    }`}
+                                className="court-btn-primary relative w-full overflow-hidden"
                             >
                                 {/* Button shimmer effect when active */}
                                 {canServe && (
@@ -390,14 +392,6 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
                                     {canServe ? t('court.judgeSelection.serve') : t('court.judgeSelection.selectPrompt')}
                                 </span>
                             </motion.button>
-
-                            {/* Cancel link */}
-                            <button
-                                onClick={handleClose}
-                                className="w-full mt-3 py-2 text-sm text-court-brownLight hover:text-court-brown transition-colors"
-                            >
-                                {t('common.cancel')}
-                            </button>
                         </motion.div>
                     </motion.div>
                 )}

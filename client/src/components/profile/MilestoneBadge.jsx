@@ -147,7 +147,7 @@ const MilestoneBadge = ({ milestone, index = 0, onTap }) => {
             +{xpReward} XP
           </motion.span>
         ) : (
-          <span className="text-[10px] font-semibold text-neutral-400">
+          <span className="text-[10px] font-semibold text-neutral-500">
             {current}/{target}
           </span>
         )}

@@ -12,10 +12,20 @@ let Purchases = null;
 let isInitialized = false;
 
 // Configuration - use environment variable
+// NOTE: This is the RevenueCat PUBLIC API key (safe for client-side use).
+// RevenueCat public keys are designed to be embedded in mobile apps and exposed in client code.
+// They can only be used to fetch offerings, make purchases, and restore purchases - NOT to
+// access sensitive customer data or modify subscriptions. The secret/webhook key is stored
+// server-side only and never exposed to the client.
+// See: https://www.revenuecat.com/docs/authentication
 const REVENUECAT_API_KEY = import.meta.env.VITE_REVENUECAT_API_KEY || '';
 export const ENTITLEMENT_ID = 'Pause Gold';
-export const PRODUCT_ID_MONTHLY = 'monthly';
-export const PRODUCT_ID_YEARLY = 'prodaa5384f89b';
+// Primary iOS product IDs (RevenueCat)
+export const PRODUCT_ID_MONTHLY = 'prod88802f6b24';
+export const PRODUCT_ID_YEARLY = 'prode16533934c';
+// Legacy or alternate product IDs for compatibility (older offerings, Android, etc.)
+export const PRODUCT_IDS_MONTHLY = [PRODUCT_ID_MONTHLY, 'monthly'];
+export const PRODUCT_IDS_YEARLY = [PRODUCT_ID_YEARLY, 'prodaa5384f89b', 'yearly'];
 export const ENTITLEMENT_ID_ALT = 'pause_gold';
 
 /**
@@ -29,7 +39,7 @@ export const isNativePlatform = () => Capacitor.isNativePlatform();
  */
 export const initializeRevenueCat = async () => {
     if (!isNativePlatform()) {
-        console.log('[RevenueCat] Skipping initialization - not on native platform');
+        if (import.meta.env.DEV) console.log('[RevenueCat] Skipping initialization - not on native platform');
         return false;
     }
 
@@ -39,7 +49,7 @@ export const initializeRevenueCat = async () => {
     }
 
     if (isInitialized) {
-        console.log('[RevenueCat] Already initialized');
+        if (import.meta.env.DEV) console.log('[RevenueCat] Already initialized');
         return true;
     }
 
@@ -53,7 +63,7 @@ export const initializeRevenueCat = async () => {
         });
 
         isInitialized = true;
-        console.log('[RevenueCat] Initialized successfully');
+        if (import.meta.env.DEV) console.log('[RevenueCat] Initialized successfully');
         return true;
     } catch (error) {
         console.error('[RevenueCat] Initialization failed:', error);
@@ -89,13 +99,13 @@ export const onCustomerInfoUpdate = async (handler) => {
  */
 export const identifyUser = async (userId) => {
     if (!isNativePlatform() || !Purchases) {
-        console.log('[RevenueCat] Cannot identify user - not initialized');
+        if (import.meta.env.DEV) console.log('[RevenueCat] Cannot identify user - not initialized');
         return null;
     }
 
     try {
         const result = await Purchases.logIn({ appUserID: userId });
-        console.log('[RevenueCat] User identified:', userId);
+        if (import.meta.env.DEV) console.log('[RevenueCat] User identified:', userId);
         return result.customerInfo;
     } catch (error) {
         console.error('[RevenueCat] Failed to identify user:', error);
@@ -117,7 +127,7 @@ export const checkPauseGoldStatus = async () => {
         const entitlements = customerInfo?.entitlements?.active || {};
         const isGold = entitlements[ENTITLEMENT_ID] !== undefined ||
             entitlements[ENTITLEMENT_ID_ALT] !== undefined;
-        console.log('[RevenueCat] Pause Gold status:', isGold);
+        if (import.meta.env.DEV) console.log('[RevenueCat] Pause Gold status:', isGold);
         return isGold;
     } catch (error) {
         console.error('[RevenueCat] Failed to check status:', error);
@@ -174,7 +184,7 @@ export const getOfferings = async () => {
  * 
  * Note: On Android, this always returns UNKNOWN - let store handle it.
  */
-export const checkTrialEligibility = async (productIdentifiers = [PRODUCT_ID_MONTHLY, PRODUCT_ID_YEARLY]) => {
+export const checkTrialEligibility = async (productIdentifiers = [...PRODUCT_IDS_MONTHLY, ...PRODUCT_IDS_YEARLY]) => {
     if (!isNativePlatform() || !Purchases) {
         // Default to eligible on web/unsupported
         const result = {};
@@ -188,7 +198,7 @@ export const checkTrialEligibility = async (productIdentifiers = [PRODUCT_ID_MON
         const eligibility = await Purchases.checkTrialOrIntroductoryPriceEligibility({
             productIdentifiers,
         });
-        console.log('[RevenueCat] Trial eligibility:', eligibility);
+        if (import.meta.env.DEV) console.log('[RevenueCat] Trial eligibility:', eligibility);
         return eligibility;
     } catch (error) {
         console.error('[RevenueCat] Failed to check trial eligibility:', error);
@@ -220,7 +230,9 @@ export const purchasePauseGold = async (planType = 'monthly') => {
         }
 
         // Find the correct package based on plan type
-        const targetProductId = planType === 'yearly' ? PRODUCT_ID_YEARLY : PRODUCT_ID_MONTHLY;
+        const targetProductIds = planType === 'yearly'
+            ? PRODUCT_IDS_YEARLY.map(id => id.toLowerCase())
+            : PRODUCT_IDS_MONTHLY.map(id => id.toLowerCase());
 
         // RevenueCat package identifiers can vary - check multiple formats
         // Common formats: '$rc_annual', '$rc_monthly', 'annual', 'monthly', or the product ID itself
@@ -234,12 +246,12 @@ export const purchasePauseGold = async (planType = 'monthly') => {
                     pkgId === 'yearly' ||
                     pkgId.includes('annual') ||
                     pkgId.includes('yearly') ||
-                    productId === targetProductId.toLowerCase();
+                    targetProductIds.includes(productId);
             } else {
                 return pkgId === '$rc_monthly' ||
                     pkgId === 'monthly' ||
                     pkgId.includes('monthly') ||
-                    productId === targetProductId.toLowerCase();
+                    targetProductIds.includes(productId);
             }
         });
 
@@ -256,12 +268,12 @@ export const purchasePauseGold = async (planType = 'monthly') => {
             throw new Error(`No ${planType} package found. Check RevenueCat configuration.`);
         }
 
-        console.log('[RevenueCat] Purchasing package:', selectedPackage.identifier, 'product:', selectedPackage.product.identifier);
+        if (import.meta.env.DEV) console.log('[RevenueCat] Purchasing package:', selectedPackage.identifier, 'product:', selectedPackage.product.identifier);
 
         // Make the purchase
         const result = await Purchases.purchasePackage({ aPackage: selectedPackage });
 
-        console.log('[RevenueCat] Purchase successful');
+        if (import.meta.env.DEV) console.log('[RevenueCat] Purchase successful');
         return {
             success: true,
             customerInfo: result.customerInfo,
@@ -269,7 +281,7 @@ export const purchasePauseGold = async (planType = 'monthly') => {
     } catch (error) {
         // Check if user cancelled
         if (error.userCancelled) {
-            console.log('[RevenueCat] User cancelled purchase');
+            if (import.meta.env.DEV) console.log('[RevenueCat] User cancelled purchase');
             return { success: false, cancelled: true };
         }
 
@@ -289,7 +301,7 @@ export const restorePurchases = async () => {
 
     try {
         const { customerInfo } = await Purchases.restorePurchases();
-        console.log('[RevenueCat] Purchases restored');
+        if (import.meta.env.DEV) console.log('[RevenueCat] Purchases restored');
         return customerInfo;
     } catch (error) {
         console.error('[RevenueCat] Restore failed:', error);
@@ -307,7 +319,7 @@ export const logOutUser = async () => {
 
     try {
         await Purchases.logOut();
-        console.log('[RevenueCat] User logged out');
+        if (import.meta.env.DEV) console.log('[RevenueCat] User logged out');
     } catch (error) {
         console.error('[RevenueCat] Logout failed:', error);
     }
@@ -329,4 +341,6 @@ export default {
     ENTITLEMENT_ID_ALT,
     PRODUCT_ID_MONTHLY,
     PRODUCT_ID_YEARLY,
+    PRODUCT_IDS_MONTHLY,
+    PRODUCT_IDS_YEARLY,
 };

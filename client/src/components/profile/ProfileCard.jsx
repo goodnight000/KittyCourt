@@ -42,7 +42,7 @@ const ProfileCard = ({
                         </div>
                     </motion.div>
                     <div className="flex-1 space-y-2">
-                        <div className="text-[11px] font-semibold uppercase tracking-[0.3em] text-neutral-400">
+                        <div className="text-[11px] font-semibold uppercase tracking-[0.3em] text-neutral-500">
                             {t('profilePage.profile.kicker')}
                         </div>
                         <h2 className="text-lg font-display font-bold text-neutral-800">

@@ -33,7 +33,7 @@ export const isNativePlatform = () => Capacitor.isNativePlatform();
  */
 export const initializePushNotifications = async () => {
     if (!isNativePlatform()) {
-        console.log('[Push] Not a native platform, skipping initialization');
+        if (import.meta.env.DEV) console.log('[Push] Not a native platform, skipping initialization');
         return false;
     }
 
@@ -45,11 +45,11 @@ export const initializePushNotifications = async () => {
             // Request permission
             const result = await PushNotifications.requestPermissions();
             if (result.receive !== 'granted') {
-                console.log('[Push] Permission denied');
+                if (import.meta.env.DEV) console.log('[Push] Permission denied');
                 return false;
             }
         } else if (permStatus.receive !== 'granted') {
-            console.log('[Push] Permission not granted:', permStatus.receive);
+            if (import.meta.env.DEV) console.log('[Push] Permission not granted:', permStatus.receive);
             return false;
         }
 
@@ -59,7 +59,7 @@ export const initializePushNotifications = async () => {
         // Set up listeners (only once)
         setupPushListeners();
 
-        console.log('[Push] Initialization successful');
+        if (import.meta.env.DEV) console.log('[Push] Initialization successful');
         return true;
     } catch (error) {
         console.error('[Push] Initialization failed:', error);
@@ -73,13 +73,13 @@ export const initializePushNotifications = async () => {
  */
 const setupPushListeners = () => {
     if (listenersRegistered) {
-        console.log('[Push] Listeners already registered, skipping');
+        if (import.meta.env.DEV) console.log('[Push] Listeners already registered, skipping');
         return;
     }
 
     // Token received - save to database
     PushNotifications.addListener('registration', async (token) => {
-        console.log('[Push] Registration token received');
+        if (import.meta.env.DEV) console.log('[Push] Registration token received');
         await saveDeviceToken(token.value);
     });
 
@@ -90,18 +90,18 @@ const setupPushListeners = () => {
 
     // Notification received while app is in foreground
     PushNotifications.addListener('pushNotificationReceived', (notification) => {
-        console.log('[Push] Foreground notification received');
+        if (import.meta.env.DEV) console.log('[Push] Foreground notification received');
         handleForegroundNotification(notification);
     });
 
     // Notification tapped (app opened from notification)
     PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
-        console.log('[Push] Notification action performed');
+        if (import.meta.env.DEV) console.log('[Push] Notification action performed');
         handleNotificationNavigation(action.notification.data);
     });
 
     listenersRegistered = true;
-    console.log('[Push] Listeners registered');
+    if (import.meta.env.DEV) console.log('[Push] Listeners registered');
 };
 
 /**
@@ -120,7 +120,7 @@ export const saveDeviceToken = async (token) => {
     try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
-            console.log('[Push] No user logged in, cannot save token');
+            if (import.meta.env.DEV) console.log('[Push] No user logged in, cannot save token');
             return false;
         }
 
@@ -147,7 +147,7 @@ export const saveDeviceToken = async (token) => {
 
         // Track this device's token for scoped deactivation on logout
         currentDeviceToken = token;
-        console.log('[Push] Token saved and tracked:', token.substring(0, 20) + '...');
+        if (import.meta.env.DEV) console.log('[Push] Token saved and tracked:', token.substring(0, 20) + '...');
         return true;
     } catch (error) {
         console.error('[Push] Exception saving token:', error);
@@ -166,11 +166,13 @@ export const saveDeviceToken = async (token) => {
  */
 export const handleForegroundNotification = (notification) => {
     // Log notification details for debugging
-    console.log('[Push] Foreground notification:', {
-        title: notification.title,
-        body: notification.body,
-        data: notification.data,
-    });
+    if (import.meta.env.DEV) {
+        console.log('[Push] Foreground notification:', {
+            title: notification.title,
+            body: notification.body,
+            data: notification.data,
+        });
+    }
 
     // The app can show an in-app toast/banner here if desired.
     // For now, we just log - the UI layer can subscribe to events
@@ -202,12 +204,12 @@ export const handleForegroundNotification = (notification) => {
  */
 export const handleNotificationNavigation = (data) => {
     if (!data) {
-        console.log('[Push] No navigation data provided');
+        if (import.meta.env.DEV) console.log('[Push] No navigation data provided');
         return;
     }
 
     const screen = data.screen || data.type;
-    console.log('[Push] Navigating to screen:', screen);
+    if (import.meta.env.DEV) console.log('[Push] Navigating to screen:', screen);
 
     switch (screen) {
         case 'courtroom':
@@ -257,7 +259,7 @@ export const handleNotificationNavigation = (data) => {
 
         default:
             // Default to home for unknown notification types
-            console.log('[Push] Unknown screen type, navigating to home');
+            if (import.meta.env.DEV) console.log('[Push] Unknown screen type, navigating to home');
             window.location.href = '/';
     }
 };
@@ -277,13 +279,13 @@ export const deactivateDeviceToken = async () => {
     try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
-            console.log('[Push] No user to deactivate tokens for');
+            if (import.meta.env.DEV) console.log('[Push] No user to deactivate tokens for');
             return true;
         }
 
         // Only deactivate current device's token, not all user's tokens
         if (!currentDeviceToken) {
-            console.log('[Push] No current device token to deactivate');
+            if (import.meta.env.DEV) console.log('[Push] No current device token to deactivate');
             return true;
         }
 
@@ -300,7 +302,7 @@ export const deactivateDeviceToken = async () => {
             return false;
         }
 
-        console.log('[Push] Current device token deactivated');
+        if (import.meta.env.DEV) console.log('[Push] Current device token deactivated');
         currentDeviceToken = null; // Clear the reference
         return true;
     } catch (error) {
@@ -323,7 +325,7 @@ export const removePushListeners = async () => {
     try {
         await PushNotifications.removeAllListeners();
         listenersRegistered = false;
-        console.log('[Push] All listeners removed');
+        if (import.meta.env.DEV) console.log('[Push] All listeners removed');
     } catch (error) {
         console.error('[Push] Error removing listeners:', error);
     }

@@ -43,7 +43,7 @@ const LanguageStep = ({
                                 <div className={`flex-shrink-0 px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-[0.2em] ${
                                     isSelected
                                         ? 'bg-white/80 text-[#8B7019]'
-                                        : 'bg-white/70 text-neutral-400'
+                                        : 'bg-white/70 text-neutral-500'
                                 }`}>
                                     {languageOption.code}
                                 </div>
@@ -52,7 +52,7 @@ const LanguageStep = ({
                                         {label}
                                     </p>
                                     {showNativeLabel && (
-                                        <p className="text-xs text-neutral-400 mt-0.5">{nativeLabel}</p>
+                                        <p className="text-xs text-neutral-500 mt-0.5">{nativeLabel}</p>
                                     )}
                                 </div>
                                 {isSelected && (
@@ -69,7 +69,7 @@ const LanguageStep = ({
                     );
                 })}
             </div>
-            <p className="text-xs text-neutral-400 text-center">
+            <p className="text-xs text-neutral-500 text-center">
                 {t('onboarding.language.helper')}
             </p>
         </Motion.div>

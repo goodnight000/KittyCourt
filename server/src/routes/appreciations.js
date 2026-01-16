@@ -12,6 +12,7 @@ const { awardXP, ACTION_TYPES } = require('../lib/xpService');
 const { recordChallengeAction, CHALLENGE_ACTIONS } = require('../lib/challengeService');
 const { safeErrorMessage } = require('../lib/shared/errorUtils');
 const { sendNotificationToUser } = require('../lib/notificationService');
+const { sendError } = require('../lib/http');
 
 // Create an appreciation
 router.post('/', requirePartner, async (req, res) => {
@@ -20,18 +21,18 @@ router.post('/', requirePartner, async (req, res) => {
         const { toUserId, message, category, kibbleAmount = 10 } = req.body;
 
         if (!toUserId) {
-            return res.status(400).json({ error: 'toUserId is required' });
+            return sendError(res, 400, 'MISSING_FIELD', 'toUserId is required');
         }
         const numericKibble = Number(kibbleAmount);
         if (!Number.isFinite(numericKibble) || !Number.isInteger(numericKibble) || numericKibble <= 0 || numericKibble > 100) {
-            return res.status(400).json({ error: 'kibbleAmount must be an integer from 1 to 100' });
+            return sendError(res, 400, 'INVALID_INPUT', 'kibbleAmount must be an integer from 1 to 100');
         }
         const safeMessage = typeof message === 'string' ? message.trim().slice(0, 500) : '';
-        if (!safeMessage) return res.status(400).json({ error: 'message is required' });
+        if (!safeMessage) return sendError(res, 400, 'MISSING_FIELD', 'message is required');
         const safeCategory = typeof category === 'string' ? category.trim().slice(0, 50) : null;
 
         if (String(toUserId) !== String(partnerId)) {
-            return res.status(403).json({ error: 'Can only send appreciation to your connected partner' });
+            return sendError(res, 403, 'FORBIDDEN', 'Can only send appreciation to your connected partner');
         }
 
         // Create the appreciation
@@ -112,7 +113,7 @@ router.post('/', requirePartner, async (req, res) => {
         });
     } catch (error) {
         console.error('Error creating appreciation:', error);
-        res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
+        return sendError(res, error.statusCode || 500, 'SERVER_ERROR', safeErrorMessage(error));
     }
 });
 
@@ -122,21 +123,26 @@ router.get('/:userId', async (req, res) => {
         const viewerId = await requireAuthUserId(req);
         const { userId } = req.params;
         if (userId && String(userId) !== String(viewerId)) {
-            return res.status(403).json({ error: 'Forbidden' });
+            return sendError(res, 403, 'FORBIDDEN', 'Forbidden');
         }
 
         const supabase = requireSupabase();
+
+        // Pagination params
+        const limit = Math.min(parseInt(req.query.limit) || 20, 100);
+        const offset = parseInt(req.query.offset) || 0;
 
         const { data: appreciations, error } = await supabase
             .from('appreciations')
             .select('*')
             .eq('to_user_id', viewerId)
-            .order('created_at', { ascending: false });
+            .order('created_at', { ascending: false })
+            .range(offset, offset + limit - 1);
 
         if (error) throw error;
 
         // Transform to camelCase
-        const transformed = appreciations.map(a => ({
+        const transformed = (appreciations || []).map(a => ({
             id: a.id,
             fromUserId: a.from_user_id,
             toUserId: a.to_user_id,
@@ -146,10 +152,17 @@ router.get('/:userId', async (req, res) => {
             createdAt: a.created_at
         }));
 
-        res.json(transformed);
+        res.json({
+            data: transformed,
+            pagination: {
+                limit,
+                offset,
+                hasMore: transformed.length === limit
+            }
+        });
     } catch (error) {
         console.error('Error fetching appreciations:', error);
-        res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
+        return sendError(res, error.statusCode || 500, 'SERVER_ERROR', safeErrorMessage(error));
     }
 });
 

@@ -10,98 +10,125 @@ const { getOrderedCoupleIds, getLevelStatus } = require('../lib/xpService');
 const { generateInsightsForCouple } = require('../lib/insightService');
 const { getUserSubscriptionTier } = require('../lib/usageLimits');
 const { safeErrorMessage } = require('../lib/shared/errorUtils');
+const { rateLimitMiddleware } = require('../lib/security/index');
+const { sendError } = require('../lib/http');
 
 const INSIGHTS_MIN_LEVEL = 10;
 
-const buildConsentState = (profiles, userId, partnerId) => {
-    const self = profiles.find(p => p.id === userId);
-    const partner = profiles.find(p => p.id === partnerId);
-
+const buildConsentState = (profile) => {
     const now = new Date();
-    const selfPaused = self?.ai_insights_paused_until ? new Date(self.ai_insights_paused_until) > now : false;
-    const partnerPaused = partner?.ai_insights_paused_until ? new Date(partner.ai_insights_paused_until) > now : false;
+    const selfPaused = profile?.ai_insights_paused_until
+        ? new Date(profile.ai_insights_paused_until) > now
+        : false;
 
     return {
-        selfConsent: !!self?.ai_insights_consent,
-        partnerConsent: !!partner?.ai_insights_consent,
-        selfPausedUntil: self?.ai_insights_paused_until || null,
-        partnerPausedUntil: partner?.ai_insights_paused_until || null,
+        selfConsent: !!profile?.ai_insights_consent,
+        partnerConsent: true,
+        selfPausedUntil: profile?.ai_insights_paused_until || null,
+        partnerPausedUntil: null,
         selfPaused,
-        partnerPaused,
+        partnerPaused: false,
     };
 };
 
-router.get('/', requirePartner, async (req, res) => {
+router.get('/', requirePartner, rateLimitMiddleware('insights'), async (req, res) => {
     try {
         const { userId, partnerId, supabase } = req;
 
+        // Pagination params
+        const limit = Math.min(parseInt(req.query.limit) || 20, 100);
+        const offset = parseInt(req.query.offset) || 0;
+
         const tier = await getUserSubscriptionTier(userId);
         if (tier !== 'pause_gold') {
-            return res.status(403).json({ error: 'Pause Gold required' });
+            return sendError(res, 403, 'SUBSCRIPTION_REQUIRED', 'Pause Gold required');
         }
 
         const levelStatus = await getLevelStatus(userId, partnerId);
         if (!levelStatus?.success) {
-            return res.status(500).json({ error: safeErrorMessage(levelStatus?.error || 'Level check failed') });
+            return sendError(res, 500, 'SERVER_ERROR', safeErrorMessage(levelStatus?.error || 'Level check failed'));
         }
         if (!levelStatus?.data || levelStatus.data.level < INSIGHTS_MIN_LEVEL) {
-            return res.status(403).json({ error: `Level ${INSIGHTS_MIN_LEVEL} required` });
+            return sendError(res, 403, 'LEVEL_REQUIRED', `Level ${INSIGHTS_MIN_LEVEL} required`);
         }
 
-        let { data: profiles, error } = await supabase
+        let { data: profile, error } = await supabase
             .from('profiles')
             .select('id, ai_insights_consent, ai_insights_consent_at, ai_insights_paused_until')
-            .in('id', [userId, partnerId]);
+            .eq('id', userId)
+            .single();
 
         if (error) throw error;
 
         // Check consent status without auto-consenting
-        const consent = buildConsentState(profiles || [], userId, partnerId);
+        const consent = buildConsentState(profile || null);
 
         // If either user hasn't explicitly consented, return requiresConsent flag
-        if (!consent.selfConsent || !consent.partnerConsent) {
+        if (!consent.selfConsent) {
             return res.json({
                 insights: [],
+                data: [],
                 consent,
                 requiresConsent: true,
-                message: 'AI insights require consent from both partners'
+                message: 'AI insights require your consent',
+                pagination: { limit, offset, hasMore: false }
             });
         }
 
         // Check for paused state
-        if (consent.selfPaused || consent.partnerPaused) {
-            return res.json({ insights: [], consent });
+        if (consent.selfPaused) {
+            return res.json({
+                insights: [],
+                data: [],
+                consent,
+                pagination: { limit, offset, hasMore: false }
+            });
         }
 
         const coupleIds = getOrderedCoupleIds(userId, partnerId);
         if (!coupleIds) {
-            return res.status(400).json({ error: 'Invalid couple' });
+            return sendError(res, 400, 'INVALID_INPUT', 'Invalid couple');
         }
-        const { data: insights, error: insightsError } = await supabase
+        let { data: insights, error: insightsError } = await supabase
             .from('insights')
             .select('*')
             .eq('user_a_id', coupleIds.user_a_id)
             .eq('user_b_id', coupleIds.user_b_id)
+            .eq('recipient_user_id', userId)
             .eq('is_active', true)
             .order('generated_at', { ascending: false })
-            .limit(10);
+            .range(offset, offset + limit - 1);
 
         if (insightsError) throw insightsError;
 
-        if (!insights || insights.length === 0) {
-            const generated = await generateInsightsForCouple({ userId, partnerId });
-            if (generated?.insights?.length) {
-                return res.json({
-                    insights: generated.insights.map((insight) => ({
-                        id: insight.id,
-                        category: insight.category,
-                        text: insight.insight_text,
-                        evidenceSummary: insight.evidence_summary,
-                        confidenceScore: insight.confidence_score,
-                        generatedAt: insight.generated_at,
-                    })),
-                    consent,
-                });
+        let meta = null;
+        const generated = await generateInsightsForCouple({
+            userId,
+            partnerId,
+            existingInsights: (insights || []).map((insight) => ({
+                text: insight.insight_text,
+                category: insight.category
+            }))
+        });
+
+        if (generated?.error) {
+            meta = { reason: generated.error };
+        } else if (generated?.reason) {
+            meta = { reason: generated.reason };
+        }
+
+        if (!generated?.error && generated?.insights?.length) {
+            const refreshed = await supabase
+                .from('insights')
+                .select('*')
+                .eq('user_a_id', coupleIds.user_a_id)
+                .eq('user_b_id', coupleIds.user_b_id)
+                .eq('recipient_user_id', userId)
+                .eq('is_active', true)
+                .order('generated_at', { ascending: false })
+                .range(offset, offset + limit - 1);
+            if (!refreshed.error) {
+                insights = refreshed.data || insights;
             }
         }
 
@@ -114,10 +141,20 @@ router.get('/', requirePartner, async (req, res) => {
             generatedAt: insight.generated_at,
         }));
 
-        return res.json({ insights: response, consent });
+        return res.json({
+            insights: response,
+            data: response,
+            consent,
+            meta,
+            pagination: {
+                limit,
+                offset,
+                hasMore: response.length === limit
+            }
+        });
     } catch (error) {
         console.error('[Insights] Failed to fetch insights:', error);
-        return res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
+        return sendError(res, error.statusCode || 500, 'SERVER_ERROR', safeErrorMessage(error));
     }
 });
 
@@ -147,7 +184,7 @@ router.post('/consent', async (req, res) => {
         return res.json({ success: true, profile: data });
     } catch (error) {
         console.error('[Insights] Failed to update consent:', error);
-        return res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
+        return sendError(res, error.statusCode || 500, 'SERVER_ERROR', safeErrorMessage(error));
     }
 });
 
@@ -172,7 +209,7 @@ router.post('/pause', async (req, res) => {
         return res.json({ success: true, pausedUntil: data?.ai_insights_paused_until || pausedUntil });
     } catch (error) {
         console.error('[Insights] Failed to pause insights:', error);
-        return res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
+        return sendError(res, error.statusCode || 500, 'SERVER_ERROR', safeErrorMessage(error));
     }
 });
 
@@ -186,19 +223,23 @@ router.post('/:id/feedback', requirePartner, async (req, res) => {
 
         const { data: insight, error } = await supabase
             .from('insights')
-            .select('id, helpful_count, not_helpful_count, user_a_id, user_b_id')
+            .select('id, helpful_count, not_helpful_count, user_a_id, user_b_id, recipient_user_id')
             .eq('id', id)
             .single();
 
         if (error || !insight) {
-            return res.status(404).json({ error: 'Insight not found' });
+            return sendError(res, 404, 'NOT_FOUND', 'Insight not found');
         }
 
         const matchesCouple = (insight.user_a_id === userId && insight.user_b_id === partnerId)
             || (insight.user_a_id === partnerId && insight.user_b_id === userId);
 
         if (!matchesCouple) {
-            return res.status(403).json({ error: 'Access denied' });
+            return sendError(res, 403, 'FORBIDDEN', 'Access denied');
+        }
+
+        if (insight.recipient_user_id && insight.recipient_user_id !== userId) {
+            return sendError(res, 403, 'FORBIDDEN', 'Access denied');
         }
 
         const updates = isHelpful
@@ -217,7 +258,7 @@ router.post('/:id/feedback', requirePartner, async (req, res) => {
         return res.json({ success: true, insight: updated });
     } catch (error) {
         console.error('[Insights] Failed to record feedback:', error);
-        return res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
+        return sendError(res, error.statusCode || 500, 'SERVER_ERROR', safeErrorMessage(error));
     }
 });
 

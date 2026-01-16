@@ -106,14 +106,31 @@ export default function CourtroomPageV2() {
     const addendumCount = session?.addendumCount ?? 0;
     const addendumRemaining = session?.addendumRemaining ?? Math.max(addendumLimit - addendumCount, 0);
     const judgeType = session?.judgeType || 'swift';
-    const judgeAvatar = useMemo(() => {
-        const map = {
-            classic: '/assets/avatars/judge_mochi.png',
-            swift: '/assets/avatars/judge_dash.png',
-            wise: '/assets/avatars/judge_whiskers.png'
+    const judgeProfile = useMemo(() => {
+        const aliases = {
+            fast: 'classic',
+            logical: 'swift',
+            best: 'wise'
         };
-        return map[judgeType] || map.swift;
+        const profiles = {
+            classic: {
+                nameKey: 'court.judges.classic.name',
+                avatar: '/assets/avatars/judge_mochi.png'
+            },
+            swift: {
+                nameKey: 'court.judges.swift.name',
+                avatar: '/assets/avatars/judge_dash.png'
+            },
+            wise: {
+                nameKey: 'court.judges.wise.name',
+                avatar: '/assets/avatars/judge_whiskers.png'
+            }
+        };
+        const normalized = aliases[judgeType] || judgeType;
+        return profiles[normalized] || profiles.swift;
     }, [judgeType]);
+    const judgeAvatar = judgeProfile.avatar;
+    const judgeName = useMemo(() => t(judgeProfile.nameKey), [judgeProfile.nameKey, t]);
 
     const myPick = useMemo(() => {
         if (!session?.resolutionPicks) return null;
@@ -394,6 +411,7 @@ export default function CourtroomPageV2() {
                         addendumRemaining={addendumRemaining}
                         addendumLimit={addendumLimit}
                         judgeAvatar={judgeAvatar}
+                        judgeName={judgeName}
                     />
                 );
             }
@@ -552,7 +570,7 @@ function EvidenceForm({
                     />
                     <div className="flex items-center justify-between mt-2">
                         <span className="text-[11px] text-court-brownLight/80">{t('courtroom.evidence.factsHint')}</span>
-                        <span className="text-[11px] text-neutral-400">{evidenceLen}/{maxLen}</span>
+                        <span className="text-[11px] text-neutral-500">{evidenceLen}/{maxLen}</span>
                     </div>
                 </div>
 
@@ -573,7 +591,7 @@ function EvidenceForm({
                     />
                     <div className="flex items-center justify-between mt-2">
                         <span className="text-[11px] text-court-brownLight/80">{t('courtroom.evidence.feelingsHint')}</span>
-                        <span className="text-[11px] text-neutral-400">{feelingsLen}/{maxLen}</span>
+                        <span className="text-[11px] text-neutral-500">{feelingsLen}/{maxLen}</span>
                     </div>
                 </div>
 
@@ -594,7 +612,7 @@ function EvidenceForm({
                     />
                     <div className="flex items-center justify-between mt-2">
                         <span className="text-[11px] text-court-brownLight/80">{t('courtroom.evidence.needsHint')}</span>
-                        <span className="text-[11px] text-neutral-400">{needsLen}/{maxLen}</span>
+                        <span className="text-[11px] text-neutral-500">{needsLen}/{maxLen}</span>
                     </div>
                 </div>
 

@@ -18,21 +18,27 @@ const { asyncHandler } = require('../middleware/asyncHandler');
 const { processSecureInput, securityConfig, llmSecurityMiddleware } = require('../lib/security/index');
 const { safeErrorMessage } = require('../lib/shared/errorUtils');
 
+const isProd = process.env.NODE_ENV === 'production';
+
 const requireUserId = async (req, fallbackUserId) => {
-    // Always require proper authentication when Supabase is configured
+    // CRITICAL: In production, ALWAYS require proper authentication
+    // Never allow fallback userId bypass in production
+    if (isProd) {
+        if (!isSupabaseConfigured()) {
+            const error = new Error('Authentication service not configured');
+            error.statusCode = 503;
+            throw error;
+        }
+        return requireAuthUserId(req);
+    }
+
+    // Development mode: require authentication when Supabase is configured
     if (isSupabaseConfigured()) {
         return requireAuthUserId(req);
     }
 
-    // In production, require Supabase configuration
-    if (process.env.NODE_ENV === 'production') {
-        const error = new Error('Supabase is not configured');
-        error.statusCode = 503;
-        throw error;
-    }
-
-    // Development mode: still require authentication if possible
-    // Only allow fallback for local testing without Supabase
+    // Development-only fallback for local testing without Supabase
+    // This path is blocked in production by the check above
     if (process.env.REQUIRE_AUTH_IN_DEV === 'true') {
         const error = new Error('Authentication required');
         error.statusCode = 401;
@@ -41,7 +47,7 @@ const requireUserId = async (req, fallbackUserId) => {
 
     // Log warning when using development fallback
     if (fallbackUserId) {
-        console.warn('[Security] Using development auth bypass - NOT FOR PRODUCTION');
+        console.warn('[Security] DEV ONLY: Using auth bypass - blocked in production');
     }
 
     if (!fallbackUserId) {

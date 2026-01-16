@@ -84,19 +84,19 @@ const SignInPage = () => {
             return;
         }
 
-        console.log('[SignInPage] Calling signIn...');
+        if (import.meta.env.DEV) console.log('[SignInPage] Calling signIn...');
         const result = await signIn(email, password);
-        console.log('[SignInPage] signIn result:', result);
+        if (import.meta.env.DEV) console.log('[SignInPage] signIn result:', result);
         setIsSubmitting(false);
 
         if (result.error) {
             console.error('[SignInPage] Error:', result.error);
             setError(getErrorMessage(result.error, t));
         } else {
-            console.log('[SignInPage] Success! Navigating to /');
+            if (import.meta.env.DEV) console.log('[SignInPage] Success! Navigating to /');
             // Small delay to ensure state is fully propagated before navigation
             setTimeout(() => {
-                console.log('[SignInPage] Executing navigate...');
+                if (import.meta.env.DEV) console.log('[SignInPage] Executing navigate...');
                 navigate('/');
             }, 100);
         }
@@ -230,7 +230,7 @@ const SignInPage = () => {
                     {/* Divider */}
                     <div className="flex items-center gap-4 my-6">
                         <div className="flex-1 h-px bg-neutral-200"></div>
-                        <span className="text-neutral-400 text-sm">{t('common.or')}</span>
+                        <span className="text-neutral-500 text-sm">{t('common.or')}</span>
                         <div className="flex-1 h-px bg-neutral-200"></div>
                     </div>
 
@@ -238,30 +238,30 @@ const SignInPage = () => {
                     <form onSubmit={handleEmailSignIn} className="space-y-4">
                         {/* Email Input */}
                         <div className="relative">
-                            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
+                            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-500" />
                             <input
                                 type="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 placeholder={t('signIn.emailPlaceholder')}
-                                className="w-full pl-12 pr-4 py-3.5 bg-neutral-50 border border-neutral-200 rounded-2xl text-neutral-700 placeholder:text-neutral-400 focus:outline-none focus:border-court-gold focus:ring-2 focus:ring-court-gold/20 transition-all"
+                                className="w-full pl-12 pr-4 py-3.5 bg-neutral-50 border border-neutral-200 rounded-2xl text-neutral-700 placeholder:text-neutral-500 focus:outline-none focus:border-court-gold focus:ring-2 focus:ring-court-gold/20 transition-all"
                             />
                         </div>
 
                         {/* Password Input */}
                         <div className="relative">
-                            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
+                            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-500" />
                             <input
                                 type={showPassword ? 'text' : 'password'}
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 placeholder={t('signIn.passwordPlaceholder')}
-                                className="w-full pl-12 pr-12 py-3.5 bg-neutral-50 border border-neutral-200 rounded-2xl text-neutral-700 placeholder:text-neutral-400 focus:outline-none focus:border-court-gold focus:ring-2 focus:ring-court-gold/20 transition-all"
+                                className="w-full pl-12 pr-12 py-3.5 bg-neutral-50 border border-neutral-200 rounded-2xl text-neutral-700 placeholder:text-neutral-500 focus:outline-none focus:border-court-gold focus:ring-2 focus:ring-court-gold/20 transition-all"
                             />
                             <button
                                 type="button"
                                 onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
+                                className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-600"
                             >
                                 {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                             </button>
@@ -325,7 +325,7 @@ const SignInPage = () => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.4 }}
-            className="mt-8 text-neutral-400 text-sm"
+            className="mt-8 text-neutral-500 text-sm"
         >
             {t('signIn.footer')}
         </Motion.p>

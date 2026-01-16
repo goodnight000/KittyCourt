@@ -7,6 +7,7 @@ import usePartnerStore from '../store/usePartnerStore';
 import useSubscriptionStore from '../store/useSubscriptionStore';
 import Paywall from '../components/Paywall';
 import { useI18n } from '../i18n';
+import { parseLocalDate } from '../utils/dateFormatters';
 
 // Calendar components
 import useCalendarEvents from '../components/calendar/useCalendarEvents';
@@ -176,9 +177,8 @@ const CalendarPage = () => {
                         onDelete={handleDeleteEvent}
                         onClose={() => setShowEventDetails(null)}
                         onAddMore={() => {
-                            setSelectedDate(showEventDetails[0].date.includes('T')
-                                ? new Date(showEventDetails[0].date)
-                                : new Date(showEventDetails[0].date + 'T00:00:00'));
+                            const parsed = parseLocalDate(showEventDetails[0].date);
+                            setSelectedDate(parsed || new Date());
                             setShowEventDetails(null);
                             setShowAddModal(true);
                         }}

@@ -9,20 +9,104 @@ const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
 const { getSupabase, isSupabaseConfigured } = require('../lib/supabase');
+const { getPartnerIdForUser } = require('../lib/auth');
 const { safeErrorMessage } = require('../lib/shared/errorUtils');
+const { sendError } = require('../lib/http');
 
 const REVENUECAT_WEBHOOK_TOKEN = process.env.REVENUECAT_WEBHOOK_TOKEN || '';
 const REVENUECAT_WEBHOOK_SECRET = process.env.REVENUECAT_WEBHOOK_SECRET || ''; // For HMAC verification
 // Support both formats: 'Pause Gold' (with space) or 'pause_gold' (snake_case).
 const PAUSE_GOLD_ENTITLEMENTS = new Set(['pause_gold', 'pause gold']);
+
+// Replay attack prevention configuration
+const WEBHOOK_TIMESTAMP_TOLERANCE_MS = 5 * 60 * 1000; // 5 minutes tolerance for timestamp validation
+const processedEventIds = new Map(); // In-memory store for event deduplication
+const EVENT_ID_TTL_MS = 24 * 60 * 60 * 1000; // Keep event IDs for 24 hours
+
+// Clean up old event IDs periodically (every hour)
+setInterval(() => {
+    const now = Date.now();
+    for (const [eventId, timestamp] of processedEventIds.entries()) {
+        if (now - timestamp > EVENT_ID_TTL_MS) {
+            processedEventIds.delete(eventId);
+        }
+    }
+}, 60 * 60 * 1000);
+
+/**
+ * Check if an event has already been processed (replay attack prevention)
+ * @param {string} eventId - Unique event identifier
+ * @returns {boolean} - True if event was already processed
+ */
+function isEventAlreadyProcessed(eventId) {
+    if (!eventId) return false;
+    return processedEventIds.has(eventId);
+}
+
+/**
+ * Mark an event as processed
+ * @param {string} eventId - Unique event identifier
+ */
+function markEventProcessed(eventId) {
+    if (eventId) {
+        processedEventIds.set(eventId, Date.now());
+    }
+}
+
+/**
+ * Validate webhook timestamp to prevent replay attacks
+ * @param {number|string} timestamp - Event timestamp (ms or ISO string)
+ * @returns {boolean} - True if timestamp is within acceptable range
+ */
+function isTimestampValid(timestamp) {
+    if (!timestamp) return false;
+
+    const eventTime = typeof timestamp === 'string'
+        ? new Date(timestamp).getTime()
+        : Number(timestamp);
+
+    if (!Number.isFinite(eventTime)) return false;
+
+    const now = Date.now();
+    const diff = Math.abs(now - eventTime);
+
+    return diff <= WEBHOOK_TIMESTAMP_TOLERANCE_MS;
+}
 const PAUSE_GOLD_PRODUCTS = new Set([
     'pause_gold_monthly',
     'pause_gold_yearly',
     'monthly',
     'yearly',
+    'prod88802f6b24',
+    'prode16533934c',
     'prodaa5384f89b',
 ]);
 const isProd = process.env.NODE_ENV === 'production';
+
+async function syncPartnerSubscription(supabase, userId, tier, expiresAt) {
+    try {
+        const partnerId = await getPartnerIdForUser(supabase, userId);
+        if (!partnerId) return false;
+
+        const { error } = await supabase
+            .from('profiles')
+            .update({
+                subscription_tier: tier,
+                subscription_expires_at: expiresAt,
+            })
+            .eq('id', partnerId);
+
+        if (error) {
+            console.error('[Webhook] Failed to update partner subscription:', error);
+            return false;
+        }
+
+        return true;
+    } catch (error) {
+        console.error('[Webhook] Failed to resolve partner for subscription sync:', error);
+        return false;
+    }
+}
 
 /**
  * Verify HMAC signature for webhook body
@@ -62,13 +146,13 @@ router.post('/revenuecat', async (req, res) => {
     try {
         if (!isSupabaseConfigured()) {
             console.error('[Webhook] Supabase not configured');
-            return res.status(500).json({ error: 'Server not configured' });
+            return sendError(res, 500, 'SERVER_ERROR', 'Server not configured');
         }
 
         // Security: Require webhook auth in production
         if (isProd && !REVENUECAT_WEBHOOK_TOKEN && !REVENUECAT_WEBHOOK_SECRET) {
             console.error('[Webhook] CRITICAL: No webhook authentication configured in production');
-            return res.status(503).json({ error: 'Webhook auth not configured' });
+            return sendError(res, 503, 'SERVICE_UNAVAILABLE', 'Webhook auth not configured');
         }
 
         // Method 1: HMAC signature verification (preferred if configured)
@@ -79,7 +163,7 @@ router.post('/revenuecat', async (req, res) => {
             const rawBody = Buffer.isBuffer(req.body) ? req.body : Buffer.from(JSON.stringify(req.body));
             if (!verifyHmacSignature(signature, rawBody, REVENUECAT_WEBHOOK_SECRET)) {
                 console.warn('[Webhook] HMAC signature verification failed');
-                return res.status(401).json({ error: 'Invalid signature' });
+                return sendError(res, 401, 'UNAUTHORIZED', 'Invalid signature');
             }
         }
         // Method 2: Bearer token auth (fallback)
@@ -100,7 +184,7 @@ router.post('/revenuecat', async (req, res) => {
             })();
             if (!ok) {
                 console.warn('[Webhook] Bearer token verification failed');
-                return res.status(401).json({ error: 'Unauthorized' });
+                return sendError(res, 401, 'UNAUTHORIZED', 'Unauthorized');
             }
         }
         // In development without auth configured, log a warning
@@ -117,7 +201,7 @@ router.post('/revenuecat', async (req, res) => {
                 event = JSON.parse(req.body.toString('utf8'));
             } catch (parseError) {
                 console.error('[Webhook] Failed to parse request body:', parseError);
-                return res.status(400).json({ error: 'Invalid JSON body' });
+                return sendError(res, 400, 'INVALID_INPUT', 'Invalid JSON body');
             }
         } else {
             event = req.body;
@@ -128,10 +212,28 @@ router.post('/revenuecat', async (req, res) => {
 
         // RevenueCat webhook payload structure
         const eventType = event.event?.type;
+        const eventId = event.event?.id; // Unique event identifier
+        const eventTimestamp = event.event?.event_timestamp_ms || event.event?.purchased_at_ms;
         const appUserId = event.event?.app_user_id;
         const productId = event.event?.product_id;
         const expiresAt = event.event?.expiration_at_ms;
         const entitlementIds = event.event?.entitlement_ids || [];
+
+        // Replay attack prevention: Check event ID deduplication
+        if (eventId && isEventAlreadyProcessed(eventId)) {
+            console.warn('[Webhook] Replay attack prevented: duplicate event ID', eventId);
+            return res.status(200).json({ received: true, processed: false, reason: 'duplicate_event' });
+        }
+
+        // Replay attack prevention: Validate timestamp (only in production for stricter security)
+        if (isProd && eventTimestamp && !isTimestampValid(eventTimestamp)) {
+            console.warn('[Webhook] Replay attack prevented: stale timestamp', {
+                eventId,
+                eventTimestamp,
+                now: Date.now(),
+            });
+            return sendError(res, 400, 'INVALID_INPUT', 'Event timestamp out of range');
+        }
 
         // Check if this event affects Pause Gold subscription
         // Support multiple entitlement formats and product names
@@ -175,8 +277,10 @@ router.post('/revenuecat', async (req, res) => {
 
                 if (subscribeError) {
                     console.error('[Webhook] Failed to update subscription:', subscribeError);
-                    return res.status(500).json({ error: 'Database update failed' });
+                    return sendError(res, 500, 'SERVER_ERROR', 'Database update failed');
                 }
+
+                await syncPartnerSubscription(supabase, appUserId, 'pause_gold', expirationDate);
                 break;
 
             case 'EXPIRATION':
@@ -193,8 +297,10 @@ router.post('/revenuecat', async (req, res) => {
 
                 if (cancelError) {
                     console.error('[Webhook] Failed to cancel subscription:', cancelError);
-                    return res.status(500).json({ error: 'Database update failed' });
+                    return sendError(res, 500, 'SERVER_ERROR', 'Database update failed');
                 }
+
+                await syncPartnerSubscription(supabase, appUserId, 'free', null);
                 break;
 
             case 'CANCELLATION':
@@ -207,6 +313,8 @@ router.post('/revenuecat', async (req, res) => {
                         subscription_expires_at: expirationDate,
                     })
                     .eq('id', appUserId);
+
+                await syncPartnerSubscription(supabase, appUserId, 'pause_gold', expirationDate);
                 break;
 
             case 'BILLING_ISSUE':
@@ -225,10 +333,13 @@ router.post('/revenuecat', async (req, res) => {
                 console.log(`[Webhook] Unhandled event type: ${eventType}`);
         }
 
+        // Mark event as processed to prevent replay attacks
+        markEventProcessed(eventId);
+
         res.status(200).json({ received: true, processed: true });
     } catch (error) {
         console.error('[Webhook] Error processing RevenueCat event:', error);
-        res.status(500).json({ error: safeErrorMessage(error) });
+        return sendError(res, 500, 'SERVER_ERROR', safeErrorMessage(error));
     }
 });
 

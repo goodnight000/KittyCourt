@@ -41,7 +41,12 @@ import useAppStore from './store/useAppStore';
 import useCourtStore from './store/useCourtStore';
 import usePartnerStore from './store/usePartnerStore';
 import useOnboardingStore from './store/useOnboardingStore';
+import useLevelStore from './store/useLevelStore';
+import useChallengeStore from './store/useChallengeStore';
+import useInsightsStore from './store/useInsightsStore';
+import useMemoryStore from './store/useMemoryStore';
 import { startAuthLifecycle } from './services/authLifecycle';
+import { startCacheLifecycle } from './services/cacheLifecycle';
 
 // RevenueCat
 import { initializeRevenueCat } from './services/revenuecat';
@@ -87,22 +92,36 @@ const AppRoutes = () => {
 
     useEffect(() => {
         const stop = startAuthLifecycle();
+        const stopCache = startCacheLifecycle();
 
         // Initialize RevenueCat SDK (only works on native platforms)
         initializeRevenueCat();
 
         // Initialize event bus listeners for dependent stores
-        console.log('[App] Initializing event bus listeners for stores');
+        if (import.meta.env.DEV) console.log('[App] Initializing event bus listeners for stores');
+        useAuthStore.getState().init?.();
         useAppStore.getState().init();
         useCourtStore.getState().init();
+        usePartnerStore.getState().init();
+        useOnboardingStore.getState().init();
+        useLevelStore.getState().init();
+        useChallengeStore.getState().init();
+        useInsightsStore.getState().init();
+        useMemoryStore.getState().init();
 
         return () => {
             stop?.();
+            stopCache?.();
             // Cleanup all stores (event bus listeners, pending timeouts, subscriptions)
             useAuthStore.getState().cleanup?.();
-            usePartnerStore.getState().cleanupRealtimeSubscriptions?.();
+            usePartnerStore.getState().cleanup?.();
             useAppStore.getState().cleanup();
             useCourtStore.getState().cleanup();
+            useOnboardingStore.getState().cleanup?.();
+            useLevelStore.getState().cleanup?.();
+            useChallengeStore.getState().cleanup?.();
+            useInsightsStore.getState().cleanup?.();
+            useMemoryStore.getState().cleanup?.();
             // Cleanup push notification listeners
             removePushListeners();
         };
@@ -112,9 +131,9 @@ const AppRoutes = () => {
         if (initializedRef.current) return;
         initializedRef.current = true;
 
-        console.log('[App] Calling initialize...');
+        if (import.meta.env.DEV) console.log('[App] Calling initialize...');
         initialize().then(() => {
-            console.log('[App] Initialize completed');
+            if (import.meta.env.DEV) console.log('[App] Initialize completed');
         }).catch((err) => {
             console.error('[App] Initialize failed:', err);
         });
@@ -127,7 +146,7 @@ const AppRoutes = () => {
         // Initialize push notifications after user is authenticated
         initializePushNotifications().then((success) => {
             if (success) {
-                console.log('[App] Push notifications initialized');
+                if (import.meta.env.DEV) console.log('[App] Push notifications initialized');
             }
         }).catch((err) => {
             console.warn('[App] Push notifications initialization failed:', err);
@@ -149,7 +168,7 @@ const AppRoutes = () => {
         return () => clearInterval(interval);
     }, [isAuthenticated, hasPartner, refreshPendingRequests]);
 
-    console.log('[App] Render - isLoading:', isLoading, 'hasCheckedAuth:', hasCheckedAuth, 'isAuthenticated:', isAuthenticated);
+    if (import.meta.env.DEV) console.log('[App] Render - isLoading:', isLoading, 'hasCheckedAuth:', hasCheckedAuth, 'isAuthenticated:', isAuthenticated);
 
     // Show loading screen until initial auth check completes
     // This prevents the flash of onboarding page on refresh

@@ -17,6 +17,10 @@ build/
 
 # IDE
 .vscode/
+.claude/
+.codex/
+.github/
+challenges_seed.csv
 .idea/
 *.swp
 *.swo

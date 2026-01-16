@@ -1,12 +1,21 @@
 /**
  * Subscription Store
- * 
+ *
  * Zustand store for managing subscription state, usage tracking,
  * and feature access control.
+ *
+ * Includes offline detection with graceful degradation - when offline,
+ * the store will use cached/last-known values and retry when online.
  */
 
 import { create } from 'zustand';
 import api from '../services/api';
+
+/**
+ * Check if the browser is currently online
+ * @returns {boolean}
+ */
+const isOnline = () => typeof navigator !== 'undefined' ? navigator.onLine : true;
 import {
     isNativePlatform,
     initializeRevenueCat,
@@ -65,6 +74,7 @@ const useSubscriptionStore = create((set, get) => ({
     customerInfo: null,
     offerings: null,
     _rcUnsub: null,
+    _onlineUnsub: null, // For online event listener cleanup
 
     // Usage tracking (fetched from backend)
     usage: {
@@ -86,13 +96,48 @@ const useSubscriptionStore = create((set, get) => ({
     error: null,
     backendStatusSupported: true,
 
+    // Offline state tracking
+    isOffline: false,
+    _pendingRefresh: false, // Flag to refresh when back online
+
     /**
      * Initialize subscription state for a user
      * Called after authentication
      * @param {string} userId - Supabase user ID
      */
     initialize: async (userId) => {
-        set({ isLoading: true, error: null });
+        set({ isLoading: true, error: null, isOffline: !isOnline() });
+
+        // Set up online/offline listeners for graceful degradation
+        try {
+            const prevOnlineUnsub = get()._onlineUnsub;
+            if (typeof prevOnlineUnsub === 'function') prevOnlineUnsub();
+        } catch (_e) { }
+
+        const handleOnline = () => {
+            set({ isOffline: false });
+            // Refresh data when coming back online if we had pending refresh
+            if (get()._pendingRefresh) {
+                set({ _pendingRefresh: false });
+                get().checkEntitlement();
+                get().fetchUsage();
+            }
+        };
+
+        const handleOffline = () => {
+            set({ isOffline: true, _pendingRefresh: true });
+        };
+
+        if (typeof window !== 'undefined') {
+            window.addEventListener('online', handleOnline);
+            window.addEventListener('offline', handleOffline);
+            set({
+                _onlineUnsub: () => {
+                    window.removeEventListener('online', handleOnline);
+                    window.removeEventListener('offline', handleOffline);
+                },
+            });
+        }
 
         try {
             try {
@@ -135,8 +180,16 @@ const useSubscriptionStore = create((set, get) => ({
 
     /**
      * Check current entitlement status
+     * Gracefully handles offline state by using cached values
      */
     checkEntitlement: async () => {
+        // If offline, mark pending refresh and use existing state
+        if (!isOnline()) {
+            set({ isOffline: true, _pendingRefresh: true });
+            if (import.meta.env.DEV) console.log('[SubscriptionStore] Offline - using cached entitlement status');
+            return get().isGold;
+        }
+
         try {
             let isGold = false;
             let customerInfo = null;
@@ -152,13 +205,18 @@ const useSubscriptionStore = create((set, get) => ({
                 try {
                     const response = await api.get('/subscription/status');
                     if (response.data?.tier === 'pause_gold') {
-                        console.log('[SubscriptionStore] Gold status confirmed from backend');
+                        if (import.meta.env.DEV) console.log('[SubscriptionStore] Gold status confirmed from backend');
                         isGold = true;
                     }
                 } catch (e) {
                     const status = e?.response?.status;
                     if (status === 404) {
                         set({ backendStatusSupported: false });
+                    } else if (e?.code === 'ERR_NETWORK' || e?.message?.includes('Network Error')) {
+                        // Network error - likely offline, use cached value
+                        set({ isOffline: true, _pendingRefresh: true });
+                        console.warn('[SubscriptionStore] Network error - using cached entitlement');
+                        return get().isGold;
                     } else {
                         // Backend endpoint may not exist yet, ignore
                         console.warn('[SubscriptionStore] Backend status check failed:', e.message);
@@ -170,10 +228,18 @@ const useSubscriptionStore = create((set, get) => ({
                 isGold,
                 customerInfo,
                 limits: isGold ? GOLD_LIMITS : FREE_LIMITS,
+                isOffline: false,
             });
 
             return isGold;
         } catch (error) {
+            // On network errors, gracefully degrade to cached state
+            if (error?.code === 'ERR_NETWORK' || error?.message?.includes('Network Error')) {
+                set({ isOffline: true, _pendingRefresh: true });
+                console.warn('[SubscriptionStore] Network error - using cached entitlement');
+                return get().isGold;
+            }
+
             console.error('[SubscriptionStore] Check entitlement failed:', error);
             set({ error: error.message });
             return false;
@@ -196,7 +262,7 @@ const useSubscriptionStore = create((set, get) => ({
             );
 
             set({ trialEligible: isEligible, trialEligibilityChecked: true });
-            console.log('[SubscriptionStore] Trial eligible:', isEligible);
+            if (import.meta.env.DEV) console.log('[SubscriptionStore] Trial eligible:', isEligible);
             return isEligible;
         } catch (error) {
             console.error('[SubscriptionStore] Check trial eligibility failed:', error);
@@ -238,7 +304,7 @@ const useSubscriptionStore = create((set, get) => ({
                         tier: 'pause_gold',
                         productId,
                     });
-                    console.log('[SubscriptionStore] Backend sync successful');
+                    if (import.meta.env.DEV) console.log('[SubscriptionStore] Backend sync successful');
                 } catch (e) {
                     // Backend sync is best-effort, webhook will handle it eventually
                     console.warn('[SubscriptionStore] Backend sync failed (will rely on webhook):', e.message);
@@ -289,7 +355,7 @@ const useSubscriptionStore = create((set, get) => ({
                     tier: isGold ? 'pause_gold' : 'free',
                     productId,
                 });
-                console.log('[SubscriptionStore] Backend sync after restore successful');
+                if (import.meta.env.DEV) console.log('[SubscriptionStore] Backend sync after restore successful');
             } catch (e) {
                 console.warn('[SubscriptionStore] Backend sync after restore failed:', e.message);
             }
@@ -305,8 +371,16 @@ const useSubscriptionStore = create((set, get) => ({
 
     /**
      * Fetch current usage from backend
+     * Gracefully handles offline state by using cached values
      */
     fetchUsage: async () => {
+        // If offline, skip fetch and use existing state
+        if (!isOnline()) {
+            set({ isOffline: true, _pendingRefresh: true });
+            if (import.meta.env.DEV) console.log('[SubscriptionStore] Offline - using cached usage data');
+            return;
+        }
+
         try {
             const response = await api.get('/usage');
             const data = response.data;
@@ -319,10 +393,18 @@ const useSubscriptionStore = create((set, get) => ({
                     planUsed: data.planUsed || 0,
                     periodStart: data.periodStart,
                 },
+                isOffline: false,
             });
         } catch (error) {
+            // On network errors, gracefully degrade to cached state
+            if (error?.code === 'ERR_NETWORK' || error?.message?.includes('Network Error')) {
+                set({ isOffline: true, _pendingRefresh: true });
+                console.warn('[SubscriptionStore] Network error - using cached usage data');
+                return;
+            }
+
             console.error('[SubscriptionStore] Fetch usage failed:', error);
-            // Don't fail hard - default to 0 usage (graceful degradation)
+            // Don't fail hard - default to existing usage (graceful degradation)
         }
     },
 
@@ -483,12 +565,18 @@ const useSubscriptionStore = create((set, get) => ({
             if (typeof unsub === 'function') unsub();
         } catch (_e) { }
 
+        try {
+            const onlineUnsub = get()._onlineUnsub;
+            if (typeof onlineUnsub === 'function') onlineUnsub();
+        } catch (_e) { }
+
         set({
             isGold: false,
             isLoading: true,
             customerInfo: null,
             offerings: null,
             _rcUnsub: null,
+            _onlineUnsub: null,
             usage: {
                 classicUsed: 0,
                 swiftUsed: 0,
@@ -498,6 +586,8 @@ const useSubscriptionStore = create((set, get) => ({
             },
             limits: FREE_LIMITS,
             error: null,
+            isOffline: false,
+            _pendingRefresh: false,
         });
     },
 
@@ -515,7 +605,7 @@ const useSubscriptionStore = create((set, get) => ({
                 limits: GOLD_LIMITS,
                 isLoading: false,
             });
-            console.log('[SubscriptionStore] Debug: Forced Gold status');
+            if (import.meta.env.DEV) console.log('[SubscriptionStore] Debug: Forced Gold status');
         } catch (error) {
             console.error('[SubscriptionStore] Debug: Failed to force Gold:', error);
         }

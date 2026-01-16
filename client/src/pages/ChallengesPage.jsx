@@ -13,6 +13,7 @@ import useChallengeStore from '../store/useChallengeStore';
 import useAuthStore from '../store/useAuthStore';
 import usePartnerStore from '../store/usePartnerStore';
 import { useI18n } from '../i18n';
+import BackButton from '../components/shared/BackButton';
 
 // Loading skeleton component
 const ChallengeSkeleton = () => (
@@ -29,17 +30,9 @@ const ChallengeSkeleton = () => (
 );
 
 const ChallengeBackdrop = () => (
-    <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute -top-24 -right-20 h-56 w-56 rounded-full bg-amber-200/35 blur-3xl" />
-        <div className="absolute top-24 -left-20 h-60 w-60 rounded-full bg-rose-200/30 blur-3xl" />
-        <div className="absolute bottom-8 right-8 h-64 w-64 rounded-full bg-amber-100/45 blur-3xl" />
-        <div
-            className="absolute inset-0 opacity-45"
-            style={{
-                backgroundImage:
-                    'radial-gradient(circle at 18% 20%, rgba(255,255,255,0.75) 0%, transparent 55%), radial-gradient(circle at 80% 10%, rgba(255,235,210,0.8) 0%, transparent 60%)'
-            }}
-        />
+    <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute -top-20 -right-20 h-64 w-64 rounded-full bg-amber-200/30 blur-3xl" />
+        <div className="absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-rose-200/25 blur-3xl" />
     </div>
 );
 
@@ -150,13 +143,7 @@ const ChallengesPage = () => {
             <ChallengeBackdrop />
             <div className="relative space-y-6">
                 <header className="flex items-start gap-3">
-                    <motion.button
-                        whileTap={{ scale: 0.95 }}
-                        onClick={handleBack}
-                        className="rounded-2xl border border-white/80 bg-white/80 p-2 shadow-soft"
-                    >
-                        <ArrowLeft className="w-5 h-5 text-neutral-600" />
-                    </motion.button>
+                    <BackButton onClick={handleBack} ariaLabel={t('common.back')} />
                     <div className="flex-1">
                         <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-amber-600">
                             {t('challenges.header.kicker')}
@@ -182,7 +169,7 @@ const ChallengesPage = () => {
                     <div className="relative space-y-4">
                         <div className="flex flex-wrap items-center justify-between gap-4">
                             <div>
-                                <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-neutral-400">
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-neutral-500">
                                     {t('challenges.section.dropKicker')}
                                 </p>
                                 <h2 className="mt-1 text-lg font-display font-bold text-neutral-800">
@@ -268,7 +255,7 @@ const ChallengesPage = () => {
                     <section className="space-y-3">
                         <div className="flex items-center justify-between gap-3">
                             <div>
-                                <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-neutral-400">
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-neutral-500">
                                     {t('challenges.active.kicker')}
                                 </p>
                                 <h2 className="text-base font-display font-bold text-neutral-800">{t('challenges.active.title')}</h2>
@@ -323,7 +310,7 @@ const ChallengesPage = () => {
                             className="flex w-full items-center justify-between text-neutral-600"
                         >
                             <div>
-                                <div className="text-[11px] font-semibold uppercase tracking-[0.3em] text-neutral-400">
+                                <div className="text-[11px] font-semibold uppercase tracking-[0.3em] text-neutral-500">
                                     {t('challenges.completed.kicker')}
                                 </div>
                                 <div className="text-sm font-bold text-neutral-700">

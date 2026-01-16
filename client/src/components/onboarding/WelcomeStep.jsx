@@ -48,7 +48,7 @@ const WelcomeStep = () => {
                 {t('onboarding.welcome.signInPrompt')}
             </button>
             <div className="space-y-4">
-                <p className="text-xs text-neutral-400">
+                <p className="text-xs text-neutral-500">
                     {t('onboarding.welcome.upgradeNote')}
                 </p>
             </div>

@@ -4,7 +4,6 @@ import { X, Check, User, AlertTriangle } from 'lucide-react';
 import { validateBirthdayDate } from '../../utils/helpers';
 import { PRESET_AVATARS } from '../../services/avatarService';
 import { useI18n } from '../../i18n';
-import { DEFAULT_LANGUAGE } from '../../i18n/languageConfig';
 
 const buildFormState = (data) => ({
     nickname: data?.nickname || '',
@@ -12,11 +11,10 @@ const buildFormState = (data) => ({
     loveLanguage: data?.loveLanguage || '',
     avatarUrl: data?.avatarUrl || null,
     anniversaryDate: data?.anniversaryDate || '',
-    preferredLanguage: data?.preferredLanguage || DEFAULT_LANGUAGE,
 });
 
 const ProfileEditForm = ({ profileData, loveLanguages, onSave, onClose }) => {
-    const { t, supportedLanguages } = useI18n();
+    const { t } = useI18n();
     const [formData, setFormData] = useState(() => buildFormState(profileData));
     const [birthdayError, setBirthdayError] = useState(null);
     const [uploading, setUploading] = useState(false);
@@ -110,6 +108,7 @@ const ProfileEditForm = ({ profileData, loveLanguages, onSave, onClose }) => {
                     <h3 className="font-bold text-neutral-800 text-lg">{t('profilePage.edit.title')}</h3>
                     <button
                         onClick={onClose}
+                        aria-label="Close form"
                         className="w-8 h-8 bg-white/80 border border-neutral-200/70 rounded-full flex items-center justify-center"
                     >
                         <X className="w-4 h-4 text-neutral-500" />
@@ -128,7 +127,7 @@ const ProfileEditForm = ({ profileData, loveLanguages, onSave, onClose }) => {
                                     className="w-full h-full object-cover"
                                 />
                             ) : (
-                                <div className="w-full h-full flex items-center justify-center bg-neutral-100 text-neutral-400">
+                                <div className="w-full h-full flex items-center justify-center bg-neutral-100 text-neutral-500">
                                     <User className="w-10 h-10" />
                                 </div>
                             )}
@@ -169,6 +168,7 @@ const ProfileEditForm = ({ profileData, loveLanguages, onSave, onClose }) => {
                             <button
                                 key={avatar.id}
                                 onClick={() => setFormData({ ...formData, avatarUrl: avatar.path })}
+                                aria-label={`Select avatar: ${avatar.labelKey ? t(avatar.labelKey) : avatar.label}`}
                                 className={`p-1 rounded-xl transition-all ${formData.avatarUrl === avatar.path
                                     ? 'bg-amber-100 ring-2 ring-amber-400'
                                     : 'bg-neutral-50 hover:bg-neutral-100'
@@ -237,30 +237,6 @@ const ProfileEditForm = ({ profileData, loveLanguages, onSave, onClose }) => {
                             </button>
                         ))}
                     </div>
-                </div>
-
-                {/* Preferred Language */}
-                <div>
-                    <label htmlFor="preferred-language" className="text-xs font-bold text-neutral-500 mb-2 block">
-                        {t('profile.languageLabel')}
-                    </label>
-                    <select
-                        id="preferred-language"
-                        value={formData.preferredLanguage || DEFAULT_LANGUAGE}
-                        onChange={(e) => setFormData({ ...formData, preferredLanguage: e.target.value })}
-                        className="w-full bg-neutral-50 border-2 border-neutral-100 rounded-xl p-3 text-neutral-700 focus:ring-2 focus:ring-amber-200 focus:border-amber-300 focus:outline-none text-sm"
-                    >
-                        {(supportedLanguages || []).map((languageOption) => {
-                            const label = languageOption.labelKey
-                                ? t(languageOption.labelKey)
-                                : (languageOption.label || languageOption.nativeLabel || languageOption.code);
-                            return (
-                                <option key={languageOption.code} value={languageOption.code}>
-                                    {label}
-                                </option>
-                            );
-                        })}
-                    </select>
                 </div>
 
                 <button

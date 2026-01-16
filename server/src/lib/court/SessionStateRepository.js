@@ -45,6 +45,15 @@ class SessionStateRepository {
             this._hydrateFromRedis().catch((error) => {
                 console.error('[Redis] Session hydration failed:', error?.message || error);
             });
+            console.log('[SessionStateRepository] Redis persistence enabled');
+        } else {
+            // Warn in production if Redis is not configured
+            const isProd = process.env.NODE_ENV === 'production';
+            if (isProd) {
+                console.warn('[SessionStateRepository] WARNING: Redis not configured in production. Court sessions will be stored in-memory only and will be lost on server restart. Set REDIS_URL environment variable for session persistence.');
+            } else {
+                console.log('[SessionStateRepository] Running in memory-only mode (Redis not configured)');
+            }
         }
     }
 

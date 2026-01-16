@@ -22,50 +22,39 @@ async function getStats(userId) {
 
     const supabase = getSupabase();
 
-    // Fetch data in parallel directly from source tables
-    const [
-        casesResult,
-        appreciationsResult,
-        questionsResult
-    ] = await Promise.all([
-        // All resolved cases where user is involved
+    const [streakResult, statsResult] = await Promise.all([
+        supabase.rpc('check_streak_status', { p_user_id: userId }),
         supabase
-            .from('cases')
-            .select('id, user_a_id, user_b_id')
-            .eq('status', 'RESOLVED')
-            .or(`user_a_id.eq.${userId},user_b_id.eq.${userId}`),
-
-        // Appreciations received by user
-        supabase
-            .from('appreciations')
-            .select('id')
-            .eq('to_user_id', userId),
-
-        // Completed questions where user is involved
-        supabase
-            .from('couple_question_assignments')
-            .select('id, user_a_id, user_b_id')
-            .eq('status', 'completed')
-            .or(`user_a_id.eq.${userId},user_b_id.eq.${userId}`)
+            .from('user_stats')
+            .select('questions_completed,cases_resolved,appreciations_received')
+            .eq('user_id', userId)
+            .maybeSingle()
     ]);
 
-    // Count results
-    const casesResolved = casesResult.data?.length || 0;
-    const appreciationsReceived = appreciationsResult.data?.length || 0;
-    const questionsCompleted = questionsResult.data?.length || 0;
+    if (streakResult.error) {
+        throw streakResult.error;
+    }
+
+    if (statsResult.error) {
+        throw statsResult.error;
+    }
+
+    const streakRow = Array.isArray(streakResult.data) ? streakResult.data[0] : streakResult.data || {};
+    const statsRow = statsResult.data || {};
+    const isGold = await isGoldUser(userId);
 
     return {
-        current_streak: 0,
-        longest_streak: 0,
-        last_streak_date: null,
-        is_grace_period: false,
-        grace_days_remaining: 0,
-        streak_expired: false,
-        can_revive: false,
-        revival_available_at: null,
-        questions_completed: questionsCompleted,
-        cases_resolved: casesResolved,
-        appreciations_received: appreciationsReceived
+        current_streak: streakRow.current_streak ?? 0,
+        longest_streak: streakRow.longest_streak ?? 0,
+        last_streak_date: streakRow.last_streak_date ?? null,
+        is_grace_period: streakRow.is_grace_period ?? false,
+        grace_days_remaining: streakRow.grace_days_remaining ?? 0,
+        streak_expired: streakRow.streak_expired ?? false,
+        can_revive: isGold ? (streakRow.can_revive ?? false) : false,
+        revival_available_at: streakRow.revival_available_at ?? null,
+        questions_completed: statsRow.questions_completed ?? 0,
+        cases_resolved: statsRow.cases_resolved ?? 0,
+        appreciations_received: statsRow.appreciations_received ?? 0
     };
 }
 

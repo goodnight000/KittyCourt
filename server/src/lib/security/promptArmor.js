@@ -8,11 +8,23 @@
 const crypto = require('crypto');
 
 /**
- * Generate a random boundary marker
+ * Generate a cryptographically random boundary marker
+ * Uses high entropy (128 bits) plus timestamp to ensure uniqueness
+ * and prevent prediction attacks
  * @returns {string} - Unique boundary string
  */
 function generateBoundary() {
-  return `===BOUNDARY_${crypto.randomBytes(6).toString('hex')}===`;
+  // Use 16 bytes (128 bits) of cryptographic randomness
+  const randomPart = crypto.randomBytes(16).toString('hex');
+  // Add high-resolution timestamp for additional uniqueness
+  const timestampPart = Date.now().toString(36) + process.hrtime.bigint().toString(36);
+  // Combine with a hash to create unpredictable boundary
+  const combined = crypto
+    .createHash('sha256')
+    .update(`${randomPart}-${timestampPart}`)
+    .digest('hex')
+    .slice(0, 24);
+  return `===BOUNDARY_${combined}===`;
 }
 
 /**

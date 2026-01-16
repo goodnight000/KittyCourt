@@ -9,6 +9,8 @@ const router = express.Router();
 const { requireSupabase, requireAuthUserId } = require('../lib/auth');
 const { safeErrorMessage } = require('../lib/shared/errorUtils');
 
+const isProd = process.env.NODE_ENV === 'production';
+
 // Create a transaction
 router.post('/transaction', async (req, res) => {
     try {

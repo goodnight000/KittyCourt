@@ -311,7 +311,15 @@ function validateOutput(output, options = {}) {
  */
 function shouldBlockOutput(output) {
   const compromise = detectOutputCompromise(output);
-  return compromise.isCompromised && compromise.confidence === 'HIGH';
+  // Block on HIGH confidence OR any CRITICAL severity detection
+  if (compromise.isCompromised && compromise.confidence === 'HIGH') {
+    return true;
+  }
+  // Also block if any detection has CRITICAL severity
+  if (compromise.detections && compromise.detections.some(d => d.severity === 'CRITICAL')) {
+    return true;
+  }
+  return false;
 }
 
 module.exports = {

@@ -229,7 +229,7 @@ const SignUpPage = () => {
                     {/* Divider */}
                     <div className="flex items-center gap-4 my-6">
                         <div className="flex-1 h-px bg-neutral-200"></div>
-                        <span className="text-neutral-400 text-sm">{t('common.or')}</span>
+                        <span className="text-neutral-500 text-sm">{t('common.or')}</span>
                         <div className="flex-1 h-px bg-neutral-200"></div>
                     </div>
 
@@ -237,30 +237,30 @@ const SignUpPage = () => {
                     <form onSubmit={handleEmailSignUp} className="space-y-4">
                         {/* Email Input */}
                         <div className="relative">
-                            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
+                            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-500" />
                             <input
                                 type="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 placeholder={t('signUp.emailPlaceholder')}
-                                className="w-full pl-12 pr-4 py-3.5 bg-neutral-50 border border-neutral-200 rounded-2xl text-neutral-700 placeholder:text-neutral-400 focus:outline-none focus:border-court-gold focus:ring-2 focus:ring-court-gold/20 transition-all"
+                                className="w-full pl-12 pr-4 py-3.5 bg-neutral-50 border border-neutral-200 rounded-2xl text-neutral-700 placeholder:text-neutral-500 focus:outline-none focus:border-court-gold focus:ring-2 focus:ring-court-gold/20 transition-all"
                             />
                         </div>
 
                         {/* Password Input */}
                         <div className="relative">
-                            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
+                            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-500" />
                             <input
                                 type={showPassword ? 'text' : 'password'}
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 placeholder={t('signUp.passwordPlaceholder')}
-                                className="w-full pl-12 pr-12 py-3.5 bg-neutral-50 border border-neutral-200 rounded-2xl text-neutral-700 placeholder:text-neutral-400 focus:outline-none focus:border-court-gold focus:ring-2 focus:ring-court-gold/20 transition-all"
+                                className="w-full pl-12 pr-12 py-3.5 bg-neutral-50 border border-neutral-200 rounded-2xl text-neutral-700 placeholder:text-neutral-500 focus:outline-none focus:border-court-gold focus:ring-2 focus:ring-court-gold/20 transition-all"
                             />
                             <button
                                 type="button"
                                 onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
+                                className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-600"
                             >
                                 {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                             </button>
@@ -278,7 +278,7 @@ const SignUpPage = () => {
                                         <div className={`w-4 h-4 rounded-full flex items-center justify-center ${req.met ? 'bg-green-500' : 'bg-neutral-200'}`}>
                                             {req.met && <Check className="w-2.5 h-2.5 text-white" />}
                                         </div>
-                                        <span className={req.met ? 'text-green-600' : 'text-neutral-400'}>{req.text}</span>
+                                        <span className={req.met ? 'text-green-600' : 'text-neutral-500'}>{req.text}</span>
                                     </div>
                                 ))}
                             </Motion.div>
@@ -286,13 +286,13 @@ const SignUpPage = () => {
 
                         {/* Confirm Password Input */}
                         <div className="relative">
-                            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
+                            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-500" />
                             <input
                                 type={showPassword ? 'text' : 'password'}
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
                                 placeholder={t('signUp.confirmPlaceholder')}
-                                className={`w-full pl-12 pr-4 py-3.5 bg-neutral-50 border rounded-2xl text-neutral-700 placeholder:text-neutral-400 focus:outline-none focus:ring-2 transition-all ${confirmPassword && password !== confirmPassword
+                                className={`w-full pl-12 pr-4 py-3.5 bg-neutral-50 border rounded-2xl text-neutral-700 placeholder:text-neutral-500 focus:outline-none focus:ring-2 transition-all ${confirmPassword && password !== confirmPassword
                                     ? 'border-red-300 focus:border-red-400 focus:ring-red-100'
                                     : 'border-neutral-200 focus:border-court-gold focus:ring-court-gold/20'
                                     }`}
@@ -325,7 +325,7 @@ const SignUpPage = () => {
                     </form>
 
                     {/* Terms */}
-                    <p className="mt-4 text-xs text-neutral-400 text-center">
+                    <p className="mt-4 text-xs text-neutral-500 text-center">
                         {t('signUp.terms')}
                     </p>
                 </div>

@@ -707,17 +707,9 @@ const OnboardingPage = () => {
 };
 
 const OnboardingBackdrop = () => (
-    <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute -top-24 -right-16 h-56 w-56 rounded-full bg-[#E8DED1]/25 blur-3xl" />
-        <div className="absolute top-20 -left-20 h-60 w-60 rounded-full bg-[#E8DED1]/25 blur-3xl" />
-        <div className="absolute bottom-12 right-8 h-64 w-64 rounded-full bg-[#F2E9DF]/35 blur-3xl" />
-        <div
-            className="absolute inset-0 opacity-45"
-            style={{
-                backgroundImage:
-                    'radial-gradient(circle at 18% 20%, rgba(255,255,255,0.75) 0%, transparent 55%), radial-gradient(circle at 80% 10%, rgba(248,242,233,0.85) 0%, transparent 60%)'
-            }}
-        />
+    <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute -top-20 -right-20 h-64 w-64 rounded-full bg-amber-200/30 blur-3xl" />
+        <div className="absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-rose-200/25 blur-3xl" />
     </div>
 );
 

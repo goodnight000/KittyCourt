@@ -1,5 +1,12 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 
+// Mock chainable Supabase methods
+const mockSupabaseChain = {
+    eq: vi.fn().mockReturnThis(),
+    select: vi.fn().mockReturnThis(),
+    single: vi.fn().mockResolvedValue({ data: {}, error: null })
+};
+
 // Mock external dependencies before importing the store
 vi.mock('../services/supabase', () => ({
     supabase: {
@@ -7,7 +14,10 @@ vi.mock('../services/supabase', () => ({
             onAuthStateChange: vi.fn(() => ({ data: { subscription: { unsubscribe: vi.fn() } } })),
             setSession: vi.fn()
         },
-        removeChannel: vi.fn()
+        removeChannel: vi.fn(),
+        from: vi.fn(() => ({
+            update: vi.fn(() => mockSupabaseChain)
+        }))
     },
     signInWithEmail: vi.fn(),
     signUpWithEmail: vi.fn(),
@@ -51,7 +61,9 @@ vi.mock('./useSubscriptionStore', () => ({
 vi.mock('./useCacheStore', () => ({
     default: {
         getState: () => ({
-            clearAll: vi.fn()
+            clearAll: vi.fn(),
+            clearRegistry: vi.fn(),
+            warmCache: vi.fn()
         })
     }
 }));
@@ -66,6 +78,7 @@ vi.mock('../services/pushNotifications', () => ({
 
 vi.mock('../i18n/languageConfig', () => ({
     DEFAULT_LANGUAGE: 'en',
+    SUPPORTED_LANGUAGES: ['en', 'zh-Hans'],
     normalizeLanguage: vi.fn((lang) => lang === 'zh-Hans' || lang === 'en' ? lang : null)
 }));
 
@@ -300,8 +313,8 @@ describe('useAuthStore', () => {
             expect(state.preferredLanguage).toBe('en');
             expect(state.isLoading).toBe(false);
 
-            // Verify AUTH_LOGOUT event was emitted
-            expect(eventCallback).toHaveBeenCalledWith({ userId: 'user-123' });
+            // Verify AUTH_LOGOUT event was emitted (includes source: 'auth' to prevent loops)
+            expect(eventCallback).toHaveBeenCalledWith(expect.objectContaining({ userId: 'user-123' }));
         });
 
         it('should call supabase signOut', async () => {
@@ -412,12 +425,8 @@ describe('useAuthStore', () => {
 
             await useAuthStore.getState().setPreferredLanguage('zh-Hans');
 
-            expect(supabaseMocks.upsertProfile).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    id: 'user-123',
-                    preferred_language: 'zh-Hans'
-                })
-            );
+            // The implementation uses supabase.from('profiles').update() directly
+            expect(supabaseMocks.supabase.from).toHaveBeenCalledWith('profiles');
         });
     });
 

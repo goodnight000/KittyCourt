@@ -262,7 +262,7 @@ const CourtAtRest = ({ onServe, navigate }) => {
                                         <div className="text-xs text-court-brownLight">{t('court.atRest.history.subtitle')}</div>
                                     </div>
                                 </div>
-                                <ChevronRight className="w-4 h-4 text-neutral-400" />
+                                <ChevronRight className="w-4 h-4 text-neutral-500" />
                             </div>
                         </motion.button>
                     </div>

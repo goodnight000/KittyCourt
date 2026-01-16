@@ -54,6 +54,7 @@ describe('ResolutionService', () => {
 
             expect(result.bothPicked).toBeTruthy();
             expect(result.sameChoice).toBe(true);
+            expect(session.finalResolution).toEqual({ id: 'res1', title: 'Resolution 1' });
         });
 
         it('should detect when both picked different resolutions', async () => {

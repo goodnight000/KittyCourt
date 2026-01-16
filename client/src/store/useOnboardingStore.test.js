@@ -1,17 +1,11 @@
 import { describe, it, expect, vi } from 'vitest'
 
-vi.mock('./useAuthStore', () => ({
-  default: {
-    getState: () => ({
-      user: null,
-      profile: null,
-      preferredLanguage: 'en',
-      setProfile: vi.fn()
-    })
-  }
-}))
-
 vi.mock('../services/supabase', () => ({
+  supabase: {
+    auth: {
+      getUser: vi.fn(async () => ({ data: { user: null } }))
+    }
+  },
   generatePartnerCode: vi.fn(() => 'CODE123'),
   upsertProfile: vi.fn()
 }))

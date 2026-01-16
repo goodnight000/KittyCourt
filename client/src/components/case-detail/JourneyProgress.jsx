@@ -79,7 +79,7 @@ const JourneyProgress = ({
                     {isComplete ? (
                       <Check className="w-5 h-5 text-white" />
                     ) : (
-                      <StepIcon className="w-4 h-4 text-neutral-400" />
+                      <StepIcon className="w-4 h-4 text-neutral-500" />
                     )}
 
                     {/* Completion ring animation */}
@@ -95,7 +95,7 @@ const JourneyProgress = ({
 
                   {/* Step label */}
                   <p className={`mt-2 text-[9px] font-medium text-center max-w-[50px] leading-tight ${
-                    isComplete ? 'text-green-600' : 'text-neutral-400'
+                    isComplete ? 'text-green-600' : 'text-neutral-500'
                   }`}>
                     {t?.(`cases.detail.journey.${step.key}`) || step.label}
                   </p>

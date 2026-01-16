@@ -79,7 +79,7 @@ export const compressImage = (base64DataUrl) => {
             canvas.toBlob(
                 (blob) => {
                     if (blob) {
-                        console.log(`[avatarService] Compressed image: ${Math.round(blob.size / 1024)}KB`);
+                        if (import.meta.env.DEV) console.log(`[avatarService] Compressed image: ${Math.round(blob.size / 1024)}KB`);
                         resolve(blob);
                     } else {
                         reject(new Error('Failed to compress image'));
@@ -167,7 +167,7 @@ export const uploadAvatar = async (userId, imageData) => {
             ? `${urlData.publicUrl}?t=${Date.now()}`
             : null;
 
-        console.log('[avatarService] Upload successful:', publicUrl);
+        if (import.meta.env.DEV) console.log('[avatarService] Upload successful:', publicUrl);
         return { url: publicUrl, error: null };
 
     } catch (err) {

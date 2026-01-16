@@ -35,7 +35,7 @@ const ConnectPartnerPage = () => {
     const [success, setSuccess] = useState('');
     const errorMap = {
         'Not authenticated': 'connectPartner.errors.notAuthenticated',
-        "You can't connect with yourself! 😹": 'connectPartner.errors.selfConnect',
+        "You can't connect with yourself! \ud83d\ude39": 'connectPartner.cantConnectSelf',
         'Partner code not found. Please check and try again.': 'connectPartner.errors.codeNotFound',
         'This user is already connected with someone.': 'connectPartner.errors.alreadyConnected',
         'No sent request to cancel': 'connectPartner.errors.noSentRequest'
@@ -49,7 +49,7 @@ const ConnectPartnerPage = () => {
     // Redirect to home if partner is connected
     useEffect(() => {
         if (hasPartner) {
-            console.log('[ConnectPartner] Partner connected, redirecting to home');
+            if (import.meta.env.DEV) console.log('[ConnectPartner] Partner connected, redirecting to home');
             navigate('/');
         }
     }, [hasPartner, navigate]);
@@ -230,7 +230,7 @@ const ConnectPartnerPage = () => {
                                     <Link2 className="w-6 h-6 text-court-gold" />
                                 </div>
                                 <h3 className="font-bold text-neutral-700">{t('connectPartner.share.title')}</h3>
-                                <p className="text-xs text-neutral-400 mt-1">
+                                <p className="text-xs text-neutral-500 mt-1">
                                     {t('connectPartner.share.subtitle')}
                                 </p>
                             </div>
@@ -277,7 +277,7 @@ const ConnectPartnerPage = () => {
                                     <Heart className="w-6 h-6 text-pink-500" />
                                 </div>
                                 <h3 className="font-bold text-neutral-700">{t('connectPartner.enter.title')}</h3>
-                                <p className="text-xs text-neutral-400 mt-1">
+                                <p className="text-xs text-neutral-500 mt-1">
                                     {t('connectPartner.enter.subtitle')}
                                 </p>
                             </div>
@@ -370,13 +370,13 @@ const ConnectPartnerPage = () => {
                     >
                         {t('connectPartner.skip')}
                     </button>
-                    <p className="text-xs text-neutral-400">
+                    <p className="text-xs text-neutral-500">
                         {t('connectPartner.skipHint')}
                     </p>
                     <div className="pt-2">
                         <button
                             onClick={signOut}
-                            className="text-xs text-neutral-400 hover:text-neutral-600 transition-colors"
+                            className="text-xs text-neutral-500 hover:text-neutral-600 transition-colors"
                         >
                             {t('connectPartner.signOut')}
                         </button>

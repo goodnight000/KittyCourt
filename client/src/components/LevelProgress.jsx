@@ -152,22 +152,6 @@ const LevelProgress = ({
                     </div>
                 </div>
 
-                <div className="mt-4 grid grid-cols-2 gap-3">
-                    <div className="rounded-2xl border border-white/80 bg-white/70 px-3 py-2 text-center">
-                        <div className="text-[10px] uppercase tracking-[0.16em] text-neutral-500">
-                            {t('levelProgress.full.focusLabel')}
-                        </div>
-                        <div className="text-sm font-semibold text-neutral-800">{t('levelProgress.full.focusValue')}</div>
-                    </div>
-                    <div className="rounded-2xl border border-white/80 bg-white/70 px-3 py-2 text-center">
-                        <div className="text-[10px] uppercase tracking-[0.16em] text-neutral-500">
-                            {t('levelProgress.full.togetherLabel')}
-                        </div>
-                        <div className="text-sm font-semibold text-neutral-800">
-                            {title}
-                        </div>
-                    </div>
-                </div>
             </div>
         </motion.div>
     );

@@ -19,6 +19,179 @@ const { getAllRepairs } = require('./repairAttempts');
 const { getLanguageLabel, normalizeLanguage } = require('./language');
 
 // ============================================================================
+// INPUT SANITIZATION FOR LLM PROMPTS
+// ============================================================================
+
+/**
+ * Maximum allowed length for user input fields
+ * Prevents token overflow and potential abuse
+ */
+const INPUT_LIMITS = {
+    cameraFacts: 2000,
+    theStoryIamTellingMyself: 2000,
+    unmetNeeds: 1000,
+    addendumText: 500,
+    name: 100,
+    profileField: 200,
+};
+
+/**
+ * Patterns that could indicate prompt injection attempts
+ * These are logged but not blocked to avoid false positives
+ */
+const SUSPICIOUS_PATTERNS = [
+    /ignore\s+(previous|above|all)\s+(instructions?|prompts?)/i,
+    /disregard\s+(previous|above|all)/i,
+    /new\s+instructions?:/i,
+    /system\s*prompt:/i,
+    /\[\s*SYSTEM\s*\]/i,
+    /you\s+are\s+now\s+a/i,
+    /pretend\s+(you\s+are|to\s+be)/i,
+    /act\s+as\s+(if|a)/i,
+    /roleplay\s+as/i,
+    /forget\s+(everything|your\s+instructions)/i,
+    /override\s+(your|the)\s+(instructions|rules)/i,
+    /<\s*\/?system\s*>/i,
+    /\{\{\s*system/i,
+];
+
+/**
+ * Characters that should be escaped or removed from user input
+ * to prevent prompt structure manipulation
+ */
+const DANGEROUS_SEQUENCES = [
+    { pattern: /```/g, replacement: '---' },  // Code blocks could confuse parsing
+    { pattern: /\n{4,}/g, replacement: '\n\n\n' },  // Excessive newlines
+    { pattern: /#{3,}/g, replacement: '##' },  // Markdown headers that could look like sections
+];
+
+/**
+ * Sanitize a single user input string for safe inclusion in LLM prompts
+ *
+ * @param {string} input - The raw user input
+ * @param {string} fieldName - Name of the field for limit lookup
+ * @param {object} options - Sanitization options
+ * @param {boolean} options.logSuspicious - Whether to log suspicious patterns (default: true)
+ * @param {string} options.context - Context for logging (e.g., 'userA', 'userB')
+ * @returns {string} Sanitized input
+ */
+function sanitizeInput(input, fieldName = 'default', options = {}) {
+    const { logSuspicious = true, context = '' } = options;
+
+    // Handle null/undefined
+    if (input == null) {
+        return '';
+    }
+
+    // Convert to string if needed
+    let sanitized = String(input);
+
+    // Trim whitespace
+    sanitized = sanitized.trim();
+
+    // Apply length limit
+    const maxLength = INPUT_LIMITS[fieldName] || INPUT_LIMITS.profileField;
+    if (sanitized.length > maxLength) {
+        console.warn(`[prompts] Input truncated: ${fieldName}${context ? ` (${context})` : ''} exceeded ${maxLength} chars`);
+        sanitized = sanitized.substring(0, maxLength) + '... [truncated]';
+    }
+
+    // Check for suspicious patterns (log only, don't block)
+    if (logSuspicious) {
+        for (const pattern of SUSPICIOUS_PATTERNS) {
+            if (pattern.test(sanitized)) {
+                console.warn(`[prompts] Suspicious pattern detected in ${fieldName}${context ? ` (${context})` : ''}: ${pattern.toString()}`);
+                // Continue processing - we log but don't block to avoid false positives
+                break;
+            }
+        }
+    }
+
+    // Apply dangerous sequence replacements
+    for (const { pattern, replacement } of DANGEROUS_SEQUENCES) {
+        sanitized = sanitized.replace(pattern, replacement);
+    }
+
+    // Remove null bytes and other control characters (except newlines and tabs)
+    sanitized = sanitized.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+
+    return sanitized;
+}
+
+/**
+ * Sanitize participant data (name and profile fields)
+ *
+ * @param {object} participant - The participant object
+ * @param {string} context - Context for logging (e.g., 'userA')
+ * @returns {object} Sanitized participant object
+ */
+function sanitizeParticipant(participant, context = '') {
+    if (!participant) return {};
+
+    return {
+        ...participant,
+        name: sanitizeInput(participant.name, 'name', { context }),
+        loveLanguage: sanitizeInput(participant.loveLanguage, 'profileField', { context }),
+        communicationStyle: sanitizeInput(participant.communicationStyle, 'profileField', { context }),
+        conflictStyle: sanitizeInput(participant.conflictStyle, 'profileField', { context }),
+        appreciationStyle: sanitizeInput(participant.appreciationStyle, 'profileField', { context }),
+        petPeeves: Array.isArray(participant.petPeeves)
+            ? participant.petPeeves.map(p => sanitizeInput(p, 'profileField', { context }))
+            : [],
+    };
+}
+
+/**
+ * Sanitize submission data (facts, feelings, needs)
+ *
+ * @param {object} submission - The submission object
+ * @param {string} context - Context for logging (e.g., 'userA')
+ * @returns {object} Sanitized submission object
+ */
+function sanitizeSubmission(submission, context = '') {
+    if (!submission) return {};
+
+    return {
+        ...submission,
+        cameraFacts: sanitizeInput(submission.cameraFacts, 'cameraFacts', { context }),
+        theStoryIamTellingMyself: sanitizeInput(submission.theStoryIamTellingMyself, 'theStoryIamTellingMyself', { context }),
+        unmetNeeds: sanitizeInput(submission.unmetNeeds, 'unmetNeeds', { context }),
+    };
+}
+
+/**
+ * Sanitize the full input object for the analyst/repair prompt
+ *
+ * @param {object} input - The full input object
+ * @returns {object} Sanitized input object
+ */
+function sanitizeAnalystInput(input) {
+    if (!input) return {};
+
+    const sanitized = {
+        ...input,
+        participants: {
+            userA: sanitizeParticipant(input.participants?.userA, 'userA'),
+            userB: sanitizeParticipant(input.participants?.userB, 'userB'),
+        },
+        submissions: {
+            userA: sanitizeSubmission(input.submissions?.userA, 'userA'),
+            userB: sanitizeSubmission(input.submissions?.userB, 'userB'),
+        },
+    };
+
+    // Sanitize addendum history if present
+    if (Array.isArray(input.addendumHistory)) {
+        sanitized.addendumHistory = input.addendumHistory.map((entry, index) => ({
+            ...entry,
+            text: sanitizeInput(entry.text, 'addendumText', { context: `addendum_${index}` }),
+        }));
+    }
+
+    return sanitized;
+}
+
+// ============================================================================
 // PROMPT 1: ANALYST + REPAIR SELECTOR
 // ============================================================================
 
@@ -399,57 +572,64 @@ Keep enum values and IDs in English (assessedIntensity, analysisDepth, identifie
 
 /**
  * Build the Analyst + Repair Selector user prompt
+ * Applies input sanitization before embedding user content into the prompt
  */
 const buildAnalystRepairUserPrompt = (input, historicalContext = '') => {
-  const userAProfile = formatProfileContext(input.participants.userA);
-  const userBProfile = formatProfileContext(input.participants.userB);
+  // SECURITY: Sanitize all user input before embedding in prompt
+  const sanitizedInput = sanitizeAnalystInput(input);
+
+  const userAProfile = formatProfileContext(sanitizedInput.participants.userA);
+  const userBProfile = formatProfileContext(sanitizedInput.participants.userB);
   const repairLibrary = formatRepairLibraryForPrompt();
-  const languageInstruction = formatLanguageInstruction(input?.language);
+  const languageInstruction = formatLanguageInstruction(sanitizedInput?.language);
 
   // Get user-reported intensity if provided
-  const userReportedIntensity = input.userReportedIntensity || null;
+  const userReportedIntensity = sanitizedInput.userReportedIntensity || null;
 
-  const addendumLines = (input.addendumHistory || []).length
-    ? input.addendumHistory.map((entry, index) => {
+  const addendumLines = (sanitizedInput.addendumHistory || []).length
+    ? sanitizedInput.addendumHistory.map((entry, index) => {
       const fromLabel = entry.fromUser === 'userA'
-        ? input.participants.userA.name
+        ? sanitizedInput.participants.userA.name
         : entry.fromUser === 'userB'
-          ? input.participants.userB.name
+          ? sanitizedInput.participants.userB.name
           : 'A partner';
       return `${index + 1}. ${fromLabel}: "${entry.text}"`;
     }).join('\n')
     : 'No addendums filed.';
 
+  // Sanitize historical context as well
+  const sanitizedHistory = sanitizeInput(historicalContext, 'cameraFacts', { context: 'historicalContext', logSuspicious: false });
+
   return `Analyze this couple's conflict and select 3 resolution options.
 
 ## Participants
-- User A: ${input.participants.userA.name}
-- User B: ${input.participants.userB.name}
+- User A: ${sanitizedInput.participants.userA.name}
+- User B: ${sanitizedInput.participants.userB.name}
 
 ## User Self-Reported Intensity
 ${userReportedIntensity || "Not provided — assess from language"}
 
 ## Personality Profiles
-### ${input.participants.userA.name}
+### ${sanitizedInput.participants.userA.name}
 ${userAProfile}
 
-### ${input.participants.userB.name}
+### ${sanitizedInput.participants.userB.name}
 ${userBProfile}
 
 ## Historical Context
-${historicalContext || "No prior history available"}
+${sanitizedHistory || "No prior history available"}
 
 ## Submissions
 
-### ${input.participants.userA.name}
-- **Facts (what happened)**: "${input.submissions.userA.cameraFacts}"
-- **Feelings (how it made them feel)**: "${input.submissions.userA.theStoryIamTellingMyself}"
-- **Unmet Needs**: "${input.submissions.userA.unmetNeeds}"
+### ${sanitizedInput.participants.userA.name}
+- **Facts (what happened)**: "${sanitizedInput.submissions.userA.cameraFacts}"
+- **Feelings (how it made them feel)**: "${sanitizedInput.submissions.userA.theStoryIamTellingMyself}"
+- **Unmet Needs**: "${sanitizedInput.submissions.userA.unmetNeeds}"
 
-### ${input.participants.userB.name}
-- **Facts (what happened)**: "${input.submissions.userB.cameraFacts}"
-- **Feelings (how it made them feel)**: "${input.submissions.userB.theStoryIamTellingMyself}"
-- **Unmet Needs**: "${input.submissions.userB.unmetNeeds}"
+### ${sanitizedInput.participants.userB.name}
+- **Facts (what happened)**: "${sanitizedInput.submissions.userB.cameraFacts}"
+- **Feelings (how it made them feel)**: "${sanitizedInput.submissions.userB.theStoryIamTellingMyself}"
+- **Unmet Needs**: "${sanitizedInput.submissions.userB.unmetNeeds}"
 
 ## Addendums
 ${addendumLines}
@@ -466,11 +646,18 @@ Output analysis and 3 resolutions as JSON.`;
 
 /**
  * Build the Combined Priming + Joint Menu user prompt
+ * Applies input sanitization before embedding user content into the prompt
  */
 const buildPrimingJointUserPrompt = (input, analysis, resolutions, historicalContext = '') => {
+  // SECURITY: Sanitize all user input before embedding in prompt
+  const sanitizedInput = sanitizeAnalystInput(input);
+
   const intensity = analysis.assessedIntensity || 'medium';
   const voiceToUse = intensity === 'high' ? 'GENTLE COUNSELOR' : 'JUDGE WHISKERS';
-  const languageInstruction = formatLanguageInstruction(input?.language);
+  const languageInstruction = formatLanguageInstruction(sanitizedInput?.language);
+
+  // Sanitize historical context
+  const sanitizedHistory = sanitizeInput(historicalContext, 'cameraFacts', { context: 'historicalContext', logSuspicious: false });
 
   return `Generate individual priming and joint menu content for this couple.
 
@@ -478,65 +665,72 @@ const buildPrimingJointUserPrompt = (input, analysis, resolutions, historicalCon
 ${intensity} → Use ${voiceToUse} voice
 
 ## Participants
-- User A: ${input.participants.userA.name}
-- User B: ${input.participants.userB.name}
+- User A: ${sanitizedInput.participants.userA.name}
+- User B: ${sanitizedInput.participants.userB.name}
 
 ## Analysis Summary
 ${JSON.stringify(analysis, null, 2)}
 
 ## Submissions
 
-### ${input.participants.userA.name}
-- **Facts**: "${input.submissions.userA.cameraFacts}"
-- **Feelings**: "${input.submissions.userA.theStoryIamTellingMyself}"
-- **Unmet Needs**: "${input.submissions.userA.unmetNeeds}"
+### ${sanitizedInput.participants.userA.name}
+- **Facts**: "${sanitizedInput.submissions.userA.cameraFacts}"
+- **Feelings**: "${sanitizedInput.submissions.userA.theStoryIamTellingMyself}"
+- **Unmet Needs**: "${sanitizedInput.submissions.userA.unmetNeeds}"
 
-### ${input.participants.userB.name}
-- **Facts**: "${input.submissions.userB.cameraFacts}"
-- **Feelings**: "${input.submissions.userB.theStoryIamTellingMyself}"
-- **Unmet Needs**: "${input.submissions.userB.unmetNeeds}"
+### ${sanitizedInput.participants.userB.name}
+- **Facts**: "${sanitizedInput.submissions.userB.cameraFacts}"
+- **Feelings**: "${sanitizedInput.submissions.userB.theStoryIamTellingMyself}"
+- **Unmet Needs**: "${sanitizedInput.submissions.userB.unmetNeeds}"
 
 ## The 3 Resolution Options
 ${JSON.stringify(resolutions, null, 2)}
 
 ## Historical Context
-${historicalContext || "No prior history"}
+${sanitizedHistory || "No prior history"}
 
 ${languageInstruction}
 
 ---
-Generate priming content for both users AND joint menu content. 
-Use real names: ${input.participants.userA.name} and ${input.participants.userB.name}.
+Generate priming content for both users AND joint menu content.
+Use real names: ${sanitizedInput.participants.userA.name} and ${sanitizedInput.participants.userB.name}.
 Output as JSON.`;
 };
 
 /**
  * Build the Hybrid Resolution user prompt
+ * Applies input sanitization before embedding user content into the prompt
  */
 const buildHybridResolutionUserPrompt = (input, analysis, userAChoice, userBChoice, historicalContext = '') => {
+  // SECURITY: Sanitize all user input before embedding in prompt
+  const sanitizedInput = sanitizeAnalystInput(input);
+
   const intensity = analysis.assessedIntensity || 'medium';
-  const languageInstruction = formatLanguageInstruction(input?.language);
+  const languageInstruction = formatLanguageInstruction(sanitizedInput?.language);
+
+  // Sanitize historical context
+  const sanitizedHistory = sanitizeInput(historicalContext, 'cameraFacts', { context: 'historicalContext', logSuspicious: false });
 
   return `Create a hybrid resolution.
 
 ## Intensity: ${intensity}
 
 ## Selections
-- ${input.participants.userA.name} chose: "${userAChoice.title}"
-- ${input.participants.userB.name} chose: "${userBChoice.title}"
+- ${sanitizedInput.participants.userA.name} chose: "${userAChoice.title}"
+- ${sanitizedInput.participants.userB.name} chose: "${userBChoice.title}"
 
 ## Original Resolutions
-### ${input.participants.userA.name}'s Choice
+### ${sanitizedInput.participants.userA.name}'s Choice
 ${JSON.stringify(userAChoice, null, 2)}
 
-### ${input.participants.userB.name}'s Choice
+### ${sanitizedInput.participants.userB.name}'s Choice
 ${JSON.stringify(userBChoice, null, 2)}
 
 ## Conflict Context
 ${JSON.stringify(analysis, null, 2)}
 
 ## Historical Context
-${historicalContext || "No prior history"}
+${sanitizedHistory || "No prior history"}
 
 ${languageInstruction}
 
@@ -554,4 +748,11 @@ module.exports = {
   buildHybridResolutionUserPrompt,
   formatRepairLibraryForPrompt,
   formatProfileContext,
+  // Input sanitization (exported for testing and reuse)
+  sanitizeInput,
+  sanitizeParticipant,
+  sanitizeSubmission,
+  sanitizeAnalystInput,
+  INPUT_LIMITS,
+  SUSPICIOUS_PATTERNS,
 };

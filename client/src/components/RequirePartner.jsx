@@ -86,7 +86,7 @@ const RequirePartner = ({ children, feature, description }) => {
                             {t('requirePartner.cta')}
                         </motion.button>
 
-                        <p className="text-xs text-neutral-400 text-center">
+                        <p className="text-xs text-neutral-500 text-center">
                             {t('requirePartner.hint')}
                         </p>
                     </div>

@@ -138,7 +138,8 @@ const buildExportPayload = async (userId) => {
             .from('insights')
             .select('*')
             .eq('user_a_id', coupleIds.user_a_id)
-            .eq('user_b_id', coupleIds.user_b_id);
+            .eq('user_b_id', coupleIds.user_b_id)
+            .eq('recipient_user_id', userId);
         insights = ensureResult('insights', insightsResult);
     }
 

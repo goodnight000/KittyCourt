@@ -2,6 +2,7 @@ import React, { memo, useMemo, useState, useEffect } from 'react';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { ChevronRight, Check, Wand2, Lock } from 'lucide-react';
 import { useI18n } from '../../i18n';
+import { parseLocalDate, startOfDay } from '../../utils/dateFormatters';
 import PlanOnboardingTooltip from './PlanOnboardingTooltip';
 
 const ONBOARDING_STORAGE_KEY = 'pause_plan_onboarding_seen';
@@ -55,11 +56,10 @@ const EventCard = memo(({
         const dateStr = event?.date || '';
         if (!dateStr) return null;
 
-        const eventDate = dateStr.includes('T') ? new Date(dateStr) : new Date(dateStr + 'T00:00:00');
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const eventStart = new Date(eventDate);
-        eventStart.setHours(0, 0, 0, 0);
+        const eventDate = parseLocalDate(dateStr);
+        const today = startOfDay(new Date());
+        const eventStart = startOfDay(eventDate);
+        if (!eventDate || !today || !eventStart) return null;
 
         const daysAway = Math.round((eventStart.getTime() - today.getTime()) / (24 * 60 * 60 * 1000));
         const timingLabel = daysAway === 0
@@ -144,49 +144,41 @@ const EventCard = memo(({
                                 <div className={`text-xl font-black leading-none tabular-nums ${isToday ? 'text-white' : 'text-neutral-800'}`}>
                                     {dayNumber}
                                 </div>
-                                <div className={`text-[10px] font-bold ${isToday ? 'text-white/80' : 'text-neutral-400'}`}>
+                                <div className={`text-[10px] font-bold ${isToday ? 'text-white/80' : 'text-neutral-500'}`}>
                                     {weekdayLabel}
                                 </div>
                             </div>
                         </div>
 
                         <div className="flex-1 min-w-0">
-                            <div className="flex items-start gap-3">
-                                <div className="w-11 h-11 rounded-2xl bg-white/80 border border-white/70 shadow-soft flex items-center justify-center text-2xl shrink-0">
-                                    {event.emoji}
-                                </div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <h4 className="font-extrabold text-neutral-800 text-sm truncate">{event.title}</h4>
+                                {timingLabel && (
+                                    <span
+                                        className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-extrabold ${isToday
+                                            ? 'bg-white/20 text-white border border-white/30'
+                                            : 'bg-white/70 border border-white/60 text-neutral-600'
+                                            }`}
+                                    >
+                                        {timingLabel}
+                                    </span>
+                                )}
+                            </div>
 
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                        <h4 className="font-extrabold text-neutral-800 text-sm truncate">{event.title}</h4>
-                                        {timingLabel && (
-                                            <span
-                                                className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-extrabold ${isToday
-                                                    ? 'bg-white/20 text-white border border-white/30'
-                                                    : 'bg-white/70 border border-white/60 text-neutral-600'
-                                                    }`}
-                                            >
-                                                {timingLabel}
-                                            </span>
-                                        )}
-                                    </div>
-
-                                    <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-neutral-600">
-                                        <span className="px-2 py-0.5 rounded-full bg-white/70 border border-white/60 text-[10px] font-extrabold text-neutral-700">
-                                            {eventTypeLabel}
-                                        </span>
-                                        {event.isSecret ? (
-                                            <span className="px-2 py-0.5 rounded-full bg-indigo-100/70 text-indigo-800 border border-indigo-200/50 text-[10px] font-extrabold inline-flex items-center gap-1">
-                                                <Lock className="w-3 h-3" />
-                                                {t('calendar.visibility.secret')}
-                                            </span>
-                                        ) : (
-                                            <span className="px-2 py-0.5 rounded-full bg-rose-100/80 text-rose-800 border border-rose-200/50 text-[10px] font-extrabold">
-                                                {t('calendar.visibility.shared')}
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
+                            <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-neutral-600">
+                                <span className="px-2 py-0.5 rounded-full bg-white/70 border border-white/60 text-[10px] font-extrabold text-neutral-700">
+                                    {eventTypeLabel}
+                                </span>
+                                {event.isSecret ? (
+                                    <span className="px-2 py-0.5 rounded-full bg-indigo-100/70 text-indigo-800 border border-indigo-200/50 text-[10px] font-extrabold inline-flex items-center gap-1">
+                                        <Lock className="w-3 h-3" />
+                                        {t('calendar.visibility.secret')}
+                                    </span>
+                                ) : (
+                                    <span className="px-2 py-0.5 rounded-full bg-rose-100/80 text-rose-800 border border-rose-200/50 text-[10px] font-extrabold">
+                                        {t('calendar.visibility.shared')}
+                                    </span>
+                                )}
                             </div>
                         </div>
 

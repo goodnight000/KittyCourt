@@ -371,6 +371,7 @@ const LoadingScreen = ({
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         onClick={handleReset}
+                        aria-label="Reset loading state"
                         className="mt-10 px-6 py-2.5 bg-white/80 backdrop-blur-sm border border-amber-200/60 rounded-full text-sm text-amber-700 hover:bg-amber-50 hover:text-red-500 hover:border-red-200 transition-all shadow-sm"
                     >
                         {t('loadingScreen.reset')}

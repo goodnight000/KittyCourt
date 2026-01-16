@@ -20,6 +20,7 @@ const makeQuotaSafeStorage = (storage) => {
             try {
                 return storage.getItem(name)
             } catch {
+                // Intentionally ignored: localStorage may be unavailable or restricted
                 return null
             }
         },
@@ -37,7 +38,7 @@ const makeQuotaSafeStorage = (storage) => {
                         storage.removeItem(name)
                         storage.setItem(name, value)
                     } catch {
-                        // swallow
+                        // Intentionally ignored: localStorage quota exceeded or unavailable
                     }
                     return
                 }
@@ -50,7 +51,7 @@ const makeQuotaSafeStorage = (storage) => {
             try {
                 storage.removeItem(name)
             } catch {
-                // swallow
+                // Intentionally ignored: localStorage may be unavailable
             }
         },
     }

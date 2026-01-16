@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Star, Plus, X, Check, Edit3, Trash2, ShoppingBag, Bell, CheckCircle2 } from 'lucide-react';
+import { Star, Plus, X, Check, Edit3, Trash2, ShoppingBag, Bell, CheckCircle2 } from 'lucide-react';
 import useAppStore from '../store/useAppStore';
 import useAuthStore from '../store/useAuthStore';
 import usePartnerStore from '../store/usePartnerStore';
@@ -8,6 +8,7 @@ import RequirePartner from '../components/RequirePartner';
 import { supabase } from '../services/supabase';
 import { useNavigate } from 'react-router-dom';
 import { useI18n } from '../i18n';
+import BackButton from '../components/shared/BackButton';
 
 const getDefaultRewards = (t) => ([
     { id: 1, title: t('economy.defaults.footMassage.title'), subtitle: t('economy.defaults.footMassage.subtitle'), cost: 50, icon: "🦶", color: "pink" },
@@ -167,14 +168,7 @@ export default function EconomyPage() {
             <MarketBackdrop />
             <div className="relative space-y-6">
                 <header className="flex items-center gap-3">
-                    <motion.button
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => navigate(-1)}
-                        className="rounded-2xl border border-white/80 bg-white/80 p-2 shadow-soft"
-                        aria-label={t('common.back')}
-                    >
-                        <ArrowLeft className="w-5 h-5 text-neutral-600" />
-                    </motion.button>
+                    <BackButton onClick={() => navigate(-1)} ariaLabel={t('common.back')} />
                     <div className="flex-1">
                         <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-amber-600">
                             {t('economy.header.kicker')}
@@ -211,7 +205,7 @@ export default function EconomyPage() {
                     </div>
                     <div className="relative flex items-start justify-between gap-4">
                         <div>
-                            <div className="text-[10px] uppercase tracking-[0.4em] text-neutral-400 font-semibold">{t('economy.balance.kicker')}</div>
+                            <div className="text-[10px] uppercase tracking-[0.4em] text-neutral-500 font-semibold">{t('economy.balance.kicker')}</div>
                             <h2 className="text-xl font-display font-bold text-neutral-800 mt-2">{t('economy.balance.title')}</h2>
                             <p className="text-xs text-neutral-500 mt-1">{t('economy.balance.subtitle')}</p>
                         </div>
@@ -225,12 +219,12 @@ export default function EconomyPage() {
                     </div>
                     <div className="relative mt-4 grid grid-cols-2 gap-3">
                         <div className="rounded-2xl border border-amber-200/70 bg-white/85 px-3 py-3 text-left shadow-inner-soft">
-                            <div className="text-[10px] uppercase tracking-[0.3em] text-neutral-400 font-semibold">{t('economy.balance.label')}</div>
+                            <div className="text-[10px] uppercase tracking-[0.3em] text-neutral-500 font-semibold">{t('economy.balance.label')}</div>
                             <div className="text-3xl font-display font-bold text-neutral-800 mt-2">{myKibbleBalance}</div>
                             <div className="text-[11px] text-neutral-500">{t('economy.balance.coins')}</div>
                         </div>
                         <div className="rounded-2xl border border-rose-200/70 bg-white/85 px-3 py-3 text-left shadow-inner-soft">
-                            <div className="text-[10px] uppercase tracking-[0.3em] text-neutral-400 font-semibold">{t('economy.partner.label')}</div>
+                            <div className="text-[10px] uppercase tracking-[0.3em] text-neutral-500 font-semibold">{t('economy.partner.label')}</div>
                             <div className="text-sm font-semibold text-neutral-800 mt-2">{partnerDisplayName}</div>
                             <div className="text-[11px] text-neutral-500">{t('economy.partner.subtitle')}</div>
                         </div>
@@ -279,7 +273,7 @@ export default function EconomyPage() {
                                             {redemption.reward_description && (
                                                 <p className="text-neutral-500 text-xs mt-1 ml-7">{redemption.reward_description}</p>
                                             )}
-                                            <p className="text-neutral-400 text-xs mt-1 ml-7">
+                                            <p className="text-neutral-500 text-xs mt-1 ml-7">
                                                 {t('economy.pending.redeemedOn', {
                                                     date: new Date(redemption.redeemed_at).toLocaleDateString(language)
                                                 })}
@@ -314,7 +308,7 @@ export default function EconomyPage() {
                 <div className="space-y-3">
                     <div className="flex items-center justify-between">
                         <div>
-                            <div className="text-[10px] uppercase tracking-[0.35em] text-neutral-400 font-semibold">{t('economy.redeem.kicker')}</div>
+                            <div className="text-[10px] uppercase tracking-[0.35em] text-neutral-500 font-semibold">{t('economy.redeem.kicker')}</div>
                             <h2 className="text-base font-display font-bold text-neutral-800">
                                 {t('economy.redeem.title', { name: partnerDisplayName })}
                             </h2>
@@ -349,7 +343,7 @@ export default function EconomyPage() {
                 <div className="space-y-3">
                     <div className="flex items-center justify-between">
                         <div>
-                            <div className="text-[10px] uppercase tracking-[0.35em] text-neutral-400 font-semibold">{t('economy.myMenu.kicker')}</div>
+                            <div className="text-[10px] uppercase tracking-[0.35em] text-neutral-500 font-semibold">{t('economy.myMenu.kicker')}</div>
                             <h2 className="text-base font-display font-bold text-neutral-800">
                                 {t('economy.myMenu.title', { name: partnerDisplayName })}
                             </h2>
@@ -383,10 +377,10 @@ export default function EconomyPage() {
                                         <h3 className="font-bold text-neutral-800 text-sm">{r.title}</h3>
                                         <p className="text-neutral-500 text-xs">{r.subtitle} • {r.cost} 🪙</p>
                                     </div>
-                                    <button onClick={() => { setEditingReward(r); setShowAddModal(true); }} className="p-2 text-neutral-400 hover:text-violet-500">
+                                    <button onClick={() => { setEditingReward(r); setShowAddModal(true); }} className="p-2 text-neutral-500 hover:text-violet-500">
                                         <Edit3 className="w-4 h-4" />
                                     </button>
-                                    <button onClick={() => handleDeleteReward(r.id)} className="p-2 text-neutral-400 hover:text-rose-500">
+                                    <button onClick={() => handleDeleteReward(r.id)} className="p-2 text-neutral-500 hover:text-rose-500">
                                         <Trash2 className="w-4 h-4" />
                                     </button>
                                 </motion.div>
@@ -486,7 +480,7 @@ function CouponCard({ coupon, delay, onRedeem, isRedeeming, canAfford }) {
                         <Star className="w-3 h-3 fill-current" />
                         <span className="font-semibold">{t('economy.coupon.treat')}</span>
                     </div>
-                    <span className={`text-xs font-semibold ${canAfford ? colors.text : 'text-neutral-400'}`}>
+                    <span className={`text-xs font-semibold ${canAfford ? colors.text : 'text-neutral-500'}`}>
                         {canAfford ? t('economy.coupon.redeem') : t('economy.coupon.needMore')}
                     </span>
                 </div>
@@ -536,7 +530,7 @@ function RewardModal({ reward, onSave, onClose }) {
                 </div>
                 <div className="relative flex items-center justify-between">
                     <div>
-                        <div className="text-[10px] uppercase tracking-[0.35em] text-neutral-400 font-semibold">
+                        <div className="text-[10px] uppercase tracking-[0.35em] text-neutral-500 font-semibold">
                             {t('economy.rewardModal.kicker')}
                         </div>
                         <h3 className="font-display font-bold text-neutral-800 text-lg">
@@ -617,16 +611,8 @@ function RewardModal({ reward, onSave, onClose }) {
 }
 
 const MarketBackdrop = () => (
-    <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute -top-24 -right-16 h-56 w-56 rounded-full bg-amber-200/25 blur-3xl" />
-        <div className="absolute top-24 -left-20 h-60 w-60 rounded-full bg-rose-200/30 blur-3xl" />
-        <div className="absolute bottom-10 right-8 h-64 w-64 rounded-full bg-amber-100/35 blur-3xl" />
-        <div
-            className="absolute inset-0 opacity-45"
-            style={{
-                backgroundImage:
-                    'radial-gradient(circle at 18% 20%, rgba(255,255,255,0.75) 0%, transparent 55%), radial-gradient(circle at 80% 10%, rgba(255,235,210,0.8) 0%, transparent 60%)'
-            }}
-        />
+    <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute -top-20 -right-20 h-64 w-64 rounded-full bg-amber-200/30 blur-3xl" />
+        <div className="absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-rose-200/25 blur-3xl" />
     </div>
 );

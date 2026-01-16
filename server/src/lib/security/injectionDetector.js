@@ -37,14 +37,48 @@ const HEURISTIC_CHECKS = [
   {
     name: 'unicode_lookalikes',
     check: (input) => {
-      // Detect homoglyph attacks (Cyrillic/Greek letters mixed with Latin)
+      // Detect homoglyph attacks - expanded to cover many Unicode scripts
+      // that contain characters visually similar to Latin letters
+
+      // Cyrillic (U+0400-04FF) - contains many Latin lookalikes: a, e, o, c, etc.
       const hasCyrillic = /[\u0400-\u04FF]/.test(input);
+      // Greek (U+0370-03FF) - contains Latin lookalikes: A, B, E, H, etc.
       const hasGreek = /[\u0370-\u03FF]/.test(input);
+      // Mathematical Alphanumeric Symbols (U+1D400-1D7FF) - styled Latin letters
+      const hasMathAlphanumeric = /[\u{1D400}-\u{1D7FF}]/u.test(input);
+      // Fullwidth Latin Letters (U+FF00-FFEF) - wide versions of ASCII
+      const hasFullwidth = /[\uFF00-\uFFEF]/.test(input);
+      // Cherokee (U+13A0-13FF) - some characters look like Latin
+      const hasCherokee = /[\u13A0-\u13FF]/.test(input);
+      // Armenian (U+0530-058F) - contains some Latin lookalikes
+      const hasArmenian = /[\u0530-\u058F]/.test(input);
+      // Coptic (U+2C80-2CFF) - related to Greek with Latin lookalikes
+      const hasCoptic = /[\u2C80-\u2CFF]/.test(input);
+      // Letterlike Symbols (U+2100-214F) - stylized letters and symbols
+      const hasLetterlike = /[\u2100-\u214F]/.test(input);
+      // Enclosed Alphanumerics (U+2460-24FF) - circled/parenthesized letters
+      const hasEnclosed = /[\u2460-\u24FF]/.test(input);
+      // Latin Extended Additional (combining marks abuse)
+      const hasSuspiciousCombining = /[\u0300-\u036F]{3,}/.test(input);
+      // Zero-width characters that can hide content
+      const hasZeroWidth = /[\u200B-\u200F\u2060-\u206F\uFEFF]/.test(input);
+      // Superscripts and Subscripts that mimic regular letters
+      const hasSuperSub = /[\u2070-\u209F]/.test(input);
+
       const hasLatin = /[a-zA-Z]/.test(input);
-      return (hasCyrillic || hasGreek) && hasLatin;
+
+      // Flag if any suspicious Unicode range is mixed with Latin
+      const suspiciousScript = hasCyrillic || hasGreek || hasMathAlphanumeric ||
+        hasFullwidth || hasCherokee || hasArmenian || hasCoptic ||
+        hasLetterlike || hasEnclosed || hasSuperSub;
+
+      // Zero-width chars or excessive combining marks are always suspicious
+      const alwaysSuspicious = hasZeroWidth || hasSuspiciousCombining;
+
+      return alwaysSuspicious || (suspiciousScript && hasLatin);
     },
     score: 3,
-    description: 'Mixed scripts that may indicate homoglyph attack',
+    description: 'Mixed scripts or suspicious Unicode that may indicate homoglyph attack',
   },
   {
     name: 'base64_like',

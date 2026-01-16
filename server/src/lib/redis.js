@@ -99,11 +99,13 @@ const acquireLock = async (lockKey, ttlMs = LOCK_TTL_MS) => {
         };
     } catch (err) {
         console.error('[Redis] Failed to acquire lock:', err);
-        // On error, allow operation to proceed (fail-open for single instance)
+        // WS-H-004: Fail-closed when Redis is configured but unavailable
+        // This prevents race conditions in distributed deployments
         return {
-            acquired: true,
+            acquired: false,
             lockValue: null,
-            release: async () => {}
+            release: async () => {},
+            error: 'Lock service unavailable'
         };
     }
 };

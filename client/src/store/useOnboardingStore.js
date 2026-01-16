@@ -3,36 +3,65 @@ import { persist } from 'zustand/middleware'
 import { quotaSafeLocalStorage } from './quotaSafeStorage'
 import { eventBus, EVENTS } from '../lib/eventBus'
 import { DEFAULT_LANGUAGE } from '../i18n/languageConfig'
-import { generatePartnerCode, upsertProfile } from '../services/supabase'
-import useAuthStore from './useAuthStore'
+import { supabase, generatePartnerCode, upsertProfile } from '../services/supabase'
 
 const initialState = {
   onboardingComplete: false,
   onboardingStep: 0,
-  onboardingData: {}
+  onboardingData: {},
+  _authUserId: null,
+  _authProfile: null,
+  _preferredLanguage: DEFAULT_LANGUAGE
 }
+
+let eventCleanupFns = []
 
 const useOnboardingStore = create(
   persist(
     (set, get) => {
-      eventBus.on(EVENTS.AUTH_LOGOUT, () => {
-        set({ ...initialState })
-      })
-
-      eventBus.on(EVENTS.AUTH_LOGIN, (payload) => {
-        if (payload?.profile) {
-          set({ onboardingComplete: !!payload.profile.onboarding_complete })
-        }
-      })
-
-      eventBus.on(EVENTS.PROFILE_UPDATED, (payload) => {
-        if (payload?.profile) {
-          set({ onboardingComplete: !!payload.profile.onboarding_complete })
-        }
-      })
-
       return {
         ...initialState,
+        init: () => {
+          eventCleanupFns.forEach(fn => fn())
+          eventCleanupFns = []
+
+          const unsubLogin = eventBus.on(EVENTS.AUTH_LOGIN, (payload) => {
+            set({
+              _authUserId: payload?.userId || null,
+              _authProfile: payload?.profile || null,
+              _preferredLanguage: payload?.preferredLanguage
+                || payload?.profile?.preferred_language
+                || get()._preferredLanguage,
+              onboardingComplete: !!payload?.profile?.onboarding_complete
+            })
+          })
+
+          const unsubProfile = eventBus.on(EVENTS.PROFILE_UPDATED, (payload) => {
+            if (!payload?.profile) return
+            set({
+              _authProfile: payload.profile,
+              _preferredLanguage: payload.profile?.preferred_language || get()._preferredLanguage,
+              onboardingComplete: !!payload.profile.onboarding_complete
+            })
+          })
+
+          const unsubLanguage = eventBus.on(EVENTS.LANGUAGE_CHANGED, (payload) => {
+            if (payload?.language) {
+              set({ _preferredLanguage: payload.language })
+            }
+          })
+
+          const unsubLogout = eventBus.on(EVENTS.AUTH_LOGOUT, () => {
+            set({ ...initialState })
+          })
+
+          eventCleanupFns.push(unsubLogin, unsubProfile, unsubLanguage, unsubLogout)
+        },
+
+        cleanup: () => {
+          eventCleanupFns.forEach(fn => fn())
+          eventCleanupFns = []
+        },
 
         setOnboardingStep: (step) => set({ onboardingStep: step }),
 
@@ -41,15 +70,16 @@ const useOnboardingStore = create(
         })),
 
         completeOnboarding: async () => {
-          const { user, profile: existingProfile, preferredLanguage } = useAuthStore.getState()
-          const { onboardingData } = get()
+          const { onboardingData, _authProfile, _preferredLanguage } = get()
+
+          const { data: { user } } = await supabase.auth.getUser()
 
           if (!user) {
             return { error: 'No user logged in' }
           }
 
           try {
-            const partnerCode = existingProfile?.partner_code || generatePartnerCode()
+            const partnerCode = _authProfile?.partner_code || generatePartnerCode()
 
             let avatarUrl = onboardingData.avatarUrl || null
             if (avatarUrl && avatarUrl.startsWith('data:')) {
@@ -83,7 +113,7 @@ const useOnboardingStore = create(
               appreciation_style: onboardingData.appreciationStyle,
               bio: onboardingData.bio || null,
               onboarding_complete: true,
-              preferred_language: preferredLanguage || DEFAULT_LANGUAGE,
+              preferred_language: _preferredLanguage || _authProfile?.preferred_language || DEFAULT_LANGUAGE,
               updated_at: new Date().toISOString()
             }
 
@@ -96,11 +126,17 @@ const useOnboardingStore = create(
               return { error: 'Failed to save profile - no data returned' }
             }
 
-            useAuthStore.getState().setProfile(data)
             set({
               onboardingComplete: true,
               onboardingStep: 0,
-              onboardingData: {}
+              onboardingData: {},
+              _authProfile: data
+            })
+
+            eventBus.emit(EVENTS.PROFILE_UPDATED, {
+              userId: data.id,
+              profile: data,
+              source: 'onboarding'
             })
 
             return { data }

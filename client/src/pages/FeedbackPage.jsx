@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, MessageCircle, Bug, Lightbulb, Send, Check } from 'lucide-react';
+import { MessageCircle, Bug, Lightbulb, Send, Check } from 'lucide-react';
 import { useI18n } from '../i18n';
 import useAuthStore from '../store/useAuthStore';
 import api from '../services/api';
+import BackButton from '../components/shared/BackButton';
 
 const FEEDBACK_TYPES = [
     { id: 'contact', icon: MessageCircle, color: 'amber' },
@@ -127,14 +128,7 @@ const FeedbackPage = () => {
             <div className="relative space-y-6">
                 {/* Header */}
                 <header className="flex items-center gap-3">
-                    <motion.button
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => navigate(-1)}
-                        className="rounded-2xl border border-white/80 bg-white/80 p-2 shadow-soft"
-                        aria-label={t('common.back')}
-                    >
-                        <ArrowLeft className="w-5 h-5 text-neutral-600" />
-                    </motion.button>
+                    <BackButton onClick={() => navigate(-1)} ariaLabel={t('common.back')} />
                     <div className="flex-1">
                         <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-amber-600">
                             {t('settings.support.title')}
@@ -196,7 +190,7 @@ const FeedbackPage = () => {
                         }}
                         placeholder={t('feedback.messagePlaceholder')}
                         rows={6}
-                        className="w-full bg-white/70 border-2 border-neutral-100 rounded-2xl p-4 text-neutral-700 placeholder:text-neutral-400 focus:ring-2 focus:ring-amber-200 focus:border-amber-300 focus:outline-none text-sm resize-none"
+                        className="w-full bg-white/70 border-2 border-neutral-100 rounded-2xl p-4 text-neutral-700 placeholder:text-neutral-500 focus:ring-2 focus:ring-amber-200 focus:border-amber-300 focus:outline-none text-sm resize-none"
                     />
                 </section>
 

@@ -3,7 +3,9 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
 import { runLocalStorageMaintenance } from './utils/storageMaintenance'
+import { initSentry } from './services/sentry'
 
+initSentry()
 runLocalStorageMaintenance()
 
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {

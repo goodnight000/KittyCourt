@@ -84,7 +84,7 @@ export const updatePassword = async (newPassword) => {
  */
 export const signInWithGoogle = async () => {
     const redirectTo = `${window.location.origin}/auth/callback`;
-    console.log('[Auth] Google Sign-In Redirect URL:', redirectTo);
+    if (import.meta.env.DEV) console.log('[Auth] Google Sign-In Redirect URL:', redirectTo);
 
     const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -123,7 +123,7 @@ export const getCurrentUser = async () => {
  * Create or update user profile
  */
 export const upsertProfile = async (profileData) => {
-    console.log('[supabase] upsertProfile called with:', profileData);
+    if (import.meta.env.DEV) console.log('[supabase] upsertProfile called with:', profileData);
     try {
         // First, try the upsert
         const { data: upsertData, error: upsertError } = await supabase
@@ -132,7 +132,7 @@ export const upsertProfile = async (profileData) => {
             .select()
             .single();
 
-        console.log('[supabase] upsertProfile result:', { data: upsertData, error: upsertError });
+        if (import.meta.env.DEV) console.log('[supabase] upsertProfile result:', { data: upsertData, error: upsertError });
 
         if (upsertError) {
             console.error('[supabase] upsertProfile error:', upsertError);

@@ -62,7 +62,7 @@ const OptionsStep = ({
                                         {optionLabel}
                                     </p>
                                     {optionDesc && (
-                                        <p className="text-xs text-neutral-400 mt-0.5">{optionDesc}</p>
+                                        <p className="text-xs text-neutral-500 mt-0.5">{optionDesc}</p>
                                     )}
                                 </div>
                                 {selected && (
@@ -94,7 +94,7 @@ const OptionsStep = ({
                         value={customInput}
                         onChange={(e) => setCustomInput(e.target.value)}
                         onKeyDown={handleCustomInputKeyPress}
-                        className="w-full px-4 py-3 bg-white/80 border border-dashed border-neutral-200 rounded-xl text-neutral-600 placeholder:text-neutral-400 focus:outline-none focus:border-[#D2BC76] transition-all"
+                        className="w-full px-4 py-3 bg-white/80 border border-dashed border-neutral-200 rounded-xl text-neutral-600 placeholder:text-neutral-500 focus:outline-none focus:border-[#D2BC76] transition-all"
                     />
                 </Motion.div>
             )}

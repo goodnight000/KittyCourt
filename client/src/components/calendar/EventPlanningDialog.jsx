@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { X, Wand2, Loader2, AlertTriangle, Check, ChevronDown, BookOpen, Clock, Send, StickyNote, Heart, Gift, Lightbulb } from 'lucide-react';
 import { useI18n } from '../../i18n';
+import { parseLocalDate } from '../../utils/dateFormatters';
 import api from '../../services/api';
 
 const STYLE_OPTIONS = [
@@ -108,12 +109,11 @@ const PlanLoadingScreen = ({ stepIndex, t }) => {
 const EventPlanningDialog = ({ event, eventKey, myId, partnerId, partnerDisplayName, myDisplayName, onClose, onSaved }) => {
     const { t, language } = useI18n();
     const dateStr = event?.date;
-    const eventDate = dateStr?.includes('T') ? new Date(dateStr) : new Date(dateStr + 'T00:00:00');
+    const eventDate = parseLocalDate(dateStr) || new Date();
 
     const [style, setStyle] = useState('cozy');
     const [plan, setPlan] = useState(null);
     const [meta, setMeta] = useState(null);
-    const [checked, setChecked] = useState({});
     const [isLoading, setIsLoading] = useState(true);
     const [isHydrating, setIsHydrating] = useState(true); // Track initial hydration state
     const [error, setError] = useState(null);
@@ -137,10 +137,7 @@ const EventPlanningDialog = ({ event, eventKey, myId, partnerId, partnerDisplayN
     const [notesByStyle, setNotesByStyle] = useState(() => ({}));
     const [isSharing, setIsSharing] = useState(false);
     const [shareSuccess, setShareSuccess] = useState(false);
-
-    useEffect(() => {
-        setChecked({});
-    }, [plan?.mainPlan?.title]);
+    const checked = checklistsByStyle[style] || {};
 
     // Loading step cycle animation
     useEffect(() => {
@@ -193,9 +190,9 @@ const EventPlanningDialog = ({ event, eventKey, myId, partnerId, partnerDisplayN
                 const initialPlan = nextPlans[initialStyle] || null;
                 setStyle(initialStyle);
                 setPlan(initialPlan);
-                setChecked(nextChecklists[initialStyle] || {});
                 setNotes(nextNotes[initialStyle] || '');
             } catch {
+                // Intentionally ignored: hydration failure is handled by generating new plan
                 if (cancelled) return;
                 setPlansByStyle({});
                 setPlanIdsByStyle({});
@@ -248,8 +245,6 @@ const EventPlanningDialog = ({ event, eventKey, myId, partnerId, partnerDisplayN
 
             setPlan(nextPlan);
             setMeta(nextMeta);
-            setChecked({});
-
             setPlansByStyle((prev) => ({ ...prev, [style]: nextPlan }));
             setPlanIdsByStyle((prev) => ({ ...prev, [style]: planId }));
             setChecklistsByStyle((prev) => ({ ...prev, [style]: {} }));
@@ -289,7 +284,6 @@ const EventPlanningDialog = ({ event, eventKey, myId, partnerId, partnerDisplayN
         if (cached) {
             setPlan(cached);
             setError(null);
-            setChecked(checklistsByStyle[style] || {});
             setNotes(notesByStyle[style] || '');
             return;
         }
@@ -334,7 +328,7 @@ const EventPlanningDialog = ({ event, eventKey, myId, partnerId, partnerDisplayN
                 setShowSaveToast(true);
                 setTimeout(() => setShowSaveToast(false), 1500);
             } catch {
-                // Best-effort save
+                // Intentionally ignored: notes auto-save is best-effort
             }
         }, 800);
     }, [style, planIdsByStyle]);
@@ -350,33 +344,29 @@ const EventPlanningDialog = ({ event, eventKey, myId, partnerId, partnerDisplayN
             setShareSuccess(true);
             setTimeout(() => setShareSuccess(false), 2500);
         } catch {
-            // Handle error silently or show toast
+            // Intentionally ignored: share failure is handled by UI state
         } finally {
             setIsSharing(false);
         }
     }, [style, planIdsByStyle, partnerId]);
 
     const toggleChecklistItem = (key) => {
-        setChecked((prev) => {
-            const next = { ...prev, [key]: !prev[key] };
-            setChecklistsByStyle((current) => ({ ...current, [style]: next }));
+        const next = { ...checked, [key]: !checked[key] };
+        setChecklistsByStyle((current) => ({ ...current, [style]: next }));
 
-            const planId = planIdsByStyle[style];
-            if (!planId) return next;
+        const planId = planIdsByStyle[style];
+        if (!planId) return;
 
-            if (checklistSaveTimerRef.current) clearTimeout(checklistSaveTimerRef.current);
-            checklistSaveTimerRef.current = setTimeout(async () => {
-                try {
-                    await api.patch(`/calendar/event-plans/${planId}`, { checklistState: next });
-                    setShowSaveToast(true);
-                    setTimeout(() => setShowSaveToast(false), 1500);
-                } catch {
-                    // Best-effort; keep UI responsive even if save fails.
-                }
-            }, 500);
-
-            return next;
-        });
+        if (checklistSaveTimerRef.current) clearTimeout(checklistSaveTimerRef.current);
+        checklistSaveTimerRef.current = setTimeout(async () => {
+            try {
+                await api.patch(`/calendar/event-plans/${planId}`, { checklistState: next });
+                setShowSaveToast(true);
+                setTimeout(() => setShowSaveToast(false), 1500);
+            } catch {
+                // Intentionally ignored: checklist auto-save is best-effort
+            }
+        }, 500);
     };
 
     return (

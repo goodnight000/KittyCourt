@@ -260,6 +260,7 @@ class CourtSessionManager {
 
         console.log(`[Court] Session ${session.id} dismissed by ${userId} from phase ${session.phase}`);
 
+        this._triggerBackgroundExtraction(session);
         await this._deleteSession(session);
         this._cleanup(session.coupleId);
     }
@@ -376,6 +377,7 @@ class CourtSessionManager {
 
         this.settlementService.acceptSettlement(session, userId);
 
+        this._triggerBackgroundExtraction(session);
         await this._deleteSession(session);
         this._cleanup(session.coupleId);
     }
@@ -649,6 +651,21 @@ class CourtSessionManager {
         }
     }
 
+    _triggerBackgroundExtraction(session) {
+        if (!this.judgeEngine?.triggerBackgroundExtraction || !session) return;
+
+        try {
+            const caseData = buildCaseData(session);
+            caseData.submissions.userA.selectedPrimaryEmotion ||= '';
+            caseData.submissions.userA.coreNeed ||= '';
+            caseData.submissions.userB.selectedPrimaryEmotion ||= '';
+            caseData.submissions.userB.coreNeed ||= '';
+            this.judgeEngine.triggerBackgroundExtraction(caseData, session.caseId || null);
+        } catch (error) {
+            console.error('[Court] Failed to trigger background extraction:', error);
+        }
+    }
+
     // === Timeout Handlers ===
 
     _handlePendingTimeout(coupleId) {
@@ -656,6 +673,7 @@ class CourtSessionManager {
         if (!session || session.phase !== PHASE.PENDING) return;
 
         console.log(`[Court] Pending timeout for session ${session.id}`);
+        this._triggerBackgroundExtraction(session);
         this._deleteSession(session);
         this._cleanup(coupleId);
     }
@@ -665,6 +683,7 @@ class CourtSessionManager {
         if (!session || session.phase !== PHASE.EVIDENCE) return;
 
         console.log(`[Court] Evidence timeout for session ${session.id} - case tossed`);
+        this._triggerBackgroundExtraction(session);
         await this._deleteSession(session);
         this._cleanup(coupleId);
     }
@@ -692,6 +711,7 @@ class CourtSessionManager {
         if (!session || session.phase !== PHASE.ANALYZING) return;
 
         console.log(`[Court] Analyzing timeout for session ${session.id} - case tossed`);
+        this._triggerBackgroundExtraction(session);
         await this._deleteSession(session);
         this._cleanup(coupleId);
     }
@@ -701,6 +721,7 @@ class CourtSessionManager {
         if (!session || session.phase !== PHASE.PRIMING) return;
 
         console.log(`[Court] Priming timeout for session ${session.id} - case tossed`);
+        this._triggerBackgroundExtraction(session);
         await this._deleteSession(session);
         this._cleanup(coupleId);
     }
@@ -710,6 +731,7 @@ class CourtSessionManager {
         if (!session || session.phase !== PHASE.JOINT_READY) return;
 
         console.log(`[Court] Joint timeout for session ${session.id} - case tossed`);
+        this._triggerBackgroundExtraction(session);
         await this._deleteSession(session);
         this._cleanup(coupleId);
     }
@@ -719,6 +741,7 @@ class CourtSessionManager {
         if (!session || session.phase !== PHASE.RESOLUTION) return;
 
         console.log(`[Court] Resolution timeout for session ${session.id} - case tossed`);
+        this._triggerBackgroundExtraction(session);
         await this._deleteSession(session);
         this._cleanup(coupleId);
     }

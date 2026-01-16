@@ -19,7 +19,6 @@ vi.mock('../../i18n', () => ({
                 'profilePage.edit.nicknamePlaceholder': 'Enter nickname',
                 'profilePage.edit.birthdayLabel': 'Birthday',
                 'profile.loveLanguageLabel': 'Love Language',
-                'profile.languageLabel': 'Preferred Language',
                 'profile.saveProfile': 'Save Profile',
                 'errors.IMAGE_INVALID': 'Invalid image type',
                 'errors.IMAGE_TOO_LARGE': 'Image is too large (max 5MB)',
@@ -116,7 +115,6 @@ describe('ProfileEditForm', () => {
         loveLanguage: 'words',
         avatarUrl: '/assets/profile-pic/cat.png',
         anniversaryDate: '2020-06-20',
-        preferredLanguage: 'en',
     };
 
     const defaultProps = {
@@ -180,13 +178,6 @@ describe('ProfileEditForm', () => {
                 expect(screen.getByText(lang.label)).toBeInTheDocument();
                 expect(screen.getByText(lang.emoji)).toBeInTheDocument();
             });
-        });
-
-        it('should render language selection dropdown', () => {
-            render(<ProfileEditForm {...defaultProps} />);
-            expect(screen.getByText('Preferred Language')).toBeInTheDocument();
-            const languageSelect = screen.getByRole('combobox');
-            expect(languageSelect).toHaveValue('en');
         });
 
         it('should render save button', () => {
@@ -285,14 +276,6 @@ describe('ProfileEditForm', () => {
             expect(dogButton).toHaveClass('ring-2');
         });
 
-        it('should change language when dropdown changes', () => {
-            render(<ProfileEditForm {...defaultProps} />);
-
-            const languageSelect = screen.getByRole('combobox');
-            fireEvent.change(languageSelect, { target: { value: 'zh-Hans' } });
-
-            expect(languageSelect).toHaveValue('zh-Hans');
-        });
     });
 
     describe('Form Validation - Birthday', () => {
@@ -383,7 +366,6 @@ describe('ProfileEditForm', () => {
                 birthday: '1990-05-15',
                 loveLanguage: 'words',
                 avatarUrl: '/assets/profile-pic/cat.png',
-                preferredLanguage: 'en',
             }));
         });
 
@@ -517,7 +499,6 @@ describe('ProfileEditForm', () => {
                 loveLanguage: '',
                 avatarUrl: '',
                 anniversaryDate: '',
-                preferredLanguage: '',
             };
 
             render(<ProfileEditForm {...defaultProps} profileData={emptyProfile} />);
@@ -533,7 +514,6 @@ describe('ProfileEditForm', () => {
                 loveLanguage: null,
                 avatarUrl: null,
                 anniversaryDate: null,
-                preferredLanguage: null,
             };
 
             // Should not crash
@@ -542,16 +522,5 @@ describe('ProfileEditForm', () => {
             }).not.toThrow();
         });
 
-        it('should default to DEFAULT_LANGUAGE when preferredLanguage is not set', () => {
-            const profileWithoutLang = {
-                ...defaultProfileData,
-                preferredLanguage: '',
-            };
-
-            render(<ProfileEditForm {...defaultProps} profileData={profileWithoutLang} />);
-
-            const languageSelect = screen.getByRole('combobox');
-            expect(languageSelect).toHaveValue('en');
-        });
     });
 });

@@ -12,6 +12,9 @@ import { create } from 'zustand';
 import api from '../services/api';
 import { createSocketAction } from '../utils/socketActionHelper';
 import { eventBus, EVENTS } from '../lib/eventBus';
+import useCacheStore, { cacheKey } from './useCacheStore';
+
+const isOnline = () => typeof navigator !== 'undefined' && navigator.onLine;
 
 // View phases (must match server)
 export const VIEW_PHASE = {
@@ -39,17 +42,15 @@ export const VIEW_PHASE = {
 // Alias for UI convenience
 export const COURT_PHASES = VIEW_PHASE;
 
-// Socket reference (set by useCourtSocket hook)
-let socketRef = null;
-export const setSocketRef = (socket) => { socketRef = socket; };
-export const getSocketRef = () => socketRef;
-
 // API base path
 const COURT_API = '/court';
 const STALE_THRESHOLD_MS = 10000;
 
 // Event bus listener cleanup functions
 let eventCleanupFns = [];
+
+// Module-level socket reference (non-reactive, prevents unnecessary re-renders)
+let socketInstance = null;
 
 const useCourtStore = create((set, get) => {
     const fallbackFetch = () => get().fetchState({ force: true });
@@ -63,9 +64,9 @@ const useCourtStore = create((set, get) => {
         onApiError = null,
         includeUserId = true
     }) => async (payload = {}) => {
-        if (socketRef?.connected) {
+        if (socketInstance?.connected) {
             const action = createSocketAction(socketEvent, { timeoutMs, fallbackFn });
-            const response = await action(socketRef, payload);
+            const response = await action(socketInstance, payload);
 
             if (syncState && response?.state) get().onStateSync(response.state);
             if (response?.error) {
@@ -107,6 +108,8 @@ const useCourtStore = create((set, get) => {
 
     // === Connection State ===
     isConnected: false,
+    // Note: Socket reference is stored in module-level socketInstance variable
+    // to prevent unnecessary re-renders. Use getSocketRef() to access.
 
     // Last time we received authoritative state (ms since epoch)
     lastSyncAt: 0,
@@ -154,6 +157,7 @@ const useCourtStore = create((set, get) => {
         const prevView = get().myViewPhase;
         const prevSessionId = get().session?.id;
         const userId = get()._authUserId;
+        const partnerId = get()._authPartnerId;
 
         const nextSessionId = session?.id;
         const isNewSession = !!(nextSessionId && nextSessionId !== prevSessionId);
@@ -190,6 +194,20 @@ const useCourtStore = create((set, get) => {
             ...(isSessionCleared || isNewSession ? { settlementDeclinedNotice: null } : {}),
             ...(isSessionCleared || isNewSession ? { dismissedRatingSessionId: null } : {})
         });
+
+        if (isSessionCleared || isNewSession) {
+            const cacheStore = useCacheStore.getState();
+            if (userId && partnerId) {
+                cacheStore.invalidate(cacheKey.caseHistory(userId, partnerId));
+                const caseRefresh = cacheStore.revalidate(cacheKey.caseHistory(userId, partnerId), { onlyStale: false });
+                if (caseRefresh?.catch) caseRefresh.catch(() => {});
+            }
+            if (userId) {
+                cacheStore.invalidate(cacheKey.stats(userId));
+                const statsRefresh = cacheStore.revalidate(cacheKey.stats(userId), { onlyStale: false });
+                if (statsRefresh?.catch) statsRefresh.catch(() => {});
+            }
+        }
     },
 
     onError: (message) => {
@@ -251,7 +269,7 @@ const useCourtStore = create((set, get) => {
     dismiss: async () => {
         set({ isSubmitting: true, error: null });
 
-        if (!socketRef?.connected) {
+        if (!socketInstance?.connected) {
             get().reset();
             set({ isSubmitting: false });
             return;
@@ -279,7 +297,7 @@ const useCourtStore = create((set, get) => {
         const { localEvidence, localFeelings, localNeeds } = get();
         set({ isSubmitting: true, error: null });
         const payload = { evidence: localEvidence, feelings: localFeelings, needs: localNeeds };
-        const shouldClearBefore = socketRef?.connected;
+        const shouldClearBefore = socketInstance?.connected;
 
         if (shouldClearBefore) {
             set({ localEvidence: '', localFeelings: '', localNeeds: '' });
@@ -352,7 +370,7 @@ const useCourtStore = create((set, get) => {
         if (!localAddendum.trim()) return;
 
         set({ isSubmitting: true, error: null });
-        const shouldClearBefore = socketRef?.connected;
+        const shouldClearBefore = socketInstance?.connected;
         if (shouldClearBefore) {
             set({ localAddendum: '' });
         }
@@ -463,6 +481,16 @@ const useCourtStore = create((set, get) => {
             }
 
             await api.post(`/cases/${caseId}/rate`, { userId, rating });
+            const cacheStore = useCacheStore.getState();
+            if (userId && get()._authPartnerId) {
+                const partnerId = get()._authPartnerId;
+                cacheStore.invalidate(cacheKey.caseHistory(userId, partnerId));
+                const caseRefresh = cacheStore.revalidate(cacheKey.caseHistory(userId, partnerId), { onlyStale: false });
+                if (caseRefresh?.catch) caseRefresh.catch(() => {});
+            }
+            cacheStore.invalidate(cacheKey.stats(userId));
+            const statsRefresh = cacheStore.revalidate(cacheKey.stats(userId), { onlyStale: false });
+            if (statsRefresh?.catch) statsRefresh.catch(() => {});
             return true;
         } catch (error) {
             console.error('[CourtStore] submitVerdictRating error:', error);
@@ -475,6 +503,7 @@ const useCourtStore = create((set, get) => {
      * Fetch state from API (for initial load or reconnection)
      */
     fetchState: async ({ force = false } = {}) => {
+        if (!isOnline()) return;
         try {
             const userId = get()._authUserId;
             if (!userId) return;
@@ -482,7 +511,7 @@ const useCourtStore = create((set, get) => {
             // If WebSocket is connected, server will push the authoritative state.
             const lastSyncAt = get().lastSyncAt;
             const stale = !lastSyncAt || Date.now() - lastSyncAt > STALE_THRESHOLD_MS;
-            if (!force && (socketRef?.connected || get().isConnected) && !stale) {
+            if (!force && (socketInstance?.connected || get().isConnected) && !stale) {
                 return;
             }
 
@@ -531,7 +560,7 @@ const useCourtStore = create((set, get) => {
 
         // Listen for auth logout - reset court state
         const unsubLogout = eventBus.on(EVENTS.AUTH_LOGOUT, () => {
-            console.log('[CourtStore] Received AUTH_LOGOUT event, resetting court state');
+            if (import.meta.env.DEV) console.log('[CourtStore] Received AUTH_LOGOUT event, resetting court state');
             set({ _authUserId: null, _authPartnerId: null });
             get().reset();
         });
@@ -539,7 +568,7 @@ const useCourtStore = create((set, get) => {
 
         // Listen for auth login - cache user data
         const unsubLogin = eventBus.on(EVENTS.AUTH_LOGIN, ({ userId, partner }) => {
-            console.log('[CourtStore] Received AUTH_LOGIN event, caching userId:', userId);
+            if (import.meta.env.DEV) console.log('[CourtStore] Received AUTH_LOGIN event, caching userId:', userId);
             set({
                 _authUserId: userId,
                 _authPartnerId: partner?.id || null
@@ -549,12 +578,12 @@ const useCourtStore = create((set, get) => {
 
         // Listen for partner connection - cache partner ID
         const unsubPartner = eventBus.on(EVENTS.PARTNER_CONNECTED, ({ partnerId }) => {
-            console.log('[CourtStore] Received PARTNER_CONNECTED event, caching partnerId:', partnerId);
+            if (import.meta.env.DEV) console.log('[CourtStore] Received PARTNER_CONNECTED event, caching partnerId:', partnerId);
             set({ _authPartnerId: partnerId });
         });
         eventCleanupFns.push(unsubPartner);
 
-        console.log('[CourtStore] Event bus listeners initialized');
+        if (import.meta.env.DEV) console.log('[CourtStore] Event bus listeners initialized');
     },
 
     /**
@@ -563,7 +592,7 @@ const useCourtStore = create((set, get) => {
     cleanup: () => {
         eventCleanupFns.forEach(fn => fn());
         eventCleanupFns = [];
-        console.log('[CourtStore] Event bus listeners cleaned up');
+        if (import.meta.env.DEV) console.log('[CourtStore] Event bus listeners cleaned up');
     },
 
     // === Helpers ===
@@ -597,5 +626,11 @@ const useCourtStore = create((set, get) => {
     }
     });
 });
+
+export const setSocketRef = (socket) => {
+    socketInstance = socket;
+};
+
+export const getSocketRef = () => socketInstance;
 
 export default useCourtStore;

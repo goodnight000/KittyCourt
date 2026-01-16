@@ -116,7 +116,7 @@ const ChallengeCard = ({
                         <div className="flex items-start justify-between gap-2">
                             <div>
                                 {statusLabel && (
-                                    <div className="text-[10px] font-semibold uppercase tracking-[0.3em] text-neutral-400">
+                                    <div className="text-[10px] font-semibold uppercase tracking-[0.3em] text-neutral-500">
                                         {statusLabel}
                                     </div>
                                 )}
@@ -170,7 +170,7 @@ const ChallengeCard = ({
                                 disabled={actionDisabled || !onAction}
                                 className={`rounded-full px-3 py-1 text-xs font-bold ${
                                     actionDisabled
-                                        ? 'bg-neutral-200/70 text-neutral-400'
+                                        ? 'bg-neutral-200/70 text-neutral-500'
                                         : 'bg-gradient-to-r from-[#C9A227] to-[#8B7019] text-white shadow-soft'
                                 }`}
                             >
@@ -184,12 +184,12 @@ const ChallengeCard = ({
                                     e.stopPropagation();
                                     onSkip();
                                 }}
-                                className="px-2 py-1 text-[11px] font-semibold text-neutral-400 hover:text-neutral-600"
+                                className="px-2 py-1 text-[11px] font-semibold text-neutral-500 hover:text-neutral-600"
                             >
                                 {t('challenges.actions.skip')}
                             </motion.button>
                         )}
-                        {isClickable && <ChevronRight className="w-4 h-4 text-neutral-400" />}
+                        {isClickable && <ChevronRight className="w-4 h-4 text-neutral-500" />}
                     </div>
                 </div>
             </div>

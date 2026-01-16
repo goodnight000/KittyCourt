@@ -10,6 +10,7 @@ import usePartnerStore from '../store/usePartnerStore'
 import useMemoryStore from '../store/useMemoryStore'
 import MemoryCard from '../components/MemoryCard'
 import { useI18n } from '../i18n'
+import BackButton from '../components/shared/BackButton'
 
 const REACTION_OPTIONS = ['❤️', '😍', '😂', '🥰']
 
@@ -41,17 +42,9 @@ const DeletedMemoryCard = ({ deletedAt, onRestore }) => {
 }
 
 const MemoryBackdrop = () => (
-  <div className="absolute inset-0 pointer-events-none">
-    <div className="absolute -top-24 -right-20 h-48 w-48 rounded-full bg-rose-200/35 blur-3xl" />
-    <div className="absolute top-24 -left-20 h-52 w-52 rounded-full bg-amber-200/40 blur-3xl" />
-    <div className="absolute bottom-10 right-6 h-56 w-56 rounded-full bg-amber-100/45 blur-3xl" />
-    <div
-      className="absolute inset-0 opacity-50"
-      style={{
-        backgroundImage:
-          'radial-gradient(circle at 15% 20%, rgba(255,255,255,0.75) 0%, transparent 55%), radial-gradient(circle at 85% 15%, rgba(255,235,210,0.75) 0%, transparent 50%)'
-      }}
-    />
+  <div className="fixed inset-0 pointer-events-none">
+    <div className="absolute -top-20 -right-20 h-64 w-64 rounded-full bg-amber-200/30 blur-3xl" />
+    <div className="absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-rose-200/25 blur-3xl" />
   </div>
 )
 
@@ -184,7 +177,11 @@ const MemoriesPage = () => {
   if (!hasPartner) {
     return (
       <div className="relative min-h-screen overflow-hidden px-4 pb-6 pt-6">
-        <MemoryBackdrop />
+        {/* Background gradient */}
+            <div className="fixed inset-0 pointer-events-none">
+                <div className="absolute -top-20 -right-20 h-64 w-64 rounded-full bg-amber-200/30 blur-3xl" />
+                <div className="absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-rose-200/25 blur-3xl" />
+            </div>
         <div className="relative">
           <motion.button
             whileTap={{ scale: 0.95 }}
@@ -268,13 +265,7 @@ const MemoriesPage = () => {
       <MemoryBackdrop />
       <div className="relative space-y-6">
         <header className="flex items-start gap-3">
-          <motion.button
-            whileTap={{ scale: 0.95 }}
-            onClick={handleBack}
-            className="rounded-2xl border border-white/80 bg-white/80 p-2 shadow-soft"
-          >
-            <ArrowLeft className="w-5 h-5 text-neutral-600" />
-          </motion.button>
+          <BackButton onClick={handleBack} ariaLabel={t('common.back')} />
           <div className="flex-1">
             <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-amber-600">
               {t('memories.header.kicker')}
@@ -303,7 +294,7 @@ const MemoriesPage = () => {
           </div>
           <div className="relative flex flex-wrap items-center justify-between gap-4">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-neutral-400">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-neutral-500">
                 {t('memories.overview.kicker')}
               </p>
               <h2 className="mt-1 text-lg font-display font-bold text-neutral-800">
@@ -549,7 +540,7 @@ const MemoriesPage = () => {
                     className="w-full max-h-[360px] object-cover"
                   />
                 ) : (
-                  <div className="flex h-56 items-center justify-center text-sm text-neutral-400">
+                  <div className="flex h-56 items-center justify-center text-sm text-neutral-500">
                     {t('memories.viewer.processing')}
                   </div>
                 )}
@@ -560,7 +551,7 @@ const MemoriesPage = () => {
               )}
 
               <div className="mt-4 space-y-3">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.3em] text-neutral-400">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.3em] text-neutral-500">
                   {t('memories.viewer.reactions')}
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -595,12 +586,12 @@ const MemoriesPage = () => {
               <div className="mt-5 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="text-sm font-semibold text-neutral-700">{t('memories.viewer.comments')}</div>
-                  <div className="text-[11px] text-neutral-400">
+                  <div className="text-[11px] text-neutral-500">
                     {t('memories.viewer.commentCount', { count: comments.length })}
                   </div>
                 </div>
                 {comments.length === 0 && (
-                  <div className="text-xs text-neutral-400">{t('memories.viewer.emptyComments')}</div>
+                  <div className="text-xs text-neutral-500">{t('memories.viewer.emptyComments')}</div>
                 )}
                 {comments.map((comment) => (
                   <div

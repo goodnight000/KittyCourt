@@ -11,6 +11,7 @@
 const express = require('express');
 const router = express.Router();
 const { requireSupabase, requireAuthUserId, getPartnerIdForUser } = require('../lib/auth');
+const { requirePartner } = require('../middleware/requirePartner');
 const { sendError } = require('../lib/http');
 const { getStats, reviveStreak, getStatsForCouple, isGoldUser } = require('../lib/statsService');
 const { safeErrorMessage } = require('../lib/shared/errorUtils');
@@ -59,19 +60,21 @@ router.get('/', async (req, res) => {
  *   userA: { userId, ...stats },
  *   userB: { userId, ...stats }
  * }
+ *
+ * Security: Uses requirePartner middleware to verify the partner relationship
+ * before allowing access to couple stats.
  */
-router.get('/couple', async (req, res) => {
+router.get('/couple', requirePartner, async (req, res) => {
     try {
-        const supabase = requireSupabase();
-        const authUserId = await requireAuthUserId(req);
+        // Partner verified by requirePartner middleware
+        const { userId, partnerId } = req;
 
-        // Get partner ID
-        const partnerId = await getPartnerIdForUser(supabase, authUserId);
-        if (!partnerId) {
-            return sendError(res, 400, 'NO_PARTNER', 'No partner connected');
+        // Additional verification: ensure both IDs are valid UUIDs
+        if (!userId || !partnerId) {
+            return sendError(res, 400, 'INVALID_COUPLE', 'Invalid user or partner ID');
         }
 
-        const coupleStats = await getStatsForCouple(authUserId, partnerId);
+        const coupleStats = await getStatsForCouple(userId, partnerId);
 
         res.json(coupleStats);
     } catch (error) {

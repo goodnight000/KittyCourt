@@ -5,7 +5,8 @@ import useAppStore from '../store/useAppStore';
 import useAuthStore from '../store/useAuthStore';
 import usePartnerStore from '../store/usePartnerStore';
 import RequirePartner from '../components/RequirePartner';
-import { ChevronLeft, Scale, ChevronRight, Calendar, AlertTriangle, Zap, Cloud, FileText } from 'lucide-react';
+import { Scale, ChevronRight, Calendar, AlertTriangle, Zap, Cloud, FileText } from 'lucide-react';
+import BackButton from '../components/shared/BackButton';
 import { useI18n } from '../i18n';
 import { formatDate } from '../utils/helpers';
 
@@ -100,17 +101,15 @@ const HistoryPage = () => {
 
     return (
         <div className="relative min-h-screen overflow-hidden pb-6">
-            <HistoryBackdrop />
+            {/* Background gradient */}
+            <div className="fixed inset-0 pointer-events-none">
+                <div className="absolute -top-20 -right-20 h-64 w-64 rounded-full bg-amber-200/30 blur-3xl" />
+                <div className="absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-rose-200/25 blur-3xl" />
+            </div>
             <div className="relative space-y-6">
             {/* Header */}
             <div className="flex items-start gap-3">
-                <motion.button
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => navigate(-1)}
-                    className="rounded-2xl border border-white/80 bg-white/80 p-2 shadow-soft"
-                >
-                    <ChevronLeft className="w-5 h-5 text-neutral-600" />
-                </motion.button>
+                <BackButton onClick={() => navigate(-1)} ariaLabel={t('common.back')} />
                 <div>
                     <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-amber-600">
                         {t('cases.history.kicker')}
@@ -183,7 +182,7 @@ const HistoryPage = () => {
                                         <h3 className="font-bold text-neutral-800 text-sm leading-snug line-clamp-2">
                                             {caseItem.caseTitle || t('cases.history.caseNumber', { number: index + 1 })}
                                         </h3>
-                                        <div className="flex items-center gap-1 text-[10px] text-neutral-400 mt-1">
+                                        <div className="flex items-center gap-1 text-[10px] text-neutral-500 mt-1">
                                             <Calendar className="w-3 h-3" />
                                             {formatDate(caseItem.createdAt, {
                                                 locale: language,
@@ -194,7 +193,7 @@ const HistoryPage = () => {
                                             })}
                                         </div>
                                     </div>
-                                    <ChevronRight className="w-5 h-5 text-neutral-400 mt-1" />
+                                    <ChevronRight className="w-5 h-5 text-neutral-500 mt-1" />
                                 </div>
 
                                 <div className="flex flex-wrap items-center gap-1.5">
@@ -251,17 +250,9 @@ const HistoryPage = () => {
 };
 
 const HistoryBackdrop = () => (
-    <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute -top-24 -right-16 h-56 w-56 rounded-full bg-amber-200/30 blur-3xl" />
-        <div className="absolute top-16 -left-20 h-60 w-60 rounded-full bg-rose-200/25 blur-3xl" />
-        <div className="absolute bottom-6 right-8 h-64 w-64 rounded-full bg-amber-100/40 blur-3xl" />
-        <div
-            className="absolute inset-0 opacity-45"
-            style={{
-                backgroundImage:
-                    'radial-gradient(circle at 18% 20%, rgba(255,255,255,0.75) 0%, transparent 55%), radial-gradient(circle at 80% 10%, rgba(255,235,210,0.8) 0%, transparent 60%)'
-            }}
-        />
+    <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute -top-20 -right-20 h-64 w-64 rounded-full bg-amber-200/30 blur-3xl" />
+        <div className="absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-rose-200/25 blur-3xl" />
     </div>
 );
 

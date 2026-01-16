@@ -26,7 +26,7 @@ const OnboardingStep = ({
                             {stepData.icon}
                         </Motion.div>
                     )}
-                    <div className="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/80 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-neutral-400">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/80 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-neutral-500">
                         {stepBadgeLabel}
                     </div>
                     <h2 className="text-2xl font-display font-bold text-neutral-800 mt-3 mb-2">

@@ -38,12 +38,13 @@ const resolveInitialProfileLanguage = (preferredLanguage) => (
 let initializePromise = null;
 let authListenerSubscription = null;
 let pendingTimeouts = new Set();
+let eventCleanupFns = [];
 
 /**
  * Handler for SIGNED_OUT event
  */
 const handleSignedOut = (set, get) => {
-    console.log('[Auth] Handling SIGNED_OUT event');
+    if (import.meta.env.DEV) console.log('[Auth] Handling SIGNED_OUT event');
 
     // Clear all pending timeouts to prevent memory leaks
     pendingTimeouts.forEach(timeoutId => clearTimeout(timeoutId));
@@ -56,9 +57,11 @@ const handleSignedOut = (set, get) => {
 
     useSubscriptionStore.getState().reset();
     revenueCatLogOut();
+    useCacheStore.getState().clearAll();
+    useCacheStore.getState().clearRegistry();
 
     // Emit logout event
-    eventBus.emit(EVENTS.AUTH_LOGOUT, { userId: null });
+    eventBus.emit(EVENTS.AUTH_LOGOUT, { userId: null, source: 'auth' });
 
     set({
         user: null,
@@ -75,14 +78,15 @@ const handleSignedOut = (set, get) => {
  * Handler for TOKEN_REFRESHED event
  */
 const handleTokenRefreshed = (set, session) => {
-    console.log('[Auth] Handling TOKEN_REFRESHED event');
+    if (import.meta.env.DEV) console.log('[Auth] Handling TOKEN_REFRESHED event');
 
     if (session) {
         set({ session });
         // Emit session refreshed event
         eventBus.emit(EVENTS.AUTH_SESSION_REFRESHED, {
             userId: session.user?.id,
-            session
+            session,
+            source: 'auth'
         });
     }
 };
@@ -91,7 +95,7 @@ const handleTokenRefreshed = (set, session) => {
  * Handler for SIGNED_IN event
  */
 const handleSignedIn = async (set, get, sessionUser, session) => {
-    console.log('[Auth] Handling SIGNED_IN event for user:', sessionUser?.id);
+    if (import.meta.env.DEV) console.log('[Auth] Handling SIGNED_IN event for user:', sessionUser?.id);
 
     const state = get();
 
@@ -116,22 +120,26 @@ const handleSignedIn = async (set, get, sessionUser, session) => {
     // Set auth state atomically to prevent flash of unauthenticated content
     if (cachedProfile?.id === sessionUser.id) {
         // Use cached profile - set all auth state in one atomic update
+        const cachedLanguage = resolvePreferredLanguage(cachedProfile);
         set({
             user: sessionUser,
             session,
             isAuthenticated: true,
             hasCheckedAuth: true,
             isLoading: false,
-            preferredLanguage: resolvePreferredLanguage(cachedProfile),
+            preferredLanguage: cachedLanguage,
         });
 
         eventBus.emit(EVENTS.AUTH_LOGIN, {
             userId: sessionUser.id,
             profile: cachedProfile,
+            user: sessionUser,
+            preferredLanguage: cachedLanguage,
+            source: 'auth'
         });
 
         // Warm cache in background (don't await)
-        useCacheStore.getState().warmCache(sessionUser.id, cachedProfile?.partner_id);
+        useCacheStore.getState().warmCache(sessionUser.id, cachedProfile?.partner_id, cachedLanguage);
 
         const timeoutId = setTimeout(() => {
             pendingTimeouts.delete(timeoutId);
@@ -168,11 +176,15 @@ const handleSignedIn = async (set, get, sessionUser, session) => {
             profile,
             partner,
             requests,
-            sent
+            sent,
+            user: sessionUser,
+            preferredLanguage: profile ? resolvePreferredLanguage(profile) : get().preferredLanguage,
+            source: 'auth'
         });
 
         // Warm cache in background (don't await)
-        useCacheStore.getState().warmCache(sessionUser.id, partner?.id || profile?.partner_id);
+        const warmLanguage = profile ? resolvePreferredLanguage(profile) : get().preferredLanguage;
+        useCacheStore.getState().warmCache(sessionUser.id, partner?.id || profile?.partner_id, warmLanguage);
 
         // Initialize subscription store after auth
         const timeoutId = setTimeout(() => {
@@ -191,7 +203,7 @@ const handleSignedIn = async (set, get, sessionUser, session) => {
  * Handler for INITIAL_SESSION event
  */
 const handleInitialSession = (set, get, sessionUser, session) => {
-    console.log('[Auth] Handling INITIAL_SESSION event');
+    if (import.meta.env.DEV) console.log('[Auth] Handling INITIAL_SESSION event');
     // INITIAL_SESSION uses the same logic as SIGNED_IN
     return handleSignedIn(set, get, sessionUser, session);
 };
@@ -255,7 +267,7 @@ const useAuthStore = create(
 
             handleSupabaseAuthEvent: async (event, session) => {
                 const sessionUser = session?.user || null;
-                console.log('[Auth] Auth state change:', event, sessionUser?.id);
+                if (import.meta.env.DEV) console.log('[Auth] Auth state change:', event, sessionUser?.id);
 
                 if (event === 'SIGNED_OUT') {
                     return handleSignedOut(set, get);
@@ -322,10 +334,31 @@ const useAuthStore = create(
                     }
                 })().catch((error) => {
                     console.error('[Auth] Initialization error:', error);
+                    initializePromise = null; // Reset to allow retry (CRITICAL-009 fix)
                     set({ isLoading: false, hasCheckedAuth: true });
                 });
 
                 return initializePromise;
+            },
+
+            // Initialize event bus listeners (for external profile updates)
+            init: () => {
+                eventCleanupFns.forEach(fn => fn());
+                eventCleanupFns = [];
+
+                const unsubProfile = eventBus.on(EVENTS.PROFILE_UPDATED, (payload) => {
+                    if (!payload?.profile || payload?.source === 'auth') return;
+
+                    const currentUserId = get().user?.id;
+                    if (currentUserId && payload.userId && payload.userId !== currentUserId) return;
+
+                    set({
+                        profile: payload.profile,
+                        preferredLanguage: resolvePreferredLanguage(payload.profile) || get().preferredLanguage,
+                    });
+                });
+
+                eventCleanupFns.push(unsubProfile);
             },
 
             // Sign in with email/password
@@ -333,7 +366,7 @@ const useAuthStore = create(
             signIn: async (email, password) => {
                 try {
                     set({ isLoading: true });
-                    console.log('[Auth] signIn called with email:', email);
+                    if (import.meta.env.DEV) console.log('[Auth] signIn called with email:', email);
                     const { data, error } = await supabaseSignInWithEmail(email, password);
                     if (error) {
                         console.error('[Auth] Sign in error:', error);
@@ -341,7 +374,7 @@ const useAuthStore = create(
                         return { error };
                     }
 
-                    console.log('[Auth] Sign in successful, user:', data.user?.id);
+                    if (import.meta.env.DEV) console.log('[Auth] Sign in successful, user:', data.user?.id);
 
                     // Load user context using profile loader service
                     let profile = null;
@@ -349,7 +382,7 @@ const useAuthStore = create(
                     let requests = [];
                     let sent = null;
                     try {
-                        console.log('[Auth] Loading user context for user:', data.user.id);
+                        if (import.meta.env.DEV) console.log('[Auth] Loading user context for user:', data.user.id);
 
                         const {
                             profile: loadedProfile,
@@ -366,17 +399,21 @@ const useAuthStore = create(
                         requests = loadedRequests || [];
                         sent = loadedSent || null;
 
-                        console.log('[Auth] User context loaded:', {
-                            hasProfile: !!profile
-                        });
+                        if (import.meta.env.DEV) {
+                            console.log('[Auth] User context loaded:', {
+                                hasProfile: !!profile
+                            });
+                        }
                     } catch (e) {
                         console.warn('[Auth] Profile fetch exception:', e);
                     }
 
-                    console.log('[Auth] Setting state after sign-in:', {
-                        userId: data.user?.id,
-                        hasProfile: !!profile
-                    });
+                    if (import.meta.env.DEV) {
+                        console.log('[Auth] Setting state after sign-in:', {
+                            userId: data.user?.id,
+                            hasProfile: !!profile
+                        });
+                    }
 
                     set({
                         user: data.user,
@@ -393,11 +430,15 @@ const useAuthStore = create(
                         profile,
                         partner,
                         requests,
-                        sent
+                        sent,
+                        user: data.user,
+                        preferredLanguage: profile ? resolvePreferredLanguage(profile) : get().preferredLanguage,
+                        source: 'auth'
                     });
 
                     // Warm cache in background (don't await)
-                    useCacheStore.getState().warmCache(data.user.id, partner?.id || profile?.partner_id);
+                    const warmLanguage = profile ? resolvePreferredLanguage(profile) : get().preferredLanguage;
+                    useCacheStore.getState().warmCache(data.user.id, partner?.id || profile?.partner_id, warmLanguage);
 
                     // Set up real-time subscriptions and initialize subscription store
                     const timeoutId = setTimeout(() => {
@@ -406,7 +447,7 @@ const useAuthStore = create(
                     }, 100);
                     pendingTimeouts.add(timeoutId);
 
-                    console.log('[Auth] State set complete, returning success');
+                    if (import.meta.env.DEV) console.log('[Auth] State set complete, returning success');
                     return { data };
                 } catch (e) {
                     console.error('[Auth] Sign in exception:', e);
@@ -442,7 +483,7 @@ const useAuthStore = create(
                 // Only set authenticated if we have a valid session
                 if (needsEmailConfirmation) {
                     // Email confirmation required - don't set authenticated
-                    console.log('[Auth] Sign up successful, email confirmation required');
+                    if (import.meta.env.DEV) console.log('[Auth] Sign up successful, email confirmation required');
                     return {
                         data,
                         needsEmailConfirmation: true,
@@ -489,7 +530,7 @@ const useAuthStore = create(
                 await supabaseSignOut();
 
                 // Emit logout event
-                eventBus.emit(EVENTS.AUTH_LOGOUT, { userId: user?.id });
+                eventBus.emit(EVENTS.AUTH_LOGOUT, { userId: user?.id, source: 'auth' });
 
                 set({
                     user: null,
@@ -516,6 +557,7 @@ const useAuthStore = create(
                         userId: profile?.id || current.user?.id,
                         changes: profile,
                         profile,
+                        source: 'auth'
                     });
                 }
             },
@@ -544,7 +586,8 @@ const useAuthStore = create(
                         profile,
                         partner,
                         requests,
-                        sent
+                        sent,
+                        source: 'auth'
                     });
                 } catch (e) {
                     console.warn('[Auth] Failed to refresh profile:', e);
@@ -569,7 +612,9 @@ const useAuthStore = create(
                 if (shouldInvalidateCache) {
                     eventBus.emit(EVENTS.LANGUAGE_CHANGED, {
                         language: normalizedLanguage,
-                        previousLanguage: currentLanguage
+                        previousLanguage: currentLanguage,
+                        userId: user?.id || null,
+                        source: 'auth'
                     });
                 }
 
@@ -621,7 +666,7 @@ const useAuthStore = create(
                         useCacheStore.getState().clearAll();
                         // Re-warm cache after clearing
                         const { profile: updatedProfile } = get();
-                        useCacheStore.getState().warmCache(user.id, updatedProfile?.partner_id);
+                        useCacheStore.getState().warmCache(user.id, updatedProfile?.partner_id, normalizedLanguage);
                     }
                 }
             },
@@ -647,7 +692,10 @@ const useAuthStore = create(
 
             // Clean up all resources (called on app unmount)
             cleanup: () => {
-                console.log('[Auth] Cleaning up all resources');
+                if (import.meta.env.DEV) console.log('[Auth] Cleaning up all resources');
+
+                eventCleanupFns.forEach(fn => fn());
+                eventCleanupFns = [];
 
                 // Clear all pending timeouts
                 pendingTimeouts.forEach(timeoutId => clearTimeout(timeoutId));

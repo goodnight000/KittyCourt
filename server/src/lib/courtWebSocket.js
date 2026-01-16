@@ -20,6 +20,22 @@ const { safeErrorMessage } = require('./shared/errorUtils');
  */
 const wsRateLimits = new Map(); // key: `${userId}:${event}` -> { count, resetAt }
 
+// Periodic cleanup of expired rate limit entries (CRITICAL-007 fix)
+// Runs every 5 minutes to prevent memory growth
+setInterval(() => {
+    const now = Date.now();
+    let cleanedCount = 0;
+    for (const [key, value] of wsRateLimits.entries()) {
+        if (now > value.resetAt) {
+            wsRateLimits.delete(key);
+            cleanedCount++;
+        }
+    }
+    if (cleanedCount > 0) {
+        console.log(`[WS] Rate limit cleanup: removed ${cleanedCount} expired entries`);
+    }
+}, 5 * 60 * 1000); // Every 5 minutes
+
 /**
  * Rate limit configuration for WebSocket events
  * Format: { limit: max requests, windowMs: time window in milliseconds }
@@ -108,11 +124,20 @@ class CourtWebSocketService {
         });
 
         // Authenticate the socket using Supabase JWT when configured.
+        // CRITICAL-006 fix: Require auth in production OR when Supabase is configured
         this.io.use(async (socket, next) => {
-            if (!isSupabaseConfigured()) {
-                if (process.env.NODE_ENV === 'production') {
-                    return next(new Error('Auth not configured'));
-                }
+            const isProduction = process.env.NODE_ENV === 'production';
+            const supabaseConfigured = isSupabaseConfigured();
+
+            // In production, always require Supabase to be configured
+            if (isProduction && !supabaseConfigured) {
+                console.error('[WS] CRITICAL: Supabase not configured in production');
+                return next(new Error('Auth not configured'));
+            }
+
+            // In development without Supabase, allow (with warning)
+            if (!supabaseConfigured) {
+                console.warn('[WS] Running without Supabase auth - development mode only');
                 return next();
             }
 
@@ -379,7 +404,23 @@ class CourtWebSocketService {
                         return handleRateLimitExceeded(socket, 'court:submit_addendum', ack, rateCheck.retryAfterMs);
                     }
 
-                    await courtSessionManager.submitAddendum(socket.userId, text);
+                    // Security validation for addendum text (CRITICAL-001 fix)
+                    const addendumCheck = processSecureInput(text || '', {
+                        userId: socket.userId,
+                        fieldName: 'addendum',
+                        maxLength: securityConfig.fieldLimits.addendum || 2000,
+                        endpoint: 'court',
+                    });
+
+                    if (!addendumCheck.safe) {
+                        logSecurityEvent('ws_addendum_blocked', {
+                            userId: socket.userId,
+                            reason: 'Security validation failed',
+                        });
+                        throw new Error('Content not allowed. Please rephrase.');
+                    }
+
+                    await courtSessionManager.submitAddendum(socket.userId, addendumCheck.input);
                     const state = courtSessionManager.getStateForUser(socket.userId);
                     if (typeof ack === 'function') ack({ ok: true, state });
                 } catch (error) {
@@ -471,10 +512,32 @@ class CourtWebSocketService {
 
             // === Disconnect ===
             socket.on('disconnect', () => {
-                if (socket.userId && this.userSockets.has(socket.userId)) {
-                    this.userSockets.get(socket.userId).delete(socket.id);
-                    if (this.userSockets.get(socket.userId).size === 0) {
-                        this.userSockets.delete(socket.userId);
+                const userId = socket.userId;
+                if (userId && this.userSockets.has(userId)) {
+                    this.userSockets.get(userId).delete(socket.id);
+                    if (this.userSockets.get(userId).size === 0) {
+                        this.userSockets.delete(userId);
+
+                        // WS-H-002: Notify partner when user disconnects from active session
+                        // Only notify if this was the last socket for this user
+                        try {
+                            const session = courtSessionManager.getSessionForUser(userId);
+                            if (session) {
+                                const partnerId = session.creatorId === userId
+                                    ? session.partnerId
+                                    : session.creatorId;
+                                if (partnerId && this.isUserConnected(partnerId)) {
+                                    this.emitToUser(partnerId, 'court:partner_disconnected', {
+                                        userId,
+                                        timestamp: Date.now()
+                                    });
+                                    console.log(`[WS] Notified partner ${partnerId} of disconnect`);
+                                }
+                            }
+                        } catch (err) {
+                            // Don't fail disconnect handling if notification fails
+                            console.error('[WS] Failed to notify partner of disconnect:', err.message);
+                        }
                     }
                 }
                 console.log(`[WS] Client disconnected: ${socket.id}`);

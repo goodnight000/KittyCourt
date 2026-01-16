@@ -9,6 +9,7 @@ const router = express.Router();
 const { requireAuthUserId, requireSupabase } = require('../lib/auth');
 const { safeErrorMessage } = require('../lib/shared/errorUtils');
 const { processEventReminders } = require('../lib/eventReminderService');
+const { sendError } = require('../lib/http');
 
 // GET /api/notifications/preferences - Get user's notification preferences
 router.get('/preferences', async (req, res) => {
@@ -37,7 +38,7 @@ router.get('/preferences', async (req, res) => {
         });
     } catch (error) {
         console.error('Error fetching notification preferences:', error);
-        res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
+        return sendError(res, error.statusCode || 500, 'SERVER_ERROR', safeErrorMessage(error));
     }
 });
 
@@ -47,7 +48,18 @@ router.put('/preferences', async (req, res) => {
         const userId = await requireAuthUserId(req);
         const supabase = requireSupabase();
 
-        const { dailyQuestions, eventReminders, partnerActivity } = req.body;
+        const { dailyQuestions, eventReminders, partnerActivity } = req.body || {};
+
+        // Input validation - reject non-boolean values when fields are provided
+        if (dailyQuestions !== undefined && typeof dailyQuestions !== 'boolean') {
+            return sendError(res, 400, 'INVALID_DAILY_QUESTIONS', 'dailyQuestions must be a boolean');
+        }
+        if (eventReminders !== undefined && typeof eventReminders !== 'boolean') {
+            return sendError(res, 400, 'INVALID_EVENT_REMINDERS', 'eventReminders must be a boolean');
+        }
+        if (partnerActivity !== undefined && typeof partnerActivity !== 'boolean') {
+            return sendError(res, 400, 'INVALID_PARTNER_ACTIVITY', 'partnerActivity must be a boolean');
+        }
 
         // Build update object with only provided fields (convert camelCase to snake_case)
         const updates = {};
@@ -63,7 +75,7 @@ router.put('/preferences', async (req, res) => {
         }
 
         if (Object.keys(updates).length === 0) {
-            return res.status(400).json({ error: 'No valid preference fields provided' });
+            return sendError(res, 400, 'NO_FIELDS_PROVIDED', 'At least one preference field must be provided');
         }
 
         // Upsert the preferences (insert if not exists, update if exists)
@@ -87,7 +99,7 @@ router.put('/preferences', async (req, res) => {
         });
     } catch (error) {
         console.error('Error updating notification preferences:', error);
-        res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
+        return sendError(res, error.statusCode || 500, 'SERVER_ERROR', safeErrorMessage(error));
     }
 });
 
@@ -96,9 +108,7 @@ router.post('/process-event-reminders', async (req, res) => {
     try {
         // Only allow in development mode
         if (process.env.NODE_ENV === 'production') {
-            return res.status(403).json({
-                error: 'This endpoint is only available in development mode'
-            });
+            return sendError(res, 403, 'FORBIDDEN', 'This endpoint is only available in development mode');
         }
 
         console.log('[Notifications] Manually triggering event reminder processing');
@@ -111,7 +121,7 @@ router.post('/process-event-reminders', async (req, res) => {
         });
     } catch (error) {
         console.error('Error processing event reminders:', error);
-        res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
+        return sendError(res, error.statusCode || 500, 'SERVER_ERROR', safeErrorMessage(error));
     }
 });
 

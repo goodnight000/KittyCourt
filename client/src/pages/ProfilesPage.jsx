@@ -7,7 +7,7 @@ import {
 import useAppStore from '../store/useAppStore';
 import useAuthStore from '../store/useAuthStore';
 import usePartnerStore from '../store/usePartnerStore';
-import useCacheStore, { CACHE_TTL, CACHE_KEYS } from '../store/useCacheStore';
+import useCacheStore, { CACHE_POLICY, cacheKey } from '../store/useCacheStore';
 import useSubscriptionStore from '../store/useSubscriptionStore';
 import useLevelStore from '../store/useLevelStore';
 import useMemoryStore from '../store/useMemoryStore';
@@ -41,9 +41,8 @@ const ProfilesPage = () => {
     const { active: activeChallenges, completed: completedChallenges, available: availableChallenges, isLoading: challengesLoading, fetchChallenges } = useChallengeStore();
     const latestInsight = insights?.[0] || null;
     const selfConsent = consent ? !!consent.selfConsent : true;
-    const partnerConsent = consent ? !!consent.partnerConsent : true;
-    const bothConsented = selfConsent && partnerConsent;
-    const insightsPaused = consent?.selfPaused || consent?.partnerPaused;
+    const bothConsented = selfConsent;
+    const insightsPaused = consent?.selfPaused;
     const showChallenges = shouldShowChallenges();
     const showInsights = shouldShowInsights();
     const insightsUnlocked = showInsights && isGold;
@@ -71,8 +70,6 @@ const ProfilesPage = () => {
     const [showEditModal, setShowEditModal] = useState(false);
     const [activeTab, setActiveTab] = useState('me'); // 'me' or 'us'
     const [showPaywall, setShowPaywall] = useState(false);
-    const [devXPLoading, setDevXPLoading] = useState(false);
-    const [devXPMessage, setDevXPMessage] = useState('');
     const [activeChallengeIndex, setActiveChallengeIndex] = useState(0);
     const [userStats, setUserStats] = useState(null);
     const challengeTrackRef = useRef(null);
@@ -90,27 +87,40 @@ const ProfilesPage = () => {
         const fetchStats = async () => {
             if (!authUser?.id) return;
 
-            const cacheKey = `${CACHE_KEYS.STATS}:${authUser.id}`;
-
-            // Check cache first
-            const cached = useCacheStore.getState().getCached(cacheKey);
-            if (cached !== null) {
-                setUserStats(cached);
-                return;
-            }
-
             try {
-                const response = await api.get('/stats');
-                const stats = response.data;
+                const cacheStore = useCacheStore.getState();
+                const key = cacheKey.stats(authUser.id);
 
-                // Cache for 5 minutes
-                useCacheStore.getState().setCache(cacheKey, stats, CACHE_TTL.STATS || 5 * 60 * 1000);
-                setUserStats(stats);
+                const { data, promise } = await cacheStore.getOrFetch({
+                    key,
+                    fetcher: async () => {
+                        const response = await api.get('/stats');
+                        return response.data || null;
+                    },
+                    ...CACHE_POLICY.STATS,
+                    revalidateOnInterval: true,
+                });
+
+                setUserStats(data);
+
+                if (promise) {
+                    promise.then((fresh) => setUserStats(fresh)).catch(() => {});
+                }
             } catch (err) {
                 console.error('Failed to fetch stats:', err);
             }
         };
         fetchStats();
+    }, [authUser?.id]);
+
+    useEffect(() => {
+        if (!authUser?.id) return;
+        const cacheStore = useCacheStore.getState();
+        const key = cacheKey.stats(authUser.id);
+        const unsubscribe = cacheStore.subscribeKey(key, (next) => {
+            setUserStats(next || null);
+        });
+        return unsubscribe;
     }, [authUser?.id]);
 
     useEffect(() => {
@@ -160,28 +170,6 @@ const ProfilesPage = () => {
     };
 
 
-    const awardDevXP = async (amount) => {
-        if (!import.meta.env.DEV) return;
-        if (!hasPartner) return;
-        if (!isXPEnabled) return;
-        if (devXPLoading) return;
-
-        try {
-            setDevXPLoading(true);
-            setDevXPMessage('');
-            await api.post('/levels/dev/award-xp', { amount });
-            await fetchLevel();
-            setDevXPMessage(t('profilePage.devTools.success', { amount }));
-            setTimeout(() => setDevXPMessage(''), 2000);
-        } catch (error) {
-            console.error('[ProfilesPage] Dev XP award failed:', error);
-            setDevXPMessage(t('profilePage.devTools.error'));
-            setTimeout(() => setDevXPMessage(''), 3000);
-        } finally {
-            setDevXPLoading(false);
-        }
-    };
-
     // Unified stats from user_stats table (single source of truth)
     const totalCases = userStats?.cases_resolved ?? 0;
     const totalAppreciations = userStats?.appreciations_received ?? 0;
@@ -194,7 +182,11 @@ const ProfilesPage = () => {
 
     return (
         <div className="relative min-h-screen pb-6 overflow-hidden">
-            <ProfileBackdrop />
+            {/* Background gradient */}
+            <div className="fixed inset-0 pointer-events-none">
+                <div className="absolute -top-20 -right-20 h-64 w-64 rounded-full bg-amber-200/30 blur-3xl" />
+                <div className="absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-rose-200/25 blur-3xl" />
+            </div>
             <div className="relative space-y-6">
 
                 <header className="flex items-center gap-3">
@@ -207,7 +199,7 @@ const ProfilesPage = () => {
                     <motion.button
                         whileTap={{ scale: 0.95 }}
                         onClick={() => navigate('/settings')}
-                        className="rounded-2xl border border-white/80 bg-white/80 p-2 shadow-soft"
+                        className="grid h-11 w-11 place-items-center rounded-2xl border border-white/80 bg-white/80 shadow-soft"
                         aria-label={t('profilePage.header.settingsAria')}
                     >
                         <Settings className="w-5 h-5 text-neutral-600" />
@@ -237,7 +229,7 @@ const ProfilesPage = () => {
                         disabled={!hasPartner}
                         className={`relative flex-1 rounded-full px-3 py-2.5 text-sm font-bold transition-colors ${activeTab === 'us'
                             ? 'text-white'
-                            : hasPartner ? 'text-neutral-500' : 'text-neutral-400 opacity-60 cursor-not-allowed'
+                            : hasPartner ? 'text-neutral-500' : 'text-neutral-500 opacity-60 cursor-not-allowed'
                             }`}
                     >
                         {activeTab === 'us' && (
@@ -329,7 +321,7 @@ const ProfilesPage = () => {
                                             <Gavel className="w-4 h-4 text-amber-600" />
                                             {t('profilePage.subscription.judgeWhiskers')}
                                         </span>
-                                        <span className={`font-medium ${isGold ? 'text-neutral-700' : 'text-neutral-400'}`}>
+                                        <span className={`font-medium ${isGold ? 'text-neutral-700' : 'text-neutral-500'}`}>
                                             {isGold ? getUsageDisplay('wise', t) : t('profilePage.subscription.goldOnly')}
                                         </span>
                                     </div>
@@ -338,7 +330,7 @@ const ProfilesPage = () => {
                                             <Wand2 className="w-4 h-4 text-amber-600" />
                                             {t('profilePage.subscription.helpMePlan')}
                                         </span>
-                                        <span className={`font-medium ${isGold ? 'text-neutral-700' : 'text-neutral-400'}`}>
+                                        <span className={`font-medium ${isGold ? 'text-neutral-700' : 'text-neutral-500'}`}>
                                             {isGold ? t('profilePage.subscription.unlimited') : t('profilePage.subscription.goldOnly')}
                                         </span>
                                     </div>
@@ -367,7 +359,7 @@ const ProfilesPage = () => {
                                                 <div className="rounded-full border border-amber-200/70 bg-amber-100/70 px-3 py-1 text-xs font-bold text-amber-700">
                                                     {t('profilePage.subscription.price')}
                                                 </div>
-                                                <div className="text-[10px] text-neutral-400">{t('profilePage.subscription.ctaHint')}</div>
+                                                <div className="text-[10px] text-neutral-500">{t('profilePage.subscription.ctaHint')}</div>
                                             </div>
                                         </div>
                                     </motion.button>
@@ -427,7 +419,7 @@ const ProfilesPage = () => {
                                         />
                                     </div>
                                     <div>
-                                        <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-neutral-400">
+                                        <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-neutral-500">
                                             {t('profilePage.relationship.kicker')}
                                         </p>
                                         <h2 className="text-lg font-display font-bold text-neutral-800">
@@ -443,7 +435,7 @@ const ProfilesPage = () => {
                                         </p>
                                     )}
                                     {!profileData.anniversaryDate && hasPartner && (
-                                        <p className="text-neutral-400 text-sm italic">
+                                        <p className="text-neutral-500 text-sm italic">
                                             {t('profilePage.relationship.anniversaryMissing')}
                                         </p>
                                     )}
@@ -459,33 +451,6 @@ const ProfilesPage = () => {
                                     title={title}
                                     compact={false}
                                 />
-                            )}
-
-                            {import.meta.env.DEV && isXPEnabled && hasPartner && (
-                                <div className="glass-card p-3 border border-neutral-200/60">
-                                    <div className="flex items-center justify-between gap-3">
-                                        <div>
-                                            <div className="text-xs font-bold text-neutral-700">{t('profilePage.devTools.title')}</div>
-                                            <div className="text-[11px] text-neutral-500">{t('profilePage.devTools.subtitle')}</div>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            {devXPMessage && (
-                                                <div className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-1 rounded-full">
-                                                    {devXPMessage}
-                                                </div>
-                                            )}
-                                            <motion.button
-                                                whileTap={{ scale: 0.97 }}
-                                                onClick={() => awardDevXP(250)}
-                                                disabled={devXPLoading}
-                                                className={`text-xs font-bold text-white px-3 py-2 rounded-xl shadow-soft ${devXPLoading ? 'opacity-70' : ''}`}
-                                                style={{ background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)' }}
-                                            >
-                                                {devXPLoading ? t('profilePage.devTools.adding') : t('profilePage.devTools.addXp', { amount: 250 })}
-                                            </motion.button>
-                                        </div>
-                                    </div>
-                                </div>
                             )}
 
                             {/* Memories Preview */}
@@ -602,7 +567,7 @@ const ProfilesPage = () => {
                                                 {!challengesLoading && activeChallengeCount > 0 && (
                                                     <div className="space-y-3">
                                                         <div className="flex items-center justify-between gap-3">
-                                                            <div className="text-[11px] font-semibold uppercase tracking-[0.3em] text-neutral-400">
+                                                            <div className="text-[11px] font-semibold uppercase tracking-[0.3em] text-neutral-500">
                                                                 {t('profilePage.challenges.activeNow')}
                                                             </div>
                                                             <div className="flex items-center gap-2">
@@ -653,7 +618,7 @@ const ProfilesPage = () => {
                                                                                     {emoji}
                                                                                 </div>
                                                                                 <div className="flex-1 space-y-1">
-                                                                                    <div className="text-[10px] font-semibold uppercase tracking-[0.25em] text-neutral-400">
+                                                                                    <div className="text-[10px] font-semibold uppercase tracking-[0.25em] text-neutral-500">
                                                                                         {t('profilePage.challenges.activeLabel', { number: index + 1 })}
                                                                                     </div>
                                                                                     <div className="text-sm font-display font-bold text-neutral-800">
@@ -678,7 +643,7 @@ const ProfilesPage = () => {
                                                                                         className="h-full rounded-full bg-gradient-to-r from-[#C9A227] to-[#8B7019]"
                                                                                     />
                                                                                 </div>
-                                                                                <div className="flex items-center justify-between text-[10px] text-neutral-400">
+                                                                                <div className="flex items-center justify-between text-[10px] text-neutral-500">
                                                                                     <span>{t('profilePage.challenges.daysLeft', { count: daysLeft })}</span>
                                                                                     <span className="font-semibold text-amber-600">
                                                                                         {isActive ? t('profilePage.challenges.current') : t('profilePage.challenges.swipe')}
@@ -832,12 +797,6 @@ const ProfilesPage = () => {
                                             </div>
                                         )}
 
-                                        {insightsUnlocked && selfConsent && !partnerConsent && (
-                                            <div className="rounded-2xl border border-sky-200/70 bg-sky-50/70 p-3 text-xs text-sky-700">
-                                                {t('profilePage.insights.waitingPartner')}
-                                            </div>
-                                        )}
-
                                         {insightsUnlocked && bothConsented && insightsPaused && (
                                             <div className="rounded-2xl border border-sky-200/70 bg-sky-50/70 p-3 text-xs text-sky-700">
                                                 {t('profilePage.insights.paused')}
@@ -911,17 +870,9 @@ const ProfilesPage = () => {
 };
 
 const ProfileBackdrop = () => (
-    <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute -top-24 -right-16 h-56 w-56 rounded-full bg-amber-200/30 blur-3xl" />
-        <div className="absolute top-16 -left-20 h-60 w-60 rounded-full bg-rose-200/25 blur-3xl" />
-        <div className="absolute bottom-6 right-8 h-64 w-64 rounded-full bg-amber-100/40 blur-3xl" />
-        <div
-            className="absolute inset-0 opacity-45"
-            style={{
-                backgroundImage:
-                    'radial-gradient(circle at 18% 20%, rgba(255,255,255,0.75) 0%, transparent 55%), radial-gradient(circle at 80% 10%, rgba(255,235,210,0.8) 0%, transparent 60%)'
-            }}
-        />
+    <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute -top-20 -right-20 h-64 w-64 rounded-full bg-amber-200/30 blur-3xl" />
+        <div className="absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-rose-200/25 blur-3xl" />
     </div>
 );
 

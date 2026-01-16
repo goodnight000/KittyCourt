@@ -118,7 +118,7 @@ const MilestoneDetailModal = ({ milestone, onClose }) => {
               <span className="text-neutral-500">
                 {t('profilePage.milestones.progress', { current, target })}
               </span>
-              <span className={isUnlocked ? 'font-bold text-amber-700' : 'text-neutral-400'}>
+              <span className={isUnlocked ? 'font-bold text-amber-700' : 'text-neutral-500'}>
                 {progressPercent}%
               </span>
             </div>
@@ -146,7 +146,7 @@ const MilestoneDetailModal = ({ milestone, onClose }) => {
               }
             `}
           >
-            <Star className={`w-4 h-4 ${isUnlocked ? 'text-amber-600 fill-amber-600' : 'text-neutral-400'}`} />
+            <Star className={`w-4 h-4 ${isUnlocked ? 'text-amber-600 fill-amber-600' : 'text-neutral-500'}`} />
             <span
               className={`text-sm font-bold ${isUnlocked ? 'text-amber-700' : 'text-neutral-500'}`}
             >

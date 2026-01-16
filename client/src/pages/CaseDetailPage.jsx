@@ -6,11 +6,12 @@ import usePartnerStore from '../store/usePartnerStore';
 import { useI18n } from '../i18n';
 import { formatDate } from '../utils/helpers';
 import {
-    ChevronLeft, MessageCircle, Heart, Calendar, Scale,
+    MessageCircle, Heart, Calendar, Scale,
     AlertTriangle, Zap, Cloud, FileText, Clock, User,
     ChevronDown, ChevronUp, ChevronRight, CheckCircle, Cpu, Target, Activity
 } from 'lucide-react';
 import api from '../services/api';
+import BackButton from '../components/shared/BackButton';
 
 /**
  * Judge model configuration
@@ -31,10 +32,9 @@ const JUDGE_MODELS = {
  * Subtle page backdrop with gradient orbs
  */
 const PageBackdrop = () => (
-    <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
-        <div className="absolute -top-20 -right-20 h-64 w-64 rounded-full bg-amber-100/20 blur-3xl" />
-        <div className="absolute top-1/3 -left-20 h-72 w-72 rounded-full bg-rose-100/15 blur-3xl" />
-        <div className="absolute bottom-20 right-10 h-48 w-48 rounded-full bg-violet-100/15 blur-3xl" />
+    <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute -top-20 -right-20 h-64 w-64 rounded-full bg-amber-200/30 blur-3xl" />
+        <div className="absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-rose-200/25 blur-3xl" />
     </div>
 );
 
@@ -147,6 +147,7 @@ const CaseDetailPage = () => {
         try {
             return typeof verdictString === 'string' ? JSON.parse(verdictString) : verdictString;
         } catch {
+            // Intentionally ignored: fallback to raw string as summary
             return { summary: verdictString };
         }
     };
@@ -167,13 +168,7 @@ const CaseDetailPage = () => {
         return (
             <div className="space-y-5">
                 <div className="flex items-center gap-3">
-                    <motion.button
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => navigate(-1)}
-                        className="w-10 h-10 bg-white/80 rounded-xl flex items-center justify-center shadow-soft"
-                    >
-                        <ChevronLeft className="w-5 h-5 text-neutral-600" />
-                    </motion.button>
+                    <BackButton onClick={() => navigate(-1)} ariaLabel={t('common.back')} />
                     <h1 className="text-xl font-bold text-gradient">{t('cases.detail.notFound')}</h1>
                 </div>
             </div>
@@ -234,8 +229,7 @@ const CaseDetailPage = () => {
                 animate={{ opacity: 1, y: 0 }}
                 className="flex items-center gap-3"
             >
-                <motion.button
-                    whileTap={{ scale: 0.95 }}
+                <BackButton
                     onClick={() => {
                         if (window.history.length > 1) {
                             navigate(-1);
@@ -243,10 +237,8 @@ const CaseDetailPage = () => {
                             navigate('/history', { replace: true });
                         }
                     }}
-                    className="w-10 h-10 bg-white/80 rounded-xl flex items-center justify-center shadow-soft"
-                >
-                    <ChevronLeft className="w-5 h-5 text-neutral-600" />
-                </motion.button>
+                    ariaLabel={t('common.back')}
+                />
                 <div className="flex-1 min-w-0">
                     <h1 className="text-lg font-bold text-gradient truncate">
                         {caseData.caseTitle || t('cases.detail.titleFallback')}
@@ -328,7 +320,7 @@ const CaseDetailPage = () => {
 
                 {/* Judge Model Indicator */}
                 <div className="flex items-center gap-2 pt-2 border-t border-neutral-100">
-                    <Cpu className="w-4 h-4 text-neutral-400" />
+                    <Cpu className="w-4 h-4 text-neutral-500" />
                     <span className="text-xs text-neutral-500">
                         {t('cases.detail.judgedBy')}:{' '}
                         <span className="font-semibold text-neutral-700">
@@ -370,7 +362,7 @@ const CaseDetailPage = () => {
 
                     {/* What happened (Facts) */}
                     <div className="space-y-1.5">
-                        <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wide flex items-center gap-1.5">
+                        <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-wide flex items-center gap-1.5">
                             <FileText className="w-3 h-3" />
                             {t('cases.detail.partnerStatements.fact')}
                         </p>
@@ -382,7 +374,7 @@ const CaseDetailPage = () => {
                     {/* How they felt (Feelings) */}
                     {caseData.userAFeelings && (
                         <div className="space-y-1.5">
-                            <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wide flex items-center gap-1.5">
+                            <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-wide flex items-center gap-1.5">
                                 <Heart className="w-3 h-3" />
                                 {t('cases.detail.partnerStatements.feelings')}
                             </p>
@@ -395,7 +387,7 @@ const CaseDetailPage = () => {
                     {/* What they need (Needs - from analysis if available) */}
                     {(caseData.userANeeds || analysisData?.userA_UnderlyingNeed) && (
                         <div className="space-y-1.5">
-                            <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wide flex items-center gap-1.5">
+                            <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-wide flex items-center gap-1.5">
                                 <Target className="w-3 h-3" />
                                 {t('cases.detail.partnerStatements.needs')}
                             </p>
@@ -429,7 +421,7 @@ const CaseDetailPage = () => {
 
                     {/* What happened (Facts) */}
                     <div className="space-y-1.5">
-                        <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wide flex items-center gap-1.5">
+                        <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-wide flex items-center gap-1.5">
                             <FileText className="w-3 h-3" />
                             {t('cases.detail.partnerStatements.fact')}
                         </p>
@@ -441,7 +433,7 @@ const CaseDetailPage = () => {
                     {/* How they felt (Feelings) */}
                     {caseData.userBFeelings && (
                         <div className="space-y-1.5">
-                            <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wide flex items-center gap-1.5">
+                            <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-wide flex items-center gap-1.5">
                                 <Heart className="w-3 h-3" />
                                 {t('cases.detail.partnerStatements.feelings')}
                             </p>
@@ -454,7 +446,7 @@ const CaseDetailPage = () => {
                     {/* What they need (Needs - from analysis if available) */}
                     {(caseData.userBNeeds || analysisData?.userB_UnderlyingNeed) && (
                         <div className="space-y-1.5">
-                            <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wide flex items-center gap-1.5">
+                            <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-wide flex items-center gap-1.5">
                                 <Target className="w-3 h-3" />
                                 {t('cases.detail.partnerStatements.needs')}
                             </p>
@@ -751,7 +743,7 @@ const CaseDetailPage = () => {
                                 {hadMismatch ? (
                                     <>
                                         {/* Partner Picks Header */}
-                                        <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wide">
+                                        <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-wide">
                                             {t('cases.detail.resolutions.partnerPicks')}
                                         </p>
 
@@ -796,7 +788,7 @@ const CaseDetailPage = () => {
                                         </div>
 
                                         {/* Merged Resolution Header */}
-                                        <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wide pt-2">
+                                        <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-wide pt-2">
                                             {t('cases.detail.resolutions.mergedResolution')}
                                         </p>
 
@@ -940,7 +932,7 @@ const CaseDetailPage = () => {
                                 <p className="text-sm text-neutral-700 italic">
                                     "{currentVerdictData.addendumText}"
                                 </p>
-                                <p className="text-[10px] text-neutral-400 mt-1 flex items-center gap-1">
+                                <p className="text-[10px] text-neutral-500 mt-1 flex items-center gap-1">
                                     <Clock className="w-3 h-3" />
                                     {formatDate(currentVerdictData.createdAt, {
                                         locale: language,
@@ -1103,7 +1095,7 @@ const CaseDetailPage = () => {
                                                         })
                                                         : t('cases.detail.timeline.originalVerdict')}
                                                 </p>
-                                                <p className="text-[10px] text-neutral-400 flex items-center gap-1 mt-0.5">
+                                                <p className="text-[10px] text-neutral-500 flex items-center gap-1 mt-0.5">
                                                     <Clock className="w-3 h-3" />
                                                     {formatDate(v.createdAt, {
                                                         locale: language,
@@ -1116,7 +1108,7 @@ const CaseDetailPage = () => {
                                                     })}
                                                 </p>
                                             </div>
-                                            <ChevronRight className="w-4 h-4 text-neutral-400" />
+                                            <ChevronRight className="w-4 h-4 text-neutral-500" />
                                         </div>
                                         {v.addendumText && (
                                             <p className="text-xs text-neutral-500 mt-1.5 line-clamp-2 italic">

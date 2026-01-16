@@ -5,6 +5,12 @@
  */
 import { create } from 'zustand';
 import api from '../services/api';
+import useCacheStore, { CACHE_POLICY, cacheKey } from './useCacheStore';
+import { eventBus, EVENTS } from '../lib/eventBus';
+
+let cacheListenerKey = null;
+let cacheUnsubscribe = null;
+let eventCleanupFns = [];
 
 // Level titles and XP thresholds (from implementation plan)
 const LEVEL_CONFIG = [
@@ -60,6 +66,8 @@ const useLevelStore = create((set, get) => ({
     pendingLevelUps: [],
     serverAvailable: true,
     error: null,
+    _authUserId: null,
+    _authPartnerId: null,
 
     // Progressive disclosure check
     shouldShowLevelBanner: () => {
@@ -84,8 +92,44 @@ const useLevelStore = create((set, get) => ({
         return level >= 10;
     },
 
+    init: () => {
+        eventCleanupFns.forEach(fn => fn());
+        eventCleanupFns = [];
+
+        const unsubLogin = eventBus.on(EVENTS.AUTH_LOGIN, (payload) => {
+            set({
+                _authUserId: payload?.userId || null,
+                _authPartnerId: payload?.partner?.id || payload?.profile?.partner_id || null,
+            });
+        });
+
+        const unsubProfile = eventBus.on(EVENTS.PROFILE_UPDATED, (payload) => {
+            if (!payload?.profile && !payload?.partner) return;
+            set({
+                _authPartnerId: payload?.partner?.id || payload?.profile?.partner_id || null,
+            });
+        });
+
+        const unsubPartner = eventBus.on(EVENTS.PARTNER_CONNECTED, (payload) => {
+            if (payload?.partnerId) {
+                set({ _authPartnerId: payload.partnerId });
+            }
+        });
+
+        const unsubLogout = eventBus.on(EVENTS.AUTH_LOGOUT, () => {
+            get().reset();
+        });
+
+        eventCleanupFns.push(unsubLogin, unsubProfile, unsubPartner, unsubLogout);
+    },
+
+    cleanup: () => {
+        eventCleanupFns.forEach(fn => fn());
+        eventCleanupFns = [];
+    },
+
     // Actions
-    fetchLevel: async () => {
+    fetchLevel: async ({ force = false } = {}) => {
         const { isLoading, serverAvailable } = get();
         if (isLoading || !serverAvailable) return;
         // Feature flag check - if disabled, use mock data
@@ -110,42 +154,84 @@ const useLevelStore = create((set, get) => ({
         set({ isLoading: true, error: null });
 
         try {
-            const response = await api.get('/levels/status');
-            const payload = response?.data || {};
+            const cacheStore = useCacheStore.getState();
+            const userId = get()._authUserId;
+            const partnerId = get()._authPartnerId || null;
 
-            if (payload?.enabled === false || !payload?.level) {
-                set({
-                    level: 1,
-                    totalXP: 0,
-                    currentXP: 0,
-                    xpForNextLevel: 100,
-                    title: 'Curious Kittens',
-                    questionsAnswered: 0,
+            const applyPayload = (payload) => {
+                if (payload?.enabled === false || !payload?.level) {
+                    set({
+                        level: 1,
+                        totalXP: 0,
+                        currentXP: 0,
+                        xpForNextLevel: 100,
+                        title: 'Curious Kittens',
+                        questionsAnswered: 0,
+                        isLoading: false,
+                        lastFetched: new Date().toISOString(),
+                        lastSeenLevel: null,
+                        pendingLevelUps: [],
+                        serverAvailable: true,
+                        error: null,
+                    });
+                    return;
+                }
+
+                const lastSeenLevel = Number.isFinite(payload.lastSeenLevel)
+                    ? payload.lastSeenLevel
+                    : payload.level;
+                const queuedLevels = getLevelUpsToQueue(lastSeenLevel, payload.level);
+
+                set((state) => ({
+                    ...payload,
+                    questionsAnswered: payload.questionsAnswered || 0,
                     isLoading: false,
                     lastFetched: new Date().toISOString(),
-                    lastSeenLevel: null,
-                    pendingLevelUps: [],
+                    lastSeenLevel,
+                    pendingLevelUps: mergeLevelUps(state.pendingLevelUps, queuedLevels),
                     serverAvailable: true,
                     error: null,
+                }));
+            };
+
+            if (userId) {
+                const key = cacheKey.level(userId, partnerId);
+                if (cacheListenerKey !== key) {
+                    if (cacheUnsubscribe) cacheUnsubscribe();
+                    cacheUnsubscribe = cacheStore.subscribeKey(key, (payload) => {
+                        applyPayload(payload || {});
+                    });
+                    cacheListenerKey = key;
+                }
+                if (force) {
+                    const fresh = await cacheStore.fetchAndCache(key, async () => {
+                        const response = await api.get('/levels/status');
+                        return response?.data || {};
+                    }, CACHE_POLICY.LEVEL);
+                    applyPayload(fresh);
+                    return;
+                }
+
+                const { data, promise } = await cacheStore.getOrFetch({
+                    key,
+                    fetcher: async () => {
+                        const response = await api.get('/levels/status');
+                        return response?.data || {};
+                    },
+                    ...CACHE_POLICY.LEVEL,
+                    revalidateOnInterval: true,
                 });
+
+                applyPayload(data || {});
+
+                if (promise) {
+                    promise.then((fresh) => applyPayload(fresh || {})).catch(() => {});
+                }
                 return;
             }
 
-            const lastSeenLevel = Number.isFinite(payload.lastSeenLevel)
-                ? payload.lastSeenLevel
-                : payload.level;
-            const queuedLevels = getLevelUpsToQueue(lastSeenLevel, payload.level);
-
-            set((state) => ({
-                ...payload,
-                questionsAnswered: payload.questionsAnswered || 0,
-                isLoading: false,
-                lastFetched: new Date().toISOString(),
-                lastSeenLevel,
-                pendingLevelUps: mergeLevelUps(state.pendingLevelUps, queuedLevels),
-                serverAvailable: true,
-                error: null,
-            }));
+            const response = await api.get('/levels/status');
+            applyPayload(response?.data || {});
         } catch (error) {
             const status = error?.response?.status;
             if (status === 404) {
@@ -191,6 +277,9 @@ const useLevelStore = create((set, get) => ({
 
     // Reset to initial state
     reset: () => {
+        if (cacheUnsubscribe) cacheUnsubscribe();
+        cacheUnsubscribe = null;
+        cacheListenerKey = null;
         set({
             level: 1,
             totalXP: 0,
@@ -204,6 +293,8 @@ const useLevelStore = create((set, get) => ({
             pendingLevelUps: [],
             serverAvailable: true,
             error: null,
+            _authUserId: null,
+            _authPartnerId: null,
         });
     },
 

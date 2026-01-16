@@ -6,17 +6,20 @@ import api from '../../services/api';
 // Mock dependencies
 vi.mock('../../services/api');
 vi.mock('../../store/useCacheStore', () => {
-    const getCached = vi.fn(() => null);
+    const getOrFetch = vi.fn(async ({ fetcher }) => ({ data: await fetcher(), promise: null }));
+    const fetchAndCache = vi.fn(async () => []);
     const setCache = vi.fn();
     return {
         default: {
             getState: () => ({
-                getCached,
+                getOrFetch,
+                fetchAndCache,
                 setCache,
+                subscribeKey: vi.fn(() => vi.fn()),
             }),
         },
-        CACHE_KEYS: { CALENDAR_EVENTS: 'calendar:events' },
-        CACHE_TTL: { CALENDAR_EVENTS: 10 * 60 * 1000 },
+        CACHE_POLICY: { CALENDAR_EVENTS: { ttlMs: 10 * 60 * 1000, staleMs: 2 * 60 * 1000 } },
+        cacheKey: { calendarEvents: vi.fn(() => 'calendar:events:user') },
     };
 });
 vi.mock('../../store/useAuthStore', () => ({

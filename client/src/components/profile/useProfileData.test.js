@@ -3,7 +3,7 @@ import { renderHook, waitFor, act } from '@testing-library/react';
 import useProfileData from './useProfileData';
 
 // Mock dependencies
-const mockRefreshProfile = vi.fn();
+const mockRefreshProfile = vi.fn().mockResolvedValue(undefined);
 const mockUser = { id: 'user-123' };
 const mockProfile = {
     id: 'user-123',
@@ -73,7 +73,6 @@ describe('useProfileData', () => {
                 loveLanguage: 'words',
                 avatarUrl: '/assets/profile-pic/cat.png',
                 anniversaryDate: '2020-06-20',
-                preferredLanguage: 'en',
             });
         });
 
@@ -123,7 +122,6 @@ describe('useProfileData', () => {
                 loveLanguage: '',
                 avatarUrl: null,
                 anniversaryDate: '',
-                preferredLanguage: 'en',
             });
         });
 
@@ -143,7 +141,6 @@ describe('useProfileData', () => {
                 loveLanguage: '',
                 avatarUrl: null,
                 anniversaryDate: '',
-                preferredLanguage: 'en',
             });
         });
     });
@@ -168,7 +165,6 @@ describe('useProfileData', () => {
                 loveLanguage: 'gifts',
                 avatarUrl: '/assets/profile-pic/dog.png',
                 anniversaryDate: '2020-06-20',
-                preferredLanguage: 'en',
             };
 
             act(() => {
@@ -182,6 +178,13 @@ describe('useProfileData', () => {
         });
 
         it('should set isLoading to true while saving', async () => {
+            // Create a delayed mock to ensure we can observe the loading state
+            let resolvePromise;
+            const delayedPromise = new Promise((resolve) => {
+                resolvePromise = resolve;
+            });
+            mockSupabaseSingle.mockReturnValue(delayedPromise);
+
             const { result } = renderHook(() => useProfileData());
 
             act(() => {
@@ -190,11 +193,16 @@ describe('useProfileData', () => {
                     birthday: '1990-05-15',
                     loveLanguage: 'words',
                     avatarUrl: '/assets/profile-pic/cat.png',
-                    preferredLanguage: 'en',
                 });
             });
 
+            // isLoading should be true while awaiting
             expect(result.current.isLoading).toBe(true);
+
+            // Now resolve the promise
+            await act(async () => {
+                resolvePromise({ data: mockProfile, error: null });
+            });
 
             await waitFor(() => {
                 expect(result.current.isLoading).toBe(false);
@@ -210,7 +218,6 @@ describe('useProfileData', () => {
                     birthday: '1990-05-15',
                     loveLanguage: 'words',
                     avatarUrl: 'data:image/png;base64,test',
-                    preferredLanguage: 'en',
                 });
             });
 
@@ -226,7 +233,6 @@ describe('useProfileData', () => {
                     birthday: '1990-05-15',
                     loveLanguage: 'time',
                     avatarUrl: '/assets/profile-pic/cat.png',
-                    preferredLanguage: 'zh-Hans',
                 });
             });
 
@@ -234,8 +240,12 @@ describe('useProfileData', () => {
                 display_name: 'Updated Name',
                 birthday: '1990-05-15',
                 love_language: 'time',
-                preferred_language: 'zh-Hans',
             }));
+            expect(mockSupabaseUpdate).toHaveBeenCalledWith(
+                expect.not.objectContaining({
+                    preferred_language: expect.anything(),
+                })
+            );
         });
 
         it('should call refreshProfile after successful save', async () => {
@@ -247,7 +257,6 @@ describe('useProfileData', () => {
                     birthday: '1990-05-15',
                     loveLanguage: 'words',
                     avatarUrl: '/assets/profile-pic/cat.png',
-                    preferredLanguage: 'en',
                 });
             });
 
@@ -264,7 +273,6 @@ describe('useProfileData', () => {
                     loveLanguage: 'words',
                     avatarUrl: '/assets/profile-pic/cat.png',
                     anniversaryDate: '2021-01-01', // Try to change anniversary
-                    preferredLanguage: 'en',
                 });
             });
 
@@ -293,7 +301,6 @@ describe('useProfileData', () => {
                     loveLanguage: 'words',
                     avatarUrl: '/assets/profile-pic/cat.png',
                     anniversaryDate: '2021-01-01',
-                    preferredLanguage: 'en',
                 });
             });
 
@@ -329,7 +336,6 @@ describe('useProfileData', () => {
                     birthday: '1990-05-15',
                     loveLanguage: 'words',
                     avatarUrl: '/assets/profile-pic/cat.png',
-                    preferredLanguage: 'en',
                 });
             });
 
@@ -350,7 +356,6 @@ describe('useProfileData', () => {
                     birthday: '1990-05-15',
                     loveLanguage: 'words',
                     avatarUrl: '/assets/profile-pic/cat.png',
-                    preferredLanguage: 'en',
                 });
             });
 
@@ -372,7 +377,6 @@ describe('useProfileData', () => {
                     birthday: '1990-05-15',
                     loveLanguage: 'words',
                     avatarUrl: 'data:image/png;base64,test',
-                    preferredLanguage: 'en',
                 });
             });
 
@@ -396,7 +400,6 @@ describe('useProfileData', () => {
                     birthday: '1990-05-15',
                     loveLanguage: 'words',
                     avatarUrl: '/assets/profile-pic/cat.png',
-                    preferredLanguage: 'en',
                 });
             });
 
@@ -417,7 +420,6 @@ describe('useProfileData', () => {
                     loveLanguage: 'touch',
                     avatarUrl: '/assets/profile-pic/bunny.png',
                     anniversaryDate: '2022-01-01',
-                    preferredLanguage: 'zh-Hans',
                 });
             });
 
@@ -435,7 +437,6 @@ describe('useProfileData', () => {
                     loveLanguage: 'words',
                     avatarUrl: '/assets/profile-pic/cat.png',
                     anniversaryDate: '2020-06-20',
-                    preferredLanguage: 'en',
                 });
             });
 
@@ -487,7 +488,6 @@ describe('useProfileData', () => {
                     birthday: '1990-05-15',
                     loveLanguage: 'words',
                     avatarUrl: '/assets/profile-pic/cat.png',
-                    preferredLanguage: 'en',
                 });
             });
 
@@ -507,7 +507,6 @@ describe('useProfileData', () => {
                     birthday: '',
                     loveLanguage: 'words',
                     avatarUrl: '/assets/profile-pic/cat.png',
-                    preferredLanguage: 'en',
                 });
             });
 
@@ -518,24 +517,5 @@ describe('useProfileData', () => {
             );
         });
 
-        it('should use DEFAULT_LANGUAGE when preferredLanguage is empty', async () => {
-            const { result } = renderHook(() => useProfileData());
-
-            await act(async () => {
-                await result.current.saveProfile({
-                    nickname: 'Test',
-                    birthday: '1990-05-15',
-                    loveLanguage: 'words',
-                    avatarUrl: '/assets/profile-pic/cat.png',
-                    preferredLanguage: '',
-                });
-            });
-
-            expect(mockSupabaseUpdate).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    preferred_language: 'en',
-                })
-            );
-        });
     });
 });

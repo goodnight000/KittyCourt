@@ -7,7 +7,7 @@
 const express = require('express');
 const router = express.Router();
 const { getSupabase, isSupabaseConfigured } = require('../lib/supabase');
-const { getAuthUserIdOrNull } = require('../lib/auth');
+const { getAuthUserIdOrNull, getPartnerIdForUser } = require('../lib/auth');
 const { createRateLimiter } = require('../lib/rateLimit');
 const { safeErrorMessage } = require('../lib/shared/errorUtils');
 
@@ -19,13 +19,17 @@ const PAUSE_GOLD_PRODUCTS = new Set([
     'pause_gold_yearly',
     'monthly',
     'yearly',
+    'prod88802f6b24',
+    'prode16533934c',
     'prodaa5384f89b',
 ]);
 const PRODUCT_PERIOD_DAYS = new Map([
     ['pause_gold_monthly', 30],
     ['monthly', 30],
+    ['prod88802f6b24', 30],
     ['pause_gold_yearly', 365],
     ['yearly', 365],
+    ['prode16533934c', 365],
     ['prodaa5384f89b', 365],
 ]);
 const isProd = process.env.NODE_ENV === 'production';
@@ -107,6 +111,31 @@ function resolvePauseGoldStatus(subscriber) {
     }
 
     return { tier: 'pause_gold', expiresAt };
+}
+
+async function syncPartnerSubscription(supabase, userId, tier, expiresAt) {
+    try {
+        const partnerId = await getPartnerIdForUser(supabase, userId);
+        if (!partnerId) return false;
+
+        const { error } = await supabase
+            .from('profiles')
+            .update({
+                subscription_tier: tier,
+                subscription_expires_at: expiresAt,
+            })
+            .eq('id', partnerId);
+
+        if (error) {
+            console.error('[Subscription API] Partner sync error:', error);
+            return false;
+        }
+
+        return true;
+    } catch (error) {
+        console.error('[Subscription API] Partner lookup error:', error);
+        return false;
+    }
 }
 
 /**
@@ -226,8 +255,10 @@ router.post('/sync', syncRateLimiter, async (req, res) => {
             return res.status(500).json({ error: 'Database update failed' });
         }
 
+        const partnerUpdated = await syncPartnerSubscription(supabase, userId, tier, expiresAt);
+
         console.log(`[Subscription API] Synced ${userId} to ${tier}`);
-        res.json({ success: true, synced: true });
+        res.json({ success: true, synced: true, partnerUpdated });
     } catch (error) {
         console.error('[Subscription API] POST sync error:', error);
         res.status(500).json({ error: safeErrorMessage(error) });
@@ -271,8 +302,10 @@ router.post('/debug-grant', async (req, res) => {
             return res.status(500).json({ error: 'Database update failed' });
         }
 
+        const partnerUpdated = await syncPartnerSubscription(supabase, userId, 'pause_gold', expiresAt);
+
         console.log(`[Subscription API] Debug: Granted Gold to ${userId}`);
-        res.json({ success: true, tier: 'pause_gold', expiresAt });
+        res.json({ success: true, tier: 'pause_gold', expiresAt, partnerUpdated });
     } catch (error) {
         console.error('[Subscription API] Debug grant error:', error);
         res.status(500).json({ error: safeErrorMessage(error) });

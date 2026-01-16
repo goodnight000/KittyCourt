@@ -2,8 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
-    ArrowLeft, Mail, Shield, Bell, Globe, HelpCircle, FileText,
-    ChevronRight, AlertTriangle, Scale, ExternalLink, Heart, Download, X
+    Mail, Shield, Bell, Globe, HelpCircle, FileText,
+    ChevronRight, AlertTriangle, ExternalLink, Heart, Download, X
 } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 import usePartnerStore from '../store/usePartnerStore';
@@ -11,6 +11,8 @@ import { useI18n } from '../i18n';
 import { SUPPORTED_LANGUAGE_CONFIG } from '../i18n/languageConfig';
 import OptionsStep from '../components/onboarding/OptionsStep';
 import api from '../services/api';
+import LiquidGlassPopup from '../components/shared/LiquidGlassPopup';
+import BackButton from '../components/shared/BackButton';
 
 const LOVE_LANGUAGE_OPTIONS = [
     { id: 'words', emoji: '💬', labelKey: 'options.loveLanguage.words', descKey: 'options.loveLanguage.wordsDesc' },
@@ -307,7 +309,7 @@ const SettingsPage = () => {
     };
 
     return (
-        <div className="relative min-h-screen pb-6 overflow-hidden">
+        <div className="relative min-h-screen pb-6">
             {/* Background gradient */}
             <div className="fixed inset-0 pointer-events-none">
                 <div className="absolute -top-20 -right-20 h-64 w-64 rounded-full bg-amber-200/30 blur-3xl" />
@@ -317,14 +319,7 @@ const SettingsPage = () => {
             <div className="relative space-y-6">
                 {/* Header */}
                 <header className="flex items-center gap-3">
-                    <motion.button
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => navigate(-1)}
-                        className="rounded-2xl border border-white/80 bg-white/80 p-2 shadow-soft"
-                        aria-label={t('common.back')}
-                    >
-                        <ArrowLeft className="w-5 h-5 text-neutral-600" />
-                    </motion.button>
+                    <BackButton onClick={() => navigate(-1)} ariaLabel={t('common.back')} />
                     <div className="flex-1">
                         <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-amber-600">
                             {t('nav.profile')}
@@ -367,7 +362,7 @@ const SettingsPage = () => {
                             className="w-full flex items-center justify-between py-3 px-3 rounded-2xl border border-white/80 bg-white/70"
                         >
                             <span className="text-sm text-neutral-700">{t('settings.account.changePassword')}</span>
-                            <ChevronRight className="w-4 h-4 text-neutral-400" />
+                            <ChevronRight className="w-4 h-4 text-neutral-500" />
                         </motion.button>
                     )}
 
@@ -385,21 +380,28 @@ const SettingsPage = () => {
                         { key: 'eventReminders', label: t('settings.notifications.eventReminders') },
                         { key: 'partnerActivity', label: t('settings.notifications.partnerActivity') },
                     ].map(({ key, label }) => (
-                        <div key={key} className="flex items-center justify-between py-2">
+                        <div key={key} className="flex items-center justify-between py-1.5">
                             <span className="text-sm text-neutral-600">{label}</span>
                             <motion.button
+                                type="button"
                                 whileTap={{ scale: 0.95 }}
                                 onClick={() => handleNotificationToggle(key)}
-                                className={`relative w-12 h-7 rounded-full transition-colors ${notifications[key]
-                                    ? 'bg-gradient-to-r from-[#C9A227] to-[#8B7019]'
-                                    : 'bg-neutral-200'
-                                    }`}
+                                role="switch"
+                                aria-checked={!!notifications[key]}
+                                className="inline-flex h-11 w-11 shrink-0 items-center justify-center bg-transparent p-0"
                             >
-                                <motion.div
-                                    layout
-                                    className="absolute top-1 w-5 h-5 rounded-full bg-white shadow-soft"
-                                    style={{ left: notifications[key] ? 'calc(100% - 24px)' : '4px' }}
-                                />
+                                <span
+                                    className={`relative inline-flex h-6 w-11 items-center overflow-hidden rounded-full p-[3px] transition-colors ${notifications[key]
+                                        ? 'bg-gradient-to-r from-[#C9A227] to-[#8B7019]'
+                                        : 'bg-neutral-200'
+                                        }`}
+                                >
+                                    <motion.span
+                                        animate={{ x: notifications[key] ? 20 : 0 }}
+                                        transition={{ type: 'spring', stiffness: 520, damping: 34 }}
+                                        className="h-[18px] w-[18px] rounded-full bg-white shadow-soft"
+                                    />
+                                </span>
                             </motion.button>
                         </div>
                     ))}
@@ -420,7 +422,7 @@ const SettingsPage = () => {
                         <span className="text-sm text-neutral-700">{t('settings.preferences.language')}</span>
                         <span className="text-sm font-medium text-neutral-500 flex items-center gap-1">
                             {currentLanguageLabel}
-                            <ChevronRight className="w-4 h-4 text-neutral-400" />
+                            <ChevronRight className="w-4 h-4 text-neutral-500" />
                         </span>
                     </motion.button>
                 </section>
@@ -440,7 +442,7 @@ const SettingsPage = () => {
                         className="w-full flex items-center justify-between py-3 px-3 rounded-2xl border border-white/80 bg-white/70"
                     >
                         <span className="text-sm text-neutral-700">{t('settings.relationship.edit', 'Edit preferences')}</span>
-                        <ChevronRight className="w-4 h-4 text-neutral-400" />
+                        <ChevronRight className="w-4 h-4 text-neutral-500" />
                     </motion.button>
                 </section>
 
@@ -457,7 +459,7 @@ const SettingsPage = () => {
                         className="w-full flex items-center justify-between py-3 px-3 rounded-2xl border border-white/80 bg-white/70"
                     >
                         <span className="text-sm text-neutral-700">{t('settings.support.sendFeedback')}</span>
-                        <ChevronRight className="w-4 h-4 text-neutral-400" />
+                        <ChevronRight className="w-4 h-4 text-neutral-500" />
                     </motion.button>
                 </section>
 
@@ -491,7 +493,7 @@ const SettingsPage = () => {
                     )}
 
                     {exportLoading ? (
-                        <p className="text-xs text-neutral-400">{t('common.loading', 'Loading...')}</p>
+                        <p className="text-xs text-neutral-500">{t('common.loading', 'Loading...')}</p>
                     ) : exportRequest ? (
                         <div className="rounded-2xl border border-white/80 bg-white/80 px-3 py-2 text-xs text-neutral-600 space-y-1">
                             <div className="flex items-center justify-between">
@@ -511,7 +513,7 @@ const SettingsPage = () => {
                                 </span>
                             </div>
                             {exportRequest.requestedAt && (
-                                <div className="text-[11px] text-neutral-400">
+                                <div className="text-[11px] text-neutral-500">
                                     {t('settings.export.requestedAt', {
                                         date: new Date(exportRequest.requestedAt).toLocaleDateString(language, { month: 'short', day: 'numeric', year: 'numeric' }),
                                     })}
@@ -524,7 +526,7 @@ const SettingsPage = () => {
                             )}
                         </div>
                     ) : (
-                        <p className="text-xs text-neutral-400">
+                        <p className="text-xs text-neutral-500">
                             {t('settings.export.emptyState', 'No exports requested yet.')}
                         </p>
                     )}
@@ -533,11 +535,7 @@ const SettingsPage = () => {
                         whileTap={{ scale: exportEmailValid && !exportSubmitting ? 0.98 : 1 }}
                         onClick={handleExportRequest}
                         disabled={!exportEmailValid || exportSubmitting}
-                        className={`w-full py-3 rounded-2xl text-sm font-semibold transition-all ${
-                            exportEmailValid && !exportSubmitting
-                                ? 'bg-gradient-to-r from-amber-500 to-[#8B7019] text-white shadow-soft'
-                                : 'bg-neutral-100 text-neutral-400 cursor-not-allowed'
-                        }`}
+                        className="btn-primary w-full"
                     >
                         {exportSubmitting
                             ? t('settings.export.ctaLoading', 'Requesting...')
@@ -564,26 +562,14 @@ const SettingsPage = () => {
                             className="w-full flex items-center justify-between py-3 px-3 rounded-2xl border border-white/80 bg-white/70"
                         >
                             <span className="text-sm text-neutral-700">{label}</span>
-                            <ExternalLink className="w-4 h-4 text-neutral-400" />
+                            <ExternalLink className="w-4 h-4 text-neutral-500" />
                         </a>
                     ))}
 
                     <div className="flex items-center justify-between py-2 px-3">
                         <span className="text-sm text-neutral-600">{t('settings.legal.version')}</span>
-                        <span className="text-sm font-mono text-neutral-400">1.0.0</span>
+                        <span className="text-sm font-mono text-neutral-500">1.0.0</span>
                     </div>
-                </section>
-
-                {/* How It Works Section */}
-                <section className="glass-card p-4 space-y-3 relative overflow-hidden">
-                    <div className="absolute -top-8 -right-8 h-20 w-20 rounded-full bg-amber-200/35 blur-2xl" />
-                    <h2 className="text-sm font-bold text-neutral-700 flex items-center gap-2 relative">
-                        <Scale className="w-4 h-4 text-amber-600" />
-                        {t('settings.howItWorks.title')}
-                    </h2>
-                    <p className="text-sm text-neutral-600 leading-relaxed relative">
-                        {t('settings.howItWorks.description')}
-                    </p>
                 </section>
 
                 {/* Danger Zone */}
@@ -721,7 +707,7 @@ const SettingsPage = () => {
                                         {t('settings.preferences.language')}
                                     </h3>
                                     <p className="text-sm text-neutral-500 mt-1">
-                                        Choose your preferred language
+                                        {t('settings.language.chooseLanguage')}
                                     </p>
                                 </div>
 
@@ -741,8 +727,8 @@ const SettingsPage = () => {
                                                 whileTap={{ scale: 0.98 }}
                                                 onClick={() => handleLanguageChange(lang.code)}
                                                 className={`w-full flex items-center gap-4 py-4 px-4 rounded-2xl border-2 transition-all ${isSelected
-                                                        ? 'border-amber-400 bg-gradient-to-r from-amber-50 to-rose-50/50 shadow-soft'
-                                                        : 'border-neutral-100 bg-white hover:border-amber-200 hover:bg-amber-50/30'
+                                                        ? 'border-court-gold/40 bg-court-cream/70 shadow-soft'
+                                                        : 'border-white/80 bg-white/90 hover:border-court-gold/20 hover:bg-court-cream/40'
                                                     }`}
                                             >
                                                 {/* Flag emoji */}
@@ -750,7 +736,7 @@ const SettingsPage = () => {
 
                                                 {/* Language names */}
                                                 <div className="flex-1 text-left">
-                                                    <p className={`font-semibold ${isSelected ? 'text-amber-700' : 'text-neutral-800'}`}>
+                                                    <p className={`font-semibold ${isSelected ? 'text-court-brown' : 'text-neutral-800'}`}>
                                                         {lang.nativeLabel}
                                                     </p>
                                                     <p className="text-xs text-neutral-500">{lang.label}</p>
@@ -758,7 +744,7 @@ const SettingsPage = () => {
 
                                                 {/* Checkmark with animation */}
                                                 <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-all ${isSelected
-                                                        ? 'bg-gradient-to-br from-amber-400 to-[#8B7019]'
+                                                        ? 'bg-gradient-to-br from-court-gold to-court-goldDark'
                                                         : 'bg-neutral-100'
                                                     }`}>
                                                     {isSelected && (
@@ -786,10 +772,7 @@ const SettingsPage = () => {
                                         whileTap={{ scale: hasLanguageChange ? 0.98 : 1 }}
                                         onClick={handleLanguageConfirm}
                                         disabled={!hasLanguageChange}
-                                        className={`w-full py-3 rounded-2xl text-sm font-semibold transition-all ${hasLanguageChange
-                                                ? 'bg-gradient-to-r from-amber-500 to-[#8B7019] text-white shadow-soft'
-                                                : 'bg-neutral-100 text-neutral-400 cursor-not-allowed'
-                                            }`}
+                                        className="btn-primary w-full"
                                     >
                                         {t('settings.preferences.confirmLanguage', 'Confirm language')}
                                     </motion.button>
@@ -800,9 +783,9 @@ const SettingsPage = () => {
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
                                     transition={{ delay: 0.4 }}
-                                    className="text-center text-xs text-neutral-400 mt-5"
+                                    className="text-center text-xs text-neutral-500 mt-5"
                                 >
-                                    Tap outside to close
+                                    {t('common.tapToClose')}
                                 </motion.p>
                             </div>
                         </motion.div>
@@ -948,10 +931,7 @@ const SettingsPage = () => {
                                     whileTap={{ scale: relationshipSaving ? 1 : 0.98 }}
                                     onClick={handleRelationshipSave}
                                     disabled={relationshipSaving}
-                                    className={`flex-1 py-3 rounded-2xl text-sm font-bold text-white ${relationshipSaving
-                                        ? 'bg-neutral-300 cursor-not-allowed'
-                                        : 'bg-gradient-to-r from-amber-500 to-[#8B7019] shadow-soft'
-                                        }`}
+                                    className="btn-primary flex-1"
                                 >
                                     {relationshipSaving
                                         ? t('settings.relationship.saving', 'Saving...')

@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { normalizeLanguage, DEFAULT_LANGUAGE } from '../../i18n/languageConfig';
 import { processAvatarForSave } from '../../services/avatarService';
 import useAuthStore from '../../store/useAuthStore';
 
@@ -22,7 +21,6 @@ const useProfileData = () => {
         loveLanguage: profile?.love_language || '',
         avatarUrl: profile?.avatar_url || null,
         anniversaryDate: profile?.anniversary_date || '',
-        preferredLanguage: normalizeLanguage(profile?.preferred_language) || DEFAULT_LANGUAGE,
     }));
 
     // Update profileData when profile changes (from Supabase only)
@@ -33,7 +31,6 @@ const useProfileData = () => {
             loveLanguage: profile?.love_language || '',
             avatarUrl: profile?.avatar_url || null,
             anniversaryDate: profile?.anniversary_date || '',
-            preferredLanguage: normalizeLanguage(profile?.preferred_language) || DEFAULT_LANGUAGE,
         });
     }, [profile]);
 
@@ -58,7 +55,6 @@ const useProfileData = () => {
                     display_name: newData.nickname || null,
                     love_language: newData.loveLanguage || null,
                     birthday: newData.birthday || null,
-                    preferred_language: newData.preferredLanguage || DEFAULT_LANGUAGE,
                 };
 
                 // Only include anniversary_date if it's being set for the first time

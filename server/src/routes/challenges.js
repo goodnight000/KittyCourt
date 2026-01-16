@@ -18,6 +18,9 @@ const { sendError } = require('../lib/http');
 const { safeErrorMessage } = require('../lib/shared/errorUtils');
 const { sendNotificationToPartner } = require('../lib/notificationService');
 
+// UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 router.get('/', requirePartner, async (req, res) => {
     try {
         if (!isXPSystemEnabled()) {
@@ -26,28 +29,47 @@ router.get('/', requirePartner, async (req, res) => {
 
         const { userId, partnerId, supabase } = req;
 
+        // Pagination params
+        const limit = Math.min(parseInt(req.query.limit) || 20, 100);
+        const offset = parseInt(req.query.offset) || 0;
+
         const language = await resolveRequestLanguage(req, supabase, userId);
-        const result = await fetchChallenges({ userId, partnerId, language });
+        const result = await fetchChallenges({ userId, partnerId, language, limit, offset });
         if (result?.error) {
             return sendError(res, 500, 'CHALLENGES_FETCH_FAILED', result.error);
         }
 
-        return res.json(result);
+        // Calculate total items for pagination
+        const totalItems = (result.active?.length || 0) + (result.available?.length || 0) + (result.completed?.length || 0);
+
+        return res.json({
+            ...result,
+            pagination: {
+                limit,
+                offset,
+                hasMore: totalItems === limit
+            }
+        });
     } catch (error) {
         console.error('[Challenges] Failed to fetch challenges:', error);
-        return res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
+        return sendError(res, error.statusCode || 500, 'SERVER_ERROR', safeErrorMessage(error));
     }
 });
 
 router.post('/:id/start', requirePartner, async (req, res) => {
     try {
+        const challengeId = req.params.id;
+
+        // Input validation
+        if (!UUID_REGEX.test(challengeId)) {
+            return sendError(res, 400, 'INVALID_ID', 'Invalid challenge ID format');
+        }
+
         if (!isXPSystemEnabled()) {
             return sendError(res, 400, 'XP_DISABLED', 'XP system disabled');
         }
 
         const { userId, partnerId, supabase } = req;
-
-        const challengeId = req.params.id;
         const language = await resolveRequestLanguage(req, supabase, userId);
         const result = await startChallenge({ userId, partnerId, challengeId, language });
         if (result?.error) {
@@ -57,19 +79,24 @@ router.post('/:id/start', requirePartner, async (req, res) => {
         return res.json({ success: true, challenge: result.challenge });
     } catch (error) {
         console.error('[Challenges] Failed to start challenge:', error);
-        return res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
+        return sendError(res, error.statusCode || 500, 'SERVER_ERROR', safeErrorMessage(error));
     }
 });
 
 router.post('/:id/skip', requirePartner, async (req, res) => {
     try {
+        const challengeId = req.params.id;
+
+        // Input validation
+        if (!UUID_REGEX.test(challengeId)) {
+            return sendError(res, 400, 'INVALID_ID', 'Invalid challenge ID format');
+        }
+
         if (!isXPSystemEnabled()) {
             return sendError(res, 400, 'XP_DISABLED', 'XP system disabled');
         }
 
         const { userId, partnerId, supabase } = req;
-
-        const challengeId = req.params.id;
         const language = await resolveRequestLanguage(req, supabase, userId);
         const result = await skipChallenge({ userId, partnerId, challengeId, language });
         if (result?.error) {
@@ -79,19 +106,24 @@ router.post('/:id/skip', requirePartner, async (req, res) => {
         return res.json({ success: true });
     } catch (error) {
         console.error('[Challenges] Failed to skip challenge:', error);
-        return res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
+        return sendError(res, error.statusCode || 500, 'SERVER_ERROR', safeErrorMessage(error));
     }
 });
 
 router.post('/:id/complete', requirePartner, async (req, res) => {
     try {
+        const challengeId = req.params.id;
+
+        // Input validation
+        if (!UUID_REGEX.test(challengeId)) {
+            return sendError(res, 400, 'INVALID_ID', 'Invalid challenge ID format');
+        }
+
         if (!isXPSystemEnabled()) {
             return sendError(res, 400, 'XP_DISABLED', 'XP system disabled');
         }
 
         const { userId, partnerId } = req;
-
-        const challengeId = req.params.id;
         const result = await requestChallengeCompletion({ userId, partnerId, challengeId });
         if (result?.error) {
             return sendError(res, 400, 'CHALLENGE_COMPLETE_FAILED', result.error);
@@ -108,19 +140,24 @@ router.post('/:id/complete', requirePartner, async (req, res) => {
         return res.json({ success: true, pending: !!result?.pending });
     } catch (error) {
         console.error('[Challenges] Failed to request completion:', error);
-        return res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
+        return sendError(res, error.statusCode || 500, 'SERVER_ERROR', safeErrorMessage(error));
     }
 });
 
 router.post('/:id/confirm', requirePartner, async (req, res) => {
     try {
+        const challengeId = req.params.id;
+
+        // Input validation
+        if (!UUID_REGEX.test(challengeId)) {
+            return sendError(res, 400, 'INVALID_ID', 'Invalid challenge ID format');
+        }
+
         if (!isXPSystemEnabled()) {
             return sendError(res, 400, 'XP_DISABLED', 'XP system disabled');
         }
 
         const { userId, partnerId } = req;
-
-        const challengeId = req.params.id;
         const result = await confirmChallengeCompletion({ userId, partnerId, challengeId });
         if (result?.error) {
             return sendError(res, 400, 'CHALLENGE_CONFIRM_FAILED', result.error);
@@ -137,7 +174,7 @@ router.post('/:id/confirm', requirePartner, async (req, res) => {
         return res.json({ success: true });
     } catch (error) {
         console.error('[Challenges] Failed to confirm completion:', error);
-        return res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
+        return sendError(res, error.statusCode || 500, 'SERVER_ERROR', safeErrorMessage(error));
     }
 });
 

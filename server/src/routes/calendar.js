@@ -14,11 +14,22 @@ const { recordChallengeAction, CHALLENGE_ACTIONS } = require('../lib/challengeSe
 const { resolveRequestLanguage } = require('../lib/language');
 const { safeErrorMessage } = require('../lib/shared/errorUtils');
 const { processSecureInput, securityConfig, llmSecurityMiddleware } = require('../lib/security/index');
+const { sendError } = require('../lib/http');
+
+// UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// ISO date string validation (YYYY-MM-DD or full ISO 8601)
+const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?)?$/;
 
 // Get calendar events
 router.get('/events', requirePartner, async (req, res) => {
     try {
         const { userId: viewerId, partnerId, supabase } = req;
+
+        // Pagination params
+        const limit = Math.min(parseInt(req.query.limit) || 20, 100);
+        const offset = parseInt(req.query.offset) || 0;
 
         let query = supabase
             .from('calendar_events')
@@ -34,12 +45,15 @@ router.get('/events', requirePartner, async (req, res) => {
             query = query.eq('created_by', viewerId);
         }
 
+        // Apply pagination
+        query = query.range(offset, offset + limit - 1);
+
         const { data: events, error } = await query;
 
         if (error) throw error;
 
         // Transform to camelCase
-        const transformed = events.map(e => ({
+        const transformed = (events || []).map(e => ({
             id: e.id,
             createdBy: e.created_by,
             title: e.title,
@@ -53,10 +67,17 @@ router.get('/events', requirePartner, async (req, res) => {
             createdAt: e.created_at
         }));
 
-        res.json(transformed);
+        res.json({
+            data: transformed,
+            pagination: {
+                limit,
+                offset,
+                hasMore: transformed.length === limit
+            }
+        });
     } catch (error) {
         console.error('Error fetching events:', error);
-        res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
+        return sendError(res, error.statusCode || 500, 'SERVER_ERROR', safeErrorMessage(error));
     }
 });
 
@@ -65,6 +86,35 @@ router.post('/events', requirePartner, async (req, res) => {
     try {
         const { userId: viewerId, partnerId, supabase } = req;
         const { title, date, type, emoji, isRecurring, notes, isSecret } = req.body;
+
+        // Input validation
+        if (!title || typeof title !== 'string' || title.trim().length === 0) {
+            return sendError(res, 400, 'INVALID_TITLE', 'title is required and must be a non-empty string');
+        }
+        if (title.length > 200) {
+            return sendError(res, 400, 'INVALID_TITLE', 'title must be 200 characters or less');
+        }
+        if (!date || typeof date !== 'string') {
+            return sendError(res, 400, 'INVALID_DATE', 'date is required and must be a string');
+        }
+        if (!ISO_DATE_REGEX.test(date)) {
+            return sendError(res, 400, 'INVALID_DATE', 'date must be a valid ISO date string (YYYY-MM-DD or ISO 8601)');
+        }
+        if (type !== undefined && typeof type !== 'string') {
+            return sendError(res, 400, 'INVALID_TYPE', 'type must be a string');
+        }
+        if (emoji !== undefined && typeof emoji !== 'string') {
+            return sendError(res, 400, 'INVALID_EMOJI', 'emoji must be a string');
+        }
+        if (isRecurring !== undefined && typeof isRecurring !== 'boolean') {
+            return sendError(res, 400, 'INVALID_RECURRING', 'isRecurring must be a boolean');
+        }
+        if (notes !== undefined && notes !== null && typeof notes !== 'string') {
+            return sendError(res, 400, 'INVALID_NOTES', 'notes must be a string');
+        }
+        if (isSecret !== undefined && typeof isSecret !== 'boolean') {
+            return sendError(res, 400, 'INVALID_SECRET', 'isSecret must be a boolean');
+        }
 
         const { data: event, error } = await supabase
             .from('calendar_events')
@@ -121,7 +171,7 @@ router.post('/events', requirePartner, async (req, res) => {
         });
     } catch (error) {
         console.error('Error creating event:', error);
-        res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
+        return sendError(res, error.statusCode || 500, 'SERVER_ERROR', safeErrorMessage(error));
     }
 });
 
@@ -132,6 +182,38 @@ router.put('/events/:id', requirePartner, async (req, res) => {
         const { userId: viewerId, partnerId, supabase } = req;
         const { title, date, type, emoji, isRecurring, notes, isSecret } = req.body;
 
+        // Input validation
+        if (!UUID_REGEX.test(id)) {
+            return sendError(res, 400, 'INVALID_ID', 'Invalid event ID format');
+        }
+        if (title !== undefined && (typeof title !== 'string' || title.trim().length === 0)) {
+            return sendError(res, 400, 'INVALID_TITLE', 'title must be a non-empty string');
+        }
+        if (title !== undefined && title.length > 200) {
+            return sendError(res, 400, 'INVALID_TITLE', 'title must be 200 characters or less');
+        }
+        if (date !== undefined && typeof date !== 'string') {
+            return sendError(res, 400, 'INVALID_DATE', 'date must be a string');
+        }
+        if (date !== undefined && !ISO_DATE_REGEX.test(date)) {
+            return sendError(res, 400, 'INVALID_DATE', 'date must be a valid ISO date string (YYYY-MM-DD or ISO 8601)');
+        }
+        if (type !== undefined && typeof type !== 'string') {
+            return sendError(res, 400, 'INVALID_TYPE', 'type must be a string');
+        }
+        if (emoji !== undefined && typeof emoji !== 'string') {
+            return sendError(res, 400, 'INVALID_EMOJI', 'emoji must be a string');
+        }
+        if (isRecurring !== undefined && typeof isRecurring !== 'boolean') {
+            return sendError(res, 400, 'INVALID_RECURRING', 'isRecurring must be a boolean');
+        }
+        if (notes !== undefined && notes !== null && typeof notes !== 'string') {
+            return sendError(res, 400, 'INVALID_NOTES', 'notes must be a string');
+        }
+        if (isSecret !== undefined && typeof isSecret !== 'boolean') {
+            return sendError(res, 400, 'INVALID_SECRET', 'isSecret must be a boolean');
+        }
+
         const { data: existing, error: existingError } = await supabase
             .from('calendar_events')
             .select('created_by,is_secret')
@@ -141,7 +223,7 @@ router.put('/events/:id', requirePartner, async (req, res) => {
         if (existingError) throw existingError;
 
         const canEdit = existing.created_by === viewerId || (partnerId && existing.created_by === partnerId && existing.is_secret === false);
-        if (!canEdit) return res.status(403).json({ error: 'Not allowed to update this event' });
+        if (!canEdit) return sendError(res, 403, 'FORBIDDEN', 'Not allowed to update this event');
 
         const { data: event, error } = await supabase
             .from('calendar_events')
@@ -173,7 +255,7 @@ router.put('/events/:id', requirePartner, async (req, res) => {
         });
     } catch (error) {
         console.error('Error updating event:', error);
-        res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
+        return sendError(res, error.statusCode || 500, 'SERVER_ERROR', safeErrorMessage(error));
     }
 });
 
@@ -192,7 +274,7 @@ router.delete('/events/:id', requirePartner, async (req, res) => {
         if (existingError) throw existingError;
 
         const canDelete = existing.created_by === viewerId || (partnerId && existing.created_by === partnerId && existing.is_secret === false);
-        if (!canDelete) return res.status(403).json({ error: 'Not allowed to delete this event' });
+        if (!canDelete) return sendError(res, 403, 'FORBIDDEN', 'Not allowed to delete this event');
 
         const { error } = await supabase
             .from('calendar_events')
@@ -204,7 +286,7 @@ router.delete('/events/:id', requirePartner, async (req, res) => {
         res.json({ success: true });
     } catch (error) {
         console.error('Error deleting event:', error);
-        res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
+        return sendError(res, error.statusCode || 500, 'SERVER_ERROR', safeErrorMessage(error));
     }
 });
 
@@ -238,7 +320,7 @@ router.post('/event-plans/exists', async (req, res) => {
         return res.json({ exists });
     } catch (error) {
         console.error('Error checking event plan existence:', error);
-        res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
+        return sendError(res, error.statusCode || 500, 'SERVER_ERROR', safeErrorMessage(error));
     }
 });
 
@@ -248,7 +330,7 @@ router.get('/event-plans', async (req, res) => {
         const viewerId = await requireAuthUserId(req);
         const { eventKey } = req.query || {};
 
-        if (!eventKey) return res.status(400).json({ error: 'eventKey is required' });
+        if (!eventKey) return sendError(res, 400, 'MISSING_FIELD', 'eventKey is required');
 
         const supabase = requireSupabase();
         const { data, error } = await supabase
@@ -276,7 +358,7 @@ router.get('/event-plans', async (req, res) => {
         return res.json({ plans });
     } catch (error) {
         console.error('Error fetching event plans:', error);
-        res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
+        return sendError(res, error.statusCode || 500, 'SERVER_ERROR', safeErrorMessage(error));
     }
 });
 
@@ -297,7 +379,7 @@ router.patch('/event-plans/:id', async (req, res) => {
         }
 
         if (Object.keys(updatePayload).length === 0) {
-            return res.status(400).json({ error: 'checklistState or notes is required' });
+            return sendError(res, 400, 'MISSING_FIELD', 'checklistState or notes is required');
         }
 
         const supabase = requireSupabase();
@@ -310,7 +392,7 @@ router.patch('/event-plans/:id', async (req, res) => {
             .single();
 
         if (error) {
-            if (error.code === '42P01') return res.status(409).json({ error: 'event_plans table missing (run migration 015)' });
+            if (error.code === '42P01') return sendError(res, 409, 'TABLE_MISSING', 'event_plans table missing (run migration 015)');
             throw error;
         }
 
@@ -324,7 +406,7 @@ router.patch('/event-plans/:id', async (req, res) => {
         });
     } catch (error) {
         console.error('Error updating plan:', error);
-        res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
+        return sendError(res, error.statusCode || 500, 'SERVER_ERROR', safeErrorMessage(error));
     }
 });
 
@@ -343,7 +425,7 @@ router.post('/event-plans/:id/share', requirePartner, async (req, res) => {
             .single();
 
         if (planError || !plan) {
-            return res.status(404).json({ error: 'Plan not found' });
+            return sendError(res, 404, 'NOT_FOUND', 'Plan not found');
         }
 
         // Get user's display name for notification
@@ -369,7 +451,7 @@ router.post('/event-plans/:id/share', requirePartner, async (req, res) => {
         return res.json({ success: true });
     } catch (error) {
         console.error('Error sharing plan:', error);
-        res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
+        return sendError(res, error.statusCode || 500, 'SERVER_ERROR', safeErrorMessage(error));
     }
 });
 
@@ -412,12 +494,12 @@ router.post('/plan-event', requirePartner, llmSecurityMiddleware('eventPlanner')
         };
 
         if (partnerIdFromClient && String(partnerIdFromClient) !== String(partnerId)) {
-            return res.status(400).json({ error: 'Invalid partnerId for current user' });
+            return sendError(res, 400, 'INVALID_INPUT', 'Invalid partnerId for current user');
         }
 
         const usage = await canUseFeature({ userId: viewerId, type: 'plan' });
         if (!usage.allowed) {
-            return res.status(403).json({ error: 'Usage limit reached', usage });
+            return sendError(res, 403, 'USAGE_LIMIT_REACHED', 'Usage limit reached');
         }
 
         const { generateEventPlan } = require('../lib/eventPlanner');
@@ -469,7 +551,7 @@ router.post('/plan-event', requirePartner, llmSecurityMiddleware('eventPlanner')
 
     } catch (error) {
         console.error('Planning error:', error);
-        res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
+        return sendError(res, error.statusCode || 500, 'SERVER_ERROR', safeErrorMessage(error));
     }
 });
 

@@ -11,6 +11,7 @@ const { requirePartner } = require('../middleware/requirePartner');
 const { isSupabaseConfigured } = require('../lib/supabase');
 const { getLevelStatus, isXPSystemEnabled, getOrderedCoupleIds, awardXP, ACTION_TYPES } = require('../lib/xpService');
 const { safeErrorMessage } = require('../lib/shared/errorUtils');
+const { sendError } = require('../lib/http');
 
 const router = express.Router();
 
@@ -26,19 +27,19 @@ router.get('/status', requirePartner, async (req, res) => {
         }
 
         if (!isSupabaseConfigured()) {
-            return res.status(503).json({ error: 'Supabase not configured' });
+            return sendError(res, 503, 'SERVICE_UNAVAILABLE', 'Supabase not configured');
         }
 
         const { userId, partnerId, supabase } = req;
 
         const coupleIds = getOrderedCoupleIds(userId, partnerId);
         if (!coupleIds) {
-            return res.status(400).json({ error: 'Invalid couple' });
+            return sendError(res, 400, 'INVALID_INPUT', 'Invalid couple');
         }
 
         const levelResult = await getLevelStatus(userId, partnerId);
         if (!levelResult?.success || !levelResult?.data) {
-            return res.status(500).json({ error: levelResult?.error || 'Failed to fetch level status' });
+            return sendError(res, 500, 'SERVER_ERROR', levelResult?.error || 'Failed to fetch level status');
         }
 
         let lastSeenLevel = levelResult.data.level;
@@ -99,7 +100,7 @@ router.get('/status', requirePartner, async (req, res) => {
         });
     } catch (error) {
         console.error('[Levels] Error fetching status:', error);
-        return res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
+        return sendError(res, error.statusCode || 500, 'SERVER_ERROR', safeErrorMessage(error));
     }
 });
 
@@ -111,20 +112,30 @@ router.get('/status', requirePartner, async (req, res) => {
 router.post('/dev/award-xp', requirePartner, async (req, res) => {
     try {
         if (process.env.NODE_ENV === 'production') {
-            return res.status(404).json({ error: 'Not found' });
+            return sendError(res, 404, 'NOT_FOUND', 'Not found');
         }
 
         if (!isXPSystemEnabled()) {
-            return res.status(400).json({ error: 'XP system disabled' });
+            return sendError(res, 400, 'XP_DISABLED', 'XP system disabled');
         }
 
         if (!isSupabaseConfigured()) {
-            return res.status(503).json({ error: 'Supabase not configured' });
+            return sendError(res, 503, 'SERVICE_UNAVAILABLE', 'Supabase not configured');
         }
 
+        // Input validation
         const amount = Number(req.body?.amount);
-        if (!Number.isFinite(amount) || amount <= 0 || amount > 10000) {
-            return res.status(400).json({ error: 'Invalid amount' });
+        if (req.body?.amount === undefined || req.body?.amount === null) {
+            return sendError(res, 400, 'MISSING_AMOUNT', 'amount is required');
+        }
+        if (!Number.isFinite(amount) || !Number.isInteger(amount)) {
+            return sendError(res, 400, 'INVALID_AMOUNT', 'amount must be a valid integer');
+        }
+        if (amount <= 0) {
+            return sendError(res, 400, 'INVALID_AMOUNT', 'amount must be a positive integer');
+        }
+        if (amount > 10000) {
+            return sendError(res, 400, 'INVALID_AMOUNT', 'amount must not exceed 10000');
         }
 
         const { userId, partnerId } = req;
@@ -139,13 +150,13 @@ router.post('/dev/award-xp', requirePartner, async (req, res) => {
         });
 
         if (!result?.success) {
-            return res.status(500).json({ error: result?.error || 'Failed to award XP' });
+            return sendError(res, 500, 'SERVER_ERROR', result?.error || 'Failed to award XP');
         }
 
         return res.json(result);
     } catch (error) {
         console.error('[Levels] Error awarding debug XP:', error);
-        return res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
+        return sendError(res, error.statusCode || 500, 'SERVER_ERROR', safeErrorMessage(error));
     }
 });
 
@@ -157,18 +168,18 @@ router.post('/dev/award-xp', requirePartner, async (req, res) => {
 router.post('/seen', requirePartner, async (req, res) => {
     try {
         if (!isXPSystemEnabled()) {
-            return res.status(400).json({ error: 'XP system disabled' });
+            return sendError(res, 400, 'XP_DISABLED', 'XP system disabled');
         }
 
         if (!isSupabaseConfigured()) {
-            return res.status(503).json({ error: 'Supabase not configured' });
+            return sendError(res, 503, 'SERVICE_UNAVAILABLE', 'Supabase not configured');
         }
 
         const { userId, partnerId, supabase } = req;
 
         const levelResult = await getLevelStatus(userId, partnerId);
         if (!levelResult?.success || !levelResult?.data) {
-            return res.status(500).json({ error: levelResult?.error || 'Failed to fetch level status' });
+            return sendError(res, 500, 'SERVER_ERROR', levelResult?.error || 'Failed to fetch level status');
         }
 
         const requested = Number(req.body?.level);
@@ -185,13 +196,13 @@ router.post('/seen', requirePartner, async (req, res) => {
             .eq('id', userId);
 
         if (updateError) {
-            return res.status(500).json({ error: updateError.message });
+            return sendError(res, 500, 'SERVER_ERROR', updateError.message);
         }
 
         return res.json({ success: true, lastSeenLevel: safeLevel });
     } catch (error) {
         console.error('[Levels] Error updating seen level:', error);
-        return res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
+        return sendError(res, error.statusCode || 500, 'SERVER_ERROR', safeErrorMessage(error));
     }
 });
 

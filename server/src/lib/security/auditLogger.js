@@ -7,10 +7,12 @@
 
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { securityConfig } = require('./config/securityConfig');
 
 const LOG_DIR = process.env.SECURITY_LOG_DIR || path.join(process.cwd(), 'logs', 'security');
 const ALERT_WEBHOOK = process.env.SECURITY_ALERT_WEBHOOK;
+const AUDIT_LOG_SECRET = process.env.AUDIT_LOG_SECRET || crypto.randomBytes(32).toString('hex');
 
 // Ensure log directory exists
 function ensureLogDir() {
@@ -35,15 +37,62 @@ function getLogFilePath() {
 }
 
 /**
- * Format log entry as JSON line
+ * Generate HMAC integrity hash for log entry
+ * @param {string} data - Data to hash
+ * @returns {string} - HMAC-SHA256 hash
+ */
+function generateIntegrityHash(data) {
+  return crypto
+    .createHmac('sha256', AUDIT_LOG_SECRET)
+    .update(data)
+    .digest('hex');
+}
+
+/**
+ * Format log entry as JSON line with integrity hash
  * @param {Object} event - Security event
- * @returns {string} - Formatted log entry
+ * @returns {string} - Formatted log entry with integrity hash
  */
 function formatLogEntry(event) {
-  return JSON.stringify({
-    timestamp: new Date().toISOString(),
+  const timestamp = new Date().toISOString();
+  const entryData = {
+    timestamp,
     ...event,
-  });
+  };
+
+  // Create the data string for hashing (without the hash field)
+  const dataToHash = JSON.stringify(entryData);
+
+  // Add integrity hash to make the entry tamper-resistant
+  entryData.integrityHash = generateIntegrityHash(dataToHash);
+
+  return JSON.stringify(entryData);
+}
+
+/**
+ * Verify integrity hash of a log entry
+ * @param {Object} entry - Parsed log entry
+ * @returns {boolean} - Whether the entry passes integrity check
+ */
+function verifyLogEntryIntegrity(entry) {
+  if (!entry || !entry.integrityHash) {
+    return false;
+  }
+
+  // Extract the hash and recreate the original data
+  const { integrityHash, ...dataWithoutHash } = entry;
+  const dataToHash = JSON.stringify(dataWithoutHash);
+  const expectedHash = generateIntegrityHash(dataToHash);
+
+  // Use timing-safe comparison to prevent timing attacks
+  try {
+    return crypto.timingSafeEqual(
+      Buffer.from(integrityHash, 'hex'),
+      Buffer.from(expectedHash, 'hex')
+    );
+  } catch (e) {
+    return false;
+  }
 }
 
 /**
@@ -305,4 +354,5 @@ module.exports = {
   logSecurityEvent,
   querySecurityLogs,
   getSecurityMetrics,
+  verifyLogEntryIntegrity,
 };

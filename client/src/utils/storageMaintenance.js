@@ -5,6 +5,7 @@ const safeJsonParse = (value) => {
     try {
         return JSON.parse(value)
     } catch {
+        // Intentionally ignored: invalid JSON returns null
         return null
     }
 }
@@ -17,13 +18,16 @@ const isLargeDataUrl = (value) =>
 export const runLocalStorageMaintenance = () => {
     if (typeof window === 'undefined') return
     const { localStorage } = window
-    if (!localStorage) return
+    const { sessionStorage } = window
+    if (!localStorage && !sessionStorage) return
 
     try {
         const keys = []
-        for (let i = 0; i < localStorage.length; i++) {
-            const k = localStorage.key(i)
-            if (k) keys.push(k)
+        if (localStorage) {
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i)
+                if (k) keys.push(k)
+            }
         }
 
         // 1) Trim local profile drafts that may contain base64 images.
@@ -40,14 +44,18 @@ export const runLocalStorageMaintenance = () => {
         }
 
         // 2) If cache is huge, clear it (safe to rebuild).
-        const pauseCache = localStorage.getItem('pause-cache')
+        const pauseCache = localStorage?.getItem('pause-cache')
         if (isHuge(pauseCache, 300_000)) {
             localStorage.removeItem('pause-cache')
+        }
+        const sessionPauseCache = sessionStorage?.getItem('pause-cache')
+        if (isHuge(sessionPauseCache, 300_000)) {
+            sessionStorage.removeItem('pause-cache')
         }
 
         // 3) If auth/app persisted blobs are huge, strip avatar_url fields.
         for (const key of ['catjudge-auth', 'cat-judge-storage']) {
-            const raw = localStorage.getItem(key)
+            const raw = localStorage?.getItem(key)
             if (!raw) continue
             const obj = safeJsonParse(raw)
             if (!obj || typeof obj !== 'object') continue
@@ -73,6 +81,6 @@ export const runLocalStorageMaintenance = () => {
             localStorage.setItem(key, JSON.stringify(obj))
         }
     } catch {
-        // swallow; never block app start
+        // Intentionally ignored: storage cleanup is non-critical
     }
 }

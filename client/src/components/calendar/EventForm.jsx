@@ -86,15 +86,19 @@ const EventForm = ({ selectedDate, onAdd, onClose }) => {
     const handleSubmit = () => {
         if (!title.trim()) return;
         if (dateError) return; // Don't submit if date is invalid
-        onAdd({
+        const trimmedNotes = notes.trim();
+        const payload = {
             title: title.trim(),
             date,
             type,
             emoji,
             isRecurring,
-            isSecret,
-            notes: notes.trim() || null
-        });
+            isSecret
+        };
+        if (trimmedNotes) {
+            payload.notes = trimmedNotes;
+        }
+        onAdd(payload);
     };
 
     return (
@@ -190,7 +194,7 @@ const EventForm = ({ selectedDate, onAdd, onClose }) => {
                         maxLength={MAX_TITLE_LENGTH}
                         className="w-full bg-neutral-50 border-2 border-neutral-100 rounded-xl p-3 text-neutral-700 focus:ring-2 focus:ring-violet-200 focus:border-violet-300 focus:outline-none text-sm"
                     />
-                    <p className="text-xs text-neutral-400 mt-1">
+                    <p className="text-xs text-neutral-500 mt-1">
                         {title.length}/{MAX_TITLE_LENGTH}
                     </p>
                 </div>

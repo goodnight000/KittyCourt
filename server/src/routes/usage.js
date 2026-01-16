@@ -10,6 +10,7 @@ const { getSupabase, isSupabaseConfigured } = require('../lib/supabase');
 const { getAuthUserIdOrNull } = require('../lib/auth');
 const { getCurrentPeriodStartUTC, incrementUsage } = require('../lib/usageTracking');
 const { safeErrorMessage } = require('../lib/shared/errorUtils');
+const { sendError } = require('../lib/http');
 
 const requireSupabase = () => {
     if (!isSupabaseConfigured()) throw new Error('Supabase not configured');
@@ -130,7 +131,7 @@ router.get('/', async (req, res) => {
     try {
         const userId = await getAuthUserIdOrNull(req);
         if (!userId) {
-            return res.status(401).json({ error: 'Unauthorized' });
+            return sendError(res, 401, 'UNAUTHORIZED', 'Unauthorized');
         }
 
         const record = await getCoupleUsageRecord(userId);
@@ -144,7 +145,7 @@ router.get('/', async (req, res) => {
         });
     } catch (error) {
         console.error('[Usage API] GET error:', error);
-        res.status(500).json({ error: safeErrorMessage(error) });
+        return sendError(res, 500, 'SERVER_ERROR', safeErrorMessage(error));
     }
 });
 
@@ -157,12 +158,12 @@ router.post('/increment', async (req, res) => {
     try {
         const userId = await getAuthUserIdOrNull(req);
         if (!userId) {
-            return res.status(401).json({ error: 'Unauthorized' });
+            return sendError(res, 401, 'UNAUTHORIZED', 'Unauthorized');
         }
 
         const { type } = req.body;
         if (!['classic', 'swift', 'wise', 'plan'].includes(type)) {
-            return res.status(400).json({ error: 'Invalid type. Must be classic, swift, wise, or plan' });
+            return sendError(res, 400, 'INVALID_INPUT', 'Invalid type. Must be classic, swift, wise, or plan');
         }
 
         try {
@@ -170,13 +171,13 @@ router.post('/increment', async (req, res) => {
             res.json({ success: true, newCount: newCount ?? 0 });
         } catch (e) {
             if (e?.code === '42P01') {
-                return res.status(409).json({ error: 'usage_tracking table missing (run migration 016/017)' });
+                return sendError(res, 409, 'TABLE_MISSING', 'usage_tracking table missing (run migration 016/017)');
             }
             throw e;
         }
     } catch (error) {
         console.error('[Usage API] POST increment error:', error);
-        res.status(500).json({ error: safeErrorMessage(error) });
+        return sendError(res, 500, 'SERVER_ERROR', safeErrorMessage(error));
     }
 });
 
@@ -188,12 +189,12 @@ router.get('/can-use', async (req, res) => {
     try {
         const userId = await getAuthUserIdOrNull(req);
         if (!userId) {
-            return res.status(401).json({ error: 'Unauthorized' });
+            return sendError(res, 401, 'UNAUTHORIZED', 'Unauthorized');
         }
 
         const { type } = req.query;
         if (!['classic', 'swift', 'wise', 'plan'].includes(type)) {
-            return res.status(400).json({ error: 'Invalid type' });
+            return sendError(res, 400, 'INVALID_INPUT', 'Invalid type');
         }
 
         const [record, tier] = await Promise.all([
@@ -225,7 +226,7 @@ router.get('/can-use', async (req, res) => {
         });
     } catch (error) {
         console.error('[Usage API] GET can-use error:', error);
-        res.status(500).json({ error: safeErrorMessage(error) });
+        return sendError(res, 500, 'SERVER_ERROR', safeErrorMessage(error));
     }
 });
 

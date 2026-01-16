@@ -3,10 +3,34 @@
  */
 import { create } from 'zustand'
 import api from '../services/api'
+import useCacheStore, { CACHE_POLICY, cacheKey } from './useCacheStore'
+import { eventBus, EVENTS } from '../lib/eventBus'
 
+const isOnline = () => typeof navigator !== 'undefined' && navigator.onLine
 const isDev = import.meta.env.DEV
+let cacheListenerKey = null
+let cacheUnsubscribe = null
+let eventCleanupFns = []
 
-const useMemoryStore = create((set, get) => ({
+const useMemoryStore = create((set, get) => {
+  const syncCache = () => {
+    const userId = get()._authUserId
+    if (!userId) return
+    const cacheStore = useCacheStore.getState()
+    const snapshot = {
+      memories: get().memories || [],
+      deletedCount: get().deletedCount || 0,
+      deletedMemories: get().deletedMemories || [],
+    }
+    cacheStore.setCache(
+      cacheKey.memories(userId),
+      snapshot,
+      CACHE_POLICY.MEMORIES.ttlMs,
+      CACHE_POLICY.MEMORIES.staleMs
+    )
+  }
+
+  return ({
   memories: [],
   deletedCount: 0,
   deletedMemories: [],
@@ -15,12 +39,82 @@ const useMemoryStore = create((set, get) => ({
   serverAvailable: true,
   error: null,
   commentsByMemory: {},
+  _authUserId: null,
+
+  init: () => {
+    eventCleanupFns.forEach(fn => fn())
+    eventCleanupFns = []
+
+    const unsubLogin = eventBus.on(EVENTS.AUTH_LOGIN, (payload) => {
+      set({ _authUserId: payload?.userId || null })
+    })
+
+    const unsubProfile = eventBus.on(EVENTS.PROFILE_UPDATED, (payload) => {
+      if (payload?.userId && !get()._authUserId) {
+        set({ _authUserId: payload.userId })
+      }
+    })
+
+    const unsubLogout = eventBus.on(EVENTS.AUTH_LOGOUT, () => {
+      get().reset()
+    })
+
+    eventCleanupFns.push(unsubLogin, unsubProfile, unsubLogout)
+  },
+
+  cleanup: () => {
+    eventCleanupFns.forEach(fn => fn())
+    eventCleanupFns = []
+  },
 
   fetchMemories: async () => {
     if (get().isLoading || !get().serverAvailable) return
+    if (!isOnline()) return
     set({ isLoading: true, error: null })
 
     try {
+      const userId = get()._authUserId
+      const cacheStore = useCacheStore.getState()
+
+      const applyPayload = (payload) => {
+        const data = payload || {}
+        set({
+          memories: data.memories || [],
+          deletedCount: data.deletedCount || 0,
+          deletedMemories: data.deletedMemories || [],
+          isLoading: false,
+          serverAvailable: true,
+          error: null
+        })
+      }
+
+      if (userId) {
+        const key = cacheKey.memories(userId)
+        if (cacheListenerKey !== key) {
+          if (cacheUnsubscribe) cacheUnsubscribe()
+          cacheUnsubscribe = cacheStore.subscribeKey(key, (payload) => {
+            applyPayload(payload)
+          })
+          cacheListenerKey = key
+        }
+
+        const { data, promise } = await cacheStore.getOrFetch({
+          key,
+          fetcher: async () => {
+            const response = await api.get('/memories')
+            return response?.data || {}
+          },
+          ...CACHE_POLICY.MEMORIES,
+        })
+
+        applyPayload(data)
+
+        if (promise) {
+          promise.then((fresh) => applyPayload(fresh)).catch(() => {})
+        }
+        return
+      }
+
       const response = await api.get('/memories')
       const data = response?.data || {}
 
@@ -115,6 +209,7 @@ const useMemoryStore = create((set, get) => ({
           isUploading: false,
           error: null
         })
+        syncCache()
         return true
       }
 
@@ -135,6 +230,7 @@ const useMemoryStore = create((set, get) => ({
       if (!get().serverAvailable) return
       await api.delete(`/memories/${memoryId}`)
       set({ memories: get().memories.filter(m => m.id !== memoryId) })
+      syncCache()
     } catch (error) {
       console.error('[MemoryStore] Failed to delete memory:', error)
       set({ error: 'Failed to delete memory' })
@@ -167,6 +263,7 @@ const useMemoryStore = create((set, get) => ({
           }
         })
       })
+      syncCache()
     } catch (error) {
       console.error('[MemoryStore] Failed to set reaction:', error)
       set({ error: 'Failed to react to memory' })
@@ -187,6 +284,7 @@ const useMemoryStore = create((set, get) => ({
           }
         })
       })
+      syncCache()
     } catch (error) {
       console.error('[MemoryStore] Failed to remove reaction:', error)
       set({ error: 'Failed to remove reaction' })
@@ -228,6 +326,7 @@ const useMemoryStore = create((set, get) => ({
           return { ...memory, commentsCount: memory.commentsCount + 1 }
         })
       })
+      syncCache()
     } catch (error) {
       console.error('[MemoryStore] Failed to add comment:', error)
       set({ error: 'Failed to add comment' })
@@ -249,6 +348,7 @@ const useMemoryStore = create((set, get) => ({
           return { ...memory, commentsCount: Math.max(memory.commentsCount - 1, 0) }
         })
       })
+      syncCache()
     } catch (error) {
       console.error('[MemoryStore] Failed to delete comment:', error)
       set({ error: 'Failed to delete comment' })
@@ -257,16 +357,23 @@ const useMemoryStore = create((set, get) => ({
 
   clearError: () => set({ error: null }),
 
-  reset: () => set({
-    memories: [],
-    deletedCount: 0,
-    deletedMemories: [],
-    isLoading: false,
-    isUploading: false,
-    serverAvailable: true,
-    error: null,
-    commentsByMemory: {}
+  reset: () => {
+    if (cacheUnsubscribe) cacheUnsubscribe()
+    cacheUnsubscribe = null
+    cacheListenerKey = null
+    set({
+      memories: [],
+      deletedCount: 0,
+      deletedMemories: [],
+      isLoading: false,
+      isUploading: false,
+      serverAvailable: true,
+      error: null,
+      commentsByMemory: {},
+      _authUserId: null
+    })
+  }
   })
-}))
+})
 
 export default useMemoryStore

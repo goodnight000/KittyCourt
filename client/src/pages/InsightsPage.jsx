@@ -11,19 +11,12 @@ import useInsightsStore from '../store/useInsightsStore'
 import useSubscriptionStore from '../store/useSubscriptionStore'
 import Paywall from '../components/Paywall'
 import { useI18n } from '../i18n'
+import BackButton from '../components/shared/BackButton'
 
 const InsightBackdrop = () => (
-  <div className="absolute inset-0 pointer-events-none">
-    <div className="absolute -top-24 -right-16 h-56 w-56 rounded-full bg-amber-200/35 blur-3xl" />
-    <div className="absolute top-16 -left-20 h-60 w-60 rounded-full bg-rose-200/30 blur-3xl" />
-    <div className="absolute bottom-6 right-8 h-64 w-64 rounded-full bg-amber-100/45 blur-3xl" />
-    <div
-      className="absolute inset-0 opacity-45"
-      style={{
-        backgroundImage:
-          'radial-gradient(circle at 18% 20%, rgba(255,255,255,0.75) 0%, transparent 55%), radial-gradient(circle at 80% 10%, rgba(255,235,210,0.8) 0%, transparent 60%)'
-      }}
-    />
+  <div className="fixed inset-0 pointer-events-none">
+    <div className="absolute -top-20 -right-20 h-64 w-64 rounded-full bg-amber-200/30 blur-3xl" />
+    <div className="absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-rose-200/25 blur-3xl" />
   </div>
 )
 
@@ -37,6 +30,7 @@ const InsightsPage = () => {
   const {
     insights,
     consent,
+    meta: insightsMeta,
     isLoading,
     error,
     serverAvailable: insightsAvailable,
@@ -50,13 +44,14 @@ const InsightsPage = () => {
   const levelUnlocked = shouldShowInsights()
   const showInsights = levelUnlocked && isGold
   const selfConsent = consent ? !!consent.selfConsent : true
-  const partnerConsent = consent ? !!consent.partnerConsent : true
-  const bothConsented = selfConsent && partnerConsent
-  const paused = consent?.selfPaused || consent?.partnerPaused
+  const bothConsented = selfConsent
+  const paused = consent?.selfPaused
   const insightsCount = insights.length
   const insightsLabel = insightsCount === 1
     ? t('insights.countOne')
     : t('insights.countOther', { count: insightsCount })
+  const showThresholdHint = insightsMeta?.reason === 'insufficient_activity'
+    || insightsMeta?.reason === 'insufficient_memory'
   const [showPaywall, setShowPaywall] = useState(false)
   const errorMap = {
     'Failed to load insights': 'insights.errors.loadFailed',
@@ -71,10 +66,7 @@ const InsightsPage = () => {
       return { label: t('insights.status.syncing'), className: 'border-white/80 bg-white/80 text-neutral-500' }
     }
     if (!bothConsented) {
-      if (!selfConsent) {
-        return { label: t('insights.status.off'), className: 'border-white/80 bg-white/80 text-neutral-500' }
-      }
-      return { label: t('insights.status.waiting'), className: 'border-amber-200/70 bg-amber-100/70 text-amber-700' }
+      return { label: t('insights.status.off'), className: 'border-white/80 bg-white/80 text-neutral-500' }
     }
     if (paused) {
       return { label: t('insights.status.paused'), className: 'border-amber-200/70 bg-amber-100/70 text-amber-700' }
@@ -97,7 +89,11 @@ const InsightsPage = () => {
   if (!isXPEnabled || !levelUnlocked) {
     return (
       <div className="relative min-h-screen overflow-hidden px-4 pb-6 pt-6">
-        <InsightBackdrop />
+        {/* Background gradient */}
+            <div className="fixed inset-0 pointer-events-none">
+                <div className="absolute -top-20 -right-20 h-64 w-64 rounded-full bg-amber-200/30 blur-3xl" />
+                <div className="absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-rose-200/25 blur-3xl" />
+            </div>
         <div className="relative">
           <motion.button
             whileTap={{ scale: 0.95 }}
@@ -183,13 +179,7 @@ const InsightsPage = () => {
       <InsightBackdrop />
       <div className="relative space-y-6">
         <header className="flex items-start gap-3">
-          <motion.button
-            whileTap={{ scale: 0.95 }}
-            onClick={handleBack}
-            className="rounded-2xl border border-white/80 bg-white/80 p-2 shadow-soft"
-          >
-            <ArrowLeft className="w-5 h-5 text-neutral-600" />
-          </motion.button>
+          <BackButton onClick={handleBack} ariaLabel={t('common.back')} />
           <div className="flex-1">
             <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-amber-600">
               {t('insights.header.kicker')}
@@ -213,7 +203,7 @@ const InsightsPage = () => {
           </div>
           <div className="relative flex flex-wrap items-center justify-between gap-4">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-neutral-400">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-neutral-500">
                 {t('insights.observatory.kicker')}
               </p>
               <h2 className="mt-1 text-lg font-display font-bold text-neutral-800">
@@ -272,12 +262,6 @@ const InsightsPage = () => {
           </div>
         )}
 
-        {consent && selfConsent && !partnerConsent && (
-          <div className="glass-card border border-amber-100/70 bg-amber-50/60 text-sm text-amber-700">
-            {t('insights.consent.waitingPartner')}
-          </div>
-        )}
-
         {bothConsented && paused && (
           <div className="glass-card flex items-center justify-between gap-3">
             <div>
@@ -331,6 +315,11 @@ const InsightsPage = () => {
             <p className="mt-2 text-sm text-neutral-500">
               {t('insights.empty.subtitle')}
             </p>
+            {showThresholdHint && (
+              <p className="mt-2 text-xs text-neutral-500">
+                {t('insights.empty.thresholdHint')}
+              </p>
+            )}
           </motion.div>
         )}
 
@@ -361,7 +350,7 @@ const InsightsPage = () => {
                   <div className="text-sm font-semibold text-neutral-800">{insight.text}</div>
                   {insight.evidenceSummary && (
                     <div className="rounded-2xl border border-white/80 bg-white/70 p-3 text-xs text-neutral-500">
-                      <div className="text-[10px] font-semibold uppercase tracking-[0.3em] text-neutral-400">
+                      <div className="text-[10px] font-semibold uppercase tracking-[0.3em] text-neutral-500">
                         {t('insights.card.contextLabel')}
                       </div>
                       <p className="mt-1">{insight.evidenceSummary}</p>

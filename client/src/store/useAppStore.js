@@ -1,9 +1,17 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import api from '../services/api';
-import useCacheStore, { CACHE_TTL, CACHE_KEYS } from './useCacheStore';
+import useCacheStore, { CACHE_POLICY, cacheKey } from './useCacheStore';
 import { quotaSafeLocalStorage, sanitizeProfileForStorage } from './quotaSafeStorage';
 import { eventBus, EVENTS } from '../lib/eventBus';
+
+const isOnline = () => typeof navigator !== 'undefined' && navigator.onLine;
+
+const normalizeAppreciations = (payload) => {
+    if (Array.isArray(payload)) return payload;
+    if (Array.isArray(payload?.data)) return payload.data;
+    return [];
+};
 
 /**
  * useAppStore - Application-wide state
@@ -24,6 +32,12 @@ import { eventBus, EVENTS } from '../lib/eventBus';
 
 // Event bus listener cleanup functions
 let eventCleanupFns = [];
+let cacheCleanupFns = [];
+
+const clearCacheListeners = () => {
+    cacheCleanupFns.forEach(fn => fn());
+    cacheCleanupFns = [];
+};
 
 const useAppStore = create(
     persist(
@@ -41,6 +55,7 @@ const useAppStore = create(
 
             // --- Actions ---
             fetchUsers: async () => {
+                if (!isOnline()) return;
                 set({ isLoading: true });
                 try {
                     const { _authUserId, _authProfile, _authPartner } = get();
@@ -66,6 +81,7 @@ const useAppStore = create(
                                 user.kibbleBalance = user.kibbleBalance || 0;
                             }
                         } catch {
+                            // Intentionally ignored: non-critical balance prefetch
                             user.kibbleBalance = 0;
                         }
                     }
@@ -89,31 +105,36 @@ const useAppStore = create(
             showCelebration: false,
 
             fetchCaseHistory: async () => {
+                if (!isOnline()) return;
                 try {
                     const { _authUserId, _authPartner } = get();
                     if (!_authUserId || !_authPartner?.id) return;
 
-                    const cacheKey = `${CACHE_KEYS.CASE_HISTORY}:${_authUserId}:${_authPartner.id}`;
-
-                    // Check cache first
-                    const cached = useCacheStore.getState().getCached(cacheKey);
-                    if (cached !== null) {
-                        set({ caseHistory: cached });
-                        return;
-                    }
+                    const cacheStore = useCacheStore.getState();
+                    const key = cacheKey.caseHistory(_authUserId, _authPartner.id);
 
                     // Build query params for filtering
                     const params = new URLSearchParams();
                     params.set('userAId', _authUserId);
                     params.set('userBId', _authPartner.id);
 
-                    const url = `/cases?${params.toString()}`;
-                    const response = await api.get(url);
-                    const data = response.data || [];
+                    const { data, promise } = await cacheStore.getOrFetch({
+                        key,
+                        fetcher: async () => {
+                            const url = `/cases?${params.toString()}`;
+                            const response = await api.get(url);
+                            return response.data || [];
+                        },
+                        ...CACHE_POLICY.CASE_HISTORY,
+                    });
 
-                    // Cache the result
-                    useCacheStore.getState().setCache(cacheKey, data, CACHE_TTL.CASE_HISTORY);
-                    set({ caseHistory: data });
+                    set({ caseHistory: Array.isArray(data) ? data : [] });
+
+                    if (promise) {
+                        promise.then((fresh) => {
+                            set({ caseHistory: Array.isArray(fresh) ? fresh : [] });
+                        }).catch(() => {});
+                    }
                 } catch (error) {
                     console.error("Failed to fetch case history", error);
                 }
@@ -153,22 +174,26 @@ const useAppStore = create(
                 const { _authUserId } = get();
                 if (!_authUserId) return;
 
-                const cacheKey = `${CACHE_KEYS.APPRECIATIONS}:${_authUserId}`;
-
-                // Check cache first
-                const cached = useCacheStore.getState().getCached(cacheKey);
-                if (cached !== null) {
-                    set({ appreciations: cached });
-                    return;
-                }
+                const cacheStore = useCacheStore.getState();
+                const key = cacheKey.appreciations(_authUserId);
 
                 try {
-                    const response = await api.get(`/appreciations/${_authUserId}`);
-                    const data = response.data || [];
+                    const { data, promise } = await cacheStore.getOrFetch({
+                        key,
+                        fetcher: async () => {
+                            const response = await api.get(`/appreciations/${_authUserId}`);
+                            return normalizeAppreciations(response.data);
+                        },
+                        ...CACHE_POLICY.APPRECIATIONS,
+                    });
 
-                    // Cache the result
-                    useCacheStore.getState().setCache(cacheKey, data, CACHE_TTL.APPRECIATIONS);
-                    set({ appreciations: data });
+                    set({ appreciations: normalizeAppreciations(data) });
+
+                    if (promise) {
+                        promise.then((fresh) => {
+                            set({ appreciations: normalizeAppreciations(fresh) });
+                        }).catch(() => {});
+                    }
                 } catch (error) {
                     console.error("Failed to fetch appreciations", error);
                 }
@@ -190,7 +215,12 @@ const useAppStore = create(
                     });
 
                     // Invalidate partner's appreciations cache (they received a new one)
-                    useCacheStore.getState().invalidate(`${CACHE_KEYS.APPRECIATIONS}:${_authPartner.id}`);
+                    const cacheStore = useCacheStore.getState();
+                    cacheStore.invalidate(cacheKey.appreciations(_authPartner.id));
+                    cacheStore.invalidate(cacheKey.stats(_authPartner.id));
+                    cacheStore.invalidate(cacheKey.stats(_authUserId));
+                    const statsRefresh = cacheStore.revalidate(cacheKey.stats(_authUserId), { onlyStale: false });
+                    if (statsRefresh?.catch) statsRefresh.catch(() => {});
 
                     // Refresh users and appreciations
                     get().fetchUsers();
@@ -231,6 +261,27 @@ const useAppStore = create(
 
             // --- Event Bus Integration ---
 
+            setupCacheListeners: ({ userId, partnerId }) => {
+                clearCacheListeners();
+
+                const cacheStore = useCacheStore.getState();
+                if (userId) {
+                    cacheCleanupFns.push(
+                        cacheStore.subscribeKey(cacheKey.appreciations(userId), (data) => {
+                            set({ appreciations: normalizeAppreciations(data) });
+                        })
+                    );
+                }
+
+                if (userId && partnerId) {
+                    cacheCleanupFns.push(
+                        cacheStore.subscribeKey(cacheKey.caseHistory(userId, partnerId), (data) => {
+                            set({ caseHistory: Array.isArray(data) ? data : [] });
+                        })
+                    );
+                }
+            },
+
             /**
              * Initialize event bus listeners
              * Call this once during app startup
@@ -239,10 +290,12 @@ const useAppStore = create(
                 // Clear any existing listeners
                 eventCleanupFns.forEach(fn => fn());
                 eventCleanupFns = [];
+                clearCacheListeners();
 
                 // Listen for auth logout - reset all state
                 const unsubLogout = eventBus.on(EVENTS.AUTH_LOGOUT, () => {
-                    console.log('[AppStore] Received AUTH_LOGOUT event, resetting state');
+                    if (import.meta.env.DEV) console.log('[AppStore] Received AUTH_LOGOUT event, resetting state');
+                    clearCacheListeners();
                     set({
                         currentUser: null,
                         users: [],
@@ -259,13 +312,14 @@ const useAppStore = create(
 
                 // Listen for auth login - initialize user-specific state
                 const unsubLogin = eventBus.on(EVENTS.AUTH_LOGIN, ({ userId, profile, partner }) => {
-                    console.log('[AppStore] Received AUTH_LOGIN event, initializing for userId:', userId);
+                    if (import.meta.env.DEV) console.log('[AppStore] Received AUTH_LOGIN event, initializing for userId:', userId);
                     // Cache auth data locally to avoid circular dependencies
                     set({
                         _authUserId: userId,
                         _authProfile: profile,
                         _authPartner: partner
                     });
+                    get().setupCacheListeners({ userId, partnerId: partner?.id });
                     // Fetch users (which includes kibble balance)
                     get().fetchUsers();
                     // Fetch appreciations for the logged-in user
@@ -279,9 +333,10 @@ const useAppStore = create(
 
                 // Listen for partner connection - refresh case history and users
                 const unsubPartner = eventBus.on(EVENTS.PARTNER_CONNECTED, ({ partnerId, partnerProfile }) => {
-                    console.log('[AppStore] Received PARTNER_CONNECTED event, partner:', partnerId);
+                    if (import.meta.env.DEV) console.log('[AppStore] Received PARTNER_CONNECTED event, partner:', partnerId);
                     // Update cached partner data
                     set({ _authPartner: partnerProfile || { id: partnerId } });
+                    get().setupCacheListeners({ userId: get()._authUserId, partnerId });
                     // Refresh case history now that partner is connected
                     get().fetchCaseHistory();
                     // Refresh users to get partner data
@@ -291,7 +346,7 @@ const useAppStore = create(
 
                 // Listen for profile updates - refresh cached profile
                 const unsubProfile = eventBus.on(EVENTS.PROFILE_UPDATED, ({ userId, changes }) => {
-                    console.log('[AppStore] Received PROFILE_UPDATED event for userId:', userId);
+                    if (import.meta.env.DEV) console.log('[AppStore] Received PROFILE_UPDATED event for userId:', userId);
                     const { _authUserId, _authProfile } = get();
                     if (userId === _authUserId && _authProfile) {
                         set({ _authProfile: { ..._authProfile, ...changes } });
@@ -301,7 +356,7 @@ const useAppStore = create(
                 });
                 eventCleanupFns.push(unsubProfile);
 
-                console.log('[AppStore] Event bus listeners initialized');
+                if (import.meta.env.DEV) console.log('[AppStore] Event bus listeners initialized');
             },
 
             /**
@@ -310,7 +365,8 @@ const useAppStore = create(
             cleanup: () => {
                 eventCleanupFns.forEach(fn => fn());
                 eventCleanupFns = [];
-                console.log('[AppStore] Event bus listeners cleaned up');
+                clearCacheListeners();
+                if (import.meta.env.DEV) console.log('[AppStore] Event bus listeners cleaned up');
             },
 
         }),

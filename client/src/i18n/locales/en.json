@@ -24,6 +24,7 @@
     "minutesAgo": "{count} minutes ago",
     "hoursAgo": "{count} hours ago",
     "daysAgo": "{count} days ago",
+    "tapToClose": "Tap outside to close",
     "catMessages": [
       "Purr-fectly acceptable! 🐱",
       "The judge approves... for now. 👁️",
@@ -175,6 +176,8 @@
     "AGE_TOO_OLD": "Please enter a valid birth year"
   },
   "errors": {
+    "somethingWentWrong": "Something went wrong",
+    "tryAgainMessage": "We hit a snag loading this screen. Try again.",
     "NO_PARTNER": "No partner connected",
     "PARTNER_REQUIRED": "Partner required",
     "INVALID_PARTNER": "Invalid partner",
@@ -253,10 +256,10 @@
     "partnerFelt": "{name} felt",
     "yourAnswer": "Your answer",
     "partnerAnswer": "{name}'s answer",
-    "partnerAnswerLocked": "{name} will unlock after you answer",
+    "partnerAnswerLocked": "Encourage {name} to answer so you can both see each other's responses.",
     "editedAt": "Edited {date}",
     "bothAnsweredReward": "Both answered! You've earned +10 XP.",
-    "continueNext": "Continue to the next question",
+    "continueNext": "Next question",
     "moodLocked": "Mood locked",
     "questionArchives": "Question archives",
     "dailyReset": "Resets daily at midnight"
@@ -437,7 +440,7 @@
     "header": {
       "kicker": "Appreciation log",
       "title": "Your Love Ledger",
-      "subtitle": "Things {name} appreciates about you 💕"
+      "subtitle": "Things {name} appreciates about you"
     },
     "summary": {
       "title": "Total Appreciations",
@@ -446,7 +449,7 @@
     "empty": {
       "title": "No Appreciations Yet",
       "line1": "When {name} shows appreciation for something you did,",
-      "line2": "it will appear here! 💕"
+      "line2": "it will appear here."
     },
     "kibbleReward": "+{count} kibble"
   },
@@ -578,7 +581,7 @@
     },
     "verdict": {
       "banner": "VERDICT DELIVERED",
-      "title": "Judge Whiskers Has Spoken",
+      "title": "{judgeName} Has Spoken",
       "subtitle": "The Therapist Cat delivers wisdom",
       "versionLabel": "Version:",
       "patternDetected": "{pattern} Pattern Detected",
@@ -604,7 +607,7 @@
           "subtitle": "Your path to reconnection"
         }
       },
-      "signature": "- Judge Whiskers",
+      "signature": "- {judgeName}",
       "horsemenTitle": "Gottman's Four Horsemen Detected",
       "addendumTitle": "File an Addendum",
       "addendumHint": "Add more context for reconsideration",
@@ -614,7 +617,7 @@
       "accepted": "You accepted!",
       "waitingForPartner": "Waiting for {name}...",
       "history": "History",
-      "judgeAlt": "Judge Whiskers"
+      "judgeAlt": "{judgeName}"
     },
     "atRest": {
       "avatarAlt": "Sleeping Judge Whiskers",
@@ -652,6 +655,11 @@
         "Cat Court Principle: Validate first, solve second.",
         "Whisker Wisdom: Curiosity beats defensiveness.",
         "Court Note: A fair ruling protects both hearts."
+      ],
+      "fallbackQuotes": [
+        "Reviewing the evidence...",
+        "Considering both perspectives...",
+        "Weighing the options..."
       ],
       "judgeAlt": "Judge Whiskers",
       "steps": {
@@ -1221,7 +1229,8 @@
       "codeNotFound": "Partner code not found.",
       "alreadyConnected": "That user is already connected.",
       "noSentRequest": "No pending request to cancel."
-    }
+    },
+    "cantConnectSelf": "You can't connect with yourself! \ud83d\ude39"
   },
   "courtroom": {
     "feature": "Court",
@@ -1513,7 +1522,8 @@
     },
     "empty": {
       "title": "No insights yet",
-      "subtitle": "Check back after your next case."
+      "subtitle": "Check back after your next case.",
+      "thresholdHint": "Insights appear after your recent daily questions, appreciations, or shared memories."
     },
     "card": {
       "categoryFallback": "General",
@@ -1661,6 +1671,11 @@
       "prefix": "One membership for",
       "emphasis": "both partners",
       "suffix": "to use together"
+    },
+    "partnerActive": {
+      "title": "Your partner already has Pause Gold",
+      "subtitle": "You're covered for the same period.",
+      "error": "Your partner already has Pause Gold. You're covered for the same period."
     },
     "benefits": {
       "title": "What you get",
@@ -2062,6 +2077,9 @@
   },
   "settings": {
     "title": "Settings",
+    "language": {
+      "chooseLanguage": "Choose your preferred language"
+    },
     "account": {
       "title": "Account",
       "loginMethod": "Login method",

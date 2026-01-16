@@ -16,13 +16,50 @@ const { auditLogger } = require('./auditLogger');
 const { securityConfig } = require('./config/securityConfig');
 
 /**
+ * PII patterns for sanitization in logs
+ * These patterns are used to redact sensitive information before logging
+ */
+const PII_PATTERNS = [
+  // Email addresses
+  { pattern: /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, replacement: '[EMAIL_REDACTED]' },
+  // Phone numbers (various formats)
+  { pattern: /(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/g, replacement: '[PHONE_REDACTED]' },
+  // SSN-like patterns
+  { pattern: /\b\d{3}[-.\s]?\d{2}[-.\s]?\d{4}\b/g, replacement: '[SSN_REDACTED]' },
+  // Credit card numbers (basic patterns)
+  { pattern: /\b(?:\d{4}[-.\s]?){3}\d{4}\b/g, replacement: '[CARD_REDACTED]' },
+  // IP addresses (IPv4)
+  { pattern: /\b(?:\d{1,3}\.){3}\d{1,3}\b/g, replacement: '[IP_REDACTED]' },
+  // Dates of birth patterns (MM/DD/YYYY, DD/MM/YYYY, YYYY-MM-DD)
+  { pattern: /\b(?:\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2})\b/g, replacement: '[DOB_REDACTED]' },
+];
+
+/**
+ * Sanitize PII from a string before logging
+ * @param {string} input - Input string that may contain PII
+ * @returns {string} - Sanitized string with PII redacted
+ */
+function sanitizePIIForLogging(input) {
+  if (typeof input !== 'string') {
+    return input;
+  }
+
+  let sanitized = input;
+  for (const { pattern, replacement } of PII_PATTERNS) {
+    sanitized = sanitized.replace(pattern, replacement);
+  }
+  return sanitized;
+}
+
+/**
  * Main security middleware for LLM-related endpoints
  * @param {string} endpointName - Name of the endpoint for rate limiting
  * @returns {Function} - Express middleware function
  */
 function llmSecurityMiddleware(endpointName) {
   return async (req, res, next) => {
-    const userId = req.user?.id || req.body?.userId || req.query?.userId || 'anonymous';
+    // Only accept userId from authenticated session to prevent rate limit bypass
+    const userId = req.user?.id || `ip:${req.ip}`;
 
     try {
       // Step 1: Check if user is blocked (async - Redis-backed)
@@ -100,7 +137,8 @@ function llmSecurityMiddleware(endpointName) {
               riskLevel: injectionCheck.riskLevel,
               totalScore: injectionCheck.totalScore,
               patterns: injectionCheck.patternMatches.map(m => m.pattern),
-              inputPreview: value.slice(0, 100),
+              // Sanitize PII from input preview before logging to prevent PII exposure
+              inputPreview: sanitizePIIForLogging(value.slice(0, 100)),
             });
           } else if (injectionCheck.action === 'FLAG') {
             securityIssues.push({
@@ -206,7 +244,8 @@ function validateLanguageMiddleware(req, res, next) {
  */
 function rateLimitMiddleware(endpointName) {
   return async (req, res, next) => {
-    const userId = req.user?.id || req.body?.userId || req.query?.userId || req.ip || 'anonymous';
+    // Only accept userId from authenticated session to prevent rate limit bypass
+    const userId = req.user?.id || `ip:${req.ip}`;
 
     try {
       // Check if blocked (async - Redis-backed)
@@ -230,9 +269,19 @@ function rateLimitMiddleware(endpointName) {
       res.set('X-RateLimit-Remaining', String(rateLimit.remaining));
       next();
     } catch (error) {
-      // Fail open - allow request if rate limiting fails
-      console.error('[RateLimit Middleware] Error:', error);
-      next();
+      // Fail closed - reject request if rate limiting fails (security-first approach)
+      auditLogger.error({
+        type: 'RATE_LIMIT_MIDDLEWARE_ERROR',
+        userId,
+        endpoint: endpointName,
+        error: error.message,
+      });
+
+      return res.status(503).json({
+        error: 'Service temporarily unavailable',
+        message: 'Unable to process your request at this time. Please try again later.',
+        retryAfter: 30,
+      });
     }
   };
 }
@@ -337,4 +386,5 @@ module.exports = {
   identifyLLMFields,
   getNestedValue,
   setNestedValue,
+  sanitizePIIForLogging,
 };

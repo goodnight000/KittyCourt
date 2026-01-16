@@ -227,11 +227,11 @@ const PartnerRequestModal = () => {
                                 {/* Partner Code for Verification */}
                                 {senderPartnerCode && (
                                     <div className="bg-neutral-50 rounded-xl p-3 mb-4 border border-neutral-100">
-                                        <p className="text-xs text-neutral-400 text-center mb-1">Their Partner Code</p>
+                                        <p className="text-xs text-neutral-500 text-center mb-1">Their Partner Code</p>
                                         <p className="text-lg font-mono font-bold text-neutral-700 text-center tracking-widest">
                                             {senderPartnerCode}
                                         </p>
-                                        <p className="text-xs text-neutral-400 text-center mt-1">
+                                        <p className="text-xs text-neutral-500 text-center mt-1">
                                             Confirm this matches what they shared with you
                                         </p>
                                     </div>

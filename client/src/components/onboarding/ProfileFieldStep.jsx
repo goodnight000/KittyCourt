@@ -61,17 +61,17 @@ const ProfileFieldStep = ({
                 className="space-y-6"
             >
                 <div className="relative">
-                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-500" />
                     <input
                         type="text"
                         value={value || ''}
                         onChange={(e) => onChange(e.target.value)}
                         placeholder={t('onboarding.name.placeholder')}
-                        className="w-full pl-12 pr-4 py-4 bg-white/90 border border-white/80 rounded-2xl text-neutral-700 text-lg placeholder:text-neutral-400 focus:outline-none focus:border-[#D2BC76] focus:ring-2 focus:ring-[#F1E3B6] transition-all shadow-inner-soft"
+                        className="w-full pl-12 pr-4 py-4 bg-white/90 border border-white/80 rounded-2xl text-neutral-700 text-lg placeholder:text-neutral-500 focus:outline-none focus:border-[#D2BC76] focus:ring-2 focus:ring-[#F1E3B6] transition-all shadow-inner-soft"
                         autoFocus
                     />
                 </div>
-                <p className="text-sm text-neutral-400 text-center">
+                <p className="text-sm text-neutral-500 text-center">
                     {t('onboarding.name.helper')}
                 </p>
             </Motion.div>
@@ -86,7 +86,7 @@ const ProfileFieldStep = ({
                 className="space-y-6"
             >
                 <div className="relative w-full">
-                    <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
+                    <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-500" />
                     <input
                         type="date"
                         value={value || ''}
@@ -104,7 +104,7 @@ const ProfileFieldStep = ({
                         {error}
                     </p>
                 )}
-                <p className="text-sm text-neutral-400 text-center">
+                <p className="text-sm text-neutral-500 text-center">
                     {t('onboarding.birthday.helper')}
                 </p>
             </Motion.div>
@@ -130,7 +130,7 @@ const ProfileFieldStep = ({
                                 className="w-full h-full object-cover"
                             />
                         ) : (
-                            <div className="w-full h-full flex items-center justify-center bg-neutral-100 text-neutral-400">
+                            <div className="w-full h-full flex items-center justify-center bg-neutral-100 text-neutral-500">
                                 <User className="w-12 h-12" />
                             </div>
                         )}
@@ -142,7 +142,7 @@ const ProfileFieldStep = ({
 
                 {/* Preset avatars grid */}
                 <div>
-                    <p className="text-xs text-neutral-400 uppercase tracking-wider mb-3 text-center">
+                    <p className="text-xs text-neutral-500 uppercase tracking-wider mb-3 text-center">
                         {t('onboarding.avatar.presetLabel')}
                     </p>
                     <div className="grid grid-cols-4 gap-3">
@@ -175,7 +175,7 @@ const ProfileFieldStep = ({
                 {/* Divider */}
                 <div className="flex items-center gap-4">
                     <div className="flex-1 h-px bg-neutral-200" />
-                    <span className="text-neutral-400 text-xs">{t('common.or')}</span>
+                    <span className="text-neutral-500 text-xs">{t('common.or')}</span>
                     <div className="flex-1 h-px bg-neutral-200" />
                 </div>
 
@@ -224,7 +224,7 @@ const ProfileFieldStep = ({
                 )}
 
                 {/* Note about changing later */}
-                <p className="text-xs text-neutral-400 text-center">
+                <p className="text-xs text-neutral-500 text-center">
                     {t('onboarding.avatar.changeLater')}
                 </p>
             </Motion.div>

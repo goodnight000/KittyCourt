@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import useAuthStore from '../../store/useAuthStore';
 import usePartnerStore from '../../store/usePartnerStore';
-import useCacheStore, { CACHE_KEYS, CACHE_TTL } from '../../store/useCacheStore';
+import useCacheStore, { CACHE_POLICY, cacheKey } from '../../store/useCacheStore';
 import api from '../../services/api';
 
 const getDefaultHolidays = (year, t) => [
@@ -46,6 +46,24 @@ const getChineseHolidays = (year, t) => [
 ];
 
 const getEventKey = (event) => `${event?.title || ''}::${event?.date || ''}`;
+
+const normalizeEventsResponse = (payload) => {
+    if (Array.isArray(payload)) return payload;
+    if (Array.isArray(payload?.data)) return payload.data;
+    return [];
+};
+
+const dedupeEvents = (events) => {
+    if (!Array.isArray(events)) return [];
+    const seen = new Set();
+    return events.filter((event) => {
+        const id = event?.id;
+        if (!id) return true;
+        if (seen.has(id)) return false;
+        seen.add(id);
+        return true;
+    });
+};
 
 const getPersonalEvents = (profile, connectedPartner, myId, partnerId, myDisplayName, partnerDisplayName, t) => {
     const personalEvents = [];
@@ -148,9 +166,9 @@ export default function useCalendarEvents(t, language = 'en') {
         [connectedPartner?.display_name, connectedPartner?.name, t]
     );
 
-    const cacheKey = useMemo(() => {
+    const cacheKeyValue = useMemo(() => {
         if (!myId) return null;
-        return `${CACHE_KEYS.CALENDAR_EVENTS}:${myId}:${partnerId || 'solo'}`;
+        return cacheKey.calendarEvents(myId, partnerId);
     }, [myId, partnerId]);
 
     const currentYear = new Date().getFullYear();
@@ -187,7 +205,7 @@ export default function useCalendarEvents(t, language = 'en') {
 
         return [
             ...dbEvents,
-            ...newDefaults.map(d => ({ ...d, id: `default_${d.title}` })),
+            ...newDefaults.map(d => ({ ...d, id: `default_${d.title}_${d.date}` })),
             ...personalEvents
         ];
     }, [dbEvents, defaultEvents, personalEvents]);
@@ -204,18 +222,6 @@ export default function useCalendarEvents(t, language = 'en') {
             && typeof window !== 'undefined'
             && window.__navDebugTarget === '/calendar';
 
-        if (!force && cacheKey) {
-            const cached = useCacheStore.getState().getCached(cacheKey);
-            if (cached !== null) {
-                if (shouldLog) {
-                    console.log('[calendar] cache hit for events');
-                }
-                setDbEvents(Array.isArray(cached) ? cached : []);
-                setIsLoading(false);
-                return;
-            }
-        }
-
         try {
             setIsLoading(true);
             if (shouldLog) {
@@ -223,16 +229,43 @@ export default function useCalendarEvents(t, language = 'en') {
                 fetchTimerRef.current = label;
                 console.time(label);
             }
-            const response = await api.get('/calendar/events');
+            const cacheStore = useCacheStore.getState();
+            if (!cacheKeyValue) {
+                const response = await api.get('/calendar/events');
+                const nextDbEvents = dedupeEvents(normalizeEventsResponse(response.data));
+                if (isMounted.current) {
+                    setDbEvents(nextDbEvents);
+                }
+                return;
+            }
+
+            if (force) {
+                const fresh = await cacheStore.fetchAndCache(cacheKeyValue, async () => {
+                    const response = await api.get('/calendar/events');
+                    return dedupeEvents(normalizeEventsResponse(response.data));
+                }, CACHE_POLICY.CALENDAR_EVENTS);
+                if (!isMounted.current) return;
+                setDbEvents(dedupeEvents(fresh));
+                return;
+            }
+
+            const { data, promise } = await cacheStore.getOrFetch({
+                key: cacheKeyValue,
+                fetcher: async () => {
+                    const response = await api.get('/calendar/events');
+                    return dedupeEvents(normalizeEventsResponse(response.data));
+                },
+                ...CACHE_POLICY.CALENDAR_EVENTS,
+            });
 
             if (!isMounted.current) return;
+            setDbEvents(dedupeEvents(normalizeEventsResponse(data)));
 
-            const nextDbEvents = Array.isArray(response.data) ? response.data : [];
-            if (isMounted.current) {
-                setDbEvents(nextDbEvents);
-                if (cacheKey) {
-                    useCacheStore.getState().setCache(cacheKey, nextDbEvents, CACHE_TTL.CALENDAR_EVENTS);
-                }
+            if (promise) {
+                promise.then((fresh) => {
+                    if (!isMounted.current) return;
+                    setDbEvents(dedupeEvents(normalizeEventsResponse(fresh)));
+                }).catch(() => {});
             }
         } catch (error) {
             console.error('Failed to fetch events:', error);
@@ -247,7 +280,7 @@ export default function useCalendarEvents(t, language = 'en') {
                 setIsLoading(false);
             }
         }
-    }, [cacheKey, myId]);
+    }, [cacheKeyValue, myId]);
 
     // Fetch on mount and when identity changes
     useEffect(() => {
@@ -265,15 +298,33 @@ export default function useCalendarEvents(t, language = 'en') {
         };
     }, [fetchEvents, myId]);
 
+    useEffect(() => {
+        if (!cacheKeyValue) return;
+        const cacheStore = useCacheStore.getState();
+        const unsubscribe = cacheStore.subscribeKey(cacheKeyValue, (next) => {
+            if (!isMounted.current) return;
+            setDbEvents(dedupeEvents(normalizeEventsResponse(next)));
+        });
+        return unsubscribe;
+    }, [cacheKeyValue]);
+
     const addEvent = useCallback(async (eventData) => {
         try {
             const response = await api.post('/calendar/events', {
                 ...eventData
             });
             setDbEvents((prev) => {
+                if (prev.some((event) => event?.id === response.data?.id)) {
+                    return prev;
+                }
                 const next = [...prev, response.data];
-                if (cacheKey) {
-                    useCacheStore.getState().setCache(cacheKey, next, CACHE_TTL.CALENDAR_EVENTS);
+                if (cacheKeyValue) {
+                    useCacheStore.getState().setCache(
+                        cacheKeyValue,
+                        next,
+                        CACHE_POLICY.CALENDAR_EVENTS.ttlMs,
+                        CACHE_POLICY.CALENDAR_EVENTS.staleMs
+                    );
                 }
                 return next;
             });
@@ -282,15 +333,20 @@ export default function useCalendarEvents(t, language = 'en') {
             console.error('Failed to add event:', error);
             return { success: false, error };
         }
-    }, [cacheKey]);
+    }, [cacheKeyValue]);
 
     const deleteEvent = useCallback(async (eventId) => {
         try {
             await api.delete(`/calendar/events/${eventId}`);
             setDbEvents((prev) => {
                 const next = prev.filter(e => e.id !== eventId);
-                if (cacheKey) {
-                    useCacheStore.getState().setCache(cacheKey, next, CACHE_TTL.CALENDAR_EVENTS);
+                if (cacheKeyValue) {
+                    useCacheStore.getState().setCache(
+                        cacheKeyValue,
+                        next,
+                        CACHE_POLICY.CALENDAR_EVENTS.ttlMs,
+                        CACHE_POLICY.CALENDAR_EVENTS.staleMs
+                    );
                 }
                 return next;
             });
@@ -299,7 +355,7 @@ export default function useCalendarEvents(t, language = 'en') {
             console.error('Failed to delete event:', error);
             return { success: false, error };
         }
-    }, [cacheKey]);
+    }, [cacheKeyValue]);
 
     return {
         events,

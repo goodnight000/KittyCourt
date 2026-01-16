@@ -40,6 +40,17 @@ class ResolutionService {
             throw new Error('Not in RESOLUTION phase');
         }
 
+        // WS-H-003: Validate resolution ID before processing
+        if (!resolutionId || typeof resolutionId !== 'string') {
+            throw new Error('Invalid resolution ID');
+        }
+
+        // Validate the resolution ID exists in the session
+        const resolution = this.findResolutionById(session, resolutionId);
+        if (!resolution) {
+            throw new Error('Resolution not found');
+        }
+
         const isCreator = session.creatorId === userId;
 
         // Handle mismatch state separately (uses distributed locking)
@@ -56,6 +67,10 @@ class ResolutionService {
 
         const bothPicked = session.userAResolutionPick && session.userBResolutionPick;
         const sameChoice = bothPicked && session.userAResolutionPick === session.userBResolutionPick;
+
+        if (sameChoice && !session.finalResolution) {
+            session.finalResolution = resolution;
+        }
 
         return {
             bothPicked,

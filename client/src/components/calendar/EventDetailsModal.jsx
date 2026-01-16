@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion as Motion } from 'framer-motion';
 import { X, Plus, Trash2, Wand2, Check } from 'lucide-react';
 import { useI18n } from '../../i18n';
+import { parseLocalDate } from '../../utils/dateFormatters';
 import api from '../../services/api';
 
 /**
@@ -61,6 +62,7 @@ const EventDetailsModal = ({ events, onDelete, onClose, onAddMore, onPlanClick, 
                 if (cancelled) return;
                 setPlannedEventKeys(new Set(Object.keys(exists).filter((k) => exists[k])));
             } catch {
+                // Intentionally ignored: plan check is optional
                 if (cancelled) return;
                 setPlannedEventKeys(new Set());
             }
@@ -85,7 +87,7 @@ const EventDetailsModal = ({ events, onDelete, onClose, onAddMore, onPlanClick, 
 
     // Parse date string as local date to prevent timezone shift
     const dateStr = events[0].date;
-    const eventDate = dateStr?.includes('T') ? new Date(dateStr) : new Date(dateStr + 'T00:00:00');
+    const eventDate = parseLocalDate(dateStr) || new Date();
     const eventCountLabel = events.length === 1
         ? t('calendar.details.eventsOnDayOne')
         : t('calendar.details.eventsOnDayOther', { count: events.length });
@@ -114,7 +116,7 @@ const EventDetailsModal = ({ events, onDelete, onClose, onAddMore, onPlanClick, 
                             {eventCountLabel}
                         </p>
                     </div>
-                    <button onClick={onClose} className="w-8 h-8 bg-neutral-100 rounded-full flex items-center justify-center">
+                    <button onClick={onClose} aria-label="Close modal" className="w-8 h-8 bg-neutral-100 rounded-full flex items-center justify-center">
                         <X className="w-4 h-4 text-neutral-500" />
                     </button>
                 </div>
@@ -174,7 +176,7 @@ const EventDetailsModal = ({ events, onDelete, onClose, onAddMore, onPlanClick, 
                                         {event.notes && (
                                             <p className="text-neutral-500 text-xs mt-2">{event.notes}</p>
                                         )}
-                                        <p className="text-neutral-400 text-xs mt-2">
+                                        <p className="text-neutral-500 text-xs mt-2">
                                             {event.isDefault
                                                 ? t('calendar.details.defaultHoliday')
                                                 : event.isPersonal
@@ -185,6 +187,7 @@ const EventDetailsModal = ({ events, onDelete, onClose, onAddMore, onPlanClick, 
                                     {canDelete && (
                                         <button
                                             onClick={() => onDelete(event.id)}
+                                            aria-label="Delete event"
                                             className="w-8 h-8 bg-red-50 rounded-full flex items-center justify-center text-red-400 hover:bg-red-100 transition-colors"
                                         >
                                             <Trash2 className="w-4 h-4" />

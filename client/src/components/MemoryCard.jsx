@@ -48,7 +48,7 @@ const MemoryCard = ({
             }`}
           />
         ) : (
-          <div className="flex h-full w-full flex-col items-center justify-center bg-neutral-100 text-neutral-400">
+          <div className="flex h-full w-full flex-col items-center justify-center bg-neutral-100 text-neutral-500">
             <ImageOff className="w-6 h-6" />
             <span className="text-xs mt-2">{t('memories.card.processing')}</span>
           </div>

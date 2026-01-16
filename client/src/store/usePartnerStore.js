@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { quotaSafeLocalStorage } from './quotaSafeStorage'
-import useAuthStore from './useAuthStore'
+import useCacheStore from './useCacheStore'
 import {
   supabase,
   findByPartnerCode,
@@ -20,6 +20,8 @@ import {
 } from '../services/supabase'
 import { eventBus, EVENTS } from '../lib/eventBus'
 
+const isOnline = () => typeof navigator !== 'undefined' && navigator.onLine
+
 const initialState = {
   partner: null,
   pendingRequests: [],
@@ -28,15 +30,21 @@ const initialState = {
   disconnectStatus: null,
   disconnectStatusLoaded: false,
   _profileSubscription: null,
-  _requestsSubscription: null
+  _requestsSubscription: null,
+  _authUserId: null,
+  _authProfile: null
 }
+
+let eventCleanupFns = []
 
 const usePartnerStore = create(
   persist(
     (set, get) => {
       const syncFromProfile = ({ profile, partner, requests, sent }) => {
         const previousHasPartner = get().hasPartner
+        const previousPartnerId = get().partner?.id || null
         const hasPartnerNow = !!profile?.partner_id
+        const nextPartnerId = profile?.partner_id || null
         set({
           partner: partner || null,
           pendingRequests: requests || [],
@@ -44,6 +52,12 @@ const usePartnerStore = create(
           hasPartner: hasPartnerNow,
           ...(hasPartnerNow ? { disconnectStatus: null, disconnectStatusLoaded: true } : {})
         })
+
+        if (previousPartnerId && previousPartnerId !== nextPartnerId) {
+          const cacheStore = useCacheStore.getState()
+          cacheStore.clearAll()
+          cacheStore.clearRegistry()
+        }
 
         if (!previousHasPartner && profile?.partner_id) {
           eventBus.emit(EVENTS.PARTNER_CONNECTED, {
@@ -55,27 +69,50 @@ const usePartnerStore = create(
         }
       }
 
-      eventBus.on(EVENTS.AUTH_LOGIN, (payload) => {
-        syncFromProfile(payload || {})
-        get().refreshDisconnectStatus()
-        get().setupRealtimeSubscriptions()
-      })
-
-      eventBus.on(EVENTS.PROFILE_UPDATED, (payload) => {
-        if (payload?.profile || payload?.partner || payload?.requests || payload?.sent) {
-          syncFromProfile(payload)
-        }
-      })
-
-      eventBus.on(EVENTS.AUTH_LOGOUT, () => {
-        get().reset()
-      })
-
       return {
         ...initialState,
         syncFromProfile,
+        init: () => {
+          eventCleanupFns.forEach(fn => fn())
+          eventCleanupFns = []
+
+          const unsubLogin = eventBus.on(EVENTS.AUTH_LOGIN, (payload) => {
+            set({
+              _authUserId: payload?.userId || null,
+              _authProfile: payload?.profile || null
+            })
+            syncFromProfile(payload || {})
+            get().refreshDisconnectStatus()
+            get().setupRealtimeSubscriptions()
+          })
+
+          const unsubProfile = eventBus.on(EVENTS.PROFILE_UPDATED, (payload) => {
+            if (payload?.profile) {
+              set({ _authProfile: payload.profile })
+            }
+            if (payload?.userId && !get()._authUserId) {
+              set({ _authUserId: payload.userId })
+            }
+            if (payload?.profile || payload?.partner || payload?.requests || payload?.sent) {
+              syncFromProfile(payload)
+            }
+          })
+
+          const unsubLogout = eventBus.on(EVENTS.AUTH_LOGOUT, () => {
+            get().reset()
+          })
+
+          eventCleanupFns.push(unsubLogin, unsubProfile, unsubLogout)
+        },
+
+        cleanup: () => {
+          eventCleanupFns.forEach(fn => fn())
+          eventCleanupFns = []
+          get().cleanupRealtimeSubscriptions()
+        },
 
         refreshDisconnectStatus: async () => {
+          if (!isOnline()) return
           try {
             const { data, error } = await supabaseGetDisconnectStatus()
             if (error) {
@@ -99,10 +136,10 @@ const usePartnerStore = create(
         },
 
         sendPartnerRequestByCode: async (partnerCode) => {
-          const { user, profile } = useAuthStore.getState()
-          if (!user) return { error: 'Not authenticated' }
+          const { _authUserId, _authProfile } = get()
+          if (!_authUserId) return { error: 'Not authenticated' }
 
-          if (profile?.partner_code === partnerCode) {
+          if (_authProfile?.partner_code === partnerCode) {
             return { error: "You can't connect with yourself! 😹" }
           }
 
@@ -113,7 +150,7 @@ const usePartnerStore = create(
 
           const { data: targetUser, error: profileError } = await getProfile(targetUserLookup.id)
           if (profileError) {
-            console.log('[Partner] Cannot view target profile (RLS restriction) - proceeding with request')
+            if (import.meta.env.DEV) console.log('[Partner] Cannot view target profile (RLS restriction) - proceeding with request')
           }
 
           if (targetUser?.partner_id) {
@@ -130,6 +167,7 @@ const usePartnerStore = create(
         },
 
         refreshPendingRequests: async () => {
+          if (!isOnline()) return
           try {
             const { data: requests } = await getPendingRequests()
             const { data: sent } = await getSentRequest()
@@ -143,7 +181,7 @@ const usePartnerStore = create(
         },
 
         acceptRequest: async (requestId, anniversaryDate = null) => {
-          const { user } = useAuthStore.getState()
+          const { _authUserId } = get()
           const { data: profile, error } = await acceptPartnerRequest(requestId, anniversaryDate)
           if (error) {
             return { error }
@@ -151,21 +189,20 @@ const usePartnerStore = create(
 
           const { data: partner } = await getPartnerProfile()
 
-          set({
-            partner,
-            hasPartner: true,
-            pendingRequests: [],
-            sentRequest: null
-          })
+          if (profile) {
+            set({ _authProfile: profile })
+            syncFromProfile({ profile, partner, requests: [], sent: null })
 
-          if (profile && user?.id) {
-            useAuthStore.getState().setProfile(profile)
-            eventBus.emit(EVENTS.PARTNER_CONNECTED, {
-              userId: user.id,
-              partnerId: profile.partner_id,
-              partnerProfile: partner,
-              anniversary_date: profile.anniversary_date
-            })
+            if (_authUserId) {
+              eventBus.emit(EVENTS.PROFILE_UPDATED, {
+                userId: _authUserId,
+                profile,
+                partner,
+                requests: [],
+                sent: null,
+                source: 'partner'
+              })
+            }
           }
 
           return { data: profile }
@@ -215,11 +252,26 @@ const usePartnerStore = create(
               disconnectStatusLoaded: false
             })
 
-            // Refresh the auth store profile to reflect partner change
-            await useAuthStore.getState().refreshProfile?.()
             await get().refreshDisconnectStatus?.()
 
-            console.log('[Partner] Disconnected successfully')
+            const userId = get()._authUserId
+            if (userId) {
+              const { data: profile } = await getProfile(userId)
+              if (profile) {
+                set({ _authProfile: profile })
+                syncFromProfile({ profile, partner: null, requests: [], sent: null })
+                eventBus.emit(EVENTS.PROFILE_UPDATED, {
+                  userId,
+                  profile,
+                  partner: null,
+                  requests: [],
+                  sent: null,
+                  source: 'partner'
+                })
+              }
+            }
+
+            if (import.meta.env.DEV) console.log('[Partner] Disconnected successfully')
             return { success: true }
           } catch (error) {
             console.error('[Partner] Disconnect error:', error)
@@ -232,11 +284,11 @@ const usePartnerStore = create(
 
           try {
             if (_profileSubscription) {
-              console.log('[Partner] Unsubscribing from profile changes')
+              if (import.meta.env.DEV) console.log('[Partner] Unsubscribing from profile changes')
               supabase.removeChannel(_profileSubscription)
             }
             if (_requestsSubscription) {
-              console.log('[Partner] Unsubscribing from partner requests')
+              if (import.meta.env.DEV) console.log('[Partner] Unsubscribing from partner requests')
               supabase.removeChannel(_requestsSubscription)
             }
           } catch (error) {
@@ -250,31 +302,58 @@ const usePartnerStore = create(
         },
 
         setupRealtimeSubscriptions: () => {
-          const { user } = useAuthStore.getState()
-          if (!user) return null
+          const userId = get()._authUserId
+          if (!userId) return null
 
-          console.log('[Partner] Setting up realtime subscriptions for user:', user.id)
+          if (import.meta.env.DEV) console.log('[Partner] Setting up realtime subscriptions for user:', userId)
           get().cleanupRealtimeSubscriptions()
 
           try {
-            const profileSub = subscribeToProfileChanges(user.id, (payload) => {
-              console.log('[Partner] Profile changed:', payload)
+            const profileSub = subscribeToProfileChanges(userId, async (payload) => {
+              if (import.meta.env.DEV) console.log('[Partner] Profile changed:', payload)
               const newProfile = payload.new
+              if (!newProfile) return
 
-              if (newProfile?.partner_id && !get().hasPartner) {
-                console.log('[Partner] Partner connected! Refreshing profile...')
-                useAuthStore.getState().refreshProfile()
+              const currentPartnerId = get().partner?.id || null
+              const nextPartnerId = newProfile?.partner_id || null
+              let partner = get().partner || null
+
+              if (nextPartnerId && currentPartnerId !== nextPartnerId) {
+                const { data: partnerProfile } = await getPartnerProfile()
+                if (partnerProfile) {
+                  partner = partnerProfile
+                }
               }
 
+              if (!nextPartnerId) {
+                partner = null
+              }
+
+              set({ _authProfile: newProfile })
+              syncFromProfile({
+                profile: newProfile,
+                partner,
+                requests: get().pendingRequests,
+                sent: get().sentRequest
+              })
+
+              eventBus.emit(EVENTS.PROFILE_UPDATED, {
+                userId,
+                profile: newProfile,
+                partner,
+                requests: get().pendingRequests,
+                sent: get().sentRequest,
+                source: 'partner'
+              })
+
               if (!newProfile?.partner_id && get().hasPartner) {
-                console.log('[Partner] Partner disconnected! Refreshing profile...')
-                useAuthStore.getState().refreshProfile()
+                if (import.meta.env.DEV) console.log('[Partner] Partner disconnected!')
                 get().refreshDisconnectStatus()
               }
             })
 
-            const requestsSub = subscribeToPartnerRequests(user.id, () => {
-              console.log('[Partner] Partner request changed')
+            const requestsSub = subscribeToPartnerRequests(userId, () => {
+              if (import.meta.env.DEV) console.log('[Partner] Partner request changed')
               get().refreshPendingRequests()
             })
 
@@ -283,7 +362,7 @@ const usePartnerStore = create(
               _requestsSubscription: requestsSub
             })
 
-            console.log('[Partner] Realtime subscriptions established')
+            if (import.meta.env.DEV) console.log('[Partner] Realtime subscriptions established')
             return { profileSub, requestsSub }
           } catch (error) {
             console.error('[Partner] Error setting up subscriptions:', error)

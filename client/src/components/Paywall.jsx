@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Crown, Heart, Check, Users, Zap, Gavel, Wand2, ChevronRight, Clock, Star, RotateCcw, Brain } from 'lucide-react';
 import useSubscriptionStore from '../store/useSubscriptionStore';
+import usePartnerStore from '../store/usePartnerStore';
+import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
 import { useI18n } from '../i18n';
 
 /**
@@ -17,15 +19,103 @@ import { useI18n } from '../i18n';
  * - Contrasting CTA color for attention
  * - Specific social proof with names
  */
+const isActiveGold = (profile) => {
+    if (!profile || profile.subscription_tier !== 'pause_gold') return false;
+    if (!profile.subscription_expires_at) return true;
+    const expiresAt = new Date(profile.subscription_expires_at);
+    return !Number.isNaN(expiresAt.valueOf()) && expiresAt >= new Date();
+};
+
 const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
-    const { purchaseGold, restorePurchases, isLoading, trialEligible } = useSubscriptionStore();
+    const { purchaseGold, restorePurchases, isLoading, trialEligible, isGold, checkEntitlement } = useSubscriptionStore();
+    const { partner } = usePartnerStore();
     const [restoring, setRestoring] = useState(false);
     const [error, setError] = useState(null);
     const [selectedPlan, setSelectedPlan] = useState('yearly');
     const { t } = useI18n();
+    const partnerHasGold = isActiveGold(partner);
+    const purchaseBlocked = partnerHasGold && !isGold;
+    const prefersReducedMotion = usePrefersReducedMotion();
+
+    // Refs for focus management
+    const modalRef = useRef(null);
+    const previousActiveElement = useRef(null);
+    const closeButtonRef = useRef(null);
+
+    useEffect(() => {
+        if (!isOpen) return;
+        let cancelled = false;
+
+        const refreshStatus = async () => {
+            const gold = await checkEntitlement();
+            if (!cancelled && gold) {
+                onClose();
+            }
+        };
+
+        refreshStatus();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [isOpen, checkEntitlement, onClose]);
+
+    // Focus trapping and management
+    useEffect(() => {
+        if (!isOpen) return;
+
+        // Store the previously focused element
+        previousActiveElement.current = document.activeElement;
+
+        // Focus the close button when modal opens
+        const focusTimeout = setTimeout(() => {
+            closeButtonRef.current?.focus();
+        }, 100);
+
+        return () => {
+            clearTimeout(focusTimeout);
+            // Restore focus when modal closes
+            previousActiveElement.current?.focus();
+        };
+    }, [isOpen]);
+
+    // Focus trap handler
+    const handleKeyDown = useCallback((event) => {
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            onClose();
+            return;
+        }
+
+        if (event.key !== 'Tab' || !modalRef.current) return;
+
+        const focusableElements = modalRef.current.querySelectorAll(
+            'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        );
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+
+        if (event.shiftKey) {
+            // Shift + Tab: if on first element, go to last
+            if (document.activeElement === firstElement) {
+                event.preventDefault();
+                lastElement?.focus();
+            }
+        } else {
+            // Tab: if on last element, go to first
+            if (document.activeElement === lastElement) {
+                event.preventDefault();
+                firstElement?.focus();
+            }
+        }
+    }, [onClose]);
 
     const handlePurchase = async () => {
         setError(null);
+        if (purchaseBlocked) {
+            setError(t('paywall.partnerActive.error'));
+            return;
+        }
         const result = await purchaseGold(selectedPlan);
 
         if (result.success) {
@@ -38,6 +128,11 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
     const handleRestore = async () => {
         setRestoring(true);
         setError(null);
+        if (purchaseBlocked) {
+            setRestoring(false);
+            setError(t('paywall.partnerActive.error'));
+            return;
+        }
 
         const result = await restorePurchases();
         setRestoring(false);
@@ -99,35 +194,42 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
         'paywall.withoutGold.items.risk',
     ];
 
-    // Floating sparkle particles
-    const SparkleParticles = () => (
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-            {[...Array(12)].map((_, i) => (
-                <motion.div
-                    key={i}
-                    className="absolute"
-                    initial={{
-                        x: Math.random() * 100 + '%',
-                        y: '110%',
-                        opacity: 0,
-                        scale: 0.5,
-                    }}
-                    animate={{
-                        y: '-10%',
-                        opacity: [0, 1, 1, 0],
-                        scale: [0.5, 1, 0.8, 0.3],
-                    }}
-                    transition={{
-                        duration: 4 + Math.random() * 3,
-                        repeat: Infinity,
-                        delay: Math.random() * 4,
-                        ease: 'easeOut',
-                    }}
-                >
-                </motion.div>
-            ))}
-        </div>
-    );
+    // Floating sparkle particles - respects reduced motion preference
+    const SparkleParticles = () => {
+        // Don't render animated particles if user prefers reduced motion
+        if (prefersReducedMotion) {
+            return null;
+        }
+
+        return (
+            <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                {[...Array(12)].map((_, i) => (
+                    <motion.div
+                        key={i}
+                        className="absolute"
+                        initial={{
+                            x: Math.random() * 100 + '%',
+                            y: '110%',
+                            opacity: 0,
+                            scale: 0.5,
+                        }}
+                        animate={{
+                            y: '-10%',
+                            opacity: [0, 1, 1, 0],
+                            scale: [0.5, 1, 0.8, 0.3],
+                        }}
+                        transition={{
+                            duration: 4 + Math.random() * 3,
+                            repeat: Infinity,
+                            delay: Math.random() * 4,
+                            ease: 'easeOut',
+                        }}
+                    >
+                    </motion.div>
+                ))}
+            </div>
+        );
+    };
 
     const PaywallBackdrop = () => (
         <div className="absolute inset-0 pointer-events-none">
@@ -156,6 +258,7 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
         <AnimatePresence>
             {isOpen && (
                 <motion.div
+                    ref={modalRef}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -163,7 +266,21 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                     style={{
                         background: 'linear-gradient(180deg, #FFF9F0 0%, #F5EDE0 50%, #E8DCCB 100%)',
                     }}
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="paywall-title"
+                    onKeyDown={handleKeyDown}
                 >
+                    {/* Close button for accessibility */}
+                    <button
+                        ref={closeButtonRef}
+                        onClick={onClose}
+                        aria-label={t('common.close') || 'Close'}
+                        className="absolute top-4 right-4 z-20 w-10 h-10 flex items-center justify-center rounded-full bg-white/80 border border-neutral-200/70 shadow-soft hover:bg-white transition-colors"
+                    >
+                        <X className="w-5 h-5 text-neutral-600" />
+                    </button>
+
                     <PaywallBackdrop />
                     <SparkleParticles />
 
@@ -201,6 +318,7 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                                 </motion.div>
 
                                 <motion.h1
+                                    id="paywall-title"
                                     className="text-3xl font-bold text-court-brown mb-2 font-display"
                                     initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}
@@ -270,6 +388,24 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                                 </motion.div>
                             </div>
                         </motion.div>
+
+                        {purchaseBlocked && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.32 }}
+                                className="mt-2 mb-6"
+                            >
+                                <div className="rounded-2xl border border-emerald-200/70 bg-emerald-50/80 px-4 py-3 text-center shadow-soft">
+                                    <div className="text-sm font-bold text-emerald-800 font-display">
+                                        {t('paywall.partnerActive.title')}
+                                    </div>
+                                    <div className="text-xs text-emerald-700 mt-1">
+                                        {t('paywall.partnerActive.subtitle')}
+                                    </div>
+                                </div>
+                            </motion.div>
+                        )}
 
                         {/* Trigger Reason */}
                         {triggerReason && (
@@ -347,140 +483,141 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                         </motion.div>
 
                         {/* Pricing Plans */}
-                        <motion.div
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.55 }}
-                            className="mb-6 relative"
-                        >
-
-                            <h3 className="text-[11px] font-semibold text-court-brownLight uppercase tracking-[0.3em] mb-3 font-display">
-                                {t('paywall.plans.title')}
-                            </h3>
-                            <div className="space-y-3">
-                                {/* Yearly Plan - Recommended */}
-                                <motion.div
-                                    className="relative"
-                                    animate={{ scale: selectedPlan === 'yearly' ? 1 : 0.94 }}
-                                    transition={{ duration: 0.2, ease: 'easeOut' }}
-                                >
-                                    {/* Best Value Badge - Outside the button */}
-                                    <div
-                                        className="absolute -top-3 left-4 px-3 py-1 rounded-full text-[10px] font-bold text-amber-700 font-display z-20 border border-amber-200/70 bg-amber-100/80"
-                                        style={{
-                                            boxShadow: '0 2px 8px rgba(212, 175, 55, 0.25)',
-                                        }}
+                        {!purchaseBlocked && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.55 }}
+                                className="mb-6 relative"
+                            >
+                                <h3 className="text-[11px] font-semibold text-court-brownLight uppercase tracking-[0.3em] mb-3 font-display">
+                                    {t('paywall.plans.title')}
+                                </h3>
+                                <div className="space-y-3">
+                                    {/* Yearly Plan - Recommended */}
+                                    <motion.div
+                                        className="relative"
+                                        animate={{ scale: selectedPlan === 'yearly' ? 1 : 0.94 }}
+                                        transition={{ duration: 0.2, ease: 'easeOut' }}
                                     >
-                                        {t('paywall.plans.yearly.badge')}
-                                    </div>
-                                    <button
-                                        onClick={() => setSelectedPlan('yearly')}
-                                        className={`w-full p-4 pt-5 rounded-[28px] text-left transition-all duration-200 ease-out border relative overflow-hidden ${selectedPlan === 'yearly'
-                                            ? 'border-amber-300/80 bg-white shadow-soft-lg'
-                                            : 'border-white/80 bg-white/70 hover:border-amber-200/70'
-                                            }`}
-                                    >
-                                        <div className="absolute inset-x-6 top-0 h-0.5 bg-gradient-to-r from-transparent via-amber-200/70 to-transparent" />
-                                        <div className="flex items-center gap-3 relative z-10">
-                                            {/* Selection Circle */}
-                                            <div
-                                                className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center border-2 transition-all duration-200"
-                                                style={{
-                                                    borderColor: selectedPlan === 'yearly' ? '#C9A227' : '#D4C4A8',
-                                                    backgroundColor: selectedPlan === 'yearly' ? '#C9A227' : 'white',
-                                                }}
-                                            >
-                                                {selectedPlan === 'yearly' && (
-                                                    <Check className="w-4 h-4 text-white" strokeWidth={3} />
-                                                )}
-                                            </div>
-
-                                            {/* Plan Info */}
-                                            <div className="flex-1 flex items-center justify-between min-w-0">
-                                                <div>
-                                                    <p className="font-bold text-court-brown font-display">{t('paywall.plans.yearly.label')}</p>
-                                                    <p className="text-xs text-court-brownLight">
-                                                        {trialEligible
-                                                            ? t('paywall.plans.yearly.trialNote')
-                                                            : t('paywall.plans.yearly.billedNote')}
-                                                    </p>
-                                                </div>
-                                                <div className="text-right">
-                                                    <div className="flex items-baseline gap-1.5">
-                                                        <del className="text-sm text-court-brownLight/60 line-through">$11.99</del>
-                                                        <span className="text-2xl font-bold text-court-brown font-display">$9.17</span>
-                                                        <span className="text-sm text-court-brownLight">{t('paywall.plans.perMonth')}</span>
-                                                    </div>
-                                                    <p className="text-xs text-green-600 font-semibold">{t('paywall.plans.yearly.save')}</p>
-                                                </div>
-                                            </div>
+                                        {/* Best Value Badge - Outside the button */}
+                                        <div
+                                            className="absolute -top-3 left-4 px-3 py-1 rounded-full text-[10px] font-bold text-amber-700 font-display z-20 border border-amber-200/70 bg-amber-100/80"
+                                            style={{
+                                                boxShadow: '0 2px 8px rgba(212, 175, 55, 0.25)',
+                                            }}
+                                        >
+                                            {t('paywall.plans.yearly.badge')}
                                         </div>
-                                    </button>
-                                </motion.div>
-
-                                {/* Monthly Plan */}
-                                <motion.div
-                                    animate={{ scale: selectedPlan === 'monthly' ? 1 : 0.94 }}
-                                    transition={{ duration: 0.2, ease: 'easeOut' }}
-                                >
-                                    <button
-                                        onClick={() => setSelectedPlan('monthly')}
-                                        className={`w-full p-4 rounded-[28px] text-left transition-all duration-200 ease-out border relative overflow-hidden ${selectedPlan === 'monthly'
-                                            ? 'border-amber-300/80 bg-white shadow-soft-lg'
-                                            : 'border-white/80 bg-white/70 hover:border-amber-200/70'
-                                            }`}
-                                    >
-                                        <div className="absolute inset-x-6 top-0 h-0.5 bg-gradient-to-r from-transparent via-amber-200/70 to-transparent" />
-                                        <div className="flex items-center gap-3 relative z-10">
-                                            {/* Selection Circle */}
-                                            <div
-                                                className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center border-2 transition-all duration-200"
-                                                style={{
-                                                    borderColor: selectedPlan === 'monthly' ? '#C9A227' : '#D4C4A8',
-                                                    backgroundColor: selectedPlan === 'monthly' ? '#C9A227' : 'white',
-                                                }}
-                                            >
-                                                {selectedPlan === 'monthly' && (
-                                                    <Check className="w-4 h-4 text-white" strokeWidth={3} />
-                                                )}
-                                            </div>
-
-                                            {/* Plan Info */}
-                                            <div className="flex-1 flex items-center justify-between min-w-0">
-                                                <div>
-                                                    <p className="font-bold text-court-brown font-display">{t('paywall.plans.monthly.label')}</p>
-                                                    <p className="text-xs text-court-brownLight">
-                                                        {trialEligible
-                                                            ? t('paywall.plans.monthly.trialNote')
-                                                            : t('paywall.plans.monthly.billedNote')}
-                                                    </p>
+                                        <button
+                                            onClick={() => setSelectedPlan('yearly')}
+                                            className={`w-full p-4 pt-5 rounded-[28px] text-left transition-all duration-200 ease-out border relative overflow-hidden ${selectedPlan === 'yearly'
+                                                ? 'border-amber-300/80 bg-white shadow-soft-lg'
+                                                : 'border-white/80 bg-white/70 hover:border-amber-200/70'
+                                                }`}
+                                        >
+                                            <div className="absolute inset-x-6 top-0 h-0.5 bg-gradient-to-r from-transparent via-amber-200/70 to-transparent" />
+                                            <div className="flex items-center gap-3 relative z-10">
+                                                {/* Selection Circle */}
+                                                <div
+                                                    className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center border-2 transition-all duration-200"
+                                                    style={{
+                                                        borderColor: selectedPlan === 'yearly' ? '#C9A227' : '#D4C4A8',
+                                                        backgroundColor: selectedPlan === 'yearly' ? '#C9A227' : 'white',
+                                                    }}
+                                                >
+                                                    {selectedPlan === 'yearly' && (
+                                                        <Check className="w-4 h-4 text-white" strokeWidth={3} />
+                                                    )}
                                                 </div>
-                                                <div className="text-right">
-                                                    <div className="flex items-baseline gap-1">
-                                                        <span className="text-2xl font-bold text-court-brown font-display">$11.99</span>
-                                                        <span className="text-sm text-court-brownLight">{t('paywall.plans.perMonth')}</span>
+
+                                                {/* Plan Info */}
+                                                <div className="flex-1 flex items-center justify-between min-w-0">
+                                                    <div>
+                                                        <p className="font-bold text-court-brown font-display">{t('paywall.plans.yearly.label')}</p>
+                                                        <p className="text-xs text-court-brownLight">
+                                                            {trialEligible
+                                                                ? t('paywall.plans.yearly.trialNote')
+                                                                : t('paywall.plans.yearly.billedNote')}
+                                                        </p>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <div className="flex items-baseline gap-1.5">
+                                                            <del className="text-sm text-court-brownLight/60 line-through">$11.99</del>
+                                                            <span className="text-2xl font-bold text-court-brown font-display">$9.17</span>
+                                                            <span className="text-sm text-court-brownLight">{t('paywall.plans.perMonth')}</span>
+                                                        </div>
+                                                        <p className="text-xs text-green-600 font-semibold">{t('paywall.plans.yearly.save')}</p>
                                                     </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    </button>
-                                </motion.div>
-                            </div>
+                                        </button>
+                                    </motion.div>
 
-                            {/* Price context + Cancel anytime */}
-                            <div className="text-center mt-3">
-                                <p className="text-xs text-court-brownLight">
-                                    {selectedPlan === 'yearly'
-                                        ? t('paywall.pricingNote.yearly')
-                                        : t('paywall.pricingNote.monthly')
-                                    }
-                                </p>
-                                <p className="text-xs text-court-brownLight/70 mt-1 flex items-center justify-center gap-1">
-                                    <Check className="w-3 h-3" />
-                                    {t('paywall.cancelAnytime')}
-                                </p>
-                            </div>
-                        </motion.div>
+                                    {/* Monthly Plan */}
+                                    <motion.div
+                                        animate={{ scale: selectedPlan === 'monthly' ? 1 : 0.94 }}
+                                        transition={{ duration: 0.2, ease: 'easeOut' }}
+                                    >
+                                        <button
+                                            onClick={() => setSelectedPlan('monthly')}
+                                            className={`w-full p-4 rounded-[28px] text-left transition-all duration-200 ease-out border relative overflow-hidden ${selectedPlan === 'monthly'
+                                                ? 'border-amber-300/80 bg-white shadow-soft-lg'
+                                                : 'border-white/80 bg-white/70 hover:border-amber-200/70'
+                                                }`}
+                                        >
+                                            <div className="absolute inset-x-6 top-0 h-0.5 bg-gradient-to-r from-transparent via-amber-200/70 to-transparent" />
+                                            <div className="flex items-center gap-3 relative z-10">
+                                                {/* Selection Circle */}
+                                                <div
+                                                    className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center border-2 transition-all duration-200"
+                                                    style={{
+                                                        borderColor: selectedPlan === 'monthly' ? '#C9A227' : '#D4C4A8',
+                                                        backgroundColor: selectedPlan === 'monthly' ? '#C9A227' : 'white',
+                                                    }}
+                                                >
+                                                    {selectedPlan === 'monthly' && (
+                                                        <Check className="w-4 h-4 text-white" strokeWidth={3} />
+                                                    )}
+                                                </div>
+
+                                                {/* Plan Info */}
+                                                <div className="flex-1 flex items-center justify-between min-w-0">
+                                                    <div>
+                                                        <p className="font-bold text-court-brown font-display">{t('paywall.plans.monthly.label')}</p>
+                                                        <p className="text-xs text-court-brownLight">
+                                                            {trialEligible
+                                                                ? t('paywall.plans.monthly.trialNote')
+                                                                : t('paywall.plans.monthly.billedNote')}
+                                                        </p>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <div className="flex items-baseline gap-1">
+                                                            <span className="text-2xl font-bold text-court-brown font-display">$11.99</span>
+                                                            <span className="text-sm text-court-brownLight">{t('paywall.plans.perMonth')}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </button>
+                                    </motion.div>
+                                </div>
+
+                                {/* Price context + Cancel anytime */}
+                                <div className="text-center mt-3">
+                                    <p className="text-xs text-court-brownLight">
+                                        {selectedPlan === 'yearly'
+                                            ? t('paywall.pricingNote.yearly')
+                                            : t('paywall.pricingNote.monthly')
+                                        }
+                                    </p>
+                                    <p className="text-xs text-court-brownLight/70 mt-1 flex items-center justify-center gap-1">
+                                        <Check className="w-3 h-3" />
+                                        {t('paywall.cancelAnytime')}
+                                    </p>
+                                </div>
+                            </motion.div>
+                        )}
 
                         {/* Social Proof - Specific Names */}
                         <motion.div
@@ -524,7 +661,7 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                         {/* Restore Purchases */}
                         <button
                             onClick={handleRestore}
-                            disabled={isLoading || restoring}
+                            disabled={isLoading || restoring || purchaseBlocked}
                             className="w-full py-2 text-xs font-semibold text-court-brownLight hover:text-court-brown transition-colors disabled:opacity-50 mb-2"
                         >
                             {restoring ? t('paywall.restore.restoring') : t('paywall.restore.cta')}
@@ -552,45 +689,62 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                     >
                         {/* Safe area padding for iOS */}
                         <div className="safe-bottom">
-                            <motion.button
-                                onClick={handlePurchase}
-                                disabled={isLoading}
-                                whileHover={{ scale: 1.01 }}
-                                whileTap={{ scale: 0.98 }}
-                                className="w-full rounded-[28px] border border-amber-200/80 bg-white/90 px-4 py-4 text-left disabled:opacity-50 transition-all font-display relative overflow-hidden shadow-soft-lg"
-                            >
-                                <div className="absolute inset-x-6 top-0 h-0.5 bg-gradient-to-r from-transparent via-amber-200/80 to-transparent" />
-                                <div className="absolute -top-8 -right-6 h-16 w-16 rounded-full bg-amber-200/35 blur-2xl" />
-                                {isLoading ? (
-                                    <div className="relative flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-2xl border border-amber-200/70 bg-amber-100/70 flex items-center justify-center">
-                                            <div className="w-5 h-5 border-2 border-amber-300/60 border-t-amber-700 rounded-full animate-spin" />
-                                        </div>
-                                        <div className="flex-1">
-                                            <div className="text-sm font-bold text-neutral-800">{t('paywall.cta.processingTitle')}</div>
-                                            <div className="text-xs text-neutral-500">{t('paywall.cta.processingSubtitle')}</div>
-                                        </div>
-                                    </div>
-                                ) : (
+                            {purchaseBlocked ? (
+                                <div className="w-full rounded-[28px] border border-emerald-200/70 bg-emerald-50/90 px-4 py-4 text-left font-display relative overflow-hidden shadow-soft-lg">
+                                    <div className="absolute inset-x-6 top-0 h-0.5 bg-gradient-to-r from-transparent via-emerald-200/80 to-transparent" />
+                                    <div className="absolute -top-8 -right-6 h-16 w-16 rounded-full bg-emerald-200/35 blur-2xl" />
                                     <div className="relative flex items-center gap-3">
                                         <div className="flex-1">
-                                            <div className="text-sm font-bold text-neutral-800">
-                                                {trialEligible ? t('paywall.cta.trial') : t('paywall.cta.subscribe')}
+                                            <div className="text-sm font-bold text-emerald-800">
+                                                {t('paywall.partnerActive.title')}
                                             </div>
-                                            <div className="text-xs text-neutral-500">
-                                                {t('paywall.cta.subtitle')}
+                                            <div className="text-xs text-emerald-700">
+                                                {t('paywall.partnerActive.subtitle')}
                                             </div>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <div className="rounded-full border border-amber-200/70 bg-amber-100/70 px-3 py-1 text-xs font-bold text-amber-700">
-                                                {t('paywall.cta.price', { price: selectedPlan === 'yearly' ? '$9.17' : '$11.99' })}
-                                            </div>
-                                            <ChevronRight className="w-5 h-5 text-amber-600" />
                                         </div>
                                     </div>
-                                )}
-                            </motion.button>
-                            {trialEligible && (
+                                </div>
+                            ) : (
+                                <motion.button
+                                    onClick={handlePurchase}
+                                    disabled={isLoading}
+                                    whileHover={{ scale: 1.01 }}
+                                    whileTap={{ scale: 0.98 }}
+                                    className="w-full rounded-[28px] border border-amber-200/80 bg-white/90 px-4 py-4 text-left disabled:opacity-50 transition-all font-display relative overflow-hidden shadow-soft-lg"
+                                >
+                                    <div className="absolute inset-x-6 top-0 h-0.5 bg-gradient-to-r from-transparent via-amber-200/80 to-transparent" />
+                                    <div className="absolute -top-8 -right-6 h-16 w-16 rounded-full bg-amber-200/35 blur-2xl" />
+                                    {isLoading ? (
+                                        <div className="relative flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-2xl border border-amber-200/70 bg-amber-100/70 flex items-center justify-center">
+                                                <div className="w-5 h-5 border-2 border-amber-300/60 border-t-amber-700 rounded-full animate-spin" />
+                                            </div>
+                                            <div className="flex-1">
+                                                <div className="text-sm font-bold text-neutral-800">{t('paywall.cta.processingTitle')}</div>
+                                                <div className="text-xs text-neutral-500">{t('paywall.cta.processingSubtitle')}</div>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="relative flex items-center gap-3">
+                                            <div className="flex-1">
+                                                <div className="text-sm font-bold text-neutral-800">
+                                                    {trialEligible ? t('paywall.cta.trial') : t('paywall.cta.subscribe')}
+                                                </div>
+                                                <div className="text-xs text-neutral-500">
+                                                    {t('paywall.cta.subtitle')}
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <div className="rounded-full border border-amber-200/70 bg-amber-100/70 px-3 py-1 text-xs font-bold text-amber-700">
+                                                    {t('paywall.cta.price', { price: selectedPlan === 'yearly' ? '$9.17' : '$11.99' })}
+                                                </div>
+                                                <ChevronRight className="w-5 h-5 text-amber-600" />
+                                            </div>
+                                        </div>
+                                    )}
+                                </motion.button>
+                            )}
+                            {trialEligible && !purchaseBlocked && (
                                 <p className="text-xs text-court-brownLight/70 text-center mt-2">
                                     {t('paywall.trialFootnote')}
                                 </p>

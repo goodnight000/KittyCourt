@@ -93,7 +93,7 @@ const CompleteStep = ({
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.6 }}
-                    className="text-xs text-neutral-400"
+                    className="text-xs text-neutral-500"
                 >
                     {t('onboarding.complete.connectNote')}
                 </Motion.p>
@@ -119,11 +119,11 @@ const CompleteStep = ({
 
             <div className="flex flex-wrap justify-center gap-3">
                 <div className="px-4 py-2 bg-white/80 rounded-xl shadow-soft border border-white/80">
-                    <p className="text-xs text-neutral-400">{t('onboarding.complete.summaryName')}</p>
+                    <p className="text-xs text-neutral-500">{t('onboarding.complete.summaryName')}</p>
                     <p className="font-bold text-neutral-700">{onboardingData.displayName}</p>
                 </div>
                 <div className="px-4 py-2 bg-white/80 rounded-xl shadow-soft border border-white/80">
-                    <p className="text-xs text-neutral-400">{t('onboarding.complete.summaryLoveLanguage')}</p>
+                    <p className="text-xs text-neutral-500">{t('onboarding.complete.summaryLoveLanguage')}</p>
                     <p className="font-bold text-neutral-700">
                         {loveLanguageOption?.emoji}{' '}
                         {loveLanguageOption ? t(loveLanguageOption.labelKey) : (onboardingData.loveLanguage || t('common.unknown'))}

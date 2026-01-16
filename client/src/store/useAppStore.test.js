@@ -11,18 +11,31 @@ vi.mock('../services/api', () => ({
 vi.mock('./useCacheStore', () => ({
     default: {
         getState: () => ({
-            getCached: vi.fn(() => null),
+            // Call the fetcher to get fresh data (simulating cache miss behavior)
+            getOrFetch: vi.fn(async ({ fetcher }) => {
+                const data = fetcher ? await fetcher() : [];
+                return { data, promise: null };
+            }),
+            fetchAndCache: vi.fn(),
             setCache: vi.fn(),
-            invalidate: vi.fn()
+            invalidate: vi.fn(),
+            subscribeKey: vi.fn(() => vi.fn()),
+            revalidate: vi.fn(() => Promise.resolve()),
+            clearAll: vi.fn(),
+            clearRegistry: vi.fn()
         })
     },
-    CACHE_TTL: {
-        CASE_HISTORY: 300000,
-        APPRECIATIONS: 300000
+    CACHE_POLICY: {
+        CASE_HISTORY: { ttlMs: 300000, staleMs: 60000 },
+        APPRECIATIONS: { ttlMs: 300000, staleMs: 60000 }
+    },
+    cacheKey: {
+        caseHistory: vi.fn(() => 'cases:key'),
+        appreciations: vi.fn(() => 'appreciations:key'),
+        stats: vi.fn(() => 'stats:key')
     },
     CACHE_KEYS: {
-        CASE_HISTORY: 'cases',
-        APPRECIATIONS: 'appreciations'
+        DAILY_HISTORY: 'daily-history'
     }
 }));
 

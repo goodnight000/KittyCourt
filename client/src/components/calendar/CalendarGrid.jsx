@@ -2,6 +2,7 @@ import React, { useMemo, memo } from 'react';
 import { motion as Motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useI18n } from '../../i18n';
+import { parseLocalDate } from '../../utils/dateFormatters';
 
 /**
  * Helper to format date as YYYY-MM-DD for map lookup
@@ -81,12 +82,12 @@ const CalendarGrid = memo(({
         const map = new Map();
         for (const event of events) {
             const dateStr = event.date;
-            let key;
-            if (dateStr.includes('T')) {
-                const d = new Date(dateStr);
-                key = formatDateKey(d);
-            } else {
-                key = dateStr;
+            let key = dateStr;
+            if (typeof dateStr === 'string' && dateStr.includes('T')) {
+                const parsed = parseLocalDate(dateStr);
+                if (parsed) {
+                    key = formatDateKey(parsed);
+                }
             }
             if (!map.has(key)) {
                 map.set(key, []);

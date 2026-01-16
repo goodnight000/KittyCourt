@@ -11,6 +11,7 @@ const { requireSupabase, requireAuthUserId, getPartnerIdForUser } = require('../
 const { getOrderedCoupleIds, awardXP, ACTION_TYPES } = require('../lib/xpService');
 const { recordChallengeAction, CHALLENGE_ACTIONS } = require('../lib/challengeService');
 const { safeErrorMessage } = require('../lib/shared/errorUtils');
+const { sendError } = require('../lib/http');
 
 const router = express.Router();
 
@@ -162,7 +163,7 @@ router.get('/', async (req, res) => {
         return res.json({ memories: response, deletedCount, deletedMemories });
     } catch (error) {
         console.error('[Memories] Failed to fetch memories:', error);
-        return res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
+        return sendError(res, error.statusCode || 500, 'SERVER_ERROR', safeErrorMessage(error));
     }
 });
 
@@ -170,10 +171,10 @@ router.post('/upload-url', async (req, res) => {
     try {
         const { filename, contentType } = req.body || {};
         if (!filename || typeof filename !== 'string') {
-            return res.status(400).json({ error: 'filename is required' });
+            return sendError(res, 400, 'MISSING_FIELD', 'filename is required');
         }
         if (contentType && !SUPPORTED_IMAGE_TYPES.has(contentType)) {
-            return res.status(400).json({ error: 'Unsupported image type' });
+            return sendError(res, 400, 'INVALID_INPUT', 'Unsupported image type');
         }
 
         const supabase = requireSupabase();
@@ -198,14 +199,14 @@ router.post('/upload-url', async (req, res) => {
         });
     } catch (error) {
         console.error('[Memories] Failed to create upload URL:', error);
-        return res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
+        return sendError(res, error.statusCode || 500, 'SERVER_ERROR', safeErrorMessage(error));
     }
 });
 
 router.post('/', async (req, res) => {
     try {
         const { storagePath, caption, memoryDate } = req.body || {};
-        if (!storagePath) return res.status(400).json({ error: 'storagePath is required' });
+        if (!storagePath) return sendError(res, 400, 'MISSING_FIELD', 'storagePath is required');
 
         const supabase = requireSupabase();
         const userId = await requireAuthUserId(req);
@@ -213,7 +214,7 @@ router.post('/', async (req, res) => {
 
         const folder = getCoupleFolder(coupleIds);
         if (!storagePath.startsWith(`${folder}/`)) {
-            return res.status(400).json({ error: 'Invalid storage path' });
+            return sendError(res, 400, 'INVALID_INPUT', 'Invalid storage path');
         }
 
         const parsedDate = parseMemoryDate(memoryDate) || new Date().toISOString().slice(0, 10);
@@ -276,7 +277,7 @@ router.post('/', async (req, res) => {
         });
     } catch (error) {
         console.error('[Memories] Failed to create memory:', error);
-        return res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
+        return sendError(res, error.statusCode || 500, 'SERVER_ERROR', safeErrorMessage(error));
     }
 });
 
@@ -296,7 +297,7 @@ router.delete('/:id', async (req, res) => {
             .single();
 
         if (error || !memory) {
-            return res.status(404).json({ error: 'Memory not found' });
+            return sendError(res, 404, 'NOT_FOUND', 'Memory not found');
         }
 
         if (memory.is_deleted) {
@@ -304,7 +305,7 @@ router.delete('/:id', async (req, res) => {
         }
 
         if (memory.uploaded_by !== userId) {
-            return res.status(403).json({ error: 'Only the uploader can delete this memory' });
+            return sendError(res, 403, 'FORBIDDEN', 'Only the uploader can delete this memory');
         }
 
         const { error: updateError } = await supabase
@@ -321,7 +322,7 @@ router.delete('/:id', async (req, res) => {
         return res.json({ success: true });
     } catch (error) {
         console.error('[Memories] Failed to delete memory:', error);
-        return res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
+        return sendError(res, error.statusCode || 500, 'SERVER_ERROR', safeErrorMessage(error));
     }
 });
 
@@ -341,7 +342,7 @@ router.post('/:id/restore', async (req, res) => {
             .single();
 
         if (error || !memory) {
-            return res.status(404).json({ error: 'Memory not found' });
+            return sendError(res, 404, 'NOT_FOUND', 'Memory not found');
         }
 
         if (!memory.is_deleted) {
@@ -355,7 +356,7 @@ router.post('/:id/restore', async (req, res) => {
 
         const canRestore = memory.deleted_by === userId ? within24Hours : within30Days;
         if (!canRestore) {
-            return res.status(403).json({ error: 'Restore window expired' });
+            return sendError(res, 403, 'FORBIDDEN', 'Restore window expired');
         }
 
         const { error: updateError } = await supabase
@@ -372,7 +373,7 @@ router.post('/:id/restore', async (req, res) => {
         return res.json({ success: true });
     } catch (error) {
         console.error('[Memories] Failed to restore memory:', error);
-        return res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
+        return sendError(res, error.statusCode || 500, 'SERVER_ERROR', safeErrorMessage(error));
     }
 });
 
@@ -381,7 +382,7 @@ router.put('/:id/reaction', async (req, res) => {
         const { id } = req.params;
         const { emoji } = req.body || {};
         if (!emoji || typeof emoji !== 'string') {
-            return res.status(400).json({ error: 'emoji is required' });
+            return sendError(res, 400, 'MISSING_FIELD', 'emoji is required');
         }
 
         const supabase = requireSupabase();
@@ -397,7 +398,7 @@ router.put('/:id/reaction', async (req, res) => {
             .single();
 
         if (error || !memory || memory.is_deleted) {
-            return res.status(404).json({ error: 'Memory not found' });
+            return sendError(res, 404, 'NOT_FOUND', 'Memory not found');
         }
 
         const { data: reaction, error: reactionError } = await supabase
@@ -415,7 +416,7 @@ router.put('/:id/reaction', async (req, res) => {
         return res.json({ success: true, reaction });
     } catch (error) {
         console.error('[Memories] Failed to update reaction:', error);
-        return res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
+        return sendError(res, error.statusCode || 500, 'SERVER_ERROR', safeErrorMessage(error));
     }
 });
 
@@ -435,7 +436,7 @@ router.delete('/:id/reaction', async (req, res) => {
             .single();
 
         if (error || !memory) {
-            return res.status(404).json({ error: 'Memory not found' });
+            return sendError(res, 404, 'NOT_FOUND', 'Memory not found');
         }
 
         const { error: deleteError } = await supabase
@@ -449,7 +450,7 @@ router.delete('/:id/reaction', async (req, res) => {
         return res.json({ success: true });
     } catch (error) {
         console.error('[Memories] Failed to delete reaction:', error);
-        return res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
+        return sendError(res, error.statusCode || 500, 'SERVER_ERROR', safeErrorMessage(error));
     }
 });
 
@@ -469,7 +470,7 @@ router.get('/:id/comments', async (req, res) => {
             .single();
 
         if (error || !memory || memory.is_deleted) {
-            return res.status(404).json({ error: 'Memory not found' });
+            return sendError(res, 404, 'NOT_FOUND', 'Memory not found');
         }
 
         const { data: comments, error: commentsError } = await supabase
@@ -491,7 +492,7 @@ router.get('/:id/comments', async (req, res) => {
         return res.json({ comments: response });
     } catch (error) {
         console.error('[Memories] Failed to fetch comments:', error);
-        return res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
+        return sendError(res, error.statusCode || 500, 'SERVER_ERROR', safeErrorMessage(error));
     }
 });
 
@@ -500,7 +501,7 @@ router.post('/:id/comments', async (req, res) => {
         const { id } = req.params;
         const { text } = req.body || {};
         const safeText = typeof text === 'string' ? text.trim().slice(0, 500) : '';
-        if (!safeText) return res.status(400).json({ error: 'text is required' });
+        if (!safeText) return sendError(res, 400, 'MISSING_FIELD', 'text is required');
 
         const supabase = requireSupabase();
         const userId = await requireAuthUserId(req);
@@ -515,7 +516,7 @@ router.post('/:id/comments', async (req, res) => {
             .single();
 
         if (error || !memory || memory.is_deleted) {
-            return res.status(404).json({ error: 'Memory not found' });
+            return sendError(res, 404, 'NOT_FOUND', 'Memory not found');
         }
 
         const { data: comment, error: insertError } = await supabase
@@ -541,7 +542,7 @@ router.post('/:id/comments', async (req, res) => {
         });
     } catch (error) {
         console.error('[Memories] Failed to create comment:', error);
-        return res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
+        return sendError(res, error.statusCode || 500, 'SERVER_ERROR', safeErrorMessage(error));
     }
 });
 
@@ -561,7 +562,7 @@ router.delete('/:memoryId/comments/:commentId', async (req, res) => {
             .single();
 
         if (error || !memory) {
-            return res.status(404).json({ error: 'Memory not found' });
+            return sendError(res, 404, 'NOT_FOUND', 'Memory not found');
         }
 
         const { data: comment, error: commentError } = await supabase
@@ -572,11 +573,11 @@ router.delete('/:memoryId/comments/:commentId', async (req, res) => {
             .single();
 
         if (commentError || !comment) {
-            return res.status(404).json({ error: 'Comment not found' });
+            return sendError(res, 404, 'NOT_FOUND', 'Comment not found');
         }
 
         if (comment.user_id !== userId) {
-            return res.status(403).json({ error: 'Not allowed to delete this comment' });
+            return sendError(res, 403, 'FORBIDDEN', 'Not allowed to delete this comment');
         }
 
         const { error: deleteError } = await supabase
@@ -589,7 +590,7 @@ router.delete('/:memoryId/comments/:commentId', async (req, res) => {
         return res.json({ success: true });
     } catch (error) {
         console.error('[Memories] Failed to delete comment:', error);
-        return res.status(error.statusCode || 500).json({ error: safeErrorMessage(error) });
+        return sendError(res, error.statusCode || 500, 'SERVER_ERROR', safeErrorMessage(error));
     }
 });
 

@@ -10,9 +10,17 @@ const VerdictScroll = ({
   partnerAName,
   partnerBName,
   caseId,
-  t
+  t,
+  judgeName,
+  judgeTitle,
+  judgeAvatar,
+  judgeAlt
 }) => {
   if (!verdict) return null;
+  const resolvedJudgeName = judgeName || t?.('cases.detail.verdict.judgeName') || 'Judge Whiskers';
+  const resolvedJudgeTitle = judgeTitle || t?.('cases.detail.verdict.judgeTitle') || 'Chief Justice of Feline Affairs';
+  const resolvedJudgeAlt = judgeAlt || resolvedJudgeName;
+  const resolvedJudgeAvatar = judgeAvatar || '/assets/avatars/judge_whiskers.png';
 
   return (
     <motion.div
@@ -52,8 +60,8 @@ const VerdictScroll = ({
               <div className="absolute inset-0 rounded-xl bg-court-gold/20 blur-lg" />
               <div className="relative w-16 h-16 rounded-xl overflow-hidden border-2 border-court-gold/50 shadow-lg">
                 <img
-                  src="/assets/avatars/judge_whiskers.png"
-                  alt="Judge Whiskers"
+                  src={resolvedJudgeAvatar}
+                  alt={resolvedJudgeAlt}
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -64,10 +72,10 @@ const VerdictScroll = ({
                 {t?.('cases.detail.verdict.officialRuling') || 'Official Ruling'}
               </p>
               <p className="text-xl font-display font-bold text-neutral-800">
-                {t?.('cases.detail.verdict.judgeName') || 'Judge Whiskers'}
+                {resolvedJudgeName}
               </p>
               <p className="text-xs text-neutral-500">
-                {t?.('cases.detail.verdict.judgeTitle') || 'Chief Justice of Feline Affairs'}
+                {resolvedJudgeTitle}
               </p>
             </div>
           </div>
@@ -209,7 +217,7 @@ const VerdictScroll = ({
 
         {/* Bottom seal */}
         <div className="flex justify-center py-4 bg-gradient-to-t from-amber-50/50 to-transparent">
-          <div className="flex items-center gap-2 text-xs text-neutral-400">
+          <div className="flex items-center gap-2 text-xs text-neutral-500">
             <div className="h-px w-8 bg-neutral-200" />
             <span>Case #{caseId?.slice(-6) || '------'}</span>
             <div className="h-px w-8 bg-neutral-200" />
