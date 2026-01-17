@@ -220,6 +220,13 @@ app.get('/api/health', (req, res) => {
 setupSentryErrorHandler(app);
 app.use((err, req, res, _next) => {
     if (err?.message === 'CORS blocked') {
+        const origin = req?.headers?.origin || req?.headers?.Origin || 'unknown';
+        console.warn('[CORS] Blocked request', {
+            origin,
+            method: req?.method,
+            path: req?.originalUrl,
+            allowed: process.env.CORS_ORIGIN || '(not set)',
+        });
         return res.status(403).json({ error: 'CORS blocked' });
     }
     console.error('[App] Unhandled error:', err);

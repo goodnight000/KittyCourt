@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { Capacitor } from '@capacitor/core';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -20,6 +21,76 @@ export const supabase = createClient(
         },
     }
 );
+
+let oauthListenerCleanup = null
+
+export const startNativeOAuthListener = async () => {
+    if (!Capacitor.isNativePlatform()) return null
+    if (oauthListenerCleanup) return oauthListenerCleanup
+
+    try {
+        const { App } = await import('@capacitor/app')
+        const { Browser } = await import('@capacitor/browser')
+
+        const isPauseSchemeUrl = (value) => {
+            if (!value) return false
+            const lower = String(value).toLowerCase()
+            return lower.startsWith('com.midnightstudio.pause://')
+        }
+
+        const exchangeSupabaseSessionFromUrl = async (url) => {
+            // Prefer PKCE code exchange.
+            if (typeof supabase.auth.exchangeCodeForSession === 'function') {
+                await supabase.auth.exchangeCodeForSession(url)
+                return
+            }
+
+            // Fallback for older SDKs.
+            if (typeof supabase.auth.getSessionFromUrl === 'function') {
+                const result = await supabase.auth.getSessionFromUrl({ storeSession: true })
+                if (result?.error) throw result.error
+                return
+            }
+
+            throw new Error('No supported Supabase OAuth exchange method found')
+        }
+
+        const handler = async ({ url }) => {
+            if (!url) return
+
+            // Handle Supabase OAuth PKCE callback (code exchange).
+            if (isPauseSchemeUrl(url) && url.includes('/auth/callback')) {
+                try {
+                    await exchangeSupabaseSessionFromUrl(url)
+                } catch (err) {
+                    console.error('[Auth] Failed to exchange OAuth code:', err)
+                } finally {
+                    try { await Browser.close() } catch (_err) {}
+                }
+                // Kick the SPA to the callback route so it can render a loading state while auth hydrates.
+                try { window.location.assign('/auth/callback') } catch (_err) {}
+                return
+            }
+
+            // Handle password reset deep link.
+            if (isPauseSchemeUrl(url) && url.includes('/reset-password')) {
+                try { await Browser.close() } catch (_err) {}
+                // Navigate within the SPA.
+                window.location.assign('/reset-password')
+            }
+        }
+
+        const sub = await App.addListener('appUrlOpen', handler)
+        oauthListenerCleanup = () => {
+            try { sub.remove() } catch (_err) {}
+            oauthListenerCleanup = null
+        }
+        return oauthListenerCleanup
+    } catch (err) {
+        console.warn('[Auth] Native OAuth listener unavailable:', err?.message || err)
+        return null
+    }
+}
 
 /**
  * Generate a unique 12-character partner code
@@ -63,8 +134,11 @@ export const signInWithEmail = async (email, password) => {
  * Request a password reset email
  */
 export const resetPassword = async (email) => {
+    const redirectTo = Capacitor.isNativePlatform()
+        ? 'com.midnightStudio.pause://reset-password'
+        : `${window.location.origin}/reset-password`
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo,
     });
     return { data, error };
 };
@@ -83,15 +157,27 @@ export const updatePassword = async (newPassword) => {
  * Sign in with Google OAuth
  */
 export const signInWithGoogle = async () => {
-    const redirectTo = `${window.location.origin}/auth/callback`;
+    const redirectTo = Capacitor.isNativePlatform()
+        ? 'com.midnightStudio.pause://auth/callback'
+        : `${window.location.origin}/auth/callback`
     if (import.meta.env.DEV) console.log('[Auth] Google Sign-In Redirect URL:', redirectTo);
 
     const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
             redirectTo,
+            skipBrowserRedirect: Capacitor.isNativePlatform(),
         },
     });
+
+    if (!error && Capacitor.isNativePlatform() && data?.url) {
+        try {
+            const { Browser } = await import('@capacitor/browser')
+            await Browser.open({ url: data.url })
+        } catch (err) {
+            console.error('[Auth] Failed to open OAuth URL:', err)
+        }
+    }
     return { data, error };
 };
 

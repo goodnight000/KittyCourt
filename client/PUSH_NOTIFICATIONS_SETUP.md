@@ -21,6 +21,17 @@ Recommended:
 
 ## iOS (FCM) setup
 
+## Supabase OAuth (Google) on iOS/Android
+
+Native OAuth uses a custom URL scheme redirect.
+
+Add these URLs in Supabase Dashboard → Authentication → URL Configuration → **Redirect URLs**:
+
+- `com.midnightStudio.pause://auth/callback`
+- `com.midnightStudio.pause://reset-password`
+
+Then ensure your Google provider is enabled in Supabase (Authentication → Providers → Google).
+
 ### 1) Create / configure iOS app in Firebase
 
 Firebase Console → Project Settings → General → “Your apps”:

@@ -51,6 +51,7 @@ import useSubscriptionStore from './store/useSubscriptionStore';
 import { startAuthLifecycle } from './services/authLifecycle';
 import { startCacheLifecycle } from './services/cacheLifecycle';
 import { eventBus, EVENTS } from './lib/eventBus';
+import { startNativeOAuthListener } from './services/supabase';
 
 // RevenueCat
 import { initializeRevenueCat } from './services/revenuecat';
@@ -104,6 +105,7 @@ const AppRoutes = () => {
     useEffect(() => {
         const stop = startAuthLifecycle();
         const stopCache = startCacheLifecycle();
+        startNativeOAuthListener();
 
         // Initialize RevenueCat SDK (only works on native platforms)
         initializeRevenueCat();
