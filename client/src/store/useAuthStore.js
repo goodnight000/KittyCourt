@@ -364,6 +364,9 @@ const useAuthStore = create(
             // Sign in with email/password
             signIn: async (email, password) => {
                 try {
+                    if (get().isLoading) {
+                        set({ isLoading: false });
+                    }
                     if (import.meta.env.DEV) console.log('[Auth] signIn called with email:', email);
                     const { data, error } = await supabaseSignInWithEmail(email, password);
                     if (error) {

@@ -6,7 +6,7 @@
  * - Phase 2: Priming + Joint Menu
  */
 
-const { PHASE } = require('./StateSerializer');
+const { PHASE } = require('./stateSerializer');
 const { TIMEOUT } = require('./timeoutHandlers');
 
 /**

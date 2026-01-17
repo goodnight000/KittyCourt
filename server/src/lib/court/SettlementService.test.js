@@ -6,7 +6,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import SettlementService from './SettlementService.js';
-import { PHASE } from './StateSerializer.js';
+import { PHASE } from './stateSerializer.js';
 
 describe('SettlementService', () => {
     let settlementService;

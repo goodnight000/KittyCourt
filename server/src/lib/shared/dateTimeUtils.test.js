@@ -208,6 +208,7 @@ describe('dateTimeUtils', () => {
                 timeZone: 'America/New_York',
                 hour: '2-digit',
                 minute: '2-digit',
+                hourCycle: 'h23',
                 hour12: false,
             }).formatToParts(date);
 

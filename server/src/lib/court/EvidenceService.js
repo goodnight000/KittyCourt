@@ -10,7 +10,7 @@
  * - Trigger verdict generation when ready
  */
 
-const { PHASE } = require('./StateSerializer');
+const { PHASE } = require('./stateSerializer');
 
 class EvidenceService {
     /**

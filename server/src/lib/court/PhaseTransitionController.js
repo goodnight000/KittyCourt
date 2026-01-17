@@ -13,7 +13,7 @@
  * - Handle verdict acceptance and session closure
  */
 
-const { PHASE } = require('./StateSerializer');
+const { PHASE } = require('./stateSerializer');
 const { TIMEOUT } = require('./timeoutHandlers');
 const { buildCaseData } = require('./caseDataBuilder');
 

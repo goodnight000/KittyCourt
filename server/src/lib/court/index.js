@@ -5,7 +5,7 @@
  */
 
 module.exports = {
-    ...require('./StateSerializer'),
+    ...require('./stateSerializer'),
     ...require('./timeoutHandlers'),
     ...require('./databaseService')
 };

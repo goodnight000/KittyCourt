@@ -19,7 +19,7 @@ const ResolutionService = require('./court/ResolutionService');
 const SettlementService = require('./court/SettlementService');
 
 // Import helper modules
-const { PHASE, VIEW_PHASE, ADDENDUM_LIMIT, computeViewPhase, sanitizeSession } = require('./court/StateSerializer');
+const { PHASE, VIEW_PHASE, ADDENDUM_LIMIT, computeViewPhase, sanitizeSession } = require('./court/stateSerializer');
 const { TIMEOUT, getRemainingTimeout } = require('./court/timeoutHandlers');
 const { reconstructFromDB } = require('./court/databaseService');
 const { runVerdictPipeline, mapJudgeTypeToUsage } = require('./court/verdictGenerator');

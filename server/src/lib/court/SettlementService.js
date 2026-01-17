@@ -10,7 +10,7 @@
  * - Manage settlement timeouts
  */
 
-const { PHASE } = require('./StateSerializer');
+const { PHASE } = require('./stateSerializer');
 const { TIMEOUT } = require('./timeoutHandlers');
 
 class SettlementService {

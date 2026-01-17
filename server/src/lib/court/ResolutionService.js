@@ -10,7 +10,7 @@
  * - Find resolutions by ID
  */
 
-const { PHASE } = require('./StateSerializer');
+const { PHASE } = require('./stateSerializer');
 const { acquireLock } = require('../redis');
 
 const HYBRID_RESOLUTION_ID = 'resolution_hybrid';

@@ -4,7 +4,7 @@
  * Handles database checkpoint operations and session recovery.
  */
 
-const { PHASE } = require('./StateSerializer');
+const { PHASE } = require('./stateSerializer');
 
 /**
  * Database operation wrappers for court sessions.

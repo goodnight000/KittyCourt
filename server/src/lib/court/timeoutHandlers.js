@@ -4,7 +4,7 @@
  * Handles session timeouts for various phases.
  */
 
-const { PHASE, VIEW_PHASE } = require('./StateSerializer');
+const { PHASE, VIEW_PHASE } = require('./stateSerializer');
 
 // Timeout durations (in ms)
 const TIMEOUT = {

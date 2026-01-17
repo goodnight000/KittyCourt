@@ -12,7 +12,7 @@
  */
 
 const { v4: uuidv4 } = require('uuid');
-const { PHASE } = require('./StateSerializer');
+const { PHASE } = require('./stateSerializer');
 const { getRedisClient, getRedisSubscriber } = require('../redis');
 
 const SESSION_KEY_PREFIX = 'court:session:';

@@ -6,7 +6,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import ResolutionService from './ResolutionService.js';
-import { PHASE } from './StateSerializer.js';
+import { PHASE } from './stateSerializer.js';
 
 describe('ResolutionService', () => {
     let resolutionService;
