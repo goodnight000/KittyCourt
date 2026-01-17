@@ -3,5 +3,5 @@
     <string name="app_name">Pause</string>
     <string name="title_activity_main">Pause</string>
     <string name="package_name">com.midnightStudio.pause</string>
-    <string name="custom_url_scheme">com.midnightStudio.pause</string>
+    <string name="custom_url_scheme">com.midnightstudio.pause</string>
 </resources>

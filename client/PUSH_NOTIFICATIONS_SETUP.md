@@ -27,8 +27,8 @@ Native OAuth uses a custom URL scheme redirect.
 
 Add these URLs in Supabase Dashboard → Authentication → URL Configuration → **Redirect URLs**:
 
-- `com.midnightStudio.pause://auth/callback`
-- `com.midnightStudio.pause://reset-password`
+- `com.midnightstudio.pause://auth/callback`
+- `com.midnightstudio.pause://reset-password`
 
 Then ensure your Google provider is enabled in Supabase (Authentication → Providers → Google).
 

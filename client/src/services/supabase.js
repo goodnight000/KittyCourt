@@ -1,6 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import { Capacitor } from '@capacitor/core';
 
+const NATIVE_OAUTH_SCHEME = 'com.midnightstudio.pause';
+
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
@@ -135,7 +137,7 @@ export const signInWithEmail = async (email, password) => {
  */
 export const resetPassword = async (email) => {
     const redirectTo = Capacitor.isNativePlatform()
-        ? 'com.midnightStudio.pause://reset-password'
+        ? `${NATIVE_OAUTH_SCHEME}://reset-password`
         : `${window.location.origin}/reset-password`
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo,
@@ -158,7 +160,7 @@ export const updatePassword = async (newPassword) => {
  */
 export const signInWithGoogle = async () => {
     const redirectTo = Capacitor.isNativePlatform()
-        ? 'com.midnightStudio.pause://auth/callback'
+        ? `${NATIVE_OAUTH_SCHEME}://auth/callback`
         : `${window.location.origin}/auth/callback`
     if (import.meta.env.DEV) console.log('[Auth] Google Sign-In Redirect URL:', redirectTo);
 

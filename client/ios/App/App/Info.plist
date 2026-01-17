@@ -30,6 +30,7 @@
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>com.midnightStudio.pause</string>
+				<string>com.midnightstudio.pause</string>
 			</array>
 		</dict>
 	</array>

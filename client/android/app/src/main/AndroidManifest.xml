@@ -25,6 +25,8 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
 
+                <data android:scheme="com.midnightstudio.pause" android:host="auth" />
+                <data android:scheme="com.midnightstudio.pause" android:host="reset-password" />
                 <data android:scheme="com.midnightStudio.pause" android:host="auth" />
                 <data android:scheme="com.midnightStudio.pause" android:host="reset-password" />
             </intent-filter>
