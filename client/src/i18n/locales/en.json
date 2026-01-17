@@ -1666,6 +1666,7 @@
   "paywall": {
     "title": "Pause Gold",
     "subtitle": "Unlock deeper judges, planning, and insights.",
+    "postCaseReason": "Nice work resolving that case. Want unlimited judges and deeper insights?",
     "trialBadge": "7-day free trial",
     "bundleNotice": {
       "prefix": "One membership for",
@@ -1770,6 +1771,38 @@
     }
   },
   "subscription": {
+    "welcome": {
+      "title": "Welcome to Pause Gold",
+      "subtitle": "Premium support for both of you, starting now.",
+      "badge": "Gold unlocked",
+      "valueTitle": "What's now unlocked",
+      "values": {
+        "unlimited": {
+          "title": "Unlimited judges",
+          "subtitle": "No monthly caps on Mochi, Dash, or Whiskers."
+        },
+        "planning": {
+          "title": "Help Me Plan",
+          "subtitle": "Guided steps for tough conversations."
+        },
+        "insights": {
+          "title": "Couple Insights",
+          "subtitle": "Patterns and progress you can feel."
+        }
+      },
+      "partner": {
+        "connected": "Your partner is covered too while you're connected.",
+        "disconnected": "Connect your partner any time to share Gold."
+      },
+      "actions": {
+        "startCase": "Start a Gold case",
+        "invitePartner": "Invite your partner",
+        "viewInsights": "Explore insights",
+        "close": "Close"
+      },
+      "plan": "Plan: {plan}",
+      "footer": "Manage your subscription anytime in Settings."
+    },
     "usage": {
       "used": "{used}/{limit} used",
       "unlimited": "✨ Unlimited",

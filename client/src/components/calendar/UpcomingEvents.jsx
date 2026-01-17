@@ -112,10 +112,10 @@ const UpcomingEvents = memo(({
         <Motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="glass-card p-4 overflow-hidden relative"
+            className="glass-card p-4 relative"
         >
             {/* Decorative background */}
-            <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+            <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden rounded-3xl">
                 <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-gradient-to-br from-amber-200/25 via-white/15 to-pink-200/20 blur-3xl opacity-70" />
                 <div className="absolute -bottom-16 -left-14 w-56 h-56 rounded-full bg-gradient-to-br from-sky-100/25 via-white/15 to-violet-200/20 blur-3xl opacity-70" />
             </div>

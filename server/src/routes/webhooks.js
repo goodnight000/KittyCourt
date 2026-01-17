@@ -83,18 +83,55 @@ const PAUSE_GOLD_PRODUCTS = new Set([
 ]);
 const isProd = process.env.NODE_ENV === 'production';
 
+const isActiveGoldOwner = (profile) => {
+    if (!profile || profile.subscription_tier !== 'pause_gold') return false;
+    if (profile.subscription_shared_by) return false;
+    if (!profile.subscription_expires_at) return true;
+    const expiresAt = new Date(profile.subscription_expires_at);
+    return !Number.isNaN(expiresAt.valueOf()) && expiresAt >= new Date();
+};
+
 async function syncPartnerSubscription(supabase, userId, tier, expiresAt) {
     try {
         const partnerId = await getPartnerIdForUser(supabase, userId);
         if (!partnerId) return false;
 
-        const { error } = await supabase
+        const { data: partnerProfile, error: partnerError } = await supabase
             .from('profiles')
-            .update({
-                subscription_tier: tier,
+            .select('subscription_tier, subscription_expires_at, subscription_shared_by')
+            .eq('id', partnerId)
+            .single();
+
+        if (partnerError) {
+            console.error('[Webhook] Partner subscription lookup failed:', partnerError);
+            return false;
+        }
+
+        const partnerOwnsGold = isActiveGoldOwner(partnerProfile);
+        const updates = tier === 'pause_gold'
+            ? (partnerOwnsGold ? null : {
+                subscription_tier: 'pause_gold',
                 subscription_expires_at: expiresAt,
+                subscription_shared_by: userId,
             })
+            : {
+                subscription_tier: 'free',
+                subscription_expires_at: null,
+                subscription_shared_by: null,
+            };
+
+        if (!updates) return false;
+
+        let query = supabase
+            .from('profiles')
+            .update(updates)
             .eq('id', partnerId);
+
+        if (tier !== 'pause_gold') {
+            query = query.eq('subscription_shared_by', userId);
+        }
+
+        const { error } = await query;
 
         if (error) {
             console.error('[Webhook] Failed to update partner subscription:', error);
@@ -142,6 +179,15 @@ function verifyHmacSignature(signature, body, secret) {
  * - CANCELLATION: Subscription cancelled
  * - BILLING_ISSUE: Payment failed
  */
+router.get('/revenuecat', (_req, res) => {
+    // Some providers validate webhook URLs with a GET/HEAD request.
+    return res.json({ status: 'ok' });
+});
+
+router.head('/revenuecat', (_req, res) => {
+    return res.status(200).end();
+});
+
 router.post('/revenuecat', async (req, res) => {
     try {
         if (!isSupabaseConfigured()) {
@@ -169,8 +215,13 @@ router.post('/revenuecat', async (req, res) => {
         // Method 2: Bearer token auth (fallback)
         else if (REVENUECAT_WEBHOOK_TOKEN) {
             const authHeader = req.headers.authorization || '';
-            const match = typeof authHeader === 'string' ? authHeader.match(/^Bearer\s+(.+)$/i) : null;
-            const token = match?.[1];
+            const headerValue = typeof authHeader === 'string' ? authHeader.trim() : '';
+            const match = headerValue ? headerValue.match(/^Bearer\s+(.+)$/i) : null;
+            // RevenueCat lets you configure the entire Authorization header value.
+            // Accept either:
+            // - "Bearer <token>" (recommended)
+            // - "<token>" (legacy/simple)
+            const token = match?.[1] || headerValue;
             const ok = (() => {
                 if (!token) return false;
                 try {
@@ -272,6 +323,7 @@ router.post('/revenuecat', async (req, res) => {
                         subscription_tier: 'pause_gold',
                         subscription_expires_at: expirationDate,
                         store_customer_id: event.event?.original_app_user_id || appUserId,
+                        subscription_shared_by: null,
                     })
                     .eq('id', appUserId);
 
@@ -292,6 +344,7 @@ router.post('/revenuecat', async (req, res) => {
                     .update({
                         subscription_tier: 'free',
                         subscription_expires_at: null,
+                        subscription_shared_by: null,
                     })
                     .eq('id', appUserId);
 
@@ -311,6 +364,7 @@ router.post('/revenuecat', async (req, res) => {
                     .update({
                         subscription_tier: 'pause_gold',
                         subscription_expires_at: expirationDate,
+                        subscription_shared_by: null,
                     })
                     .eq('id', appUserId);
 

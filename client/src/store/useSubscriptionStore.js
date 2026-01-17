@@ -30,6 +30,7 @@ import {
     ENTITLEMENT_ID,
     ENTITLEMENT_ID_ALT,
 } from '../services/revenuecat';
+import { eventBus, EVENTS } from '../lib/eventBus';
 
 /**
  * Judge limits by subscription tier
@@ -312,6 +313,10 @@ const useSubscriptionStore = create((set, get) => ({
 
                 // Refresh usage so UI immediately reflects Gold limits
                 get().fetchUsage();
+                eventBus.emit(EVENTS.SUBSCRIPTION_GOLD_UNLOCKED, {
+                    source: 'purchase',
+                    planType,
+                });
                 return { success: true };
             } else if (result.cancelled) {
                 set({ isLoading: false });

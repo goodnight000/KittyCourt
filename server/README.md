@@ -68,3 +68,15 @@ PORT=3000
 npm run dev     # node --watch server/src/app.js
 npm test        # vitest (server tests)
 ```
+
+## Deploying to Fly.io
+
+This repo includes a Fly configuration at `fly.toml` (repo root) that builds `server/Dockerfile`.
+
+```bash
+fly launch --no-deploy
+fly secrets set SUPABASE_URL=... SUPABASE_SERVICE_KEY=... OPENROUTER_API_KEY=... OPENAI_API_KEY=...
+fly secrets set CORS_ORIGIN=https://<your-client-domain>
+fly secrets set REDIS_URL=...   # required when NODE_ENV=production
+fly deploy
+```

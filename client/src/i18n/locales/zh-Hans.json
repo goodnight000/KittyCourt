@@ -1670,6 +1670,7 @@
   "paywall": {
     "title": "Pause Gold",
     "subtitle": "解锁更深度的法官、规划与洞察。",
+    "postCaseReason": "你们刚完成一次仲裁。升级 Gold 解锁无限法官与更多洞察。",
     "trialBadge": "7 天免费试用",
     "bundleNotice": {
       "prefix": "一份会员",
@@ -1774,6 +1775,38 @@
     }
   },
   "subscription": {
+    "welcome": {
+      "title": "欢迎加入 Pause Gold",
+      "subtitle": "从现在起，你们的高级支持已开启。",
+      "badge": "Gold 已解锁",
+      "valueTitle": "你已解锁",
+      "values": {
+        "unlimited": {
+          "title": "无限法官",
+          "subtitle": "Mochi、Dash、Whiskers 不再受月度限制。"
+        },
+        "planning": {
+          "title": "帮我规划",
+          "subtitle": "更清晰的对话步骤。"
+        },
+        "insights": {
+          "title": "关系洞察",
+          "subtitle": "看见你们的模式与成长。"
+        }
+      },
+      "partner": {
+        "connected": "已为你的伴侣同步 Gold（连接期间有效）。",
+        "disconnected": "连接伴侣即可共享 Gold。"
+      },
+      "actions": {
+        "startCase": "开启 Gold 案例",
+        "invitePartner": "邀请伴侣",
+        "viewInsights": "查看洞察",
+        "close": "关闭"
+      },
+      "plan": "方案：{plan}",
+      "footer": "可在设置中管理订阅。"
+    },
     "usage": {
       "used": "已用 {used}/{limit}",
       "unlimited": "✨ 不限量",

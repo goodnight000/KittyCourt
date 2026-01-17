@@ -125,7 +125,7 @@ const EventCard = memo(({
         <Motion.div
             whileTap={{ scale: 0.995 }}
             onClick={onClick}
-            className={`group relative w-full rounded-3xl p-[1px] bg-gradient-to-br ${cardFrame} shadow-soft hover:shadow-soft-lg transition-shadow duration-200 cursor-pointer overflow-hidden`}
+            className={`group relative w-full rounded-3xl p-[1px] bg-gradient-to-br ${cardFrame} shadow-soft hover:shadow-soft-lg transition-shadow duration-200 cursor-pointer`}
         >
             {/* Shimmer animation overlay */}
             <div aria-hidden="true" className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">

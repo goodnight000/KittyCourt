@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowRight, ArrowLeft, Sparkles, Check, Mail } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 import useOnboardingStore from '../store/useOnboardingStore';
+import useSubscriptionStore from '../store/useSubscriptionStore';
+import useUpsellStore from '../store/useUpsellStore';
 import { validateDate } from '../utils/helpers';
 import Paywall from '../components/Paywall';
 import { useI18n } from '../i18n';
@@ -183,6 +185,8 @@ const OnboardingPage = () => {
         updateOnboardingData,
         completeOnboarding
     } = useOnboardingStore();
+    const { isGold } = useSubscriptionStore();
+    const { markPaywallShown } = useUpsellStore();
 
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showConnectChoice, setShowConnectChoice] = useState(false);
@@ -348,6 +352,11 @@ const OnboardingPage = () => {
     };
 
     const beginPaywallThenNavigate = (path) => {
+        if (isGold) {
+            navigate(path);
+            return;
+        }
+        markPaywallShown('onboarding_complete');
         setPostPaywallPath(path);
         setShowPaywall(true);
     };

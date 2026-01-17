@@ -32,6 +32,7 @@ const FeedbackPage = lazy(() => import('./pages/FeedbackPage'));
 
 // Components
 import PartnerRequestModal from './components/PartnerRequestModal';
+import GoldWelcomeModal from './components/GoldWelcomeModal';
 import LoadingScreen from './components/LoadingScreen';
 import ErrorBoundary from './components/ErrorBoundary';
 
@@ -45,8 +46,11 @@ import useLevelStore from './store/useLevelStore';
 import useChallengeStore from './store/useChallengeStore';
 import useInsightsStore from './store/useInsightsStore';
 import useMemoryStore from './store/useMemoryStore';
+import useUpsellStore from './store/useUpsellStore';
+import useSubscriptionStore from './store/useSubscriptionStore';
 import { startAuthLifecycle } from './services/authLifecycle';
 import { startCacheLifecycle } from './services/cacheLifecycle';
+import { eventBus, EVENTS } from './lib/eventBus';
 
 // RevenueCat
 import { initializeRevenueCat } from './services/revenuecat';
@@ -83,6 +87,13 @@ const AppRoutes = () => {
     const { initialize, isLoading, hasCheckedAuth, isAuthenticated } = useAuthStore();
     const { onboardingComplete } = useOnboardingStore();
     const { pendingRequests, hasPartner, refreshPendingRequests } = usePartnerStore();
+    const { checkEntitlement } = useSubscriptionStore();
+    const {
+        goldWelcomeOpen,
+        goldWelcomeMeta,
+        openGoldWelcome,
+        closeGoldWelcome,
+    } = useUpsellStore();
     const initializedRef = useRef(false);
     const wrap = (element, message) => (
         <ErrorBoundary message={message}>
@@ -153,6 +164,19 @@ const AppRoutes = () => {
         });
     }, [isAuthenticated]);
 
+    useEffect(() => {
+        if (!isAuthenticated) return;
+        checkEntitlement();
+    }, [checkEntitlement, hasPartner, isAuthenticated]);
+
+    useEffect(() => {
+        const unsubscribe = eventBus.on(EVENTS.SUBSCRIPTION_GOLD_UNLOCKED, (payload) => {
+            openGoldWelcome(payload || null);
+        });
+
+        return () => unsubscribe();
+    }, [openGoldWelcome]);
+
     // Global polling for pending partner requests (fallback for realtime)
     useEffect(() => {
         if (!isAuthenticated || hasPartner) return;
@@ -180,6 +204,11 @@ const AppRoutes = () => {
         <>
             {/* Partner Request Modal - shown globally when there are pending requests */}
             {isAuthenticated && pendingRequests?.length > 0 && <PartnerRequestModal />}
+            <GoldWelcomeModal
+                isOpen={goldWelcomeOpen}
+                onClose={closeGoldWelcome}
+                meta={goldWelcomeMeta}
+            />
 
             <Suspense fallback={<LoadingScreen />}>
                 <Routes>

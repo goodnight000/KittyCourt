@@ -1,4 +1,4 @@
-package com.pause.app;
+package com.midnightStudio.pause;
 
 import com.getcapacitor.BridgeActivity;
 

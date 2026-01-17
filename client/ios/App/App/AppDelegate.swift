@@ -1,5 +1,8 @@
 import UIKit
 import Capacitor
+#if canImport(FirebaseCore)
+import FirebaseCore
+#endif
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -7,7 +10,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        #if canImport(FirebaseCore)
+        // Avoid crashing if the plist isn't included yet (e.g., local dev/simulator).
+        if FirebaseApp.app() == nil, Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist") != nil {
+            FirebaseApp.configure()
+        }
+        #endif
         return true
     }
 

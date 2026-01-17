@@ -3,7 +3,7 @@
  * Uses new useCourtStore + useCourtSocket.
  */
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { Gavel, MessageCircle, Heart, Target, Send } from 'lucide-react';
@@ -11,7 +11,10 @@ import { Gavel, MessageCircle, Heart, Target, Send } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 import usePartnerStore from '../store/usePartnerStore';
 import useCourtStore, { VIEW_PHASE } from '../store/useCourtStore';
+import useSubscriptionStore from '../store/useSubscriptionStore';
+import useUpsellStore from '../store/useUpsellStore';
 import RequirePartner from '../components/RequirePartner';
+import Paywall from '../components/Paywall';
 
 import {
     CourtAtRest,
@@ -49,6 +52,7 @@ export default function CourtroomPageV2() {
         isGeneratingVerdict,
         showOpeningAnimation,
         showCelebrationAnimation,
+        showRatingPopup,
         error,
         dismissedRatingSessionId,
         setLocalEvidence,
@@ -75,6 +79,8 @@ export default function CourtroomPageV2() {
     } = useCourtStore();
 
     const { isConnected } = useCourtStore();
+    const { isGold } = useSubscriptionStore();
+    const { registerCaseCompletion, markPaywallShown } = useUpsellStore();
 
     const myName = profile?.display_name || profile?.name || t('common.you');
     const partnerName = partner?.display_name || partner?.name || t('common.partner');
@@ -230,6 +236,31 @@ export default function CourtroomPageV2() {
     };
 
     const [showAddendumModal, setShowAddendumModal] = useState(false);
+    const [showPaywall, setShowPaywall] = useState(false);
+    const [paywallReason, setPaywallReason] = useState(null);
+    const pendingUpsellRef = useRef(null);
+    const postCaseHandledRef = useRef(null);
+
+    const handlePostCaseUpsell = useCallback((sessionId) => {
+        if (!sessionId || postCaseHandledRef.current === sessionId) return;
+        postCaseHandledRef.current = sessionId;
+        if (isGold) return;
+
+        const { shouldPrompt } = registerCaseCompletion();
+        if (!shouldPrompt) return;
+
+        markPaywallShown('case_complete');
+        setPaywallReason(t('paywall.postCaseReason'));
+        setShowPaywall(true);
+    }, [isGold, markPaywallShown, registerCaseCompletion, t]);
+
+    useEffect(() => {
+        if (showRatingPopup) return;
+        const pendingSession = pendingUpsellRef.current;
+        if (!pendingSession) return;
+        pendingUpsellRef.current = null;
+        handlePostCaseUpsell(pendingSession);
+    }, [handlePostCaseUpsell, showRatingPopup]);
 
     const handleServe = async (judgeType = 'swift') => {
         const partnerId = partner?.id;
@@ -482,7 +513,26 @@ export default function CourtroomPageV2() {
 
                 {/* Rating popup mounts globally so it can appear after CLOSED */}
                 <VerdictRating
-                    onRate={(rating) => submitVerdictRating(rating)}
+                    onRate={async (rating) => {
+                        await submitVerdictRating(rating);
+                        if (session?.id) {
+                            pendingUpsellRef.current = session.id;
+                        }
+                    }}
+                    onSkip={() => {
+                        if (session?.id) {
+                            pendingUpsellRef.current = session.id;
+                        }
+                    }}
+                />
+
+                <Paywall
+                    isOpen={showPaywall}
+                    onClose={() => {
+                        setShowPaywall(false);
+                        setPaywallReason(null);
+                    }}
+                    triggerReason={paywallReason || t('paywall.postCaseReason')}
                 />
             </div>
         </RequirePartner>

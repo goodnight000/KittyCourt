@@ -1,10 +1,10 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace "com.pause.app"
+    namespace "com.midnightStudio.pause"
     compileSdk rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.pause.app"
+        applicationId "com.midnightStudio.pause"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

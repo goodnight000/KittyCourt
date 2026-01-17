@@ -180,5 +180,10 @@ export const EVENTS = {
    * Fired when the application language is changed
    * @payload {{ language: string, previousLanguage: string }}
    */
-  LANGUAGE_CHANGED: 'language:changed'
+  LANGUAGE_CHANGED: 'language:changed',
+  /**
+   * Fired when a user successfully unlocks Pause Gold
+   * @payload {{ source: string, planType?: string }}
+   */
+  SUBSCRIPTION_GOLD_UNLOCKED: 'subscription:gold-unlocked'
 };

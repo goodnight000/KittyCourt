@@ -59,6 +59,11 @@ export const initializePushNotifications = async () => {
         // Set up listeners (only once)
         setupPushListeners();
 
+        // Best-effort: if Firebase Messaging is installed, prefer storing the FCM token.
+        // On iOS, the Capacitor PushNotifications `registration` token can be an APNs token,
+        // but the server sends via Firebase Admin (FCM) and needs an FCM registration token.
+        await refreshFcmTokenIfAvailable();
+
         if (import.meta.env.DEV) console.log('[Push] Initialization successful');
         return true;
     } catch (error) {
@@ -80,7 +85,11 @@ const setupPushListeners = () => {
     // Token received - save to database
     PushNotifications.addListener('registration', async (token) => {
         if (import.meta.env.DEV) console.log('[Push] Registration token received');
-        await saveDeviceToken(token.value);
+        const fcmToken = await getFcmTokenIfAvailable();
+        if (!fcmToken && Capacitor.getPlatform() === 'ios') {
+            console.warn('[Push] iOS registration token may be APNs; install/configure FCM to get an FCM token')
+        }
+        await saveDeviceToken(fcmToken || token.value);
     });
 
     // Registration error
@@ -102,6 +111,35 @@ const setupPushListeners = () => {
 
     listenersRegistered = true;
     if (import.meta.env.DEV) console.log('[Push] Listeners registered');
+};
+
+const getFirebaseMessaging = async () => {
+    try {
+        const moduleName = '@capacitor-firebase/messaging';
+        const mod = await import(/* @vite-ignore */ moduleName);
+        return mod?.FirebaseMessaging || null;
+    } catch (_err) {
+        return null;
+    }
+};
+
+const getFcmTokenIfAvailable = async () => {
+    const FirebaseMessaging = await getFirebaseMessaging();
+    if (!FirebaseMessaging) return null;
+    try {
+        const result = await FirebaseMessaging.getToken();
+        const token = result?.token;
+        return token || null;
+    } catch (err) {
+        if (import.meta.env.DEV) console.warn('[Push] FirebaseMessaging.getToken failed:', err?.message || err);
+        return null;
+    }
+};
+
+const refreshFcmTokenIfAvailable = async () => {
+    const token = await getFcmTokenIfAvailable();
+    if (!token) return false;
+    return saveDeviceToken(token);
 };
 
 /**

@@ -113,18 +113,55 @@ function resolvePauseGoldStatus(subscriber) {
     return { tier: 'pause_gold', expiresAt };
 }
 
+const isActiveGoldOwner = (profile) => {
+    if (!profile || profile.subscription_tier !== 'pause_gold') return false;
+    if (profile.subscription_shared_by) return false;
+    if (!profile.subscription_expires_at) return true;
+    const expiresAt = new Date(profile.subscription_expires_at);
+    return !Number.isNaN(expiresAt.valueOf()) && expiresAt >= new Date();
+};
+
 async function syncPartnerSubscription(supabase, userId, tier, expiresAt) {
     try {
         const partnerId = await getPartnerIdForUser(supabase, userId);
         if (!partnerId) return false;
 
-        const { error } = await supabase
+        const { data: partnerProfile, error: partnerError } = await supabase
             .from('profiles')
-            .update({
-                subscription_tier: tier,
+            .select('subscription_tier, subscription_expires_at, subscription_shared_by')
+            .eq('id', partnerId)
+            .single();
+
+        if (partnerError) {
+            console.error('[Subscription API] Partner sync lookup error:', partnerError);
+            return false;
+        }
+
+        const partnerOwnsGold = isActiveGoldOwner(partnerProfile);
+        const updates = tier === 'pause_gold'
+            ? (partnerOwnsGold ? null : {
+                subscription_tier: 'pause_gold',
                 subscription_expires_at: expiresAt,
+                subscription_shared_by: userId,
             })
+            : {
+                subscription_tier: 'free',
+                subscription_expires_at: null,
+                subscription_shared_by: null,
+            };
+
+        if (!updates) return false;
+
+        let query = supabase
+            .from('profiles')
+            .update(updates)
             .eq('id', partnerId);
+
+        if (tier !== 'pause_gold') {
+            query = query.eq('subscription_shared_by', userId);
+        }
+
+        const { error } = await query;
 
         if (error) {
             console.error('[Subscription API] Partner sync error:', error);
@@ -247,6 +284,7 @@ router.post('/sync', syncRateLimiter, async (req, res) => {
             .update({
                 subscription_tier: tier,
                 subscription_expires_at: expiresAt,
+                subscription_shared_by: null,
             })
             .eq('id', userId);
 
@@ -294,6 +332,7 @@ router.post('/debug-grant', async (req, res) => {
             .update({
                 subscription_tier: 'pause_gold',
                 subscription_expires_at: expiresAt,
+                subscription_shared_by: null,
             })
             .eq('id', userId);
 
