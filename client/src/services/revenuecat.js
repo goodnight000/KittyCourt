@@ -18,7 +18,18 @@ let isInitialized = false;
 // access sensitive customer data or modify subscriptions. The secret/webhook key is stored
 // server-side only and never exposed to the client.
 // See: https://www.revenuecat.com/docs/authentication
-const REVENUECAT_API_KEY = import.meta.env.VITE_REVENUECAT_API_KEY || '';
+const getRevenueCatApiKey = () => {
+    const sharedKey = import.meta.env.VITE_REVENUECAT_API_KEY || ''
+    const iosKey = import.meta.env.VITE_REVENUECAT_API_KEY_IOS || ''
+    const androidKey = import.meta.env.VITE_REVENUECAT_API_KEY_ANDROID || ''
+
+    const platform = Capacitor.getPlatform()
+    if (platform === 'ios' && iosKey) return iosKey
+    if (platform === 'android' && androidKey) return androidKey
+    return sharedKey
+}
+
+const REVENUECAT_API_KEY = getRevenueCatApiKey()
 export const ENTITLEMENT_ID = 'Pause Gold';
 // Primary iOS product IDs (RevenueCat)
 export const PRODUCT_ID_MONTHLY = 'prod88802f6b24';
@@ -41,6 +52,10 @@ export const initializeRevenueCat = async () => {
     if (!isNativePlatform()) {
         if (import.meta.env.DEV) console.log('[RevenueCat] Skipping initialization - not on native platform');
         return false;
+    }
+
+    if (REVENUECAT_API_KEY?.startsWith?.('test_') && !import.meta.env.DEV) {
+        console.warn('[RevenueCat] Detected test API key in a non-dev build; TestFlight/App Store builds should use the production Public SDK key')
     }
 
     if (!REVENUECAT_API_KEY) {
