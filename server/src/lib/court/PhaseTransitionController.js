@@ -271,7 +271,7 @@ class PhaseTransitionController {
 
         // Trigger background memory extraction
         if (this.judgeEngine?.triggerBackgroundExtraction) {
-            const caseData = buildCaseData(session);
+            const caseData = await buildCaseData(session);
             caseData.submissions.userA.selectedPrimaryEmotion ||= '';
             caseData.submissions.userA.coreNeed ||= '';
             caseData.submissions.userB.selectedPrimaryEmotion ||= '';

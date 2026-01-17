@@ -234,7 +234,7 @@ class ResolutionService {
             throw new Error('Hybrid resolution requested with missing choices');
         }
 
-        const caseData = buildCaseData(session);
+        const caseData = await buildCaseData(session);
         const historicalContext = session.historicalContext || '';
         const result = await this.judgeEngine.runHybridResolution(
             caseData,

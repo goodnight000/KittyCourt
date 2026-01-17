@@ -207,7 +207,7 @@ describe('useAuthStore', () => {
             expect(useAuthStore.getState().isLoading).toBe(false);
         });
 
-        it('should set isLoading during sign in process', async () => {
+        it('should not toggle global isLoading during sign in process', async () => {
             vi.useRealTimers();
 
             let loadingDuringCall = false;
@@ -229,7 +229,7 @@ describe('useAuthStore', () => {
 
             await useAuthStore.getState().signIn('test@example.com', 'password');
 
-            expect(loadingDuringCall).toBe(true);
+            expect(loadingDuringCall).toBe(false);
             expect(useAuthStore.getState().isLoading).toBe(false);
         });
     });

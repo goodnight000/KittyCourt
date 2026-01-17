@@ -605,6 +605,7 @@ const buildAnalystRepairUserPrompt = (input, historicalContext = '') => {
 ## Participants
 - User A: ${sanitizedInput.participants.userA.name}
 - User B: ${sanitizedInput.participants.userB.name}
+Always use their real names in narrative fields; never use "Partner A" or "Partner B".
 
 ## User Self-Reported Intensity
 ${userReportedIntensity || "Not provided — assess from language"}
@@ -693,7 +694,7 @@ ${languageInstruction}
 
 ---
 Generate priming content for both users AND joint menu content.
-Use real names: ${sanitizedInput.participants.userA.name} and ${sanitizedInput.participants.userB.name}.
+Use real names: ${sanitizedInput.participants.userA.name} and ${sanitizedInput.participants.userB.name}. Never use "Partner A" or "Partner B".
 Output as JSON.`;
 };
 

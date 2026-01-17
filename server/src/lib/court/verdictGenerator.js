@@ -71,7 +71,7 @@ async function runVerdictPipeline(session, deps) {
             session.timeoutId = null;
         }
 
-        const caseData = buildCaseData(session);
+        const caseData = await buildCaseData(session);
         const usageType = mapJudgeTypeToUsage(session.judgeType || 'logical');
 
         // Enforce subscription limits

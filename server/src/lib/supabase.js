@@ -297,6 +297,41 @@ async function getUserProfile(userId) {
 }
 
 /**
+ * Get display names for a list of user IDs.
+ *
+ * @param {string[]} userIds - User IDs to fetch names for
+ * @returns {Promise<object>} Map of userId -> display_name (or null)
+ */
+async function getUserDisplayNames(userIds = []) {
+    if (!isSupabaseConfigured()) {
+        return {};
+    }
+
+    const supabase = getSupabase();
+    const uniqueIds = [...new Set(userIds.filter(Boolean))];
+    if (!uniqueIds.length) return {};
+
+    const { data, error } = await supabase
+        .from('profiles')
+        .select('id, display_name')
+        .in('id', uniqueIds);
+
+    if (error) {
+        console.error('[Supabase] Error getting user display names:', error);
+        return {};
+    }
+
+    const names = {};
+    for (const row of data || []) {
+        if (row?.id) {
+            names[row.id] = row.display_name || null;
+        }
+    }
+
+    return names;
+}
+
+/**
  * Update user profile data (merge with existing)
  * Note: This updates individual columns, not a JSONB blob
  * 
@@ -431,6 +466,7 @@ module.exports = {
     insertMemory,
     reinforceMemory,
     getUserProfile,
+    getUserDisplayNames,
     updateUserProfile,
     getUserMemories,
     checkUserHasMemories,

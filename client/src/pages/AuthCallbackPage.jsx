@@ -12,6 +12,10 @@ const AuthCallbackPage = () => {
     const { t } = useI18n();
 
     useEffect(() => {
+        let intervalId = null;
+        let timeoutId = null;
+        let cancelled = false;
+
         const handleCallback = async () => {
             // Wait for Supabase to process the OAuth callback
             // We DON'T call initialize() here because App.jsx already does it
@@ -20,16 +24,17 @@ const AuthCallbackPage = () => {
             // We need to wait for the store to update and loading to finish
             // Poll for a few seconds if needed
             let attempts = 0;
-            const maxAttempts = 20; // 10 seconds
+            const maxAttempts = 30; // 15 seconds
 
-            const checkState = setInterval(() => {
+            intervalId = setInterval(() => {
+                if (cancelled) return;
                 const state = useAuthStore.getState();
                 const onboardingState = useOnboardingStore.getState();
                 attempts++;
 
                 // If authenticated, we're good to go!
                 if (state.isAuthenticated) {
-                    clearInterval(checkState);
+                    clearInterval(intervalId);
                     if (onboardingState.onboardingComplete) {
                         navigate('/');
                     } else {
@@ -44,7 +49,7 @@ const AuthCallbackPage = () => {
 
                 // Only give up after the max attempts (10 seconds)
                 if (attempts >= maxAttempts) {
-                    clearInterval(checkState);
+                    clearInterval(intervalId);
                     console.error('Auth callback timed out - no session found');
                     navigate('/signin');
                 }
@@ -52,7 +57,13 @@ const AuthCallbackPage = () => {
         };
 
         // Small delay to ensure Supabase has processed the callback
-        setTimeout(handleCallback, 500);
+        timeoutId = setTimeout(handleCallback, 500);
+
+        return () => {
+            cancelled = true;
+            if (timeoutId) clearTimeout(timeoutId);
+            if (intervalId) clearInterval(intervalId);
+        };
     }, []);
 
     return (

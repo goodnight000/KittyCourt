@@ -362,15 +362,12 @@ const useAuthStore = create(
             },
 
             // Sign in with email/password
-            // Note: Set global isLoading during auth to avoid routing "flashes" before profile is hydrated.
             signIn: async (email, password) => {
                 try {
-                    set({ isLoading: true });
                     if (import.meta.env.DEV) console.log('[Auth] signIn called with email:', email);
                     const { data, error } = await supabaseSignInWithEmail(email, password);
                     if (error) {
                         console.error('[Auth] Sign in error:', error);
-                        set({ isLoading: false });
                         return { error };
                     }
 
@@ -451,7 +448,6 @@ const useAuthStore = create(
                     return { data };
                 } catch (e) {
                     console.error('[Auth] Sign in exception:', e);
-                    set({ isLoading: false });
                     return { error: { message: 'An unexpected error occurred' } };
                 }
             },

@@ -5,23 +5,41 @@
  * Used by CourtSessionManager and PhaseTransitionController.
  */
 
+const { getUserDisplayNames } = require('../supabase');
+
 /**
  * Build case data object from session
  *
  * @param {Object} session - Court session object
- * @returns {Object} - Case data object for judge engine
+ * @returns {Promise<Object>} - Case data object for judge engine
  */
-function buildCaseData(session) {
+async function buildCaseData(session) {
+    const cachedCreatorName = session.creatorName || session.creator?.name;
+    const cachedPartnerName = session.partnerName || session.partner?.name;
+    const needsNames = !cachedCreatorName || !cachedPartnerName;
+
+    let creatorName = cachedCreatorName;
+    let partnerName = cachedPartnerName;
+
+    if (needsNames) {
+        const namesById = await getUserDisplayNames([session.creatorId, session.partnerId]);
+        creatorName = creatorName || namesById[session.creatorId] || null;
+        partnerName = partnerName || namesById[session.partnerId] || null;
+
+        if (creatorName) session.creatorName = creatorName;
+        if (partnerName) session.partnerName = partnerName;
+    }
+
     return {
         participants: {
             userA: {
                 id: session.creatorId,
-                name: 'Partner A',
+                name: creatorName || 'User A',
                 language: session.creatorLanguage || session.caseLanguage || 'en',
             },
             userB: {
                 id: session.partnerId,
-                name: 'Partner B',
+                name: partnerName || 'User B',
                 language: session.partnerLanguage || session.caseLanguage || 'en',
             }
         },

@@ -181,8 +181,8 @@ function armorAnalystRepairPrompt(caseData, options = {}) {
     instructions: `Analyze this couple's conflict and select 3 resolution options.
 
 ## Participants
-- User A: ${participants?.userA?.name || 'Partner A'}
-- User B: ${participants?.userB?.name || 'Partner B'}
+- User A: ${participants?.userA?.name || 'User A'}
+- User B: ${participants?.userB?.name || 'User B'}
 
 ## User Self-Reported Intensity
 ${userReportedIntensity || 'Not provided — assess from language'}
@@ -240,8 +240,8 @@ function armorPrimingJointPrompt(data) {
 ${intensity || 'medium'} → Use ${voiceToUse} voice
 
 ## Participants
-- User A: ${participants?.userA?.name || 'Partner A'}
-- User B: ${participants?.userB?.name || 'Partner B'}
+- User A: ${participants?.userA?.name || 'User A'}
+- User B: ${participants?.userB?.name || 'User B'}
 
 ## Historical Context
 ${historicalContext || 'No prior history'}
@@ -249,7 +249,7 @@ ${historicalContext || 'No prior history'}
 ${languageInstruction || ''}
 
 Generate priming content for both users AND joint menu content.
-Use real names: ${participants?.userA?.name || 'Partner A'} and ${participants?.userB?.name || 'Partner B'}.`,
+Use real names: ${participants?.userA?.name || 'User A'} and ${participants?.userB?.name || 'User B'}. Never use "Partner A" or "Partner B".`,
 
     userContent: {
       [`${participants?.userA?.name || 'User A'} Facts`]: submissions?.userA?.cameraFacts,

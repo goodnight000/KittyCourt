@@ -651,11 +651,11 @@ class CourtSessionManager {
         }
     }
 
-    _triggerBackgroundExtraction(session) {
+    async _triggerBackgroundExtraction(session) {
         if (!this.judgeEngine?.triggerBackgroundExtraction || !session) return;
 
         try {
-            const caseData = buildCaseData(session);
+            const caseData = await buildCaseData(session);
             caseData.submissions.userA.selectedPrimaryEmotion ||= '';
             caseData.submissions.userA.coreNeed ||= '';
             caseData.submissions.userB.selectedPrimaryEmotion ||= '';

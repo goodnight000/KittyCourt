@@ -17,6 +17,9 @@ export const supabase = createClient(
     supabaseAnonKey || 'placeholder-key',
     {
         auth: {
+            // Use PKCE so native OAuth redirects can be exchanged reliably.
+            // Implicit flow can lose URL fragments on custom schemes.
+            flowType: 'pkce',
             autoRefreshToken: true,
             persistSession: true,
             detectSessionInUrl: true,
@@ -25,6 +28,11 @@ export const supabase = createClient(
 );
 
 let oauthListenerCleanup = null
+let lastDeepLinkUrl = null
+let lastDeepLinkAtMs = 0
+const processedDeepLinks = new Set()
+let oauthExchangeInProgress = false
+let oauthExchangeCompletedAtMs = 0
 
 export const startNativeOAuthListener = async () => {
     if (!Capacitor.isNativePlatform()) return null
@@ -37,17 +45,68 @@ export const startNativeOAuthListener = async () => {
         const isPauseSchemeUrl = (value) => {
             if (!value) return false
             const lower = String(value).toLowerCase()
-            return lower.startsWith('com.midnightstudio.pause://')
+            if (lower.startsWith('com.midnightstudio.pause:')) return true
+            try {
+                const parsed = new URL(value)
+                return parsed.protocol.toLowerCase() === 'com.midnightstudio.pause:'
+            } catch (_err) {
+                return false
+            }
+        }
+
+        const getParamFromUrl = (value, key) => {
+            if (!value) return null
+            try {
+                const parsed = new URL(value)
+                const direct = parsed.searchParams.get(key)
+                if (direct) return direct
+                if (parsed.hash) {
+                    const hashParams = new URLSearchParams(parsed.hash.replace(/^#/, ''))
+                    return hashParams.get(key)
+                }
+                return null
+            } catch (_err) {
+                const [, query = ''] = String(value).split('?')
+                const [queryPart, hashPart = ''] = query.split('#')
+                const queryParams = new URLSearchParams(queryPart)
+                if (queryParams.has(key)) return queryParams.get(key)
+                if (hashPart) {
+                    const hashParams = new URLSearchParams(hashPart)
+                    return hashParams.get(key)
+                }
+                return null
+            }
+        }
+
+        const navigateSpa = (path) => {
+            try {
+                if (window.location.pathname === path) return
+                window.history.replaceState(null, '', path)
+                window.dispatchEvent(new PopStateEvent('popstate'))
+            } catch (_err) {
+                // Fallback to hard navigation if needed.
+                try { window.location.assign(path) } catch (__err) {}
+            }
         }
 
         const exchangeSupabaseSessionFromUrl = async (url) => {
-            // Prefer PKCE code exchange.
-            if (typeof supabase.auth.exchangeCodeForSession === 'function') {
-                await supabase.auth.exchangeCodeForSession(url)
+            const error = getParamFromUrl(url, 'error') || getParamFromUrl(url, 'error_code')
+            const errorDescription = getParamFromUrl(url, 'error_description')
+            if (error || errorDescription) {
+                const message = errorDescription
+                    ? `OAuth error: ${error || 'unknown'} (${errorDescription})`
+                    : `OAuth error: ${error || 'unknown'}`
+                throw new Error(message)
+            }
+
+            const code = getParamFromUrl(url, 'code')
+            if (code && typeof supabase.auth.exchangeCodeForSession === 'function') {
+                const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
+                if (exchangeError) throw exchangeError
                 return
             }
 
-            // Fallback for older SDKs.
+            // Fallback for older SDKs (implicit flow).
             if (typeof supabase.auth.getSessionFromUrl === 'function') {
                 const result = await supabase.auth.getSessionFromUrl({ storeSession: true })
                 if (result?.error) throw result.error
@@ -57,32 +116,70 @@ export const startNativeOAuthListener = async () => {
             throw new Error('No supported Supabase OAuth exchange method found')
         }
 
+        const shouldSkipUrl = (url) => {
+            const now = Date.now()
+            // Avoid loops if iOS delivers multiple OAuth callbacks close together.
+            if (oauthExchangeInProgress) return true
+            if (oauthExchangeCompletedAtMs && now - oauthExchangeCompletedAtMs < 5_000) return true
+
+            // Dedupe rapid duplicate callbacks (iOS can fire appUrlOpen + launchUrl with the same value).
+            if (lastDeepLinkUrl === url && now - lastDeepLinkAtMs < 2_000) return true
+            lastDeepLinkUrl = url
+            lastDeepLinkAtMs = now
+
+            if (processedDeepLinks.has(url)) return true
+            processedDeepLinks.add(url)
+            // Prevent unbounded growth.
+            if (processedDeepLinks.size > 50) {
+                const first = processedDeepLinks.values().next().value
+                if (first) processedDeepLinks.delete(first)
+            }
+            return false
+        }
+
         const handler = async ({ url }) => {
             if (!url) return
+            if (!isPauseSchemeUrl(url)) return
+            if (shouldSkipUrl(url)) return
 
             // Handle Supabase OAuth PKCE callback (code exchange).
-            if (isPauseSchemeUrl(url) && url.includes('/auth/callback')) {
+            if (url.includes('/auth/callback')) {
                 try {
+                    oauthExchangeInProgress = true
                     await exchangeSupabaseSessionFromUrl(url)
+                    oauthExchangeCompletedAtMs = Date.now()
                 } catch (err) {
                     console.error('[Auth] Failed to exchange OAuth code:', err)
                 } finally {
+                    oauthExchangeInProgress = false
                     try { await Browser.close() } catch (_err) {}
                 }
-                // Kick the SPA to the callback route so it can render a loading state while auth hydrates.
-                try { window.location.assign('/auth/callback') } catch (_err) {}
+                // Navigate to app root; auth store will redirect to onboarding if needed.
+                navigateSpa('/')
                 return
             }
 
             // Handle password reset deep link.
-            if (isPauseSchemeUrl(url) && url.includes('/reset-password')) {
+            if (url.includes('/reset-password')) {
                 try { await Browser.close() } catch (_err) {}
                 // Navigate within the SPA.
-                window.location.assign('/reset-password')
+                navigateSpa('/reset-password')
             }
         }
 
         const sub = await App.addListener('appUrlOpen', handler)
+
+        // If the app was cold-started via a deep link, appUrlOpen may not fire for the launch URL.
+        // Handle it once on startup.
+        try {
+            const launch = await App.getLaunchUrl()
+            if (launch?.url) {
+                await handler({ url: launch.url })
+            }
+        } catch (_err) {
+            // Ignore.
+        }
+
         oauthListenerCleanup = () => {
             try { sub.remove() } catch (_err) {}
             oauthListenerCleanup = null
