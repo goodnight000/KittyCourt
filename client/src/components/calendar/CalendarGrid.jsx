@@ -185,7 +185,7 @@ const CalendarGrid = memo(({
 
                         // Inner class with gradients
                         const innerClass = today
-                            ? 'bg-gradient-to-br from-[#B85C6B] via-[#8B4049] to-[#722F37]'
+                            ? 'bg-gradient-to-br from-amber-100 via-amber-200/70 to-amber-200/60'
                             : hasSharedEvents && hasSecretEvents
                                 ? 'bg-gradient-to-br from-white/80 via-pink-50/50 to-violet-50/50'
                                 : hasSharedEvents
@@ -214,7 +214,7 @@ const CalendarGrid = memo(({
                                     )}
                                     <span
                                         className={`text-sm font-black tabular-nums ${today
-                                            ? 'text-white'
+                                            ? 'text-amber-700'
                                             : isOutsideMonth
                                                 ? 'text-neutral-500'
                                                 : 'text-neutral-800'

@@ -14,6 +14,7 @@ import useAuthStore from '../store/useAuthStore';
 import usePartnerStore from '../store/usePartnerStore';
 import { useI18n } from '../i18n';
 import BackButton from '../components/shared/BackButton';
+import StandardButton from '../components/shared/StandardButton';
 
 // Loading skeleton component
 const ChallengeSkeleton = () => (
@@ -79,16 +80,32 @@ const ChallengesPage = () => {
         }
     }, [hasPartner, fetchLevel, fetchChallenges, language]);
 
+    const [pendingActions, setPendingActions] = useState({});
+
+    const withPending = async (key, action) => {
+        if (pendingActions[key]) return;
+        setPendingActions((prev) => ({ ...prev, [key]: true }));
+        try {
+            await action();
+        } finally {
+            setPendingActions((prev) => {
+                const next = { ...prev };
+                delete next[key];
+                return next;
+            });
+        }
+    };
+
     const handleSkip = async (id) => {
-        await skipChallenge(id);
+        await withPending(`skip:${id}`, () => skipChallenge(id));
     };
 
     const handleComplete = async (id) => {
-        await completeChallenge(id);
+        await withPending(`complete:${id}`, () => completeChallenge(id));
     };
 
     const handleConfirm = async (id) => {
-        await confirmChallenge(id);
+        await withPending(`confirm:${id}`, () => confirmChallenge(id));
     };
 
     const handleRetry = () => {
@@ -99,7 +116,7 @@ const ChallengesPage = () => {
     // Progressive disclosure: Level 5+ required
     if (!shouldShowChallenges()) {
         return (
-            <div className="relative min-h-screen overflow-hidden px-4 pb-6 pt-6">
+            <div className="relative min-h-screen overflow-hidden pb-6">
                 <ChallengeBackdrop />
                 <div className="relative">
                     <motion.button
@@ -125,13 +142,13 @@ const ChallengesPage = () => {
                         <p className="mt-2 text-sm text-neutral-500">
                             {t('challenges.locked.subtitle', { level })}
                         </p>
-                        <motion.button
-                            whileTap={{ scale: 0.98 }}
+                        <StandardButton
+                            size="lg"
                             onClick={handleBack}
-                            className="mt-5 w-full rounded-2xl bg-gradient-to-r from-[#C9A227] to-[#8B7019] py-3 text-sm font-bold text-white shadow-soft"
+                            className="mt-5 w-full py-3 text-sm"
                         >
                             {t('challenges.locked.cta')}
-                        </motion.button>
+                        </StandardButton>
                     </motion.div>
                 </div>
             </div>
@@ -139,7 +156,7 @@ const ChallengesPage = () => {
     }
 
     return (
-        <div className="relative min-h-screen overflow-hidden px-4 pb-6 pt-6">
+        <div className="relative min-h-screen overflow-hidden pb-6">
             <ChallengeBackdrop />
             <div className="relative space-y-6">
                 <header className="flex items-start gap-3">
@@ -295,7 +312,12 @@ const ChallengesPage = () => {
                                             handleConfirm(challenge.id);
                                         }
                                     }}
+                                    actionLoading={
+                                        !!pendingActions[`complete:${challenge.id}`]
+                                        || !!pendingActions[`confirm:${challenge.id}`]
+                                    }
                                     onSkip={() => handleSkip(challenge.id)}
+                                    skipLoading={!!pendingActions[`skip:${challenge.id}`]}
                                 />
                             ))}
                         </div>

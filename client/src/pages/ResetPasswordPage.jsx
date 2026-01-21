@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
-import { Lock, Eye, EyeOff, CheckCircle, AlertCircle, ArrowLeft, Shield } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Cat, CheckCircle, Eye, EyeOff, Lock, Shield } from 'lucide-react';
 import { updatePassword, supabase } from '../services/supabase';
 import { useI18n } from '../i18n';
+import StandardButton from '../components/shared/StandardButton';
 
 const ResetPasswordPage = () => {
     const navigate = useNavigate();
@@ -92,7 +93,7 @@ const ResetPasswordPage = () => {
 
     if (checkingSession) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-court-cream via-white to-court-tan/30 flex items-center justify-center safe-top">
+            <div className="min-h-screen flex items-center justify-center safe-top">
                 <motion.div
                     animate={{ rotate: 360 }}
                     transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
@@ -104,7 +105,7 @@ const ResetPasswordPage = () => {
 
     if (!isValidSession) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-court-cream via-white to-court-tan/30 flex flex-col items-center justify-center p-6 safe-top">
+            <div className="min-h-screen flex flex-col items-center justify-center p-6 safe-top">
                 <motion.div
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -120,12 +121,13 @@ const ResetPasswordPage = () => {
                             {t('resetPassword.invalid.subtitle')}
                         </p>
 
-                        <Link
-                            to="/forgot-password"
-                            className="inline-flex items-center justify-center gap-2 w-full py-3 bg-gradient-to-r from-court-gold to-court-brown rounded-2xl font-bold text-white transition-all hover:shadow-lg"
+                        <StandardButton
+                            size="lg"
+                            onClick={() => navigate('/forgot-password')}
+                            className="w-full py-3"
                         >
                             {t('resetPassword.invalid.requestNew')}
-                        </Link>
+                        </StandardButton>
 
                         <Link
                             to="/signin"
@@ -142,7 +144,7 @@ const ResetPasswordPage = () => {
 
     if (success) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-court-cream via-white to-court-tan/30 flex flex-col items-center justify-center p-6 safe-top">
+            <div className="min-h-screen flex flex-col items-center justify-center p-6 safe-top">
                 <motion.div
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -183,22 +185,22 @@ const ResetPasswordPage = () => {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-court-cream via-white to-court-tan/30 flex flex-col items-center justify-center p-6 safe-top">
+        <div className="min-h-screen flex flex-col items-center justify-center p-6 safe-top">
             {/* Background Decorations */}
             <div className="fixed inset-0 pointer-events-none overflow-hidden">
                 <motion.div
                     animate={{ y: [0, -20, 0], rotate: [0, 5, 0] }}
                     transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-                    className="absolute top-20 left-10 text-4xl opacity-20"
+                    className="absolute top-20 left-10 opacity-20"
                 >
-                    🔐
+                    <Lock className="w-10 h-10 text-amber-500" />
                 </motion.div>
                 <motion.div
                     animate={{ y: [0, 15, 0], rotate: [0, -5, 0] }}
                     transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-                    className="absolute top-40 right-16 text-3xl opacity-20"
+                    className="absolute top-40 right-16 opacity-20"
                 >
-                    🐱
+                    <Cat className="w-8 h-8 text-amber-600" />
                 </motion.div>
             </div>
 
@@ -298,12 +300,11 @@ const ResetPasswordPage = () => {
                         </div>
 
                         {/* Submit Button */}
-                        <motion.button
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
+                        <StandardButton
+                            size="xl"
                             type="submit"
                             disabled={isLoading}
-                            className="w-full py-4 bg-gradient-to-r from-court-gold to-court-brown rounded-2xl font-bold text-white flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-6"
+                            className="w-full py-4 mt-6"
                         >
                             {isLoading ? (
                                 <>
@@ -320,7 +321,7 @@ const ResetPasswordPage = () => {
                                     {t('resetPassword.form.submit')}
                                 </>
                             )}
-                        </motion.button>
+                        </StandardButton>
                     </form>
                 </div>
             </motion.div>

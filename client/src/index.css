@@ -9,12 +9,9 @@
 }
 
 /* Base Styles */
-html {
-  scroll-behavior: smooth;
-  -webkit-text-size-adjust: 100%;
-}
-
 :root {
+  --app-bg: linear-gradient(145deg, #FAF7F2 0%, #F5EDE0 40%, #E8DFD0 70%, #FAF7F2 100%);
+  --app-bg-solid: #FAF7F2;
   --safe-area-top: env(safe-area-inset-top, 0px);
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
   --safe-area-top-extra: 16px;
@@ -23,26 +20,68 @@ html {
   --app-safe-bottom: calc(var(--safe-area-bottom) + var(--safe-area-bottom-extra));
 }
 
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+html,
+body {
+  background: var(--app-bg);
+  background-color: var(--app-bg-solid);
+}
+
 body {
   font-family: var(--font-sans);
   color: #4A3728;
   -webkit-font-smoothing: antialiased;
   /* Premium warm cream/tan background inspired by Judge Whiskers */
-  background: linear-gradient(145deg, #FAF7F2 0%, #F5EDE0 40%, #E8DFD0 70%, #FAF7F2 100%);
   min-height: 100vh;
   min-height: 100dvh;
   overflow-x: hidden;
+  position: relative;
+  z-index: 0;
+}
+
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  pointer-events: none;
+  border-radius: 9999px;
+  filter: blur(64px);
+  z-index: 0;
+}
+
+body::before {
+  top: -5rem;
+  right: -5rem;
+  width: 16rem;
+  height: 16rem;
+  background: rgba(253, 230, 138, 0.3);
+}
+
+body::after {
+  bottom: -8rem;
+  left: -5rem;
+  width: 18rem;
+  height: 18rem;
+  background: rgba(251, 207, 232, 0.25);
+}
+
+#root {
+  position: relative;
+  z-index: 1;
+}
+
+.app-background {
+  background: var(--app-bg);
+  background-color: var(--app-bg-solid);
 }
 
 ::selection {
   background-color: rgba(201, 162, 39, 0.3);
   color: #4A3728;
-}
-
-/* Prevent overscroll bounce on iOS */
-html,
-body {
-  overscroll-behavior: none;
 }
 
 /* Hide scrollbar for a premium mobile app feel */
@@ -73,6 +112,19 @@ body {
   display: none;
   width: 0;
   height: 0;
+}
+
+/* Date input width clamp for iOS */
+input[type='date'] {
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+input[type='date']::-webkit-date-and-time-value {
+  min-width: 0;
+  text-align: left;
 }
 
 /* Glass Card Component */

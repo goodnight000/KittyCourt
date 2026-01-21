@@ -10,6 +10,8 @@ const { requireAuthUserId, requireSupabase } = require('../lib/auth');
 const { requirePartner } = require('../middleware/requirePartner');
 const { awardXP, ACTION_TYPES } = require('../lib/xpService');
 const { recordChallengeAction, CHALLENGE_ACTIONS } = require('../lib/challengeService');
+const { INSIGHT_EVENT_TYPES, recordInsightEvent } = require('../lib/insightEventService');
+const { triggerAppreciationExtraction } = require('../lib/stenographer');
 const { safeErrorMessage } = require('../lib/shared/errorUtils');
 const { sendNotificationToUser } = require('../lib/notificationService');
 const { sendError } = require('../lib/http');
@@ -49,6 +51,51 @@ router.post('/', requirePartner, async (req, res) => {
             .single();
 
         if (insertError) throw insertError;
+
+        try {
+            await Promise.all([
+                recordInsightEvent({
+                    userId: viewerId,
+                    eventType: INSIGHT_EVENT_TYPES.APPRECIATION,
+                    sourceId: appreciation.id,
+                }),
+                recordInsightEvent({
+                    userId: toUserId,
+                    eventType: INSIGHT_EVENT_TYPES.APPRECIATION,
+                    sourceId: appreciation.id,
+                }),
+            ]);
+        } catch (eventError) {
+            console.warn('[Appreciations] Insight event record failed:', eventError?.message || eventError);
+        }
+
+        try {
+            const { data: profiles, error: profileError } = await supabase
+                .from('profiles')
+                .select('id, display_name, preferred_language')
+                .in('id', [viewerId, toUserId]);
+
+            if (profileError) throw profileError;
+
+            const profileById = new Map((profiles || []).map(profile => [profile.id, profile]));
+            const senderProfile = profileById.get(viewerId);
+            const recipientProfile = profileById.get(toUserId);
+
+            triggerAppreciationExtraction({
+                appreciationId: appreciation.id,
+                message: safeMessage,
+                category: safeCategory,
+                userAId: viewerId,
+                userBId: toUserId,
+                userAName: senderProfile?.display_name || 'User A',
+                userBName: recipientProfile?.display_name || 'User B',
+                userALanguage: senderProfile?.preferred_language || 'en',
+                userBLanguage: recipientProfile?.preferred_language || 'en',
+                observedAt: appreciation.created_at || new Date().toISOString(),
+            });
+        } catch (extractionError) {
+            console.warn('[Appreciations] Memory extraction skipped:', extractionError?.message || extractionError);
+        }
 
         try {
             await awardXP({

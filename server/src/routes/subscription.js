@@ -9,6 +9,7 @@ const router = express.Router();
 const { getSupabase, isSupabaseConfigured } = require('../lib/supabase');
 const { getAuthUserIdOrNull, getPartnerIdForUser } = require('../lib/auth');
 const { createRateLimiter } = require('../lib/rateLimit');
+const { maybeGenerateInitialInsights } = require('../lib/insightsSchedulerService');
 const { safeErrorMessage } = require('../lib/shared/errorUtils');
 
 const REVENUECAT_SECRET_KEY = process.env.REVENUECAT_SECRET_KEY || '';
@@ -295,6 +296,20 @@ router.post('/sync', syncRateLimiter, async (req, res) => {
 
         const partnerUpdated = await syncPartnerSubscription(supabase, userId, tier, expiresAt);
 
+        if (tier === 'pause_gold') {
+            try {
+                await maybeGenerateInitialInsights({ userId });
+                if (partnerUpdated) {
+                    const partnerId = await getPartnerIdForUser(supabase, userId);
+                    if (partnerId) {
+                        await maybeGenerateInitialInsights({ userId: partnerId });
+                    }
+                }
+            } catch (insightsError) {
+                console.warn('[Subscription API] Initial insights skipped:', insightsError?.message || insightsError);
+            }
+        }
+
         console.log(`[Subscription API] Synced ${userId} to ${tier}`);
         res.json({ success: true, synced: true, partnerUpdated });
     } catch (error) {
@@ -342,6 +357,18 @@ router.post('/debug-grant', async (req, res) => {
         }
 
         const partnerUpdated = await syncPartnerSubscription(supabase, userId, 'pause_gold', expiresAt);
+
+        try {
+            await maybeGenerateInitialInsights({ userId });
+            if (partnerUpdated) {
+                const partnerId = await getPartnerIdForUser(supabase, userId);
+                if (partnerId) {
+                    await maybeGenerateInitialInsights({ userId: partnerId });
+                }
+            }
+        } catch (insightsError) {
+            console.warn('[Subscription API] Initial insights skipped:', insightsError?.message || insightsError);
+        }
 
         console.log(`[Subscription API] Debug: Granted Gold to ${userId}`);
         res.json({ success: true, tier: 'pause_gold', expiresAt, partnerUpdated });

@@ -176,7 +176,8 @@ describe('ProfileEditForm', () => {
             expect(screen.getByText('Love Language')).toBeInTheDocument();
             loveLanguages.forEach(lang => {
                 expect(screen.getByText(lang.label)).toBeInTheDocument();
-                expect(screen.getByText(lang.emoji)).toBeInTheDocument();
+                const optionButton = screen.getByText(lang.label).closest('button');
+                expect(optionButton?.querySelector('svg')).toBeInTheDocument();
             });
         });
 

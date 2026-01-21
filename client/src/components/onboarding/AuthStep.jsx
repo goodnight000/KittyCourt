@@ -3,6 +3,7 @@ import { motion as Motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { useI18n } from '../../i18n';
+import ButtonLoader from '../shared/ButtonLoader';
 
 const AuthStep = ({
     onGoogleSignUp,
@@ -111,8 +112,17 @@ const AuthStep = ({
                 >
                     <span aria-hidden="true" className="absolute inset-0 opacity-60" style={goldButtonShineStyle} />
                     <span className="relative z-10 flex items-center gap-2">
-                        {authSubmitting ? t('onboarding.auth.creating') : t('onboarding.auth.createAccount')}
-                        <ArrowRight className="w-5 h-5" />
+                        {authSubmitting ? (
+                            <ButtonLoader
+                                size="sm"
+                                tone="white"
+                            />
+                        ) : (
+                            <>
+                                {t('onboarding.auth.createAccount')}
+                                <ArrowRight className="w-5 h-5" />
+                            </>
+                        )}
                     </span>
                 </Motion.button>
             </form>

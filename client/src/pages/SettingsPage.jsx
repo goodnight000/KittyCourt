@@ -7,12 +7,14 @@ import {
 } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 import usePartnerStore from '../store/usePartnerStore';
-import { useI18n } from '../i18n';
+import { translate, useI18n } from '../i18n';
 import { SUPPORTED_LANGUAGE_CONFIG } from '../i18n/languageConfig';
 import OptionsStep from '../components/onboarding/OptionsStep';
 import api from '../services/api';
 import LiquidGlassPopup from '../components/shared/LiquidGlassPopup';
 import BackButton from '../components/shared/BackButton';
+import StandardButton from '../components/shared/StandardButton';
+import ButtonLoader from '../components/shared/ButtonLoader';
 
 const LOVE_LANGUAGE_OPTIONS = [
     { id: 'words', emoji: '💬', labelKey: 'options.loveLanguage.words', descKey: 'options.loveLanguage.wordsDesc' },
@@ -92,6 +94,7 @@ const SettingsPage = () => {
     const [showRelationshipModal, setShowRelationshipModal] = useState(false);
     const [deleteConfirmText, setDeleteConfirmText] = useState('');
     const [isDeleting, setIsDeleting] = useState(false);
+    const [isDisconnecting, setIsDisconnecting] = useState(false);
     const [pendingLanguage, setPendingLanguage] = useState(language);
     const [relationshipSaving, setRelationshipSaving] = useState(false);
     const [relationshipError, setRelationshipError] = useState(null);
@@ -110,6 +113,7 @@ const SettingsPage = () => {
     const [exportNotice, setExportNotice] = useState(null);
     const [exportLoading, setExportLoading] = useState(true);
     const [exportSubmitting, setExportSubmitting] = useState(false);
+    const [notificationSaving, setNotificationSaving] = useState({});
 
     // Notification toggles (connected to API)
     const [notifications, setNotifications] = useState({
@@ -210,6 +214,8 @@ const SettingsPage = () => {
     const loginMethod = getLoginMethod();
 
     const handleNotificationToggle = async (key) => {
+        if (notificationSaving[key]) return;
+        setNotificationSaving((prev) => ({ ...prev, [key]: true }));
         const newValue = !notifications[key];
         setNotifications(prev => ({ ...prev, [key]: newValue }));
 
@@ -221,6 +227,12 @@ const SettingsPage = () => {
             // Revert on error
             setNotifications(prev => ({ ...prev, [key]: !newValue }));
             console.error('Failed to save notification preference:', error);
+        } finally {
+            setNotificationSaving((prev) => {
+                const next = { ...prev };
+                delete next[key];
+                return next;
+            });
         }
     };
 
@@ -310,12 +322,6 @@ const SettingsPage = () => {
 
     return (
         <div className="relative min-h-screen pb-6">
-            {/* Background gradient */}
-            <div className="fixed inset-0 pointer-events-none">
-                <div className="absolute -top-20 -right-20 h-64 w-64 rounded-full bg-amber-200/30 blur-3xl" />
-                <div className="absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-rose-200/25 blur-3xl" />
-            </div>
-
             <div className="relative space-y-6">
                 {/* Header */}
                 <header className="flex items-center gap-3">
@@ -379,32 +385,39 @@ const SettingsPage = () => {
                         { key: 'dailyQuestions', label: t('settings.notifications.dailyMeow') },
                         { key: 'eventReminders', label: t('settings.notifications.eventReminders') },
                         { key: 'partnerActivity', label: t('settings.notifications.partnerActivity') },
-                    ].map(({ key, label }) => (
-                        <div key={key} className="flex items-center justify-between py-1.5">
-                            <span className="text-sm text-neutral-600">{label}</span>
-                            <motion.button
-                                type="button"
-                                whileTap={{ scale: 0.95 }}
-                                onClick={() => handleNotificationToggle(key)}
-                                role="switch"
-                                aria-checked={!!notifications[key]}
-                                className="inline-flex h-11 w-11 shrink-0 items-center justify-center bg-transparent p-0"
-                            >
-                                <span
-                                    className={`relative inline-flex h-6 w-11 items-center overflow-hidden rounded-full p-[3px] transition-colors ${notifications[key]
-                                        ? 'bg-gradient-to-r from-[#C9A227] to-[#8B7019]'
-                                        : 'bg-neutral-200'
-                                        }`}
+                    ].map(({ key, label }) => {
+                        const isSaving = !!notificationSaving[key];
+                        return (
+                            <div key={key} className="flex items-center justify-between py-1.5">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm text-neutral-600">{label}</span>
+                                    {isSaving && <ButtonLoader size="sm" tone="amber" variant="dots" />}
+                                </div>
+                                <motion.button
+                                    type="button"
+                                    whileTap={{ scale: isSaving ? 1 : 0.95 }}
+                                    onClick={() => handleNotificationToggle(key)}
+                                    role="switch"
+                                    aria-checked={!!notifications[key]}
+                                    disabled={isSaving}
+                                    className="inline-flex h-11 w-11 shrink-0 items-center justify-center bg-transparent p-0 disabled:opacity-60"
                                 >
-                                    <motion.span
-                                        animate={{ x: notifications[key] ? 20 : 0 }}
-                                        transition={{ type: 'spring', stiffness: 520, damping: 34 }}
-                                        className="h-[18px] w-[18px] rounded-full bg-white shadow-soft"
-                                    />
-                                </span>
-                            </motion.button>
-                        </div>
-                    ))}
+                                    <span
+                                        className={`relative inline-flex h-6 w-11 items-center overflow-hidden rounded-full p-[3px] transition-colors ${notifications[key]
+                                            ? 'bg-gradient-to-r from-[#C9A227] to-[#8B7019]'
+                                            : 'bg-neutral-200'
+                                            }`}
+                                    >
+                                        <motion.span
+                                            animate={{ x: notifications[key] ? 20 : 0 }}
+                                            transition={{ type: 'spring', stiffness: 520, damping: 34 }}
+                                            className="h-[18px] w-[18px] rounded-full bg-white shadow-soft"
+                                        />
+                                    </span>
+                                </motion.button>
+                            </div>
+                        );
+                    })}
                 </section>
 
                 {/* Preferences Section */}
@@ -419,11 +432,8 @@ const SettingsPage = () => {
                         onClick={() => setShowLanguagePicker(true)}
                         className="w-full flex items-center justify-between py-3 px-3 rounded-2xl border border-white/80 bg-white/70"
                     >
-                        <span className="text-sm text-neutral-700">{t('settings.preferences.language')}</span>
-                        <span className="text-sm font-medium text-neutral-500 flex items-center gap-1">
-                            {currentLanguageLabel}
-                            <ChevronRight className="w-4 h-4 text-neutral-500" />
-                        </span>
+                        <span className="text-sm text-neutral-700">{currentLanguageLabel}</span>
+                        <ChevronRight className="w-4 h-4 text-neutral-500" />
                     </motion.button>
                 </section>
 
@@ -531,16 +541,19 @@ const SettingsPage = () => {
                         </p>
                     )}
 
-                    <motion.button
+                    <StandardButton
+                        size="lg"
                         whileTap={{ scale: exportEmailValid && !exportSubmitting ? 0.98 : 1 }}
                         onClick={handleExportRequest}
                         disabled={!exportEmailValid || exportSubmitting}
-                        className="btn-primary w-full"
+                        className="w-full py-3"
                     >
-                        {exportSubmitting
-                            ? t('settings.export.ctaLoading', 'Requesting...')
-                            : t('settings.export.cta', 'Request export')}
-                    </motion.button>
+                        {exportSubmitting ? (
+                            <ButtonLoader size="sm" tone="amber" />
+                        ) : (
+                            t('settings.export.cta', 'Request export')
+                        )}
+                    </StandardButton>
                 </section>
 
                 {/* Legal Section */}
@@ -652,16 +665,26 @@ const SettingsPage = () => {
                                 <motion.button
                                     whileTap={{ scale: 0.98 }}
                                     onClick={async () => {
+                                        if (isDisconnecting) return;
+                                        setIsDisconnecting(true);
                                         const { error } = await usePartnerStore.getState().disconnectPartner();
                                         if (error) {
                                             console.error('Disconnect failed:', error);
                                             // Could add toast notification here
+                                            setIsDisconnecting(false);
+                                            return;
                                         }
                                         setShowDisconnectModal(false);
+                                        setIsDisconnecting(false);
                                     }}
-                                    className="flex-1 py-3 rounded-2xl bg-rose-500 text-sm font-bold text-white shadow-soft"
+                                    disabled={isDisconnecting}
+                                    className="flex-1 py-3 rounded-2xl bg-rose-500 text-sm font-bold text-white shadow-soft disabled:opacity-60"
                                 >
-                                    {t('settings.account.disconnectConfirm')}
+                                    {isDisconnecting ? (
+                                        <ButtonLoader size="sm" tone="white" />
+                                    ) : (
+                                        t('settings.account.disconnectConfirm')
+                                    )}
                                 </motion.button>
                             </div>
                         </motion.div>
@@ -715,7 +738,11 @@ const SettingsPage = () => {
                                 <div className="space-y-3">
                                     {(supportedLanguages || SUPPORTED_LANGUAGE_CONFIG).map((lang, index) => {
                                         const isSelected = pendingLanguage === lang.code;
-                                        const flagEmoji = lang.code === 'en' ? '🇺🇸' : lang.code === 'zh-Hans' ? '🇨🇳' : '🌐';
+                                        const languageFlag = lang.code === 'en'
+                                            ? '🇺🇸'
+                                            : lang.code === 'zh-Hans'
+                                                ? '🇨🇳'
+                                                : '🏳️';
 
                                         return (
                                             <motion.button
@@ -731,8 +758,9 @@ const SettingsPage = () => {
                                                         : 'border-white/80 bg-white/90 hover:border-court-gold/20 hover:bg-court-cream/40'
                                                     }`}
                                             >
-                                                {/* Flag emoji */}
-                                                <span className="text-2xl">{flagEmoji}</span>
+                                                <div className="h-10 w-10 rounded-2xl border border-white/80 bg-white/90 flex items-center justify-center shadow-inner-soft">
+                                                    <span className="text-xl" aria-hidden="true">{languageFlag}</span>
+                                                </div>
 
                                                 {/* Language names */}
                                                 <div className="flex-1 text-left">
@@ -743,9 +771,9 @@ const SettingsPage = () => {
                                                 </div>
 
                                                 {/* Checkmark with animation */}
-                                                <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-all ${isSelected
-                                                        ? 'bg-gradient-to-br from-court-gold to-court-goldDark'
-                                                        : 'bg-neutral-100'
+                                                <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-all border ${isSelected
+                                                        ? 'border-court-goldDark/60 bg-gradient-to-br from-court-gold to-court-goldDark shadow-soft ring-2 ring-court-gold/30'
+                                                        : 'border-neutral-300 bg-white'
                                                     }`}>
                                                     {isSelected && (
                                                         <motion.svg
@@ -768,14 +796,14 @@ const SettingsPage = () => {
                                 </div>
 
                                 <div className="mt-6 space-y-3">
-                                    <motion.button
-                                        whileTap={{ scale: hasLanguageChange ? 0.98 : 1 }}
+                                    <StandardButton
+                                        size="lg"
                                         onClick={handleLanguageConfirm}
                                         disabled={!hasLanguageChange}
-                                        className="btn-primary w-full"
+                                        className="w-full py-3"
                                     >
                                         {t('settings.preferences.confirmLanguage', 'Confirm language')}
-                                    </motion.button>
+                                    </StandardButton>
                                 </div>
 
                                 {/* Close hint */}
@@ -785,7 +813,7 @@ const SettingsPage = () => {
                                     transition={{ delay: 0.4 }}
                                     className="text-center text-xs text-neutral-500 mt-5"
                                 >
-                                    {t('common.tapToClose')}
+                                    {translate(pendingLanguage, 'common.tapToClose')}
                                 </motion.p>
                             </div>
                         </motion.div>
@@ -836,6 +864,7 @@ const SettingsPage = () => {
                                         {t('settings.relationship.loveLanguage', 'Love language')}
                                     </div>
                                     <OptionsStep
+                                        iconMode="icon"
                                         options={LOVE_LANGUAGE_OPTIONS}
                                         selectedValue={relationshipForm.loveLanguage}
                                         onOptionSelect={(value) => setRelationshipForm((prev) => ({ ...prev, loveLanguage: value }))}
@@ -847,6 +876,7 @@ const SettingsPage = () => {
                                         {t('settings.relationship.communicationStyle', 'Communication style')}
                                     </div>
                                     <OptionsStep
+                                        iconMode="icon"
                                         options={COMMUNICATION_STYLE_OPTIONS}
                                         selectedValue={relationshipForm.communicationStyle}
                                         onOptionSelect={(value) => setRelationshipForm((prev) => ({ ...prev, communicationStyle: value }))}
@@ -858,6 +888,7 @@ const SettingsPage = () => {
                                         {t('settings.relationship.conflictStyle', 'Conflict style')}
                                     </div>
                                     <OptionsStep
+                                        iconMode="icon"
                                         options={CONFLICT_STYLE_OPTIONS}
                                         selectedValue={relationshipForm.conflictStyle}
                                         onOptionSelect={(value) => setRelationshipForm((prev) => ({ ...prev, conflictStyle: value }))}
@@ -869,6 +900,7 @@ const SettingsPage = () => {
                                         {t('settings.relationship.dateActivities', 'Favorite date activities')}
                                     </div>
                                     <OptionsStep
+                                        iconMode="icon"
                                         options={dateActivityOptions}
                                         selectedValue={relationshipForm.favoriteDateActivities}
                                         onOptionSelect={(value) => handleRelationshipToggle('favoriteDateActivities', value)}
@@ -882,6 +914,7 @@ const SettingsPage = () => {
                                         {t('settings.relationship.petPeeves', 'Pet peeves')}
                                     </div>
                                     <OptionsStep
+                                        iconMode="icon"
                                         options={petPeeveOptions}
                                         selectedValue={relationshipForm.petPeeves}
                                         onOptionSelect={(value) => handleRelationshipToggle('petPeeves', value)}
@@ -895,6 +928,7 @@ const SettingsPage = () => {
                                         {t('settings.relationship.appreciationStyle', 'Appreciation style')}
                                     </div>
                                     <OptionsStep
+                                        iconMode="icon"
                                         options={APPRECIATION_STYLE_OPTIONS}
                                         selectedValue={relationshipForm.appreciationStyle}
                                         onOptionSelect={(value) => setRelationshipForm((prev) => ({ ...prev, appreciationStyle: value }))}
@@ -927,16 +961,18 @@ const SettingsPage = () => {
                                 >
                                     {t('common.cancel', 'Cancel')}
                                 </motion.button>
-                                <motion.button
-                                    whileTap={{ scale: relationshipSaving ? 1 : 0.98 }}
+                                <StandardButton
+                                    size="lg"
                                     onClick={handleRelationshipSave}
                                     disabled={relationshipSaving}
-                                    className="btn-primary flex-1"
+                                    className="flex-1 py-3"
                                 >
-                                    {relationshipSaving
-                                        ? t('settings.relationship.saving', 'Saving...')
-                                        : t('settings.relationship.save', 'Save preferences')}
-                                </motion.button>
+                                    {relationshipSaving ? (
+                                        <ButtonLoader size="sm" tone="amber" />
+                                    ) : (
+                                        t('settings.relationship.save', 'Save preferences')
+                                    )}
+                                </StandardButton>
                             </div>
                         </motion.div>
                     </motion.div>
@@ -1061,7 +1097,11 @@ const SettingsPage = () => {
                                     disabled={deleteConfirmText !== 'DELETE' || isDeleting}
                                     className="flex-1 py-3 rounded-2xl bg-rose-500 text-sm font-bold text-white disabled:opacity-50"
                                 >
-                                    {isDeleting ? t('common.loading', 'Loading...') : t('settings.danger.confirmDelete', 'Delete Account')}
+                                    {isDeleting ? (
+                                        <ButtonLoader size="sm" tone="white" />
+                                    ) : (
+                                        t('settings.danger.confirmDelete', 'Delete Account')
+                                    )}
                                 </motion.button>
                             </div>
                         </motion.div>

@@ -1,13 +1,14 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Bell, Users, Check, Clock, X } from 'lucide-react';
+import { Bell, Users, Check, Clock, X, Scale, Lightbulb } from 'lucide-react';
 import { useI18n } from '../../i18n';
+import ButtonLoader from '../shared/ButtonLoader';
 
 /**
  * WaitingForPartner - Shows when waiting for partner to join court
  * Displays court attendance status and waiting animation
  */
-const WaitingForPartner = ({ session, partnerName, myName, isCreator, onCancel }) => {
+const WaitingForPartner = ({ session, partnerName, myName, isCreator, onCancel, isSubmitting }) => {
     const { t } = useI18n();
     const displayPartnerName = partnerName || t('common.yourPartner');
     const displayMyName = myName || t('common.you');
@@ -89,9 +90,9 @@ const WaitingForPartner = ({ session, partnerName, myName, isCreator, onCancel }
                                 <motion.div
                                     animate={{ x: [-10, 10, -10] }}
                                     transition={{ duration: 2, repeat: Infinity }}
-                                    className="text-lg my-1"
+                                    className="my-1"
                                 >
-                                    ⚖️
+                                    <Scale className="w-5 h-5 text-court-gold" />
                                 </motion.div>
                                 <div className="w-8 h-0.5 bg-court-tan" />
                             </div>
@@ -133,10 +134,17 @@ const WaitingForPartner = ({ session, partnerName, myName, isCreator, onCancel }
                     <motion.button
                         whileTap={{ scale: 0.98 }}
                         onClick={onCancel}
-                        className="court-btn-ghost mx-auto"
+                        disabled={isSubmitting}
+                        className="court-btn-ghost mx-auto disabled:opacity-60"
                     >
-                        <X className="w-4 h-4" />
-                        {t('court.waitingPartner.cancel')}
+                        {isSubmitting ? (
+                            <ButtonLoader size="sm" tone="court" variant="dots" />
+                        ) : (
+                            <>
+                                <X className="w-4 h-4" />
+                                {t('court.waitingPartner.cancel')}
+                            </>
+                        )}
                     </motion.button>
                 </div>
             </motion.div>
@@ -150,7 +158,7 @@ const WaitingForPartner = ({ session, partnerName, myName, isCreator, onCancel }
             >
                 <div className="flex items-start gap-3">
                     <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm">
-                        <span className="text-xl">💡</span>
+                        <Lightbulb className="w-5 h-5 text-court-gold" />
                     </div>
                     <div>
                         <p className="text-sm text-court-brown font-medium">{t('court.waitingPartner.tipTitle')}</p>

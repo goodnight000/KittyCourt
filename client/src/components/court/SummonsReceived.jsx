@@ -1,7 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Gavel, Star } from 'lucide-react';
+import { Gavel, Star, Heart, FileText } from 'lucide-react';
 import { useI18n } from '../../i18n';
+import ButtonLoader from '../shared/ButtonLoader';
 
 /**
  * SummonsReceived - Premium Court Invitation Experience
@@ -11,20 +12,20 @@ import { useI18n } from '../../i18n';
 // Floating decorative elements for magical ambiance
 const floatingElements = [
     // Gold stars (ceremonial)
-    { type: '✦', color: 'text-court-gold', size: 'text-sm', left: '8%', top: '5%', delay: 0 },
-    { type: '✦', color: 'text-court-goldLight', size: 'text-xs', left: '88%', top: '10%', delay: 0.8 },
-    { type: '✦', color: 'text-court-gold', size: 'text-base', left: '92%', top: '40%', delay: 1.5 },
+    { Icon: Star, color: 'text-court-gold', size: 'w-3.5 h-3.5', left: '8%', top: '5%', delay: 0 },
+    { Icon: Star, color: 'text-court-goldLight', size: 'w-3 h-3', left: '88%', top: '10%', delay: 0.8 },
+    { Icon: Star, color: 'text-court-gold', size: 'w-4 h-4', left: '92%', top: '40%', delay: 1.5 },
     // Lavender accents (dreamy)
-    { type: '✦', color: 'text-lavender-300', size: 'text-sm', left: '5%', top: '35%', delay: 0.5 },
-    { type: '✦', color: 'text-lavender-400', size: 'text-xs', left: '90%', top: '65%', delay: 1.2 },
+    { Icon: Star, color: 'text-lavender-300', size: 'w-3.5 h-3.5', left: '5%', top: '35%', delay: 0.5 },
+    { Icon: Star, color: 'text-lavender-400', size: 'w-3 h-3', left: '90%', top: '65%', delay: 1.2 },
     // Hearts (love theme - it's a couples app)
-    { type: '♥', color: 'text-blush-300', size: 'text-xs', left: '6%', top: '60%', delay: 1.8 },
-    { type: '♥', color: 'text-blush-400', size: 'text-sm', left: '85%', top: '25%', delay: 0.3 },
+    { Icon: Heart, color: 'text-blush-300', size: 'w-3 h-3', left: '6%', top: '60%', delay: 1.8 },
+    { Icon: Heart, color: 'text-blush-400', size: 'w-3.5 h-3.5', left: '85%', top: '25%', delay: 0.3 },
     // Scroll accent
-    { type: '✧', color: 'text-court-goldLight', size: 'text-xs', left: '12%', top: '80%', delay: 2.0 },
+    { Icon: Star, color: 'text-court-goldLight', size: 'w-3 h-3', left: '12%', top: '80%', delay: 2.0 },
 ];
 
-const SummonsReceived = ({ session, senderName, onJoin }) => {
+const SummonsReceived = ({ session, senderName, onJoin, isSubmitting }) => {
     const { t } = useI18n();
     const displaySenderName = senderName || t('common.yourPartner');
 
@@ -50,10 +51,10 @@ const SummonsReceived = ({ session, senderName, onJoin }) => {
                         repeat: Infinity,
                         ease: "easeInOut",
                     }}
-                    className={`absolute ${el.color} ${el.size} drop-shadow-sm pointer-events-none`}
+                    className={`absolute ${el.color} drop-shadow-sm pointer-events-none`}
                     style={{ left: el.left, top: el.top }}
                 >
-                    {el.type}
+                    <el.Icon className={el.size} />
                 </motion.span>
             ))}
 
@@ -100,7 +101,7 @@ const SummonsReceived = ({ session, senderName, onJoin }) => {
                     {/* Scroll container */}
                     <div className="relative w-28 h-28 bg-gradient-to-br from-white to-court-cream rounded-3xl
                         flex items-center justify-center shadow-lg border border-court-gold/20">
-                        <span className="text-6xl">📜</span>
+                        <FileText className="w-12 h-12 text-court-gold" />
 
                         {/* Accent */}
                         <motion.div
@@ -160,7 +161,8 @@ const SummonsReceived = ({ session, senderName, onJoin }) => {
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={onJoin}
-                    className="relative w-full court-btn-primary overflow-hidden group"
+                    disabled={isSubmitting}
+                    className="relative w-full court-btn-primary overflow-hidden group disabled:opacity-60"
                 >
                     {/* Button shimmer effect */}
                     <motion.div
@@ -169,8 +171,17 @@ const SummonsReceived = ({ session, senderName, onJoin }) => {
                         className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12"
                     />
 
-                    <Gavel className="w-5 h-5 relative z-10" />
-                    <span className="relative z-10">{t('court.summons.cta')}</span>
+                    {isSubmitting ? (
+                        <ButtonLoader
+                            size="sm"
+                            tone="white"
+                        />
+                    ) : (
+                        <>
+                            <Gavel className="w-5 h-5 relative z-10" />
+                            <span className="relative z-10">{t('court.summons.cta')}</span>
+                        </>
+                    )}
                 </motion.button>
 
                 {/* Expiry notice */}

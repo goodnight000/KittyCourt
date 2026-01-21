@@ -6,6 +6,8 @@ import { useI18n } from '../i18n';
 import useAuthStore from '../store/useAuthStore';
 import api from '../services/api';
 import BackButton from '../components/shared/BackButton';
+import StandardButton from '../components/shared/StandardButton';
+import ButtonLoader from '../components/shared/ButtonLoader';
 
 const FEEDBACK_TYPES = [
     { id: 'contact', icon: MessageCircle, color: 'amber' },
@@ -206,18 +208,21 @@ const FeedbackPage = () => {
                 )}
 
                 {/* Submit Button */}
-                <motion.button
-                    whileTap={{ scale: 0.98 }}
+                <StandardButton
+                    size="lg"
                     onClick={handleSubmit}
                     disabled={isSubmitting}
-                    className={`w-full py-4 rounded-2xl font-bold text-white flex items-center justify-center gap-2 shadow-soft transition-all ${isSubmitting
-                        ? 'bg-neutral-400 cursor-not-allowed'
-                        : 'bg-gradient-to-r from-[#C9A227] to-[#8B7019] hover:shadow-md'
-                        }`}
+                    className="w-full py-4"
                 >
-                    <Send className="w-4 h-4" />
-                    {isSubmitting ? '...' : t('feedback.submit')}
-                </motion.button>
+                    {isSubmitting ? (
+                        <ButtonLoader size="sm" tone="amber" />
+                    ) : (
+                        <>
+                            <Send className="w-4 h-4" />
+                            {t('feedback.submit')}
+                        </>
+                    )}
+                </StandardButton>
             </div>
         </div>
     );

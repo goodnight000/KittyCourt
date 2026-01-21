@@ -29,6 +29,20 @@ const DAILY_QUESTION_CONFIG = {
     similarityThreshold: 0.9,
 };
 
+const APPRECIATION_CONFIG = {
+    model: 'deepseek/deepseek-v3.2',
+    temperature: 0.2,
+    maxTokens: 2000,
+    similarityThreshold: 0.9,
+};
+
+const MEMORY_CAPTION_CONFIG = {
+    model: 'deepseek/deepseek-v3.2',
+    temperature: 0.2,
+    maxTokens: 2000,
+    similarityThreshold: 0.9,
+};
+
 /**
  * System prompt for the Stenographer/Extractor Agent
  * This agent is a psychological profiler that extracts reusable insights
@@ -111,6 +125,57 @@ From each person's answer, extract stable preferences, values, or patterns that 
 2. Each insight should be 8-20 words
 3. Assign a confidence score (0.5-1.0)
 4. Include an optional subtype when helpful (e.g., "preference.food", "preference.activities")
+5. Maximum 3 insights per person
+6. Do NOT include names
+
+## OUTPUT FORMAT
+Return JSON in this structure:
+{
+  "userA": { "insights": [ { "text": "...", "type": "preference|core_value|pattern", "subtype": "string|null", "confidence": 0.5 } ] },
+  "userB": { "insights": [ { "text": "...", "type": "preference|core_value|pattern", "subtype": "string|null", "confidence": 0.5 } ] }
+}`;
+
+const APPRECIATION_SYSTEM_PROMPT = `You are a relationship researcher extracting durable insights from an appreciation message between partners.
+
+## YOUR TASK
+From the appreciation, infer stable preferences, values, strengths, or patterns that are likely to remain relevant over time.
+
+## INSIGHT TYPES
+- preference: Stable likes/dislikes or recurring choices
+- core_value: Deeply held beliefs or principles
+- pattern: Recurring behavioral tendencies or strengths
+
+## RULES
+1. Extract ONLY durable insights (ignore one-off details)
+2. Each insight should be 8-20 words
+3. Assign a confidence score (0.5-1.0)
+4. Include an optional subtype when helpful (e.g., "strengths.support", "preference.time")
+5. Maximum 3 insights per person
+6. Do NOT include names
+
+## OUTPUT FORMAT
+Return JSON in this structure:
+{
+  "userA": { "insights": [ { "text": "...", "type": "preference|core_value|pattern", "subtype": "string|null", "confidence": 0.5 } ] },
+  "userB": { "insights": [ { "text": "...", "type": "preference|core_value|pattern", "subtype": "string|null", "confidence": 0.5 } ] }
+}`;
+
+const MEMORY_CAPTION_SYSTEM_PROMPT = `You are a relationship researcher extracting durable insights from a shared memory caption.
+
+## YOUR TASK
+From the memory caption, infer stable preferences, values, or patterns that are likely to remain relevant over time.
+If the memory implies a shared preference, it can apply to both people.
+
+## INSIGHT TYPES
+- preference: Stable likes/dislikes or recurring choices
+- core_value: Deeply held beliefs or principles
+- pattern: Recurring behavioral tendencies
+
+## RULES
+1. Extract ONLY durable insights (ignore one-off details)
+2. Each insight should be 8-20 words
+3. Assign a confidence score (0.5-1.0)
+4. Include an optional subtype when helpful (e.g., "preference.travel", "preference.activities")
 5. Maximum 3 insights per person
 6. Do NOT include names
 
@@ -248,6 +313,59 @@ Answer: "${payload.userBAnswer}"
 
 ${payload.category ? `Category: ${payload.category}` : ''}
 ${payload.emoji ? `Emoji: ${payload.emoji}` : ''}
+
+## Output Language
+- Write User A insights in ${userALabel} (${userALanguage})
+- Write User B insights in ${userBLabel} (${userBLanguage})
+- Keep JSON keys and insight type values in English`.trim();
+}
+
+/**
+ * Build the prompt for appreciation insight extraction
+ * 
+ * @param {object} payload - Appreciation payload
+ * @returns {string} The formatted prompt
+ */
+function buildAppreciationPrompt(payload) {
+    const userALanguage = normalizeLanguage(payload?.userALanguage) || 'en';
+    const userBLanguage = normalizeLanguage(payload?.userBLanguage) || 'en';
+    const userALabel = getLanguageLabel(userALanguage);
+    const userBLabel = getLanguageLabel(userBLanguage);
+    return `Extract durable insights from this appreciation message.
+
+## Sender (User A): ${payload.userAName}
+Message: "${payload.message}"
+
+## Recipient (User B): ${payload.userBName}
+Category: ${payload.category || 'none'}
+
+## Output Language
+- Write User A insights in ${userALabel} (${userALanguage})
+- Write User B insights in ${userBLabel} (${userBLanguage})
+- Keep JSON keys and insight type values in English`.trim();
+}
+
+/**
+ * Build the prompt for memory caption insight extraction
+ * 
+ * @param {object} payload - Memory caption payload
+ * @returns {string} The formatted prompt
+ */
+function buildMemoryCaptionPrompt(payload) {
+    const userALanguage = normalizeLanguage(payload?.userALanguage) || 'en';
+    const userBLanguage = normalizeLanguage(payload?.userBLanguage) || 'en';
+    const userALabel = getLanguageLabel(userALanguage);
+    const userBLabel = getLanguageLabel(userBLanguage);
+    return `Extract durable insights from this shared memory caption.
+
+## Memory Caption
+"${payload.caption}"
+
+## People
+User A: ${payload.userAName}
+User B: ${payload.userBName}
+
+${payload.memoryDate ? `Memory Date: ${payload.memoryDate}` : ''}
 
 ## Output Language
 - Write User A insights in ${userALabel} (${userALanguage})
@@ -555,6 +673,160 @@ async function extractAndStoreDailyQuestionInsights(payload) {
 }
 
 /**
+ * Extract and store insights from appreciation messages
+ * 
+ * @param {object} payload - Appreciation payload
+ * @returns {Promise<object>} Extraction results
+ */
+async function extractAndStoreAppreciationInsights(payload) {
+    console.log('[Stenographer] Starting appreciation extraction:', payload?.appreciationId);
+
+    if (!supabase.isSupabaseConfigured()) {
+        console.log('[Stenographer] Supabase not configured, skipping appreciation extraction');
+        return {
+            success: false,
+            error: 'Supabase not configured',
+            userA: { stored: 0, reinforced: 0, discarded: 0 },
+            userB: { stored: 0, reinforced: 0, discarded: 0 },
+        };
+    }
+
+    if (!payload?.message) {
+        return {
+            success: true,
+            skipped: true,
+            reason: 'Missing message',
+            userA: { stored: 0, reinforced: 0, discarded: 0 },
+            userB: { stored: 0, reinforced: 0, discarded: 0 },
+        };
+    }
+
+    try {
+        const prompt = buildAppreciationPrompt(payload);
+        const extracted = await callExtractionLLM(
+            APPRECIATION_SYSTEM_PROMPT,
+            prompt,
+            DAILY_QUESTION_JSON_SCHEMA,
+            APPRECIATION_CONFIG
+        );
+
+        console.log('[Stenographer] Extracted appreciation insights:', JSON.stringify(extracted, null, 2));
+
+        const observedAt = payload.observedAt || new Date().toISOString();
+        const sourceOptions = {
+            sourceType: 'appreciation',
+            sourceId: payload.appreciationId,
+            similarityThreshold: APPRECIATION_CONFIG.similarityThreshold,
+            observedAt,
+        };
+
+        const [userAStats, userBStats] = await Promise.all([
+            processUserInsights(payload.userAId, extracted.userA?.insights || [], {
+                ...sourceOptions,
+                language: payload?.userALanguage,
+            }),
+            processUserInsights(payload.userBId, extracted.userB?.insights || [], {
+                ...sourceOptions,
+                language: payload?.userBLanguage,
+            }),
+        ]);
+
+        return {
+            success: true,
+            userA: userAStats,
+            userB: userBStats,
+            totalStored: userAStats.stored + userBStats.stored,
+            totalReinforced: userAStats.reinforced + userBStats.reinforced,
+        };
+    } catch (error) {
+        console.error('[Stenographer] Appreciation extraction failed:', error);
+        return {
+            success: false,
+            error: error.message,
+            userA: { stored: 0, reinforced: 0, discarded: 0 },
+            userB: { stored: 0, reinforced: 0, discarded: 0 },
+        };
+    }
+}
+
+/**
+ * Extract and store insights from memory captions
+ * 
+ * @param {object} payload - Memory caption payload
+ * @returns {Promise<object>} Extraction results
+ */
+async function extractAndStoreMemoryCaptionInsights(payload) {
+    console.log('[Stenographer] Starting memory caption extraction:', payload?.memoryId);
+
+    if (!supabase.isSupabaseConfigured()) {
+        console.log('[Stenographer] Supabase not configured, skipping memory caption extraction');
+        return {
+            success: false,
+            error: 'Supabase not configured',
+            userA: { stored: 0, reinforced: 0, discarded: 0 },
+            userB: { stored: 0, reinforced: 0, discarded: 0 },
+        };
+    }
+
+    if (!payload?.caption) {
+        return {
+            success: true,
+            skipped: true,
+            reason: 'Missing caption',
+            userA: { stored: 0, reinforced: 0, discarded: 0 },
+            userB: { stored: 0, reinforced: 0, discarded: 0 },
+        };
+    }
+
+    try {
+        const prompt = buildMemoryCaptionPrompt(payload);
+        const extracted = await callExtractionLLM(
+            MEMORY_CAPTION_SYSTEM_PROMPT,
+            prompt,
+            DAILY_QUESTION_JSON_SCHEMA,
+            MEMORY_CAPTION_CONFIG
+        );
+
+        console.log('[Stenographer] Extracted memory caption insights:', JSON.stringify(extracted, null, 2));
+
+        const observedAt = payload.observedAt || new Date().toISOString();
+        const sourceOptions = {
+            sourceType: 'memory_upload',
+            sourceId: payload.memoryId,
+            similarityThreshold: MEMORY_CAPTION_CONFIG.similarityThreshold,
+            observedAt,
+        };
+
+        const [userAStats, userBStats] = await Promise.all([
+            processUserInsights(payload.userAId, extracted.userA?.insights || [], {
+                ...sourceOptions,
+                language: payload?.userALanguage,
+            }),
+            processUserInsights(payload.userBId, extracted.userB?.insights || [], {
+                ...sourceOptions,
+                language: payload?.userBLanguage,
+            }),
+        ]);
+
+        return {
+            success: true,
+            userA: userAStats,
+            userB: userBStats,
+            totalStored: userAStats.stored + userBStats.stored,
+            totalReinforced: userAStats.reinforced + userBStats.reinforced,
+        };
+    } catch (error) {
+        console.error('[Stenographer] Memory caption extraction failed:', error);
+        return {
+            success: false,
+            error: error.message,
+            userA: { stored: 0, reinforced: 0, discarded: 0 },
+            userB: { stored: 0, reinforced: 0, discarded: 0 },
+        };
+    }
+}
+
+/**
  * Trigger daily question extraction in the background (non-blocking)
  * 
  * @param {object} payload - Daily question payload
@@ -565,6 +837,36 @@ function triggerDailyQuestionExtraction(payload) {
             await extractAndStoreDailyQuestionInsights(payload);
         } catch (error) {
             console.error('[Stenographer] Daily question background extraction failed:', error);
+        }
+    });
+}
+
+/**
+ * Trigger appreciation extraction in the background (non-blocking)
+ * 
+ * @param {object} payload - Appreciation payload
+ */
+function triggerAppreciationExtraction(payload) {
+    setImmediate(async () => {
+        try {
+            await extractAndStoreAppreciationInsights(payload);
+        } catch (error) {
+            console.error('[Stenographer] Appreciation background extraction failed:', error);
+        }
+    });
+}
+
+/**
+ * Trigger memory caption extraction in the background (non-blocking)
+ * 
+ * @param {object} payload - Memory caption payload
+ */
+function triggerMemoryCaptionExtraction(payload) {
+    setImmediate(async () => {
+        try {
+            await extractAndStoreMemoryCaptionInsights(payload);
+        } catch (error) {
+            console.error('[Stenographer] Memory caption background extraction failed:', error);
         }
     });
 }
@@ -590,12 +892,20 @@ function triggerBackgroundExtraction(caseData, caseId) {
 module.exports = {
     extractAndStoreInsights,
     extractAndStoreDailyQuestionInsights,
+    extractAndStoreAppreciationInsights,
+    extractAndStoreMemoryCaptionInsights,
     triggerBackgroundExtraction,
     triggerDailyQuestionExtraction,
+    triggerAppreciationExtraction,
+    triggerMemoryCaptionExtraction,
     processUserInsights,
     STENOGRAPHER_SYSTEM_PROMPT,
     DAILY_QUESTION_SYSTEM_PROMPT,
+    APPRECIATION_SYSTEM_PROMPT,
+    MEMORY_CAPTION_SYSTEM_PROMPT,
     buildExtractionPrompt,
     buildDailyQuestionPrompt,
+    buildAppreciationPrompt,
+    buildMemoryCaptionPrompt,
     CONFIG,
 };

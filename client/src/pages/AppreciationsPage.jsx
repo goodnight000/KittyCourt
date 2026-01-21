@@ -161,11 +161,8 @@ const AppreciationsPage = () => {
                         {t('appreciations.header.kicker')}
                     </p>
                     <h1 className="text-2xl font-display font-bold text-neutral-800">{t('appreciations.header.title')}</h1>
-                    <p className="text-neutral-500 text-sm flex items-center gap-2">
-                        <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-rose-100/70 border border-rose-200/70 shadow-inner-soft shrink-0">
-                            <HeartHandshake className="w-3.5 h-3.5 text-rose-500" />
-                        </span>
-                        <span>{t('appreciations.header.subtitle', { name: partnerName })}</span>
+                    <p className="text-neutral-500 text-sm">
+                        {t('appreciations.header.subtitle', { name: partnerName })}
                     </p>
                 </div>
             </div>

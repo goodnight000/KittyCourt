@@ -1,18 +1,20 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Gavel, Zap, Scale, Medal, Lock, Crown } from 'lucide-react';
+import { Crown, Gavel, Lock, Medal, Scale, Star, X, Zap } from 'lucide-react';
 import useSubscriptionStore from '../../store/useSubscriptionStore';
 import Paywall from '../Paywall';
 import { useI18n } from '../../i18n';
+import StandardButton from '../shared/StandardButton';
+import ButtonLoader from '../shared/ButtonLoader';
 
 // Floating decorative elements for premium ambiance
 // Duration is pre-computed to avoid Math.random() during render
 const floatingElements = [
-    { type: '✦', color: 'text-court-gold', size: 'text-sm', left: '5%', top: '8%', delay: 0, duration: 3.5 },
-    { type: '✦', color: 'text-court-goldLight', size: 'text-xs', left: '90%', top: '15%', delay: 0.6, duration: 4.2 },
-    { type: '✦', color: 'text-court-gold', size: 'text-base', left: '92%', top: '55%', delay: 1.2, duration: 3.8 },
-    { type: '✧', color: 'text-lavender-300', size: 'text-xs', left: '4%', top: '45%', delay: 0.4, duration: 4.5 },
-    { type: '✧', color: 'text-court-goldLight', size: 'text-sm', left: '8%', top: '85%', delay: 1.8, duration: 3.2 },
+    { Icon: Star, color: 'text-court-gold', size: 'w-3 h-3', left: '5%', top: '8%', delay: 0, duration: 3.5 },
+    { Icon: Star, color: 'text-court-goldLight', size: 'w-2.5 h-2.5', left: '90%', top: '15%', delay: 0.6, duration: 4.2 },
+    { Icon: Star, color: 'text-court-gold', size: 'w-3.5 h-3.5', left: '92%', top: '55%', delay: 1.2, duration: 3.8 },
+    { Icon: Star, color: 'text-lavender-300', size: 'w-2.5 h-2.5', left: '4%', top: '45%', delay: 0.4, duration: 4.5 },
+    { Icon: Star, color: 'text-court-goldLight', size: 'w-3 h-3', left: '8%', top: '85%', delay: 1.8, duration: 3.2 },
 ];
 
 /**
@@ -61,6 +63,8 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
     const [selectedJudge, setSelectedJudge] = useState(null);
     const [showPaywall, setShowPaywall] = useState(false);
     const [paywallReason, setPaywallReason] = useState(null);
+    const [ctaPulse, setCtaPulse] = useState(false);
+    const [isServing, setIsServing] = useState(false);
     const { t } = useI18n();
 
     const { canUseJudge, getUsageDisplay, isGold, fetchUsage } = useSubscriptionStore();
@@ -105,22 +109,27 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
     }, [selectedJudge, canUseJudge, getPaywallReason]);
 
     const handleServe = async () => {
-        if (!selectedJudge) return;
+        if (!selectedJudge || isServing) return;
 
-        await fetchUsage();
-        const status = canUseJudge(selectedJudge);
-        if (!status.allowed) {
-            const judge = JUDGES.find((item) => item.id === selectedJudge);
-            setSelectedJudge(null);
-            if (judge) {
-                setPaywallReason(getPaywallReason(judge));
-                setShowPaywall(true);
+        setIsServing(true);
+        try {
+            await fetchUsage();
+            const status = canUseJudge(selectedJudge);
+            if (!status.allowed) {
+                const judge = JUDGES.find((item) => item.id === selectedJudge);
+                setSelectedJudge(null);
+                if (judge) {
+                    setPaywallReason(getPaywallReason(judge));
+                    setShowPaywall(true);
+                }
+                return;
             }
-            return;
-        }
 
-        onServe(selectedJudge);
-        setSelectedJudge(null);
+            onServe(selectedJudge);
+            setSelectedJudge(null);
+        } finally {
+            setIsServing(false);
+        }
     };
 
     const handleClose = () => {
@@ -135,6 +144,13 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
 
     const selectedStatus = selectedJudge ? canUseJudge(selectedJudge) : null;
     const canServe = !!selectedJudge && selectedStatus?.allowed;
+
+    useEffect(() => {
+        if (!selectedJudge) return;
+        setCtaPulse(true);
+        const timer = setTimeout(() => setCtaPulse(false), 450);
+        return () => clearTimeout(timer);
+    }, [selectedJudge]);
 
     return (
         <>
@@ -161,7 +177,9 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
                         <div className="absolute top-1/3 left-1/4 w-40 h-40 rounded-full bg-blush-200/10 blur-3xl pointer-events-none" />
 
                         {/* Floating decorative elements */}
-                        {floatingElements.map((el, i) => (
+                        {floatingElements.map((el, i) => {
+                            const Icon = el.Icon;
+                            return (
                             <motion.span
                                 key={i}
                                 animate={{
@@ -175,12 +193,12 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
                                     repeat: Infinity,
                                     ease: "easeInOut",
                                 }}
-                                className={`absolute ${el.color} ${el.size} drop-shadow-sm pointer-events-none z-10`}
+                                className={`absolute drop-shadow-sm pointer-events-none z-10`}
                                 style={{ left: el.left, top: el.top }}
                             >
-                                {el.type}
+                                <Icon className={`${el.size} ${el.color}`} />
                             </motion.span>
-                        ))}
+                        )})}
 
                         {/* Modal */}
                         <motion.div
@@ -259,6 +277,8 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
                                             key={judge.id}
                                             onClick={() => handleJudgeClick(judge)}
                                             whileTap={{ scale: 0.98 }}
+                                            animate={isSelected && !isLocked ? { y: -2 } : { y: 0 }}
+                                            transition={{ type: 'spring', stiffness: 260, damping: 22 }}
                                             className={`w-full p-4 rounded-2xl border-2 text-left transition-all duration-300 relative ${isLocked
                                                 ? 'border-court-tan/30 bg-white/30 opacity-75'
                                                 : isSelected
@@ -268,11 +288,19 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
                                         >
                                             {/* Selection glow effect */}
                                             {isSelected && !isLocked && (
-                                                <motion.div
-                                                    initial={{ opacity: 0 }}
-                                                    animate={{ opacity: 1 }}
-                                                    className="absolute inset-0 rounded-2xl bg-gradient-to-br from-court-gold/5 via-transparent to-transparent pointer-events-none"
-                                                />
+                                                <>
+                                                    <motion.div
+                                                        layoutId="judgeSelectionHalo"
+                                                        transition={{ type: 'spring', stiffness: 240, damping: 24 }}
+                                                        className={`absolute inset-0 rounded-2xl border-2 ${judge.borderColor} pointer-events-none`}
+                                                    />
+                                                    <motion.div
+                                                        initial={{ opacity: 0 }}
+                                                        animate={{ opacity: [0.35, 0.6, 0.35], scale: [1, 1.02, 1] }}
+                                                        transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
+                                                        className={`absolute inset-0 rounded-2xl ${judge.accentColor}/10 pointer-events-none`}
+                                                    />
+                                                </>
                                             )}
                                             <div className="flex items-center gap-4">
                                                 {/* Avatar */}
@@ -346,7 +374,8 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
                                                     {isSelected && !isLocked && (
                                                         <motion.div
                                                             initial={{ scale: 0 }}
-                                                            animate={{ scale: 1 }}
+                                                            animate={{ scale: [0, 1.2, 1] }}
+                                                            transition={{ duration: 0.35, ease: 'easeOut' }}
                                                             className="w-2 h-2 bg-white rounded-full"
                                                         />
                                                     )}
@@ -371,14 +400,22 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
                             </div>
 
                             {/* Serve Button - Premium Gold Gradient */}
-                            <motion.button
+                            <StandardButton
                                 type="button"
                                 onClick={handleServe}
-                                disabled={!canServe}
-                                whileHover={canServe ? { scale: 1.01 } : {}}
-                                whileTap={canServe ? { scale: 0.98 } : {}}
-                                className="court-btn-primary relative w-full overflow-hidden"
+                                disabled={!canServe || isServing}
+                                animate={ctaPulse ? { scale: [1, 1.03, 1] } : { scale: 1 }}
+                                transition={{ duration: 0.35, ease: 'easeOut' }}
+                                className="relative w-full py-3 overflow-hidden"
                             >
+                                {ctaPulse && (
+                                    <motion.span
+                                        initial={{ opacity: 0.4, scale: 0.9 }}
+                                        animate={{ opacity: 0, scale: 1.35 }}
+                                        transition={{ duration: 0.5, ease: 'easeOut' }}
+                                        className="absolute inset-0 rounded-full bg-court-gold/25 pointer-events-none"
+                                    />
+                                )}
                                 {/* Button shimmer effect when active */}
                                 {canServe && (
                                     <motion.div
@@ -387,11 +424,21 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
                                         className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12"
                                     />
                                 )}
-                                <Gavel className="w-5 h-5 relative z-10" />
-                                <span className="relative z-10">
-                                    {canServe ? t('court.judgeSelection.serve') : t('court.judgeSelection.selectPrompt')}
-                                </span>
-                            </motion.button>
+                                {isServing ? (
+                                    <ButtonLoader
+                                        size="sm"
+                                        tone="white"
+                                        className="relative z-10"
+                                    />
+                                ) : (
+                                    <>
+                                        <Gavel className="w-5 h-5 relative z-10" />
+                                        <span className="relative z-10">
+                                            {canServe ? t('court.judgeSelection.serve') : t('court.judgeSelection.selectPrompt')}
+                                        </span>
+                                    </>
+                                )}
+                            </StandardButton>
                         </motion.div>
                     </motion.div>
                 )}

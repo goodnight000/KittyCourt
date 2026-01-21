@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { Mail, ArrowLeft, Send, CheckCircle, AlertCircle } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Cat, CheckCircle, Key, Lock, Mail, Send } from 'lucide-react';
 import { resetPassword } from '../services/supabase';
 import { useI18n } from '../i18n';
+import StandardButton from '../components/shared/StandardButton';
 
 const ForgotPasswordPage = () => {
     const { t } = useI18n();
@@ -52,22 +53,22 @@ const ForgotPasswordPage = () => {
 
     if (success) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-court-cream via-white to-court-tan/30 flex flex-col items-center justify-center p-6 safe-top">
+            <div className="min-h-screen flex flex-col items-center justify-center p-6 safe-top">
                 {/* Background Decorations */}
                 <div className="fixed inset-0 pointer-events-none overflow-hidden">
                     <motion.div
                         animate={{ y: [0, -20, 0], rotate: [0, 5, 0] }}
                         transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-                        className="absolute top-20 left-10 text-4xl opacity-20"
+                        className="absolute top-20 left-10 opacity-20"
                     >
-                        📧
+                        <Mail className="w-10 h-10 text-amber-500" />
                     </motion.div>
                     <motion.div
                         animate={{ y: [0, 15, 0], rotate: [0, -5, 0] }}
                         transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-                        className="absolute top-40 right-16 text-3xl opacity-20"
+                        className="absolute top-40 right-16 opacity-20"
                     >
-                        🔓
+                        <Key className="w-8 h-8 text-amber-500" />
                     </motion.div>
                 </div>
 
@@ -127,22 +128,22 @@ const ForgotPasswordPage = () => {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-court-cream via-white to-court-tan/30 flex flex-col items-center justify-center p-6 safe-top">
+        <div className="min-h-screen flex flex-col items-center justify-center p-6 safe-top">
             {/* Background Decorations */}
             <div className="fixed inset-0 pointer-events-none overflow-hidden">
                 <motion.div
                     animate={{ y: [0, -20, 0], rotate: [0, 5, 0] }}
                     transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-                    className="absolute top-20 left-10 text-4xl opacity-20"
+                    className="absolute top-20 left-10 opacity-20"
                 >
-                    🐱
+                    <Cat className="w-10 h-10 text-amber-600" />
                 </motion.div>
                 <motion.div
                     animate={{ y: [0, 15, 0], rotate: [0, -5, 0] }}
                     transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-                    className="absolute top-40 right-16 text-3xl opacity-20"
+                    className="absolute top-40 right-16 opacity-20"
                 >
-                    🔑
+                    <Key className="w-8 h-8 text-amber-600" />
                 </motion.div>
             </div>
 
@@ -173,7 +174,7 @@ const ForgotPasswordPage = () => {
                     className="w-20 h-20 mx-auto mb-4 rounded-2xl flex items-center justify-center shadow-lg"
                     style={{ background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' }}
                 >
-                    <span className="text-4xl">🔐</span>
+                    <Lock className="w-10 h-10 text-white" />
                 </motion.div>
                 <h1 className="text-3xl font-bold text-gradient font-display">{t('forgotPassword.title')}</h1>
                 <p className="text-neutral-500 mt-2">{t('forgotPassword.subtitle')}</p>
@@ -226,12 +227,11 @@ const ForgotPasswordPage = () => {
                         </div>
 
                         {/* Submit Button */}
-                        <motion.button
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
+                        <StandardButton
+                            size="xl"
                             type="submit"
                             disabled={isLoading}
-                            className="w-full py-4 bg-gradient-to-r from-court-gold to-court-brown rounded-2xl font-bold text-white flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full py-4"
                         >
                             {isLoading ? (
                                 <>
@@ -248,7 +248,7 @@ const ForgotPasswordPage = () => {
                                     {t('forgotPassword.submit')}
                                 </>
                             )}
-                        </motion.button>
+                        </StandardButton>
                     </form>
 
                     {/* Remember password? */}

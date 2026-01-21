@@ -4,32 +4,15 @@
 
 const express = require('express');
 const router = express.Router();
-const { requireAuthUserId, requireSupabase } = require('../lib/auth');
 const { requirePartner } = require('../middleware/requirePartner');
 const { getOrderedCoupleIds, getLevelStatus } = require('../lib/xpService');
-const { generateInsightsForCouple } = require('../lib/insightService');
+const { processDailyInsights } = require('../lib/insightsSchedulerService');
 const { getUserSubscriptionTier } = require('../lib/usageLimits');
 const { safeErrorMessage } = require('../lib/shared/errorUtils');
 const { rateLimitMiddleware } = require('../lib/security/index');
 const { sendError } = require('../lib/http');
 
 const INSIGHTS_MIN_LEVEL = 10;
-
-const buildConsentState = (profile) => {
-    const now = new Date();
-    const selfPaused = profile?.ai_insights_paused_until
-        ? new Date(profile.ai_insights_paused_until) > now
-        : false;
-
-    return {
-        selfConsent: !!profile?.ai_insights_consent,
-        partnerConsent: true,
-        selfPausedUntil: profile?.ai_insights_paused_until || null,
-        partnerPausedUntil: null,
-        selfPaused,
-        partnerPaused: false,
-    };
-};
 
 router.get('/', requirePartner, rateLimitMiddleware('insights'), async (req, res) => {
     try {
@@ -52,84 +35,38 @@ router.get('/', requirePartner, rateLimitMiddleware('insights'), async (req, res
             return sendError(res, 403, 'LEVEL_REQUIRED', `Level ${INSIGHTS_MIN_LEVEL} required`);
         }
 
-        let { data: profile, error } = await supabase
-            .from('profiles')
-            .select('id, ai_insights_consent, ai_insights_consent_at, ai_insights_paused_until')
-            .eq('id', userId)
-            .single();
-
-        if (error) throw error;
-
-        // Check consent status without auto-consenting
-        const consent = buildConsentState(profile || null);
-
-        // If either user hasn't explicitly consented, return requiresConsent flag
-        if (!consent.selfConsent) {
-            return res.json({
-                insights: [],
-                data: [],
-                consent,
-                requiresConsent: true,
-                message: 'AI insights require your consent',
-                pagination: { limit, offset, hasMore: false }
-            });
-        }
-
-        // Check for paused state
-        if (consent.selfPaused) {
-            return res.json({
-                insights: [],
-                data: [],
-                consent,
-                pagination: { limit, offset, hasMore: false }
-            });
-        }
-
         const coupleIds = getOrderedCoupleIds(userId, partnerId);
         if (!coupleIds) {
             return sendError(res, 400, 'INVALID_INPUT', 'Invalid couple');
         }
-        let { data: insights, error: insightsError } = await supabase
+        const { data: latestRow, error: latestError } = await supabase
             .from('insights')
-            .select('*')
+            .select('generated_at')
             .eq('user_a_id', coupleIds.user_a_id)
             .eq('user_b_id', coupleIds.user_b_id)
             .eq('recipient_user_id', userId)
             .eq('is_active', true)
             .order('generated_at', { ascending: false })
-            .range(offset, offset + limit - 1);
+            .limit(1)
+            .maybeSingle();
 
-        if (insightsError) throw insightsError;
+        if (latestError) throw latestError;
 
-        let meta = null;
-        const generated = await generateInsightsForCouple({
-            userId,
-            partnerId,
-            existingInsights: (insights || []).map((insight) => ({
-                text: insight.insight_text,
-                category: insight.category
-            }))
-        });
-
-        if (generated?.error) {
-            meta = { reason: generated.error };
-        } else if (generated?.reason) {
-            meta = { reason: generated.reason };
-        }
-
-        if (!generated?.error && generated?.insights?.length) {
-            const refreshed = await supabase
+        let insights = [];
+        if (latestRow?.generated_at) {
+            const { data: latestInsights, error: insightsError } = await supabase
                 .from('insights')
                 .select('*')
                 .eq('user_a_id', coupleIds.user_a_id)
                 .eq('user_b_id', coupleIds.user_b_id)
                 .eq('recipient_user_id', userId)
                 .eq('is_active', true)
+                .eq('generated_at', latestRow.generated_at)
                 .order('generated_at', { ascending: false })
                 .range(offset, offset + limit - 1);
-            if (!refreshed.error) {
-                insights = refreshed.data || insights;
-            }
+
+            if (insightsError) throw insightsError;
+            insights = latestInsights || [];
         }
 
         const response = (insights || []).map((insight) => ({
@@ -144,8 +81,7 @@ router.get('/', requirePartner, rateLimitMiddleware('insights'), async (req, res
         return res.json({
             insights: response,
             data: response,
-            consent,
-            meta,
+            meta: null,
             pagination: {
                 limit,
                 offset,
@@ -154,61 +90,6 @@ router.get('/', requirePartner, rateLimitMiddleware('insights'), async (req, res
         });
     } catch (error) {
         console.error('[Insights] Failed to fetch insights:', error);
-        return sendError(res, error.statusCode || 500, 'SERVER_ERROR', safeErrorMessage(error));
-    }
-});
-
-router.post('/consent', async (req, res) => {
-    try {
-        const { consent } = req.body || {};
-        const supabase = requireSupabase();
-        const userId = await requireAuthUserId(req);
-
-        const nextConsent = !!consent;
-        const nowIso = new Date().toISOString();
-        const updates = {
-            ai_insights_consent: nextConsent,
-            ai_insights_consent_at: nowIso,
-            ai_insights_paused_until: null,
-        };
-
-        const { data, error } = await supabase
-            .from('profiles')
-            .update(updates)
-            .eq('id', userId)
-            .select('ai_insights_consent, ai_insights_consent_at, ai_insights_paused_until')
-            .single();
-
-        if (error) throw error;
-
-        return res.json({ success: true, profile: data });
-    } catch (error) {
-        console.error('[Insights] Failed to update consent:', error);
-        return sendError(res, error.statusCode || 500, 'SERVER_ERROR', safeErrorMessage(error));
-    }
-});
-
-router.post('/pause', async (req, res) => {
-    try {
-        const { days } = req.body || {};
-        const pauseDays = Number.isFinite(Number(days)) ? Math.max(Number(days), 1) : 7;
-
-        const supabase = requireSupabase();
-        const userId = await requireAuthUserId(req);
-        const pausedUntil = new Date(Date.now() + pauseDays * 24 * 60 * 60 * 1000).toISOString();
-
-        const { data, error } = await supabase
-            .from('profiles')
-            .update({ ai_insights_paused_until: pausedUntil })
-            .eq('id', userId)
-            .select('ai_insights_paused_until')
-            .single();
-
-        if (error) throw error;
-
-        return res.json({ success: true, pausedUntil: data?.ai_insights_paused_until || pausedUntil });
-    } catch (error) {
-        console.error('[Insights] Failed to pause insights:', error);
         return sendError(res, error.statusCode || 500, 'SERVER_ERROR', safeErrorMessage(error));
     }
 });
@@ -258,6 +139,28 @@ router.post('/:id/feedback', requirePartner, async (req, res) => {
         return res.json({ success: true, insight: updated });
     } catch (error) {
         console.error('[Insights] Failed to record feedback:', error);
+        return sendError(res, error.statusCode || 500, 'SERVER_ERROR', safeErrorMessage(error));
+    }
+});
+
+router.post('/process-daily', async (req, res) => {
+    try {
+        const secret = process.env.INSIGHTS_CRON_SECRET;
+        const isProd = process.env.NODE_ENV === 'production';
+
+        if (secret) {
+            const provided = req.headers['x-cron-secret'];
+            if (provided !== secret) {
+                return sendError(res, 403, 'FORBIDDEN', 'Invalid cron secret');
+            }
+        } else if (isProd) {
+            return sendError(res, 403, 'FORBIDDEN', 'Cron secret required');
+        }
+
+        const result = await processDailyInsights();
+        return res.json({ success: true, result });
+    } catch (error) {
+        console.error('[Insights] Failed to process daily insights:', error);
         return sendError(res, error.statusCode || 500, 'SERVER_ERROR', safeErrorMessage(error));
     }
 });

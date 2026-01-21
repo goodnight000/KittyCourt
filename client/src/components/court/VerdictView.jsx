@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import {
     Gavel, Star, Quote, AlertTriangle, HeartHandshake,
-    Plus, Check, ChevronRight
+    Plus, Check, ChevronRight, Heart, Lightbulb, Clock
 } from 'lucide-react';
 import { useI18n } from '../../i18n';
 
@@ -135,7 +135,7 @@ const VerdictView = ({
                 >
                     <div className="flex items-center gap-2">
                         <div className="w-8 h-8 bg-gradient-to-br from-green-100 to-green-50 rounded-xl flex items-center justify-center">
-                            <span className="text-lg">😻</span>
+                            <Heart className="w-5 h-5 text-green-600" />
                         </div>
                         <div>
                             <h3 className="text-sm font-bold text-green-700">{t('court.verdict.sections.purr.title')}</h3>
@@ -171,7 +171,7 @@ const VerdictView = ({
                 >
                     <div className="flex items-center gap-2">
                         <div className="w-8 h-8 bg-gradient-to-br from-court-gold/30 to-court-tan rounded-xl flex items-center justify-center">
-                            <span className="text-lg">🙀</span>
+                            <AlertTriangle className="w-5 h-5 text-court-goldDark" />
                         </div>
                         <div>
                             <h3 className="text-sm font-bold text-court-goldDark">{t('court.verdict.sections.hiss.title')}</h3>
@@ -216,8 +216,9 @@ const VerdictView = ({
                             {verdict.theSentence.description}
                         </p>
                         {verdict.theSentence.rationale && (
-                            <p className="text-xs text-court-maroon italic mt-2 pt-2 border-t border-court-maroon/20">
-                                💡 {verdict.theSentence.rationale}
+                            <p className="text-xs text-court-maroon italic mt-2 pt-2 border-t border-court-maroon/20 flex items-start gap-1.5">
+                                <Lightbulb className="w-3.5 h-3.5 text-court-maroon mt-0.5" />
+                                <span>{verdict.theSentence.rationale}</span>
                             </p>
                         )}
                     </div>
@@ -313,9 +314,9 @@ const VerdictView = ({
                             <motion.div
                                 animate={{ scale: [1, 1.1, 1] }}
                                 transition={{ duration: 1.5, repeat: Infinity }}
-                                className="text-2xl mb-2"
+                                className="flex items-center justify-center mb-2"
                             >
-                                ⏳
+                                <Clock className="w-5 h-5 text-court-gold" />
                             </motion.div>
                             <p className="text-sm font-medium text-court-brown">{t('court.verdict.accepted')}</p>
                             <p className="text-xs text-court-brownLight">{t('court.verdict.waitingForPartner', { name: partnerName })}</p>

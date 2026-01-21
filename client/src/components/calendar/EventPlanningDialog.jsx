@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
-import { X, Wand2, Loader2, AlertTriangle, Check, ChevronDown, BookOpen, Clock, Send, StickyNote, Heart, Gift, Lightbulb } from 'lucide-react';
+import { X, Wand2, Loader2, AlertTriangle, Check, ChevronDown, BookOpen, Clock, Send, StickyNote, Heart, Gift, Lightbulb, Star } from 'lucide-react';
 import { useI18n } from '../../i18n';
 import { parseLocalDate } from '../../utils/dateFormatters';
 import api from '../../services/api';
+import useUiStore from '../../store/useUiStore';
+import EmojiIcon from '../shared/EmojiIcon';
+import ButtonLoader from '../shared/ButtonLoader';
 
 const STYLE_OPTIONS = [
     { id: 'cozy', labelKey: 'calendar.planning.styles.cozy', descKey: 'calendar.planning.styles.cozyDesc', emoji: '🕯️' },
@@ -110,6 +113,8 @@ const EventPlanningDialog = ({ event, eventKey, myId, partnerId, partnerDisplayN
     const { t, language } = useI18n();
     const dateStr = event?.date;
     const eventDate = parseLocalDate(dateStr) || new Date();
+    const hideDock = useUiStore((state) => state.hideDock);
+    const showDock = useUiStore((state) => state.showDock);
 
     const [style, setStyle] = useState('cozy');
     const [plan, setPlan] = useState(null);
@@ -138,6 +143,11 @@ const EventPlanningDialog = ({ event, eventKey, myId, partnerId, partnerDisplayN
     const [isSharing, setIsSharing] = useState(false);
     const [shareSuccess, setShareSuccess] = useState(false);
     const checked = checklistsByStyle[style] || {};
+
+    useEffect(() => {
+        hideDock();
+        return () => showDock();
+    }, [hideDock, showDock]);
 
     // Loading step cycle animation
     useEffect(() => {
@@ -391,8 +401,10 @@ const EventPlanningDialog = ({ event, eventKey, myId, partnerId, partnerDisplayN
                 <div className="p-6 pb-5 border-b border-court-tan/30 relative z-10">
                     <div className="flex items-start justify-between gap-3">
                         <div className="flex items-center gap-3 min-w-0">
-                            <div className="w-12 h-12 rounded-3xl bg-gradient-to-br from-court-cream to-court-tan flex items-center justify-center text-2xl shadow-soft border border-court-tan/30 shrink-0">
-                                {event.emoji || '✨'}
+                            <div className="w-12 h-12 rounded-3xl bg-gradient-to-br from-court-cream to-court-tan flex items-center justify-center shadow-soft border border-court-tan/30 shrink-0">
+                                {event.emoji
+                                    ? <EmojiIcon emoji={event.emoji} className="w-6 h-6 text-court-gold" />
+                                    : <Star className="w-6 h-6 text-court-gold" />}
                             </div>
                             <div className="min-w-0">
                                 <div className="flex items-center gap-2">
@@ -428,26 +440,12 @@ const EventPlanningDialog = ({ event, eventKey, myId, partnerId, partnerDisplayN
                                             : 'bg-white/60 text-court-brownLight border-court-tan/30 hover:bg-white/80'
                                             }`}
                                     >
-                                        <span className="mr-1.5">{opt.emoji}</span>
+                                        <EmojiIcon emoji={opt.emoji} className="w-4 h-4 text-court-gold" />
                                         {t(opt.labelKey)}
                                     </button>
                                 );
                             })}
                         </div>
-                        {/* Style description */}
-                        <AnimatePresence mode="wait">
-                            {STYLE_OPTIONS.find((opt) => opt.id === style)?.descKey && (
-                                <Motion.p
-                                    key={style}
-                                    initial={{ opacity: 0, height: 0 }}
-                                    animate={{ opacity: 1, height: 'auto' }}
-                                    exit={{ opacity: 0, height: 0 }}
-                                    className="text-[11px] text-court-brownLight mt-2 text-center"
-                                >
-                                    {t(STYLE_OPTIONS.find((opt) => opt.id === style)?.descKey)}
-                                </Motion.p>
-                            )}
-                        </AnimatePresence>
                     </div>
                 </div>
 
@@ -479,9 +477,14 @@ const EventPlanningDialog = ({ event, eventKey, myId, partnerId, partnerDisplayN
                                     <p className="text-red-600 text-xs mt-1">{error}</p>
                                     <button
                                         onClick={generatePlan}
-                                        className="mt-3 px-4 py-2 rounded-full bg-white text-red-700 border border-red-200 text-xs font-bold"
+                                        disabled={isLoading}
+                                        className="mt-3 px-4 py-2 rounded-full bg-white text-red-700 border border-red-200 text-xs font-bold disabled:opacity-60"
                                     >
-                                        {t('common.tryAgain')}
+                                        {isLoading ? (
+                                            <ButtonLoader size="sm" tone="rose" />
+                                        ) : (
+                                            t('common.tryAgain')
+                                        )}
                                     </button>
                                 </div>
                             </div>
@@ -512,7 +515,7 @@ const EventPlanningDialog = ({ event, eventKey, myId, partnerId, partnerDisplayN
                                             className="shrink-0 px-3 py-2 rounded-full bg-court-cream/60 border border-court-tan/30 shadow-soft text-xs text-court-brown font-medium flex items-center gap-2"
                                             title={h.source}
                                         >
-                                            <span>{h.emoji}</span>
+                                            <EmojiIcon emoji={h.emoji} className="w-4 h-4 text-court-gold" />
                                             <span className="whitespace-nowrap">{h.text}</span>
                                         </div>
                                     ))}
@@ -589,7 +592,7 @@ const EventPlanningDialog = ({ event, eventKey, myId, partnerId, partnerDisplayN
                                 <div className="space-y-3">
                                     {plan.littleTouches.slice(0, 4).map((touch, idx) => (
                                         <div key={idx} className="flex gap-3">
-                                            <span className="text-lg">{touch.emoji}</span>
+                                            <EmojiIcon emoji={touch.emoji} className="w-5 h-5 text-court-gold" />
                                             <div className="min-w-0">
                                                 <p className="text-xs font-bold text-court-brown">{touch.title}</p>
                                                 <p className="text-[11px] text-court-brownLight mt-0.5">{touch.details}</p>
@@ -609,7 +612,7 @@ const EventPlanningDialog = ({ event, eventKey, myId, partnerId, partnerDisplayN
                                 <div className="space-y-3">
                                     {plan.giftIdeas.slice(0, 4).map((gift, idx) => (
                                         <div key={idx} className="flex gap-3">
-                                            <span className="text-lg">{gift.emoji}</span>
+                                            <EmojiIcon emoji={gift.emoji} className="w-5 h-5 text-court-gold" />
                                             <div className="min-w-0">
                                                 <p className="text-xs font-bold text-court-brown">{gift.title}</p>
                                                 <p className="text-[11px] text-court-brownLight mt-0.5">{gift.details}</p>
@@ -630,7 +633,7 @@ const EventPlanningDialog = ({ event, eventKey, myId, partnerId, partnerDisplayN
                                     {plan.alternatives.map((alt, idx) => (
                                         <div key={idx} className="shrink-0 w-60 rounded-3xl bg-gradient-to-br from-court-cream/70 via-white/80 to-court-tan/40 border border-court-tan/30 p-4 shadow-soft">
                                             <div className="flex items-center gap-2">
-                                                <span className="text-xl">{alt.emoji}</span>
+                                                <EmojiIcon emoji={alt.emoji} className="w-5 h-5 text-court-gold" />
                                                 <p className="text-sm font-extrabold text-court-brown truncate">{alt.title}</p>
                                             </div>
                                             <p className="text-xs text-court-brown mt-2">{alt.oneLiner}</p>

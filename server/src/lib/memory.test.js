@@ -13,7 +13,13 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const supabase = require('./supabase');
 const embeddings = require('./embeddings');
-const { buildExtractionPrompt, processUserInsights, STENOGRAPHER_SYSTEM_PROMPT } = require('./stenographer');
+const {
+    buildExtractionPrompt,
+    buildAppreciationPrompt,
+    buildMemoryCaptionPrompt,
+    processUserInsights,
+    STENOGRAPHER_SYSTEM_PROMPT,
+} = require('./stenographer');
 const { formatContextForPrompt, hasHistoricalContext } = require('./memoryRetrieval');
 
 let searchSimilarMemories;
@@ -63,6 +69,46 @@ describe('Stenographer Agent', () => {
             expect(prompt).toContain('Work has been overwhelming');
             expect(prompt).toContain('Hurt');
             expect(prompt).toContain('Overwhelmed');
+        });
+    });
+
+    describe('buildAppreciationPrompt', () => {
+        it('should format appreciation data into extraction prompt', () => {
+            const payload = {
+                userAName: 'Alex',
+                userBName: 'Sam',
+                message: 'Thanks for making me laugh when I am stressed.',
+                category: 'support',
+                userALanguage: 'en',
+                userBLanguage: 'en',
+            };
+
+            const prompt = buildAppreciationPrompt(payload);
+
+            expect(prompt).toContain('Alex');
+            expect(prompt).toContain('Sam');
+            expect(prompt).toContain('make me laugh');
+            expect(prompt).toContain('support');
+        });
+    });
+
+    describe('buildMemoryCaptionPrompt', () => {
+        it('should format memory caption data into extraction prompt', () => {
+            const payload = {
+                caption: 'Sunset hike at Yosemite',
+                memoryDate: '2024-05-01',
+                userAName: 'Alex',
+                userBName: 'Sam',
+                userALanguage: 'en',
+                userBLanguage: 'en',
+            };
+
+            const prompt = buildMemoryCaptionPrompt(payload);
+
+            expect(prompt).toContain('Sunset hike at Yosemite');
+            expect(prompt).toContain('Alex');
+            expect(prompt).toContain('Sam');
+            expect(prompt).toContain('2024-05-01');
         });
     });
 

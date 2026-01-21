@@ -123,8 +123,10 @@ describe('PartnerConnection', () => {
 
         it('should display partner love language', () => {
             renderWithRouter(connectedProps);
-            expect(screen.getByText(/💬/)).toBeInTheDocument();
-            expect(screen.getByText(/Words of Affirmation/)).toBeInTheDocument();
+            const loveLanguage = screen.getByText(/Words of Affirmation/);
+            expect(loveLanguage).toBeInTheDocument();
+            const loveLanguageRow = loveLanguage.closest('p');
+            expect(loveLanguageRow?.querySelector('svg')).toBeInTheDocument();
         });
 
         it('should not display love language if partner has none', () => {
@@ -132,7 +134,7 @@ describe('PartnerConnection', () => {
                 ...connectedProps,
                 partner: { ...connectedProps.partner, love_language: null },
             });
-            expect(screen.queryByText('💬')).not.toBeInTheDocument();
+            expect(screen.queryByText('Words of Affirmation')).not.toBeInTheDocument();
         });
 
         it('should fallback to "Your Partner" when display_name is not available', () => {

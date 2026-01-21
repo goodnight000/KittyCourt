@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Plus } from 'lucide-react';
 import useAppStore from '../store/useAppStore';
 import useAuthStore from '../store/useAuthStore';
 import usePartnerStore from '../store/usePartnerStore';
@@ -40,6 +40,7 @@ const CalendarPage = () => {
     const [showEventDetails, setShowEventDetails] = useState(null);
     const [showPlanningModal, setShowPlanningModal] = useState(null);
     const [showPaywall, setShowPaywall] = useState(false);
+    const [isAddingEvent, setIsAddingEvent] = useState(false);
 
     const handleMonthNavigate = (direction) => {
         setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + direction, 1));
@@ -55,9 +56,15 @@ const CalendarPage = () => {
     };
 
     const handleAddEvent = async (eventData) => {
-        const result = await addEvent(eventData);
-        if (result.success) {
-            setShowAddModal(false);
+        if (isAddingEvent) return;
+        setIsAddingEvent(true);
+        try {
+            const result = await addEvent(eventData);
+            if (result.success) {
+                setShowAddModal(false);
+            }
+        } finally {
+            setIsAddingEvent(false);
         }
     };
 
@@ -85,16 +92,12 @@ const CalendarPage = () => {
     return (
         <div className="space-y-5 pb-6">
             {/* Header */}
-            <div className="flex items-center gap-3">
-                <img
-                    src="/assets/icons/calendar.png"
-                    alt={t('calendar.iconAlt')}
-                    className="w-12 h-12 object-contain drop-shadow-sm"
-                    draggable={false}
-                />
+            <header className="flex items-center gap-3">
                 <div className="flex-1">
-                    <h1 className="text-xl font-bold text-gradient">{t('calendar.title')}</h1>
-                    <p className="text-neutral-500 text-sm">{t('calendar.subtitle')}</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-amber-600">
+                        {t('calendar.subtitle')}
+                    </p>
+                    <h1 className="text-2xl font-display font-bold text-neutral-800">{t('calendar.title')}</h1>
                 </div>
                 <Motion.button
                     whileTap={{ scale: 0.97 }}
@@ -103,22 +106,17 @@ const CalendarPage = () => {
                         setShowAddModal(true);
                     }}
                     disabled={isLoading}
-                    className="w-12 h-12 relative"
+                    className="relative grid h-11 w-11 place-items-center rounded-2xl border border-white/80 bg-white/80 shadow-soft"
                     aria-label={t('calendar.addEventAria')}
                 >
-                    <img
-                        src="/assets/icons/plus.png"
-                        alt=""
-                        className={`w-12 h-12 object-contain drop-shadow-sm transition-opacity ${isLoading ? 'opacity-60' : 'opacity-100'}`}
-                        draggable={false}
-                    />
+                    <Plus className={`w-5 h-5 text-neutral-600 transition-opacity ${isLoading ? 'opacity-60' : 'opacity-100'}`} />
                     {isLoading && (
                         <div className="absolute inset-0 grid place-items-center">
                             <Loader2 className="w-5 h-5 text-court-brown animate-spin" />
                         </div>
                     )}
                 </Motion.button>
-            </div>
+            </header>
 
             {/* Calendar Grid */}
             <CalendarGrid
@@ -144,6 +142,7 @@ const CalendarPage = () => {
                     <EventForm
                         selectedDate={selectedDate}
                         onAdd={handleAddEvent}
+                        isSubmitting={isAddingEvent}
                         onClose={() => setShowAddModal(false)}
                     />
                 )}

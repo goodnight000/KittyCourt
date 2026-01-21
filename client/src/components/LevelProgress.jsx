@@ -7,6 +7,7 @@
  */
 import React from 'react';
 import { motion } from 'framer-motion';
+import { Award, Cat, Crown, Flame, Heart, Star, Trophy } from 'lucide-react';
 import { useI18n } from '../i18n';
 
 const LevelProgress = ({
@@ -27,17 +28,16 @@ const LevelProgress = ({
     const formattedNextXP = xpForNextLevel.toLocaleString(language);
     const formattedRemaining = remainingXP.toLocaleString(language);
 
-    // Get level emoji based on level tier
-    const getLevelEmoji = (lvl) => {
-        if (lvl >= 50) return '👑';
-        if (lvl >= 30) return '🔥';
-        if (lvl >= 20) return '💎';
-        if (lvl >= 15) return '💫';
-        if (lvl >= 10) return '🌟';
-        if (lvl >= 7) return '🏆';
-        if (lvl >= 5) return '💕';
-        if (lvl >= 3) return '🐱';
-        return '🐾';
+    // Get level icon based on level tier
+    const getLevelIcon = (lvl) => {
+        if (lvl >= 50) return Crown;
+        if (lvl >= 30) return Flame;
+        if (lvl >= 20) return Award;
+        if (lvl >= 15) return Star;
+        if (lvl >= 10) return Star;
+        if (lvl >= 7) return Trophy;
+        if (lvl >= 5) return Heart;
+        return Cat;
     };
 
     // Compact mode (Dashboard banner)
@@ -58,8 +58,8 @@ const LevelProgress = ({
                 </div>
                 <div className="relative flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-2xl bg-white/80 border border-amber-100/70 shadow-sm flex items-center justify-center text-xl">
-                            {getLevelEmoji(level)}
+                        <div className="h-10 w-10 rounded-2xl bg-white/80 border border-amber-100/70 shadow-sm flex items-center justify-center">
+                            {React.createElement(getLevelIcon(level), { className: 'w-5 h-5 text-amber-700' })}
                         </div>
                         <div>
                             <div className="text-sm font-display font-bold text-neutral-800">
@@ -112,9 +112,9 @@ const LevelProgress = ({
                             initial={{ scale: 0 }}
                             animate={{ scale: 1 }}
                             transition={{ delay: 0.1, type: 'spring', stiffness: 200 }}
-                            className="h-14 w-14 rounded-2xl bg-white/90 border border-amber-100/70 shadow-md flex items-center justify-center text-2xl"
+                            className="h-14 w-14 rounded-2xl bg-white/90 border border-amber-100/70 shadow-md flex items-center justify-center"
                         >
-                            {getLevelEmoji(level)}
+                            {React.createElement(getLevelIcon(level), { className: 'w-7 h-7 text-amber-700' })}
                         </motion.div>
                         <div>
                             <div className="text-[11px] uppercase tracking-[0.2em] text-neutral-500 font-semibold">

@@ -1,9 +1,12 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { X, Check, User, AlertTriangle } from 'lucide-react';
 import { validateBirthdayDate } from '../../utils/helpers';
 import { PRESET_AVATARS } from '../../services/avatarService';
 import { useI18n } from '../../i18n';
+import EmojiIcon from '../shared/EmojiIcon';
+import StandardButton from '../shared/StandardButton';
+import ButtonLoader from '../shared/ButtonLoader';
 
 const buildFormState = (data) => ({
     nickname: data?.nickname || '',
@@ -18,7 +21,15 @@ const ProfileEditForm = ({ profileData, loveLanguages, onSave, onClose }) => {
     const [formData, setFormData] = useState(() => buildFormState(profileData));
     const [birthdayError, setBirthdayError] = useState(null);
     const [uploading, setUploading] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
     const fileInputRef = useRef(null);
+    const isMountedRef = useRef(true);
+
+    useEffect(() => {
+        return () => {
+            isMountedRef.current = false;
+        };
+    }, []);
 
     const translateValidationError = (validation) => {
         if (!validation?.error) return null;
@@ -83,10 +94,17 @@ const ProfileEditForm = ({ profileData, loveLanguages, onSave, onClose }) => {
         input.click();
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         // Don't save if there are validation errors
-        if (birthdayError) return;
-        onSave(formData);
+        if (birthdayError || isSaving) return;
+        setIsSaving(true);
+        try {
+            await onSave(formData);
+        } finally {
+            if (isMountedRef.current) {
+                setIsSaving(false);
+            }
+        }
     };
 
     return (
@@ -139,7 +157,11 @@ const ProfileEditForm = ({ profileData, loveLanguages, onSave, onClose }) => {
                                 disabled={uploading}
                                 className="w-full py-2.5 bg-amber-50 text-amber-700 rounded-xl text-sm font-bold flex items-center justify-center gap-2 border border-amber-200"
                             >
-                                {t('profilePage.edit.takePhoto')}
+                                {uploading ? (
+                                    <ButtonLoader size="sm" tone="amber" />
+                                ) : (
+                                    t('profilePage.edit.takePhoto')
+                                )}
                             </motion.button>
                             <motion.button
                                 whileTap={{ scale: 0.95 }}
@@ -147,7 +169,11 @@ const ProfileEditForm = ({ profileData, loveLanguages, onSave, onClose }) => {
                                 disabled={uploading}
                                 className="w-full py-2.5 bg-rose-50 text-rose-600 rounded-xl text-sm font-bold flex items-center justify-center gap-2 border border-rose-200"
                             >
-                                {uploading ? t('profilePage.edit.uploading') : t('profilePage.edit.uploadPhoto')}
+                                {uploading ? (
+                                    <ButtonLoader size="sm" tone="rose" />
+                                ) : (
+                                    t('profilePage.edit.uploadPhoto')
+                                )}
                             </motion.button>
                             <input
                                 ref={fileInputRef}
@@ -229,7 +255,7 @@ const ProfileEditForm = ({ profileData, loveLanguages, onSave, onClose }) => {
                                     : 'bg-neutral-50 hover:bg-neutral-100'
                                     }`}
                             >
-                                <span className="text-xl">{lang.emoji}</span>
+                                <EmojiIcon emoji={lang.emoji} className="w-5 h-5 text-amber-600" />
                                 <span className="text-sm font-medium text-neutral-700">{lang.label}</span>
                                 {formData.loveLanguage === lang.id && (
                                     <Check className="w-4 h-4 text-amber-500 ml-auto" />
@@ -239,17 +265,21 @@ const ProfileEditForm = ({ profileData, loveLanguages, onSave, onClose }) => {
                     </div>
                 </div>
 
-                <button
+                <StandardButton
+                    size="lg"
                     onClick={handleSave}
-                    disabled={birthdayError || uploading}
-                    className={`w-full flex items-center justify-center gap-2 ${birthdayError || uploading
-                        ? 'btn-secondary opacity-50 cursor-not-allowed'
-                        : 'btn-primary'
-                        }`}
+                    disabled={birthdayError || uploading || isSaving}
+                    className="w-full py-3"
                 >
-                    <Check className="w-4 h-4" />
-                    {t('profile.saveProfile')}
-                </button>
+                    {isSaving ? (
+                        <ButtonLoader size="sm" tone="amber" />
+                    ) : (
+                        <>
+                            <Check className="w-4 h-4" />
+                            {t('profile.saveProfile')}
+                        </>
+                    )}
+                </StandardButton>
             </motion.div>
         </motion.div>
     );

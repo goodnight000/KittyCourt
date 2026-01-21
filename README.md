@@ -16,3 +16,11 @@ Pause is a relationship wellness app for couples who want a calmer, kinder way t
 ## Who it's for
 
 Couples who want a lighter, more supportive way to resolve conflict, build intimacy, and keep communication fun and consistent.
+
+## Tech stack
+
+- **Client**: React 19 + Vite, mobile-first UI, Capacitor shells for iOS/Android
+- **State**: Zustand
+- **Server**: Node.js + Express, Socket.IO for real-time updates
+- **Data**: Supabase (Postgres + Auth)
+- **Testing**: Vitest (client + server)

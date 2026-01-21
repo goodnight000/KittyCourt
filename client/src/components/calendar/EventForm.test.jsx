@@ -103,10 +103,9 @@ describe('EventForm', () => {
     it('should allow emoji selection', () => {
         render(<EventForm {...defaultProps} />);
 
-        // Find emoji buttons
-        const emojiButtons = screen.getAllByRole('button').filter(btn =>
-            /^[🎂💕🎉🌙📅🎁💐🍰🎊✨🌸🌈]$/.test(btn.textContent)
-        );
+        const emojiLabel = screen.getByText(/mark the moment/i);
+        const emojiSection = emojiLabel.parentElement;
+        const emojiButtons = emojiSection ? emojiSection.querySelectorAll('button') : [];
 
         expect(emojiButtons.length).toBeGreaterThan(0);
 

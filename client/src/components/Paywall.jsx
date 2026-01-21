@@ -5,6 +5,7 @@ import useSubscriptionStore from '../store/useSubscriptionStore';
 import usePartnerStore from '../store/usePartnerStore';
 import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
 import { useI18n } from '../i18n';
+import ButtonLoader from './shared/ButtonLoader';
 
 /**
  * Paywall Modal - High-Converting Premium Experience
@@ -664,7 +665,14 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                             disabled={isLoading || restoring || purchaseBlocked}
                             className="w-full py-2 text-xs font-semibold text-court-brownLight hover:text-court-brown transition-colors disabled:opacity-50 mb-2"
                         >
-                            {restoring ? t('paywall.restore.restoring') : t('paywall.restore.cta')}
+                            {restoring ? (
+                                <ButtonLoader
+                                    size="sm"
+                                    tone="amber"
+                                />
+                            ) : (
+                                t('paywall.restore.cta')
+                            )}
                         </button>
 
                         {/* Maybe Later with consequence */}

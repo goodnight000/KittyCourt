@@ -10,6 +10,7 @@ import useCacheStore, { CACHE_POLICY, cacheKey } from '../store/useCacheStore';
 import api from '../services/api';
 import ProfilePicture from '../components/ProfilePicture';
 import DisconnectNotice from '../components/DisconnectNotice';
+import StandardButton from '../components/shared/StandardButton';
 import { useI18n } from '../i18n';
 
 const DashboardPage = () => {
@@ -260,7 +261,6 @@ const DashboardPage = () => {
     ];
     return (
         <div className="relative min-h-screen pb-6">
-            <HomeBackdrop />
             <div className="relative space-y-6">
                 <Motion.div
                     initial={{ opacity: 0, y: 12 }}
@@ -711,16 +711,17 @@ const DashboardPage = () => {
                                             ))}
                                         </div>
 
-                                        <button
+                                        <StandardButton
+                                            size="lg"
                                             onClick={handleLogGoodDeed}
                                             disabled={!goodDeedText.trim() || isSubmitting}
-                                            className="w-full rounded-2xl bg-gradient-to-r from-rose-500 via-rose-400 to-amber-400 py-3 text-sm font-bold text-white shadow-soft flex items-center justify-center gap-2 disabled:opacity-50"
+                                            className="w-full py-3"
                                         >
                                             {isSubmitting ? (
                                                 <Motion.div
                                                     animate={{ rotate: 360 }}
                                                     transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                                                    className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
+                                                    className="w-5 h-5 border-2 border-amber-600 border-t-transparent rounded-full"
                                                 />
                                             ) : (
                                                 <>
@@ -728,7 +729,7 @@ const DashboardPage = () => {
                                                     {t('dashboard.goodDeed.submit')}
                                                 </>
                                             )}
-                                        </button>
+                                        </StandardButton>
                                     </>
                                 )}
                             </Motion.div>
@@ -815,12 +816,5 @@ const ActionTile = ({ icon, label, detail, locked, accent, onClick }) => {
         </Motion.button>
     );
 };
-
-const HomeBackdrop = () => (
-    <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute -top-20 -right-20 h-64 w-64 rounded-full bg-amber-200/30 blur-3xl" />
-        <div className="absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-rose-200/25 blur-3xl" />
-    </div>
-);
 
 export default DashboardPage;

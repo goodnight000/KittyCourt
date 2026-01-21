@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Star, Plus, X, Check, Edit3, Trash2, ShoppingBag, Bell, CheckCircle2 } from 'lucide-react';
+import { Bell, Check, CheckCircle2, Edit3, Plus, ShoppingBag, Star, Trash2, X } from 'lucide-react';
 import useAppStore from '../store/useAppStore';
 import useAuthStore from '../store/useAuthStore';
 import usePartnerStore from '../store/usePartnerStore';
@@ -9,6 +9,8 @@ import { supabase } from '../services/supabase';
 import { useNavigate } from 'react-router-dom';
 import { useI18n } from '../i18n';
 import BackButton from '../components/shared/BackButton';
+import StandardButton from '../components/shared/StandardButton';
+import EmojiIcon from '../components/shared/EmojiIcon';
 
 const getDefaultRewards = (t) => ([
     { id: 1, title: t('economy.defaults.footMassage.title'), subtitle: t('economy.defaults.footMassage.subtitle'), cost: 50, icon: "🦶", color: "pink" },
@@ -214,7 +216,7 @@ export default function EconomyPage() {
                             transition={{ duration: 2.2, repeat: Infinity }}
                             className="text-4xl"
                         >
-                            🏪
+                            <ShoppingBag className="w-9 h-9 text-amber-500" />
                         </motion.div>
                     </div>
                     <div className="relative mt-4 grid grid-cols-2 gap-3">
@@ -267,7 +269,7 @@ export default function EconomyPage() {
                                     <div className="relative flex items-center justify-between gap-3">
                                         <div className="flex-1">
                                             <div className="flex items-center gap-2">
-                                                <span className="text-lg">🎁</span>
+                                                <EmojiIcon emoji="🎁" className="w-5 h-5 text-amber-600" />
                                                 <h3 className="font-bold text-neutral-800 text-sm">{redemption.reward_name}</h3>
                                             </div>
                                             {redemption.reward_description && (
@@ -319,7 +321,9 @@ export default function EconomyPage() {
                     </div>
                     {partnerRewards.length === 0 ? (
                         <div className="glass-card p-6 text-center border border-amber-200/60">
-                            <span className="text-2xl mb-2 block">😿</span>
+                            <div className="flex justify-center mb-2">
+                                <EmojiIcon emoji="😿" className="w-7 h-7 text-amber-600" />
+                            </div>
                             <p className="text-neutral-600 text-sm font-medium">
                                 {t('economy.redeem.empty', { name: partnerDisplayName })}
                             </p>
@@ -358,7 +362,9 @@ export default function EconomyPage() {
                     </div>
                     {myRewards.length === 0 ? (
                         <div className="glass-card p-6 text-center border border-violet-200/60">
-                            <span className="text-2xl mb-2 block">🎁</span>
+                            <div className="flex justify-center mb-2">
+                                <EmojiIcon emoji="🎁" className="w-7 h-7 text-violet-500" />
+                            </div>
                             <p className="text-neutral-600 text-sm font-medium">
                                 {t('economy.myMenu.empty', { name: partnerDisplayName })}
                             </p>
@@ -372,10 +378,15 @@ export default function EconomyPage() {
                                     animate={{ opacity: 1, x: 0 }}
                                     className="glass-card p-4 flex items-center gap-3 border border-white/80"
                                 >
-                                    <span className="text-2xl">{r.icon}</span>
+                                    <div className="text-2xl">
+                                        <EmojiIcon emoji={r.icon} className="w-6 h-6 text-amber-600" />
+                                    </div>
                                     <div className="flex-1">
                                         <h3 className="font-bold text-neutral-800 text-sm">{r.title}</h3>
-                                        <p className="text-neutral-500 text-xs">{r.subtitle} • {r.cost} 🪙</p>
+                                        <p className="text-neutral-500 text-xs inline-flex flex-wrap items-center gap-1">
+                                            <span>{r.subtitle} • {r.cost}</span>
+                                            <EmojiIcon emoji="🪙" className="w-3.5 h-3.5 text-amber-500" />
+                                        </p>
                                     </div>
                                     <button onClick={() => { setEditingReward(r); setShowAddModal(true); }} className="p-2 text-neutral-500 hover:text-violet-500">
                                         <Edit3 className="w-4 h-4" />
@@ -466,7 +477,9 @@ function CouponCard({ coupon, delay, onRedeem, isRedeeming, canAfford }) {
             )}
             <div className="relative space-y-3">
                 <div className="flex items-center justify-between">
-                    <span className="text-2xl">{coupon.icon}</span>
+                    <span className={`text-2xl ${colors.text}`}>
+                        <EmojiIcon emoji={coupon.icon} className="w-6 h-6 text-current" />
+                    </span>
                     <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${colors.chip}`}>
                         {t('economy.coupon.cost', { count: coupon.cost })}
                     </span>
@@ -533,8 +546,9 @@ function RewardModal({ reward, onSave, onClose }) {
                         <div className="text-[10px] uppercase tracking-[0.35em] text-neutral-500 font-semibold">
                             {t('economy.rewardModal.kicker')}
                         </div>
-                        <h3 className="font-display font-bold text-neutral-800 text-lg">
-                            {reward ? t('economy.rewardModal.editTitle') : t('economy.rewardModal.addTitle')} 🎁
+                        <h3 className="font-display font-bold text-neutral-800 text-lg inline-flex items-center gap-2">
+                            {reward ? t('economy.rewardModal.editTitle') : t('economy.rewardModal.addTitle')}
+                            <EmojiIcon emoji="🎁" className="w-5 h-5 text-amber-500" />
                         </h3>
                     </div>
                     <button onClick={onClose} className="w-8 h-8 bg-white/80 border border-neutral-200/70 rounded-full flex items-center justify-center shadow-soft">
@@ -577,9 +591,9 @@ function RewardModal({ reward, onSave, onClose }) {
                                 <button
                                     key={e}
                                     onClick={() => setIcon(e)}
-                                    className={`w-10 h-10 rounded-xl text-xl flex items-center justify-center transition-all ${icon === e ? 'bg-violet-100 ring-2 ring-violet-400' : 'bg-white/70 border border-neutral-200/70'}`}
+                                    className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${icon === e ? 'bg-violet-100 ring-2 ring-violet-400' : 'bg-white/70 border border-neutral-200/70'}`}
                                 >
-                                    {e}
+                                    <EmojiIcon emoji={e} className="w-5 h-5 text-violet-600" />
                                 </button>
                             ))}
                         </div>
@@ -597,14 +611,15 @@ function RewardModal({ reward, onSave, onClose }) {
                         </div>
                     </div>
                 </div>
-                <button
+                <StandardButton
                     onClick={handleSubmit}
                     disabled={!title.trim()}
-                    className="w-full rounded-2xl bg-gradient-to-r from-violet-500 to-amber-400 py-3 text-sm font-bold text-white shadow-soft flex items-center justify-center gap-2 disabled:opacity-50"
+                    size="lg"
+                    className="w-full py-3"
                 >
                     <Check className="w-4 h-4" />
                     {reward ? t('economy.rewardModal.save') : t('economy.rewardModal.add')}
-                </button>
+                </StandardButton>
             </motion.div>
         </motion.div>
     );

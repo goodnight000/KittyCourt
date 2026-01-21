@@ -12,6 +12,7 @@ const { requireAuthUserId, requireSupabase, getPartnerIdForUser } = require('../
 const { isSupabaseConfigured } = require('../lib/supabase');
 const { awardXP, ACTION_TYPES } = require('../lib/xpService');
 const { recordChallengeAction, CHALLENGE_ACTIONS } = require('../lib/challengeService');
+const { INSIGHT_EVENT_TYPES, recordInsightEvent } = require('../lib/insightEventService');
 const { resolveRequestLanguage, getUserPreferredLanguage } = require('../lib/language');
 const { sendError } = require('../lib/http');
 const { asyncHandler } = require('../middleware/asyncHandler');
@@ -223,6 +224,18 @@ router.post('/verdict/accept', asyncHandler(async (req, res) => {
                             action: CHALLENGE_ACTIONS.CASE_RESOLVED,
                             sourceId,
                         });
+                        await Promise.all([
+                            recordInsightEvent({
+                                userId,
+                                eventType: INSIGHT_EVENT_TYPES.CASE_RESOLUTION,
+                                sourceId,
+                            }),
+                            recordInsightEvent({
+                                userId: partnerId,
+                                eventType: INSIGHT_EVENT_TYPES.CASE_RESOLUTION,
+                                sourceId,
+                            }),
+                        ]);
                     }
                 }
             }

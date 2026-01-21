@@ -496,7 +496,7 @@ const useSubscriptionStore = create((set, get) => ({
     /**
      * Get display text for usage
      * @param {string} judgeType - 'classic', 'swift', or 'wise'
-     * @returns {string} Display text like "2/3 used" or "✨ Unlimited"
+     * @returns {string} Display text like "2/3 used" or "Unlimited"
      */
     getUsageDisplay: (judgeType, t) => {
         const { canUseJudge, isGold } = get();
@@ -506,9 +506,9 @@ const useSubscriptionStore = create((set, get) => ({
             : (key, params) => {
                 switch (key) {
                     case 'subscription.usage.locked':
-                        return '🔒 Locked';
+                        return 'Locked';
                     case 'subscription.usage.unlimited':
-                        return '✨ Unlimited';
+                        return 'Unlimited';
                     case 'subscription.usage.used':
                         return `${params?.used ?? 0}/${params?.limit ?? 0} used`;
                     default:

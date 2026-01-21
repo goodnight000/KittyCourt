@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion as Motion } from 'framer-motion';
-import { X, Plus, Trash2, Wand2, Check } from 'lucide-react';
+import { X, Plus, Trash2, Wand2, Check, Lock, RotateCcw, Handshake, Heart } from 'lucide-react';
 import { useI18n } from '../../i18n';
 import { parseLocalDate } from '../../utils/dateFormatters';
 import api from '../../services/api';
+import EmojiIcon from '../shared/EmojiIcon';
+import ButtonLoader from '../shared/ButtonLoader';
 
 /**
  * Helper to generate event key for plan lookup
@@ -25,6 +27,7 @@ const EVENT_TYPES = [
     { id: 'anniversary', labelKey: 'calendar.eventTypes.anniversary', emoji: '💕', color: 'red' },
     { id: 'holiday', labelKey: 'calendar.eventTypes.holiday', emoji: '🎉', color: 'amber' },
     { id: 'date_night', labelKey: 'calendar.eventTypes.dateNight', emoji: '🌙', color: 'violet' },
+    { id: 'milestone', labelKey: 'calendar.eventTypes.milestone', emoji: '🏆', color: 'emerald' },
     { id: 'custom', labelKey: 'calendar.eventTypes.custom', emoji: '📅', color: 'blue' },
 ];
 
@@ -33,6 +36,7 @@ const EVENT_GRADIENTS = {
     anniversary: 'from-red-50/50',
     holiday: 'from-amber-50/50',
     date_night: 'from-violet-50/50',
+    milestone: 'from-emerald-50/50',
     custom: 'from-blue-50/50',
 };
 
@@ -43,6 +47,7 @@ const EVENT_GRADIENTS = {
 const EventDetailsModal = ({ events, onDelete, onClose, onAddMore, onPlanClick, partnerId, currentUserId, myDisplayName, partnerDisplayName }) => {
     const { t, language } = useI18n();
     const [plannedEventKeys, setPlannedEventKeys] = useState(() => new Set());
+    const [deletingId, setDeletingId] = useState(null);
 
     // Check which events already have saved plans
     useEffect(() => {
@@ -79,6 +84,16 @@ const EventDetailsModal = ({ events, onDelete, onClose, onAddMore, onPlanClick, 
             return next;
         });
     }, []);
+
+    const handleDelete = useCallback(async (eventId) => {
+        if (!eventId || deletingId) return;
+        setDeletingId(eventId);
+        try {
+            await onDelete(eventId);
+        } finally {
+            setDeletingId(null);
+        }
+    }, [deletingId, onDelete]);
 
     // Guard against empty events array
     if (!events?.length) {
@@ -123,7 +138,9 @@ const EventDetailsModal = ({ events, onDelete, onClose, onAddMore, onPlanClick, 
 
                 <div className="space-y-3">
                     {events.map((event, index) => {
-                        const eventType = EVENT_TYPES.find((item) => item.id === event.type) || EVENT_TYPES[4];
+                        const eventType = EVENT_TYPES.find((item) => item.id === event.type)
+                            || EVENT_TYPES.find((item) => item.id === 'custom')
+                            || EVENT_TYPES[0];
                         // Determine who created this event
                         const isCreatedByMe = event.createdBy === currentUserId;
                         const creatorName = isCreatedByMe ? myDisplayName : partnerDisplayName;
@@ -143,9 +160,12 @@ const EventDetailsModal = ({ events, onDelete, onClose, onAddMore, onPlanClick, 
                                     <Motion.div
                                         animate={{ scale: [1, 1.05, 1] }}
                                         transition={{ duration: 2, repeat: Infinity, delay: index * 0.2 }}
-                                        className="text-3xl"
+                                        className="flex items-center justify-center"
                                     >
-                                        {event.emoji}
+                                        <EmojiIcon
+                                            emoji={event.emoji || eventType.emoji}
+                                            className="w-7 h-7 text-amber-600"
+                                        />
                                     </Motion.div>
                                     <div className="flex-1 min-w-0">
                                         <h4 className="font-bold text-neutral-800">{event.title}</h4>
@@ -154,22 +174,26 @@ const EventDetailsModal = ({ events, onDelete, onClose, onAddMore, onPlanClick, 
                                                 {eventTypeLabel}
                                             </span>
                                             {event.isSecret ? (
-                                                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-[#1c1c84]/10 text-[#1c1c84]">
-                                                    🔒 {t('calendar.visibility.secret')}
+                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-[#1c1c84]/10 text-[#1c1c84]">
+                                                    <Lock className="w-3 h-3" />
+                                                    {t('calendar.visibility.secret')}
                                                 </span>
                                             ) : (
-                                                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-pink-100 text-pink-700">
-                                                    🤝 {t('calendar.visibility.shared')}
+                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-pink-100 text-pink-700">
+                                                    <Handshake className="w-3 h-3" />
+                                                    {t('calendar.visibility.shared')}
                                                 </span>
                                             )}
                                             {event.isRecurring && (
-                                                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-violet-100 text-violet-600">
-                                                    🔄 {t('calendar.details.yearly')}
+                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-violet-100 text-violet-600">
+                                                    <RotateCcw className="w-3 h-3" />
+                                                    {t('calendar.details.yearly')}
                                                 </span>
                                             )}
                                             {event.isPersonal && (
-                                                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-pink-100 text-pink-600">
-                                                    💕 {t('calendar.details.personal')}
+                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-pink-100 text-pink-600">
+                                                    <Heart className="w-3 h-3" />
+                                                    {t('calendar.details.personal')}
                                                 </span>
                                             )}
                                         </div>
@@ -186,11 +210,16 @@ const EventDetailsModal = ({ events, onDelete, onClose, onAddMore, onPlanClick, 
                                     </div>
                                     {canDelete && (
                                         <button
-                                            onClick={() => onDelete(event.id)}
+                                            onClick={() => handleDelete(event.id)}
                                             aria-label="Delete event"
-                                            className="w-8 h-8 bg-red-50 rounded-full flex items-center justify-center text-red-400 hover:bg-red-100 transition-colors"
+                                            disabled={deletingId === event.id}
+                                            className="w-8 h-8 bg-red-50 rounded-full flex items-center justify-center text-red-400 hover:bg-red-100 transition-colors disabled:opacity-60"
                                         >
-                                            <Trash2 className="w-4 h-4" />
+                                            {deletingId === event.id ? (
+                                                <ButtonLoader size="sm" tone="rose" variant="dots" />
+                                            ) : (
+                                                <Trash2 className="w-4 h-4" />
+                                            )}
                                         </button>
                                     )}
                                 </div>

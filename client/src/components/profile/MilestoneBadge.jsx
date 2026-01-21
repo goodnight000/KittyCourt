@@ -1,6 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { Lock } from 'lucide-react';
 import { useI18n } from '../../i18n';
+import EmojiIcon from '../shared/EmojiIcon';
 
 /**
  * Progress Ring SVG component
@@ -62,7 +64,7 @@ const MilestoneBadge = ({ milestone, index = 0, onTap }) => {
   if (!milestone) return null;
 
   const {
-    emoji = '🔒',
+    emoji = null,
     titleKey = '',
     descriptionKey = '',
     xpReward = 0,
@@ -112,7 +114,7 @@ const MilestoneBadge = ({ milestone, index = 0, onTap }) => {
       <div className="relative w-14 h-14 flex items-center justify-center mb-2">
         <ProgressRing progress={safeProgress} isUnlocked={isUnlocked} />
         <motion.span
-          className="text-2xl relative z-10"
+          className="relative z-10"
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{
@@ -122,7 +124,11 @@ const MilestoneBadge = ({ milestone, index = 0, onTap }) => {
             delay: index * 0.05 + 0.2,
           }}
         >
-          {isUnlocked ? emoji : '🔒'}
+          {isUnlocked && emoji ? (
+            <EmojiIcon emoji={emoji} className="w-6 h-6 text-amber-600" />
+          ) : (
+            <Lock className="w-5 h-5 text-neutral-400" />
+          )}
         </motion.span>
       </div>
 

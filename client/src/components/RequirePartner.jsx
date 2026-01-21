@@ -5,6 +5,7 @@ import { Link2, Lock, Users } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 import usePartnerStore from '../store/usePartnerStore';
 import { useI18n } from '../i18n';
+import StandardButton from './shared/StandardButton';
 
 /**
  * Wrapper component that shows a "Connect with Partner" overlay
@@ -76,15 +77,14 @@ const RequirePartner = ({ children, feature, description }) => {
                         )}
 
                         {/* Action Button */}
-                        <motion.button
-                            whileTap={{ scale: 0.97 }}
+                        <StandardButton
+                            size="lg"
                             onClick={() => navigate('/connect')}
-                            className="w-full py-3.5 rounded-2xl font-bold text-white flex items-center justify-center gap-2 shadow-lg"
-                            style={{ background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' }}
+                            className="w-full py-3.5"
                         >
                             <Link2 className="w-5 h-5" />
                             {t('requirePartner.cta')}
-                        </motion.button>
+                        </StandardButton>
 
                         <p className="text-xs text-neutral-500 text-center">
                             {t('requirePartner.hint')}

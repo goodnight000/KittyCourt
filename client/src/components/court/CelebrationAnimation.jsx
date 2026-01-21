@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Star, Heart } from 'lucide-react';
 import { useI18n } from '../../i18n';
+import EmojiIcon from '../shared/EmojiIcon';
 
 /**
  * CelebrationAnimation - Shows when both users accept verdict
@@ -131,9 +132,9 @@ const CelebrationAnimation = ({ onComplete, kibbleReward, judgeAvatar }) => {
                     <motion.div
                         animate={{ rotate: [0, 10, -10, 0] }}
                         transition={{ duration: 0.5, repeat: Infinity, repeatDelay: 0.5 }}
-                        className="text-4xl mb-2"
+                        className="flex items-center justify-center mb-2"
                     >
-                        🪙
+                        <EmojiIcon emoji="🪙" className="w-8 h-8 text-court-gold" />
                     </motion.div>
                     <p className="text-sm text-court-brownLight mb-1">{t('court.celebration.kibbleIntro')}</p>
                     <p className="text-3xl font-bold text-court-gold">

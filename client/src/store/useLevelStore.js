@@ -23,7 +23,7 @@ const LEVEL_CONFIG = [
     { level: 15, xpRequired: 7500, title: 'Soulmates' },
     { level: 20, xpRequired: 15000, title: 'Legendary Bond' },
     { level: 30, xpRequired: 35000, title: 'Eternal Flame' },
-    { level: 50, xpRequired: 100000, title: 'Cat Royalty 👑' },
+    { level: 50, xpRequired: 100000, title: 'Cat Royalty' },
 ];
 
 // Helper: Get level info from total XP
@@ -88,7 +88,7 @@ const useLevelStore = create((set, get) => ({
         if (!isXPSystemEnabled()) return false;
         const { level, serverAvailable } = get();
         if (!serverAvailable) return false;
-        // Note: Also requires Pause Gold + AI consent, checked separately
+        // Note: Also requires Pause Gold, checked separately
         return level >= 10;
     },
 

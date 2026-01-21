@@ -189,7 +189,7 @@ const buildInsightPrompt = ({ candidates, stats, existingInsights }) => {
     ].join('\n');
 };
 
-const generateInsightsForCouple = async ({ userId, partnerId, existingInsights = [] }) => {
+const generateInsightsForCouple = async ({ userId, partnerId, existingInsights = [], force = false }) => {
     try {
         if (!isSupabaseConfigured()) {
             return { error: 'supabase_not_configured' };
@@ -201,37 +201,32 @@ const generateInsightsForCouple = async ({ userId, partnerId, existingInsights =
         const coupleIds = getOrderedCoupleIds(userId, partnerId);
         if (!coupleIds) return { error: 'invalid_couple' };
 
-    const supabase = getSupabase();
-    const latestGeneratedAt = await getLatestInsightGeneratedAt(supabase, coupleIds, userId);
-    if (!shouldGenerateToday(latestGeneratedAt)) {
-        return { success: true, insights: [], reason: 'already_generated_today', skipped: true };
-    }
-
-    const stats = await buildRelationshipStats(supabase, coupleIds, userId);
-    const candidates = await fetchMemoryCandidates(supabase, userId);
-
-        const hasActivitySignal = stats.dailyAnswerCount > 0 || stats.appreciationCount > 0 || stats.memoryCount > 0;
-        if (candidates.length < MIN_MEMORY_CANDIDATES && !hasActivitySignal) {
-            return { success: true, insights: [], reason: 'insufficient_activity' };
+        const supabase = getSupabase();
+        const latestGeneratedAt = await getLatestInsightGeneratedAt(supabase, coupleIds, userId);
+        if (!force && !shouldGenerateToday(latestGeneratedAt)) {
+            return { success: true, insights: [], reason: 'already_generated_today', skipped: true };
         }
 
-        if (candidates.length === 0 && hasActivitySignal) {
+        const stats = await buildRelationshipStats(supabase, coupleIds, userId);
+        const candidates = await fetchMemoryCandidates(supabase, userId);
+
+        if (candidates.length < MIN_MEMORY_CANDIDATES) {
             return { success: true, insights: [], reason: 'insufficient_memory' };
         }
 
-    const prompt = buildInsightPrompt({ candidates, stats, existingInsights });
-    const messages = [
-        {
-            role: 'system',
-            content: [
-                'You are a relationship insights analyst.',
-                'Generate helpful, specific, and kind insights based on provided signals.',
-                'Focus on patterns, values, triggers, or preferences that help this person grow.',
-                'Provide an actionable micro-step in evidenceSummary.',
-                'Keep language concise and non-judgmental.',
-            ].join(' ')
-        },
-        { role: 'user', content: prompt }
+        const prompt = buildInsightPrompt({ candidates, stats, existingInsights });
+        const messages = [
+            {
+                role: 'system',
+                content: [
+                    'You are a relationship insights analyst.',
+                    'Generate helpful, specific, and kind insights based on provided signals.',
+                    'Focus on patterns, values, triggers, or preferences that help this person grow.',
+                    'Provide an actionable micro-step in evidenceSummary.',
+                    'Keep language concise and non-judgmental.',
+                ].join(' ')
+            },
+            { role: 'user', content: prompt }
         ];
 
         const llmResult = await callLLMWithRetry(
@@ -289,6 +284,18 @@ const generateInsightsForCouple = async ({ userId, partnerId, existingInsights =
 
         if (error) {
             return { error: error.message };
+        }
+
+        const { error: purgeError } = await supabase
+            .from('insights')
+            .delete()
+            .eq('user_a_id', coupleIds.user_a_id)
+            .eq('user_b_id', coupleIds.user_b_id)
+            .eq('recipient_user_id', userId)
+            .lt('generated_at', generatedAt);
+
+        if (purgeError) {
+            console.warn('[Insights] Failed to purge old insights:', purgeError);
         }
 
         await supabase

@@ -12,6 +12,7 @@ const EVENT_TYPES = [
     { id: 'anniversary', labelKey: 'calendar.eventTypes.anniversary', emoji: '💕', color: 'red' },
     { id: 'holiday', labelKey: 'calendar.eventTypes.holiday', emoji: '🎉', color: 'amber' },
     { id: 'date_night', labelKey: 'calendar.eventTypes.dateNight', emoji: '🌙', color: 'violet' },
+    { id: 'milestone', labelKey: 'calendar.eventTypes.milestone', emoji: '🏆', color: 'emerald' },
     { id: 'custom', labelKey: 'calendar.eventTypes.custom', emoji: '📅', color: 'blue' },
 ];
 
@@ -30,7 +31,9 @@ const EventCard = memo(({
     isFirstPlanButton = false
 }) => {
     const { t, language } = useI18n();
-    const eventType = EVENT_TYPES.find((item) => item.id === event.type) || EVENT_TYPES[4];
+    const eventType = EVENT_TYPES.find((item) => item.id === event.type)
+        || EVENT_TYPES.find((item) => item.id === 'custom')
+        || EVENT_TYPES[0];
 
     // Onboarding tooltip state
     const [showOnboarding, setShowOnboarding] = useState(false);
@@ -137,14 +140,14 @@ const EventCard = memo(({
                 <div className="p-3">
                     <div className="flex items-start gap-3">
                         <div className={`relative w-14 shrink-0 rounded-2xl p-[1px] bg-gradient-to-br ${dateFrame} shadow-soft`}>
-                            <div className={`rounded-[15px] px-2.5 py-2 text-center ${isToday ? 'bg-gradient-to-br from-[#B85C6B] via-[#8B4049] to-[#722F37]' : 'bg-white/85'}`}>
-                                <div className={`text-[10px] font-extrabold tracking-wide uppercase ${isToday ? 'text-white/90' : 'text-neutral-500'}`}>
+                            <div className={`rounded-[15px] px-2.5 py-2 text-center ${isToday ? 'bg-gradient-to-br from-amber-100 via-amber-200/70 to-amber-200/60' : 'bg-white/85'}`}>
+                                <div className={`text-[10px] font-extrabold tracking-wide uppercase ${isToday ? 'text-amber-700' : 'text-neutral-500'}`}>
                                     {monthLabel}
                                 </div>
-                                <div className={`text-xl font-black leading-none tabular-nums ${isToday ? 'text-white' : 'text-neutral-800'}`}>
+                                <div className={`text-xl font-black leading-none tabular-nums ${isToday ? 'text-amber-800' : 'text-neutral-800'}`}>
                                     {dayNumber}
                                 </div>
-                                <div className={`text-[10px] font-bold ${isToday ? 'text-white/80' : 'text-neutral-500'}`}>
+                                <div className={`text-[10px] font-bold ${isToday ? 'text-amber-600' : 'text-neutral-500'}`}>
                                     {weekdayLabel}
                                 </div>
                             </div>

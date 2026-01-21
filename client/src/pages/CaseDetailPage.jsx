@@ -7,7 +7,7 @@ import { useI18n } from '../i18n';
 import { formatDate } from '../utils/helpers';
 import {
     MessageCircle, Heart, Calendar, Scale,
-    AlertTriangle, Zap, Cloud, FileText, Clock, User,
+    AlertTriangle, Zap, Cloud, FileText, Clock, User, Coffee, Cat,
     ChevronDown, ChevronUp, ChevronRight, CheckCircle, Cpu, Target, Activity
 } from 'lucide-react';
 import api from '../services/api';
@@ -19,13 +19,13 @@ import BackButton from '../components/shared/BackButton';
  */
 const JUDGE_MODELS = {
     // New judge IDs
-    classic: { name: 'Judge Mochi', icon: '☕', description: 'The Gentle Thinker' },
-    swift: { name: 'Judge Dash', icon: '⚡', description: 'Speed Meets Brilliance' },
-    wise: { name: 'Judge Whiskers', icon: '🐱', description: 'The Wise Sage' },
+    classic: { name: 'Judge Mochi', Icon: Coffee, description: 'The Gentle Thinker' },
+    swift: { name: 'Judge Dash', Icon: Zap, description: 'Speed Meets Brilliance' },
+    wise: { name: 'Judge Whiskers', Icon: Cat, description: 'The Wise Sage' },
     // Legacy mappings for existing cases
-    fast: { name: 'Judge Mochi', icon: '☕', description: 'The Gentle Thinker' },
-    logical: { name: 'Judge Dash', icon: '⚡', description: 'Speed Meets Brilliance' },
-    best: { name: 'Judge Whiskers', icon: '🐱', description: 'The Wise Sage' },
+    fast: { name: 'Judge Mochi', Icon: Coffee, description: 'The Gentle Thinker' },
+    logical: { name: 'Judge Dash', Icon: Zap, description: 'Speed Meets Brilliance' },
+    best: { name: 'Judge Whiskers', Icon: Cat, description: 'The Wise Sage' },
 };
 
 /**
@@ -323,8 +323,9 @@ const CaseDetailPage = () => {
                     <Cpu className="w-4 h-4 text-neutral-500" />
                     <span className="text-xs text-neutral-500">
                         {t('cases.detail.judgedBy')}:{' '}
-                        <span className="font-semibold text-neutral-700">
-                            {judgeModel.icon} {judgeModel.name}
+                        <span className="inline-flex items-center gap-1 font-semibold text-neutral-700">
+                            <judgeModel.Icon className="w-4 h-4 text-amber-600" />
+                            {judgeModel.name}
                         </span>
                     </span>
                 </div>

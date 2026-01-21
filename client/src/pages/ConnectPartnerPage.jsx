@@ -2,13 +2,26 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
-    Copy, Check, Heart, Users, ArrowRight, Link2,
-    Send, Loader2, AlertCircle, Clock, UserPlus
+    Cat,
+    Check,
+    Clock,
+    Copy,
+    Heart,
+    Link2,
+    Loader2,
+    Scale,
+    Send,
+    AlertCircle,
+    ArrowRight,
+    UserPlus,
+    Users
 } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 import usePartnerStore from '../store/usePartnerStore';
 import { useI18n } from '../i18n';
 import DisconnectNotice from '../components/DisconnectNotice';
+import StandardButton from '../components/shared/StandardButton';
+import ButtonLoader from '../components/shared/ButtonLoader';
 
 const ConnectPartnerPage = () => {
     const navigate = useNavigate();
@@ -106,29 +119,29 @@ const ConnectPartnerPage = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-court-cream via-white to-court-tan/30 flex flex-col items-center justify-center p-6 safe-top">
+        <div className="min-h-screen flex flex-col items-center justify-center p-6 safe-top">
             {/* Floating decorations */}
             <div className="fixed inset-0 pointer-events-none overflow-hidden">
                 <motion.div
                     animate={{ y: [0, -15, 0], x: [0, 10, 0] }}
                     transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-                    className="absolute top-20 left-10 text-4xl opacity-30"
+                    className="absolute top-20 left-10 opacity-30"
                 >
-                    💕
+                    <Heart className="w-10 h-10 text-rose-400 fill-rose-400" />
                 </motion.div>
                 <motion.div
                     animate={{ y: [0, 10, 0], rotate: [0, 10, 0] }}
                     transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-                    className="absolute top-32 right-12 text-3xl opacity-30"
+                    className="absolute top-32 right-12 opacity-30"
                 >
-                    🐱
+                    <Cat className="w-8 h-8 text-amber-500" />
                 </motion.div>
                 <motion.div
                     animate={{ y: [0, -10, 0] }}
                     transition={{ duration: 6, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-                    className="absolute bottom-40 left-1/4 text-3xl opacity-30"
+                    className="absolute bottom-40 left-1/4 opacity-30"
                 >
-                    ⚖️
+                    <Scale className="w-7 h-7 text-amber-500" />
                 </motion.div>
             </div>
 
@@ -181,7 +194,11 @@ const ConnectPartnerPage = () => {
                                         disabled={isSubmitting}
                                         className="mt-2 text-xs text-amber-700 underline hover:no-underline"
                                     >
-                                        {t('connectPartner.pending.cancel')}
+                                        {isSubmitting ? (
+                                            <ButtonLoader size="sm" tone="amber" />
+                                        ) : (
+                                            t('connectPartner.pending.cancel')
+                                        )}
                                     </button>
                                 </div>
                             </div>
@@ -193,22 +210,20 @@ const ConnectPartnerPage = () => {
                 <div className="flex bg-white/60 rounded-2xl p-1.5 gap-1">
                     <button
                         onClick={() => setActiveTab('share')}
-                        className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${activeTab === 'share'
-                                ? 'text-white shadow-md'
-                                : 'text-neutral-600 hover:bg-white/50'
+                        className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 border ${activeTab === 'share'
+                                ? 'bg-amber-100/80 text-amber-700 border-amber-200/70 shadow-soft'
+                                : 'text-neutral-600 border-transparent hover:bg-white/50'
                             }`}
-                        style={activeTab === 'share' ? { background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' } : {}}
                     >
                         <Link2 className="w-4 h-4" />
                         {t('connectPartner.tabs.share')}
                     </button>
                     <button
                         onClick={() => setActiveTab('enter')}
-                        className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${activeTab === 'enter'
-                                ? 'text-white shadow-md'
-                                : 'text-neutral-600 hover:bg-white/50'
+                        className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 border ${activeTab === 'enter'
+                                ? 'bg-amber-100/80 text-amber-700 border-amber-200/70 shadow-soft'
+                                : 'text-neutral-600 border-transparent hover:bg-white/50'
                             }`}
-                        style={activeTab === 'enter' ? { background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' } : {}}
                     >
                         <UserPlus className="w-4 h-4" />
                         {t('connectPartner.tabs.enter')}
@@ -325,12 +340,11 @@ const ConnectPartnerPage = () => {
                                 )}
                             </AnimatePresence>
 
-                            <motion.button
-                                whileTap={{ scale: 0.97 }}
+                            <StandardButton
+                                size="lg"
                                 onClick={handleSendRequest}
                                 disabled={partnerCode.length !== 12 || isSubmitting || !!sentRequest}
-                                className="w-full mt-4 py-3.5 rounded-2xl font-bold text-white flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 transition-all"
-                                style={{ background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' }}
+                                className="w-full mt-4 py-3.5"
                             >
                                         {isSubmitting ? (
                                             <Loader2 className="w-5 h-5 animate-spin" />
@@ -340,7 +354,7 @@ const ConnectPartnerPage = () => {
                                                 {t('connectPartner.enter.submit')}
                                             </>
                                         )}
-                                    </motion.button>
+                                    </StandardButton>
                                 </motion.div>
                             )}
                 </AnimatePresence>

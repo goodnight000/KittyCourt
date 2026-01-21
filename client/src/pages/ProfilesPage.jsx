@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-    User, Heart, Settings, Lock, Crown, Sparkles, Zap, Gavel, Wand2, ImagePlus, Scale
+    User, Heart, Settings, Lock, Crown, Sparkles, Zap, Gavel, Wand2, ImagePlus, Scale, Target
 } from 'lucide-react';
 import useAppStore from '../store/useAppStore';
 import useAuthStore from '../store/useAuthStore';
@@ -24,6 +24,7 @@ import MilestonesSection from '../components/profile/MilestonesSection';
 import DisconnectNotice from '../components/DisconnectNotice';
 import useProfileData from '../components/profile/useProfileData';
 import useCalendarEvents from '../components/calendar/useCalendarEvents';
+import EmojiIcon from '../components/shared/EmojiIcon';
 import api from '../services/api';
 import { useI18n } from '../i18n';
 
@@ -37,12 +38,9 @@ const ProfilesPage = () => {
     const { isGold, usage, limits, getUsageDisplay, purchaseGold, restorePurchases, isLoading: subLoading } = useSubscriptionStore();
     const { level, currentXP, xpForNextLevel, title, fetchLevel, shouldShowChallenges, shouldShowInsights, serverAvailable } = useLevelStore();
     const { memories, deletedMemories, fetchMemories, serverAvailable: memoriesAvailable } = useMemoryStore();
-    const { insights, consent, fetchInsights, updateConsent, serverAvailable: insightsAvailable } = useInsightsStore();
+    const { insights, fetchInsights, serverAvailable: insightsAvailable } = useInsightsStore();
     const { active: activeChallenges, completed: completedChallenges, available: availableChallenges, isLoading: challengesLoading, fetchChallenges } = useChallengeStore();
     const latestInsight = insights?.[0] || null;
-    const selfConsent = consent ? !!consent.selfConsent : true;
-    const bothConsented = selfConsent;
-    const insightsPaused = consent?.selfPaused;
     const showChallenges = shouldShowChallenges();
     const showInsights = shouldShowInsights();
     const insightsUnlocked = showInsights && isGold;
@@ -210,13 +208,13 @@ const ProfilesPage = () => {
                 <div className="relative flex rounded-full border border-white/80 bg-white/75 p-1.5 shadow-inner-soft">
                     <button
                         onClick={() => setActiveTab('me')}
-                        className={`relative flex-1 rounded-full px-3 py-2.5 text-sm font-bold transition-colors ${activeTab === 'me' ? 'text-white' : 'text-neutral-500'
+                        className={`relative flex-1 rounded-full px-3 py-2.5 text-sm font-bold transition-colors ${activeTab === 'me' ? 'text-amber-700' : 'text-neutral-500'
                             }`}
                     >
                         {activeTab === 'me' && (
                             <motion.span
                                 layoutId="profileTab"
-                                className="absolute inset-0 rounded-full bg-gradient-to-r from-[#C9A227] to-[#8B7019] shadow-soft"
+                                className="absolute inset-0 rounded-full border border-amber-200/70 bg-amber-100/80 shadow-soft"
                             />
                         )}
                         <span className="relative z-10 flex items-center justify-center gap-2">
@@ -228,14 +226,14 @@ const ProfilesPage = () => {
                         onClick={() => hasPartner && setActiveTab('us')}
                         disabled={!hasPartner}
                         className={`relative flex-1 rounded-full px-3 py-2.5 text-sm font-bold transition-colors ${activeTab === 'us'
-                            ? 'text-white'
+                            ? 'text-amber-700'
                             : hasPartner ? 'text-neutral-500' : 'text-neutral-500 opacity-60 cursor-not-allowed'
                             }`}
                     >
                         {activeTab === 'us' && (
                             <motion.span
                                 layoutId="profileTab"
-                                className="absolute inset-0 rounded-full bg-gradient-to-r from-[#C9A227] to-[#8B7019] shadow-soft"
+                                className="absolute inset-0 rounded-full border border-amber-200/70 bg-amber-100/80 shadow-soft"
                             />
                         )}
                         <span className="relative z-10 flex items-center justify-center gap-2">
@@ -408,9 +406,9 @@ const ProfilesPage = () => {
                                         <motion.div
                                             animate={{ scale: [1, 1.2, 1] }}
                                             transition={{ duration: 1.5, repeat: Infinity }}
-                                            className="rounded-full border border-rose-200/70 bg-rose-100/70 px-3 py-1 text-lg"
+                                            className="rounded-full border border-rose-200/70 bg-rose-100/70 px-3 py-1"
                                         >
-                                            💕
+                                            <Heart className="w-5 h-5 text-rose-500 fill-rose-500" />
                                         </motion.div>
                                         <ProfilePicture
                                             avatarUrl={connectedPartner?.avatar_url}
@@ -571,11 +569,6 @@ const ProfilesPage = () => {
                                                                 {t('profilePage.challenges.activeNow')}
                                                             </div>
                                                             <div className="flex items-center gap-2">
-                                                                {activeChallengeCount > 1 && (
-                                                                    <span className="text-[10px] font-semibold uppercase tracking-[0.3em] text-amber-500">
-                                                                        {t('profilePage.challenges.swipe')}
-                                                                    </span>
-                                                                )}
                                                                 <span className="text-[11px] font-bold text-amber-700 bg-amber-100/70 px-2.5 py-1 rounded-full">
                                                                     {t('profilePage.challenges.liveCount', { count: activeChallengeCount })}
                                                                 </span>
@@ -595,7 +588,7 @@ const ProfilesPage = () => {
                                                                     : 0;
                                                                 const rewardXP = challenge.rewardXP || 0;
                                                                 const daysLeft = challenge.daysLeft ?? challenge.daysRemaining ?? 7;
-                                                                const emoji = challenge.emoji || '🎯';
+                                                                const emoji = challenge.emoji;
                                                                 const isActive = index === activeChallengeIndex;
 
                                                                 return (
@@ -614,8 +607,12 @@ const ProfilesPage = () => {
                                                                         </div>
                                                                         <div className="relative space-y-3">
                                                                             <div className="flex items-start gap-3">
-                                                                                <div className="h-10 w-10 rounded-2xl bg-amber-100/80 border border-amber-200/70 flex items-center justify-center text-lg">
-                                                                                    {emoji}
+                                                                                <div className="h-10 w-10 rounded-2xl bg-amber-100/80 border border-amber-200/70 flex items-center justify-center">
+                                                                                    {emoji ? (
+                                                                                        <EmojiIcon emoji={emoji} className="w-5 h-5 text-amber-600" />
+                                                                                    ) : (
+                                                                                        <Target className="w-5 h-5 text-amber-600" />
+                                                                                    )}
                                                                                 </div>
                                                                                 <div className="flex-1 space-y-1">
                                                                                     <div className="text-[10px] font-semibold uppercase tracking-[0.25em] text-neutral-500">
@@ -645,9 +642,11 @@ const ProfilesPage = () => {
                                                                                 </div>
                                                                                 <div className="flex items-center justify-between text-[10px] text-neutral-500">
                                                                                     <span>{t('profilePage.challenges.daysLeft', { count: daysLeft })}</span>
-                                                                                    <span className="font-semibold text-amber-600">
-                                                                                        {isActive ? t('profilePage.challenges.current') : t('profilePage.challenges.swipe')}
-                                                                                    </span>
+                                                                                    {isActive && (
+                                                                                        <span className="font-semibold text-amber-600">
+                                                                                            {t('profilePage.challenges.current')}
+                                                                                        </span>
+                                                                                    )}
                                                                                 </div>
                                                                             </div>
                                                                         </div>
@@ -753,15 +752,6 @@ const ProfilesPage = () => {
                                                         {t('profilePage.insights.unlockGold')}
                                                     </motion.button>
                                                 )}
-                                                {insightsUnlocked && (
-                                                    <motion.button
-                                                        whileTap={{ scale: 0.96 }}
-                                                        onClick={() => updateConsent(!selfConsent)}
-                                                        className="text-xs font-bold text-sky-700 bg-sky-100/70 px-2.5 py-1 rounded-full"
-                                                    >
-                                                        {selfConsent ? t('profilePage.insights.optOut') : t('profilePage.insights.turnOn')}
-                                                    </motion.button>
-                                                )}
                                             </div>
                                         </div>
 
@@ -791,19 +781,7 @@ const ProfilesPage = () => {
                                             </div>
                                         )}
 
-                                        {insightsUnlocked && !selfConsent && (
-                                            <div className="rounded-2xl border border-sky-200/70 bg-sky-50/70 p-3 text-xs text-sky-700">
-                                                {t('profilePage.insights.off')}
-                                            </div>
-                                        )}
-
-                                        {insightsUnlocked && bothConsented && insightsPaused && (
-                                            <div className="rounded-2xl border border-sky-200/70 bg-sky-50/70 p-3 text-xs text-sky-700">
-                                                {t('profilePage.insights.paused')}
-                                            </div>
-                                        )}
-
-                                        {insightsUnlocked && bothConsented && !insightsPaused && (
+                                        {insightsUnlocked && (
                                             <div className="rounded-2xl border border-white/80 bg-white/80 p-3">
                                                 {latestInsight ? (
                                                     <>

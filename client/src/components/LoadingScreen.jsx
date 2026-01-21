@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useI18n } from '../i18n';
+import EmojiIcon from './shared/EmojiIcon';
 
 /**
  * LoadingScreen - Premium, cute, full, and immersive loading experience
@@ -34,13 +35,6 @@ const HEART_POSITIONS = [
     { x: 80, y: 30, delay: 0.8 },
     { x: 35, y: 80, delay: 1.2 },
     { x: 65, y: 75, delay: 0.5 },
-];
-
-const FALLBACK_MESSAGES = [
-    { text: 'Warming up the courtroom...', emoji: '🐾' },
-    { text: 'Stretching our whiskers...', emoji: '✨' },
-    { text: 'Preparing pawsitive vibes...', emoji: '💖' },
-    { text: 'Almost ready, meow!', emoji: '🐱' },
 ];
 
 // Single paw print SVG
@@ -104,6 +98,13 @@ const CatFace = ({ className = "" }) => (
         <line x1="83" y1="68" x2="102" y2="68" stroke="#2d2d2d" strokeWidth="1.5" strokeLinecap="round" />
     </svg>
 );
+
+const FALLBACK_MESSAGES = [
+    { text: 'Warming up the courtroom...', Icon: PawPrint },
+    { text: 'Stretching our whiskers...', Icon: Sparkle },
+    { text: 'Preparing pawsitive vibes...', Icon: Heart },
+    { text: 'Almost ready, meow!', Icon: CatFace },
+];
 
 // Animated paw that walks
 const AnimatedPaw = ({ x, y, rotate, delay }) => (
@@ -187,7 +188,12 @@ const LoadingScreen = ({
     const [messageIndex, setMessageIndex] = useState(0);
     const localizedMessages = t('loadingScreen.messages');
     const messagePool = Array.isArray(localizedMessages) && localizedMessages.length
-        ? localizedMessages
+        ? localizedMessages.map((msg) => ({
+            ...msg,
+            Icon: (props) => (
+                <EmojiIcon emoji={msg.emoji} className={props.className} />
+            ),
+        }))
         : FALLBACK_MESSAGES;
 
     useEffect(() => {
@@ -214,7 +220,7 @@ const LoadingScreen = ({
     };
 
     const currentMessage = message
-        ? { text: message, emoji: '🐾' }
+        ? { text: message, Icon: PawPrint }
         : messagePool[messageIndex % messagePool.length];
 
     return (
@@ -332,16 +338,16 @@ const LoadingScreen = ({
                         <h2 className="text-xl font-bold text-amber-900 tracking-wide">
                             {currentMessage.text}
                         </h2>
-                        <motion.p
+                        <motion.div
                             animate={{
                                 scale: [1, 1.3, 1],
                                 rotate: [0, 10, -10, 0]
                             }}
                             transition={{ duration: 2, repeat: Infinity }}
-                            className="text-3xl"
+                            className="flex items-center justify-center"
                         >
-                            {currentMessage.emoji}
-                        </motion.p>
+                            <currentMessage.Icon className="w-7 h-7 text-amber-600/80" />
+                        </motion.div>
                     </motion.div>
                 </AnimatePresence>
 
@@ -395,4 +401,3 @@ const LoadingScreen = ({
 };
 
 export default LoadingScreen;
-

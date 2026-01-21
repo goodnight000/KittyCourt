@@ -4,11 +4,14 @@ import { useNavigate } from 'react-router-dom';
 import { Users, Link2, Copy, Check } from 'lucide-react';
 import ProfilePicture from '../ProfilePicture';
 import { useI18n } from '../../i18n';
+import StandardButton from '../shared/StandardButton';
+import EmojiIcon from '../shared/EmojiIcon';
 
 const PartnerConnection = ({ hasPartner, profile, partner, loveLanguages }) => {
     const { t } = useI18n();
     const navigate = useNavigate();
     const [copied, setCopied] = useState(false);
+    const partnerLoveLanguage = loveLanguages.find(l => l.id === partner?.love_language);
 
     const handleCopyCode = async () => {
         if (profile?.partner_code) {
@@ -61,10 +64,10 @@ const PartnerConnection = ({ hasPartner, profile, partner, loveLanguages }) => {
                         <h3 className="font-display font-bold text-neutral-800">
                             {partner.display_name || t('common.yourPartner')}
                         </h3>
-                        {partner.love_language && (
-                            <p className="text-xs text-neutral-500">
-                                {loveLanguages.find(l => l.id === partner.love_language)?.emoji}{' '}
-                                {loveLanguages.find(l => l.id === partner.love_language)?.label}
+                        {partnerLoveLanguage && (
+                            <p className="text-xs text-neutral-500 flex items-center gap-1">
+                                <EmojiIcon emoji={partnerLoveLanguage.emoji} className="w-3.5 h-3.5 text-emerald-500" />
+                                {partnerLoveLanguage.label}
                             </p>
                         )}
                     </div>
@@ -119,14 +122,14 @@ const PartnerConnection = ({ hasPartner, profile, partner, loveLanguages }) => {
                     </div>
                 </div>
 
-                <motion.button
-                    whileTap={{ scale: 0.98 }}
+                <StandardButton
+                    size="lg"
                     onClick={() => navigate('/connect')}
-                    className="w-full rounded-2xl bg-gradient-to-r from-[#C9A227] to-[#8B7019] py-3 text-sm font-bold text-white shadow-soft flex items-center justify-center gap-2"
+                    className="w-full py-3 text-sm"
                 >
                     <Link2 className="w-5 h-5" />
                     {t('profilePage.connect.cta')}
-                </motion.button>
+                </StandardButton>
             </div>
         </motion.div>
     );

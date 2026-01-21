@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { Cat, Clock, Heart, Moon, Search, Star } from 'lucide-react';
 import clsx from 'clsx';
 
 /**
@@ -18,11 +19,11 @@ const EmptyState = ({
     className = '',
 }) => {
     const cats = {
-        sleeping: { emoji: '😴', accessory: '💤' },
-        searching: { emoji: '🔍', accessory: '🐾' },
-        waiting: { emoji: '🐱', accessory: '⏳' },
-        happy: { emoji: '😺', accessory: '✨' },
-        love: { emoji: '😻', accessory: '💕' },
+        sleeping: { accent: Moon },
+        searching: { accent: Search },
+        waiting: { accent: Clock },
+        happy: { accent: Star },
+        love: { accent: Heart },
     };
 
     const cat = cats[variant] || cats.sleeping;
@@ -42,7 +43,7 @@ const EmptyState = ({
                 className="relative mb-6"
             >
                 <div className="w-24 h-24 bg-gradient-to-br from-lavender-100 to-pink-100 rounded-3xl flex items-center justify-center border-4 border-white shadow-soft-lg">
-                    <span className="text-5xl">{cat.emoji}</span>
+                    <Cat className="w-12 h-12 text-amber-700" />
                 </div>
                 
                 <motion.div
@@ -53,7 +54,7 @@ const EmptyState = ({
                     transition={{ duration: 2, repeat: Infinity }}
                     className="absolute -top-2 -right-2 text-xl"
                 >
-                    {cat.accessory}
+                    {React.createElement(cat.accent, { className: 'w-5 h-5 text-amber-500' })}
                 </motion.div>
             </motion.div>
 

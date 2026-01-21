@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Edit3, Calendar, Heart, Settings, LogOut, Coffee, Scale, MessageSquare } from 'lucide-react';
 import ProfilePicture from '../ProfilePicture';
 import { useI18n } from '../../i18n';
+import EmojiIcon from '../shared/EmojiIcon';
+import ButtonLoader from '../shared/ButtonLoader';
 
 const ProfileCard = ({
     profileData,
@@ -17,6 +19,19 @@ const ProfileCard = ({
 }) => {
     const { t, language } = useI18n();
     const navigate = useNavigate();
+    const [isSigningOut, setIsSigningOut] = useState(false);
+
+    const handleSignOut = async () => {
+        if (isSigningOut) return;
+        setIsSigningOut(true);
+        try {
+            await onSignOut();
+            navigate('/signin');
+        } catch (error) {
+            console.error('Sign out failed:', error);
+            setIsSigningOut(false);
+        }
+    };
 
     return (
         <>
@@ -65,7 +80,7 @@ const ProfileCard = ({
                             )}
                             {selectedLoveLanguage && (
                                 <span className="inline-flex items-center gap-1 rounded-full border border-amber-200/70 bg-amber-100/70 px-3 py-1 text-[11px] font-semibold text-amber-700">
-                                    <span>{selectedLoveLanguage.emoji}</span>
+                                    <EmojiIcon emoji={selectedLoveLanguage.emoji} className="w-3.5 h-3.5 text-amber-600" />
                                     {selectedLoveLanguage.label}
                                 </span>
                             )}
@@ -85,24 +100,31 @@ const ProfileCard = ({
 
                     <motion.button
                         whileTap={{ scale: 0.98 }}
-                        onClick={async () => {
-                            await onSignOut();
-                            navigate('/signin');
-                        }}
-                        className="flex items-center justify-center gap-2 rounded-2xl border border-rose-200/70 bg-rose-50/70 py-2.5 text-sm font-bold text-rose-600"
+                        onClick={handleSignOut}
+                        disabled={isSigningOut}
+                        className="flex items-center justify-center gap-2 rounded-2xl border border-rose-200/70 bg-rose-50/70 py-2.5 text-sm font-bold text-rose-600 disabled:opacity-60"
                     >
-                        <LogOut className="w-4 h-4" />
-                        {t('profilePage.profile.signOut')}
+                        {isSigningOut ? (
+                            <ButtonLoader size="sm" tone="rose" variant="dots" />
+                        ) : (
+                            <>
+                                <LogOut className="w-4 h-4" />
+                                {t('profilePage.profile.signOut')}
+                            </>
+                        )}
                     </motion.button>
                 </div>
             </motion.div>
 
             {/* Stats Grid */}
             <div className="grid grid-cols-2 gap-3">
-                <motion.div
+                <motion.button
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => navigate('/economy')}
+                    type="button"
                     className="glass-card relative overflow-hidden p-4 text-center"
                 >
                     <div className="absolute -top-8 -right-6 h-16 w-16 rounded-full bg-amber-200/35 blur-2xl" />
@@ -111,11 +133,14 @@ const ProfileCard = ({
                         <p className="text-2xl font-display font-bold text-neutral-800">{currentUser?.kibbleBalance || 0}</p>
                         <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-neutral-500">{t('profilePage.stats.kibble')}</p>
                     </div>
-                </motion.div>
-                <motion.div
+                </motion.button>
+                <motion.button
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.15 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => navigate('/appreciations')}
+                    type="button"
                     className="glass-card relative overflow-hidden p-4 text-center"
                 >
                     <div className="absolute -top-8 -right-6 h-16 w-16 rounded-full bg-rose-200/35 blur-2xl" />
@@ -124,11 +149,14 @@ const ProfileCard = ({
                         <p className="text-2xl font-display font-bold text-neutral-800">{totalAppreciations}</p>
                         <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-neutral-500">{t('profilePage.stats.appreciations')}</p>
                     </div>
-                </motion.div>
-                <motion.div
+                </motion.button>
+                <motion.button
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.2 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => navigate('/history')}
+                    type="button"
                     className="glass-card relative overflow-hidden p-4 text-center"
                 >
                     <div className="absolute -top-8 -right-6 h-16 w-16 rounded-full bg-amber-200/35 blur-2xl" />
@@ -137,11 +165,14 @@ const ProfileCard = ({
                         <p className="text-2xl font-display font-bold text-neutral-800">{totalCases}</p>
                         <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-neutral-500">{t('profilePage.stats.cases')}</p>
                     </div>
-                </motion.div>
-                <motion.div
+                </motion.button>
+                <motion.button
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.25 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => navigate('/daily-meow/history')}
+                    type="button"
                     className="glass-card relative overflow-hidden p-4 text-center"
                 >
                     <div className="absolute -top-8 -right-6 h-16 w-16 rounded-full bg-amber-100/45 blur-2xl" />
@@ -150,7 +181,7 @@ const ProfileCard = ({
                         <p className="text-2xl font-display font-bold text-neutral-800">{questionsAnswered}</p>
                         <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-neutral-500">{t('profilePage.stats.questions')}</p>
                     </div>
-                </motion.div>
+                </motion.button>
             </div>
         </>
     );

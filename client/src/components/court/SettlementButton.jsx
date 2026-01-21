@@ -5,6 +5,7 @@ import useCourtStore from '../../store/useCourtStore';
 import useAuthStore from '../../store/useAuthStore';
 import usePartnerStore from '../../store/usePartnerStore';
 import { useI18n } from '../../i18n';
+import ButtonLoader from '../shared/ButtonLoader';
 
 /**
  * Settlement Button Component
@@ -185,7 +186,14 @@ export default function SettlementButton({ className = '' }) {
                             disabled={isLoading}
                             className="court-btn-primary flex-1 disabled:opacity-60"
                         >
-                            {isLoading ? t('court.settlement.partnerRequest.settling') : t('court.settlement.partnerRequest.accept')}
+                            {isLoading ? (
+                                <ButtonLoader
+                                    size="sm"
+                                    tone="white"
+                                />
+                            ) : (
+                                t('court.settlement.partnerRequest.accept')
+                            )}
                         </button>
                         <button
                             onClick={handleDeclinePartnerSettlement}
@@ -399,7 +407,14 @@ export default function SettlementButton({ className = '' }) {
                                         disabled={isLoading}
                                         className="court-btn-primary flex-1 disabled:opacity-60"
                                     >
-                                        {isLoading ? t('court.settlement.modal.requesting') : t('court.settlement.modal.confirm')}
+                                        {isLoading ? (
+                                            <ButtonLoader
+                                                size="sm"
+                                                tone="white"
+                                            />
+                                        ) : (
+                                            t('court.settlement.modal.confirm')
+                                        )}
                                     </button>
                                 </div>
                             </div>

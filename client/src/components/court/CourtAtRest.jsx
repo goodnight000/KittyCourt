@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Moon, History, Gavel, ChevronRight } from 'lucide-react';
+import { Moon, History, Gavel, ChevronRight, Heart, Star } from 'lucide-react';
 import JudgeSelection from './JudgeSelection';
 import { useI18n } from '../../i18n';
 
@@ -57,17 +57,17 @@ const CourtAtRest = ({ onServe, navigate }) => {
     // Floating element configs - positioned relative to the scene container
     const floatingElements = [
         // Gold stars (brand primary)
-        { type: '✦', color: 'text-court-gold', size: 'text-sm', left: '5%', top: '10%', delay: 0 },
-        { type: '✦', color: 'text-court-gold', size: 'text-xs', left: '88%', top: '15%', delay: 1.2 },
-        { type: '✦', color: 'text-court-goldLight', size: 'text-base', left: '85%', top: '45%', delay: 0.5 },
+        { Icon: Star, color: 'text-court-gold', size: 'w-3.5 h-3.5', left: '5%', top: '10%', delay: 0 },
+        { Icon: Star, color: 'text-court-gold', size: 'w-3 h-3', left: '88%', top: '15%', delay: 1.2 },
+        { Icon: Star, color: 'text-court-goldLight', size: 'w-4 h-4', left: '85%', top: '45%', delay: 0.5 },
         // Lavender stars (dreamy, complements gold)
-        { type: '✦', color: 'text-lavender-300', size: 'text-sm', left: '8%', top: '35%', delay: 0.8 },
-        { type: '✦', color: 'text-lavender-400', size: 'text-xs', left: '90%', top: '60%', delay: 1.5 },
+        { Icon: Star, color: 'text-lavender-300', size: 'w-3.5 h-3.5', left: '8%', top: '35%', delay: 0.8 },
+        { Icon: Star, color: 'text-lavender-400', size: 'w-3 h-3', left: '90%', top: '60%', delay: 1.5 },
         // Blush hearts (love theme)
-        { type: '♥', color: 'text-blush-300', size: 'text-xs', left: '6%', top: '55%', delay: 2.0 },
-        { type: '♥', color: 'text-blush-400', size: 'text-sm', left: '92%', top: '30%', delay: 0.3 },
+        { Icon: Heart, color: 'text-blush-300', size: 'w-3 h-3', left: '6%', top: '55%', delay: 2.0 },
+        { Icon: Heart, color: 'text-blush-400', size: 'w-3.5 h-3.5', left: '92%', top: '30%', delay: 0.3 },
         // Moon (sleepy vibe)
-        { type: '☽', color: 'text-lavender-300', size: 'text-base', left: '88%', top: '5%', delay: 1.8 },
+        { Icon: Moon, color: 'text-lavender-300', size: 'w-4 h-4', left: '88%', top: '5%', delay: 1.8 },
     ];
 
     return (
@@ -94,10 +94,10 @@ const CourtAtRest = ({ onServe, navigate }) => {
                         repeat: Infinity,
                         ease: "easeInOut",
                     }}
-                    className={`absolute ${el.color} ${el.size} drop-shadow-sm pointer-events-none`}
+                    className={`absolute ${el.color} drop-shadow-sm pointer-events-none`}
                     style={{ left: el.left, top: el.top }}
                 >
-                    {el.type}
+                    <el.Icon className={el.size} />
                 </motion.span>
             ))}
 

@@ -14,7 +14,6 @@ let eventCleanupFns = []
 
 const useInsightsStore = create((set, get) => ({
   insights: [],
-  consent: null,
   meta: null,
   isLoading: false,
   serverAvailable: true,
@@ -60,7 +59,6 @@ const useInsightsStore = create((set, get) => ({
         const data = payload || {}
         set({
           insights: data.insights || data.data || [],
-          consent: data.consent || null,
           meta: data.meta || null,
           isLoading: false,
           serverAvailable: true,
@@ -119,48 +117,6 @@ const useInsightsStore = create((set, get) => ({
     }
   },
 
-  updateConsent: async (consent) => {
-    if (!get().serverAvailable) return
-    try {
-      const response = await api.post('/insights/consent', { consent })
-      const profile = response?.data?.profile || null
-      const pausedUntil = profile?.ai_insights_paused_until || null
-      const selfPaused = pausedUntil ? new Date(pausedUntil) > new Date() : false
-      set({
-        consent: {
-          ...(get().consent || {}),
-          selfConsent: !!profile?.ai_insights_consent,
-          selfConsentAt: profile?.ai_insights_consent_at || null,
-          selfPausedUntil: pausedUntil,
-          selfPaused
-        }
-      })
-      get().fetchInsights({ force: true })
-    } catch (error) {
-      console.error('[InsightsStore] Failed to update consent:', error)
-      set({ error: 'Failed to update consent' })
-    }
-  },
-
-  pauseInsights: async (days = 7) => {
-    if (!get().serverAvailable) return
-    try {
-      const response = await api.post('/insights/pause', { days })
-      const pausedUntil = response?.data?.pausedUntil || null
-      set({
-        consent: {
-          ...(get().consent || {}),
-          selfPausedUntil: pausedUntil,
-          selfPaused: true
-        }
-      })
-      get().fetchInsights({ force: true })
-    } catch (error) {
-      console.error('[InsightsStore] Failed to pause insights:', error)
-      set({ error: 'Failed to pause insights' })
-    }
-  },
-
   sendFeedback: async (insightId, helpful) => {
     if (!get().serverAvailable) return
     try {
@@ -179,7 +135,6 @@ const useInsightsStore = create((set, get) => ({
     cacheListenerKey = null
     set({
       insights: [],
-      consent: null,
       meta: null,
       isLoading: false,
       serverAvailable: true,

@@ -11,10 +11,13 @@ import useMemoryStore from '../store/useMemoryStore'
 import MemoryCard from '../components/MemoryCard'
 import { useI18n } from '../i18n'
 import BackButton from '../components/shared/BackButton'
+import StandardButton from '../components/shared/StandardButton'
+import EmojiIcon from '../components/shared/EmojiIcon'
+import ButtonLoader from '../components/shared/ButtonLoader'
 
 const REACTION_OPTIONS = ['❤️', '😍', '😂', '🥰']
 
-const DeletedMemoryCard = ({ deletedAt, onRestore }) => {
+const DeletedMemoryCard = ({ deletedAt, onRestore, isRestoring }) => {
   const { t, language } = useI18n()
 
   return (
@@ -32,9 +35,14 @@ const DeletedMemoryCard = ({ deletedAt, onRestore }) => {
         <motion.button
           whileTap={{ scale: 0.96 }}
           onClick={onRestore}
-          className="inline-flex items-center justify-center rounded-full border border-rose-200/80 bg-white/80 px-4 py-2 text-xs font-bold text-rose-700 shadow-soft"
+          disabled={isRestoring}
+          className="inline-flex items-center justify-center rounded-full border border-rose-200/80 bg-white/80 px-4 py-2 text-xs font-bold text-rose-700 shadow-soft disabled:opacity-60"
         >
-          {t('memories.deleted.restore')}
+          {isRestoring ? (
+            <ButtonLoader size="sm" tone="rose" variant="dots" />
+          ) : (
+            t('memories.deleted.restore')
+          )}
         </motion.button>
       </div>
     </div>
@@ -81,6 +89,10 @@ const MemoriesPage = () => {
   const [filePreview, setFilePreview] = useState(null)
   const [file, setFile] = useState(null)
   const [commentText, setCommentText] = useState('')
+  const [commentSubmitting, setCommentSubmitting] = useState(false)
+  const [isDeletingMemory, setIsDeletingMemory] = useState(false)
+  const [deletingCommentId, setDeletingCommentId] = useState(null)
+  const [restoringMemoryId, setRestoringMemoryId] = useState(null)
 
   const resetUploader = () => {
     setShowUploader(false)
@@ -146,7 +158,7 @@ const MemoriesPage = () => {
   }
 
   const handleUpload = async () => {
-    if (!file) return
+    if (!file || isUploading) return
     const success = await uploadMemory({ file, caption, memoryDate })
     if (success) {
       resetUploader()
@@ -163,20 +175,38 @@ const MemoriesPage = () => {
   }
 
   const handleDelete = async () => {
-    if (!selectedMemory) return
+    if (!selectedMemory || isDeletingMemory) return
+    setIsDeletingMemory(true)
     await deleteMemory(selectedMemory.id)
     setSelectedMemory(null)
+    setIsDeletingMemory(false)
   }
 
   const handleComment = async () => {
-    if (!selectedMemory || !commentText.trim()) return
+    if (!selectedMemory || !commentText.trim() || commentSubmitting) return
+    setCommentSubmitting(true)
     await addComment(selectedMemory.id, commentText)
     setCommentText('')
+    setCommentSubmitting(false)
+  }
+
+  const handleDeleteComment = async (memoryId, commentId) => {
+    if (!memoryId || !commentId || deletingCommentId) return
+    setDeletingCommentId(commentId)
+    await deleteComment(memoryId, commentId)
+    setDeletingCommentId(null)
+  }
+
+  const handleRestoreMemory = async (memoryId) => {
+    if (!memoryId || restoringMemoryId) return
+    setRestoringMemoryId(memoryId)
+    await restoreMemory(memoryId)
+    setRestoringMemoryId(null)
   }
 
   if (!hasPartner) {
     return (
-      <div className="relative min-h-screen overflow-hidden px-4 pb-6 pt-6">
+      <div className="relative min-h-screen overflow-hidden pb-6">
         {/* Background gradient */}
             <div className="fixed inset-0 pointer-events-none">
                 <div className="absolute -top-20 -right-20 h-64 w-64 rounded-full bg-amber-200/30 blur-3xl" />
@@ -221,7 +251,7 @@ const MemoriesPage = () => {
 
   if (!memoriesAvailable) {
     return (
-      <div className="relative min-h-screen overflow-hidden px-4 pb-6 pt-6">
+      <div className="relative min-h-screen overflow-hidden pb-6">
         <MemoryBackdrop />
         <div className="relative">
           <motion.button
@@ -261,7 +291,7 @@ const MemoriesPage = () => {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden px-4 pb-6 pt-6">
+    <div className="relative min-h-screen overflow-hidden pb-6">
       <MemoryBackdrop />
       <div className="relative space-y-6">
         <header className="flex items-start gap-3">
@@ -273,14 +303,14 @@ const MemoriesPage = () => {
             <h1 className="text-2xl font-display font-bold text-neutral-800">{t('memories.header.title')}</h1>
             <p className="text-sm text-neutral-500">{t('memories.header.subtitle')}</p>
           </div>
-          <motion.button
-            whileTap={{ scale: 0.95 }}
+          <StandardButton
+            size="sm"
             onClick={() => setShowUploader(true)}
-            className="flex items-center gap-2 rounded-full bg-gradient-to-r from-[#C9A227] to-[#8B7019] px-4 py-2 text-xs font-bold text-white shadow-soft"
+            className="px-4 py-2 text-xs"
           >
             <ImagePlus className="w-4 h-4" />
             {t('memories.header.add')}
-          </motion.button>
+          </StandardButton>
         </header>
 
         <motion.section
@@ -344,7 +374,8 @@ const MemoriesPage = () => {
                 <DeletedMemoryCard
                   key={item.id}
                   deletedAt={item.deletedAt}
-                  onRestore={() => restoreMemory(item.id)}
+                  onRestore={() => handleRestoreMemory(item.id)}
+                  isRestoring={restoringMemoryId === item.id}
                 />
               ))}
             </div>
@@ -377,13 +408,13 @@ const MemoriesPage = () => {
             <p className="mt-2 text-sm text-neutral-500">
               {t('memories.empty.subtitle')}
             </p>
-            <motion.button
-              whileTap={{ scale: 0.98 }}
+            <StandardButton
+              size="lg"
               onClick={() => setShowUploader(true)}
-              className="mt-5 rounded-full bg-gradient-to-r from-[#C9A227] to-[#8B7019] px-6 py-3 text-sm font-bold text-white shadow-soft"
+              className="mt-5 px-6 py-3 text-sm"
             >
               {t('memories.empty.cta')}
-            </motion.button>
+            </StandardButton>
           </motion.div>
         )}
 
@@ -485,14 +516,18 @@ const MemoriesPage = () => {
                   </div>
                 </div>
 
-                <motion.button
-                  whileTap={{ scale: 0.98 }}
+                <StandardButton
+                  size="lg"
                   onClick={handleUpload}
                   disabled={!file || isUploading}
-                  className="w-full rounded-2xl bg-gradient-to-r from-rose-500 to-amber-500 py-3 text-sm font-bold text-white shadow-soft disabled:opacity-60"
+                  className="w-full py-3"
                 >
-                  {isUploading ? t('memories.uploader.uploading') : t('memories.uploader.save')}
-                </motion.button>
+                  {isUploading ? (
+                    <ButtonLoader size="sm" tone="amber" />
+                  ) : (
+                    t('memories.uploader.save')
+                  )}
+                </StandardButton>
               </div>
             </motion.div>
           </motion.div>
@@ -566,7 +601,7 @@ const MemoriesPage = () => {
                           : 'border-white/70 bg-white/80 text-neutral-600'
                       }`}
                     >
-                      {emoji}
+                      <EmojiIcon emoji={emoji} className="w-4 h-4" />
                     </motion.button>
                   ))}
                 </div>
@@ -602,10 +637,15 @@ const MemoriesPage = () => {
                     {comment.userId === user?.id && (
                       <button
                         type="button"
-                        onClick={() => deleteComment(selectedMemory.id, comment.id)}
-                        className="text-rose-400"
+                        onClick={() => handleDeleteComment(selectedMemory.id, comment.id)}
+                        disabled={deletingCommentId === comment.id}
+                        className="text-rose-400 disabled:opacity-60"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        {deletingCommentId === comment.id ? (
+                          <ButtonLoader size="sm" tone="rose" variant="dots" />
+                        ) : (
+                          <Trash2 className="w-4 h-4" />
+                        )}
                       </button>
                     )}
                   </div>
@@ -621,9 +661,14 @@ const MemoriesPage = () => {
                   <motion.button
                     whileTap={{ scale: 0.95 }}
                     onClick={handleComment}
-                    className="rounded-2xl bg-neutral-900 px-3 py-2 text-xs font-bold text-white shadow-soft"
+                    disabled={commentSubmitting || !commentText.trim()}
+                    className="rounded-2xl bg-neutral-900 px-3 py-2 text-xs font-bold text-white shadow-soft disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    {t('memories.viewer.send')}
+                    {commentSubmitting ? (
+                      <ButtonLoader size="sm" tone="white" variant="dots" />
+                    ) : (
+                      t('memories.viewer.send')
+                    )}
                   </motion.button>
                 </div>
               </div>
@@ -632,9 +677,14 @@ const MemoriesPage = () => {
                 <motion.button
                   whileTap={{ scale: 0.96 }}
                   onClick={handleDelete}
-                  className="mt-6 w-full rounded-2xl border border-rose-200/80 bg-rose-50/70 py-2.5 text-sm font-bold text-rose-700"
+                  disabled={isDeletingMemory}
+                  className="mt-6 w-full rounded-2xl border border-rose-200/80 bg-rose-50/70 py-2.5 text-sm font-bold text-rose-700 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  {t('memories.viewer.delete')}
+                  {isDeletingMemory ? (
+                    <ButtonLoader size="sm" tone="rose" />
+                  ) : (
+                    t('memories.viewer.delete')
+                  )}
                 </motion.button>
               )}
             </motion.div>

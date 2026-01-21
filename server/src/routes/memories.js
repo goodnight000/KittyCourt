@@ -10,6 +10,8 @@ const { v4: uuidv4 } = require('uuid');
 const { requireSupabase, requireAuthUserId, getPartnerIdForUser } = require('../lib/auth');
 const { getOrderedCoupleIds, awardXP, ACTION_TYPES } = require('../lib/xpService');
 const { recordChallengeAction, CHALLENGE_ACTIONS } = require('../lib/challengeService');
+const { INSIGHT_EVENT_TYPES, recordInsightEvent } = require('../lib/insightEventService');
+const { triggerMemoryCaptionExtraction } = require('../lib/stenographer');
 const { safeErrorMessage } = require('../lib/shared/errorUtils');
 const { sendError } = require('../lib/http');
 
@@ -235,6 +237,53 @@ router.post('/', async (req, res) => {
             .single();
 
         if (error) throw error;
+
+        try {
+            await Promise.all([
+                recordInsightEvent({
+                    userId,
+                    eventType: INSIGHT_EVENT_TYPES.MEMORY_UPLOAD,
+                    sourceId: memory.id,
+                }),
+                recordInsightEvent({
+                    userId: partnerId,
+                    eventType: INSIGHT_EVENT_TYPES.MEMORY_UPLOAD,
+                    sourceId: memory.id,
+                }),
+            ]);
+        } catch (eventError) {
+            console.warn('[Memories] Insight event record failed:', eventError?.message || eventError);
+        }
+
+        if (safeCaption) {
+            try {
+                const { data: profiles, error: profileError } = await supabase
+                    .from('profiles')
+                    .select('id, display_name, preferred_language')
+                    .in('id', [userId, partnerId]);
+
+                if (profileError) throw profileError;
+
+                const profileById = new Map((profiles || []).map(profile => [profile.id, profile]));
+                const uploaderProfile = profileById.get(userId);
+                const partnerProfile = profileById.get(partnerId);
+
+                triggerMemoryCaptionExtraction({
+                    memoryId: memory.id,
+                    caption: safeCaption,
+                    memoryDate: parsedDate,
+                    userAId: userId,
+                    userBId: partnerId,
+                    userAName: uploaderProfile?.display_name || 'User A',
+                    userBName: partnerProfile?.display_name || 'User B',
+                    userALanguage: uploaderProfile?.preferred_language || 'en',
+                    userBLanguage: partnerProfile?.preferred_language || 'en',
+                    observedAt: memory.created_at || new Date().toISOString(),
+                });
+            } catch (extractionError) {
+                console.warn('[Memories] Memory extraction skipped:', extractionError?.message || extractionError);
+            }
+        }
 
         try {
             await awardXP({

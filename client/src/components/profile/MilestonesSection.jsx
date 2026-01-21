@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Award, X, Star } from 'lucide-react';
+import { Award, X, Star, Lock } from 'lucide-react';
 import { useI18n } from '../../i18n';
 import {
   MILESTONES,
@@ -9,6 +9,7 @@ import {
   getEarnedXP,
 } from '../../config/milestones';
 import MilestoneBadge from './MilestoneBadge';
+import EmojiIcon from '../shared/EmojiIcon';
 
 /**
  * Milestone Detail Modal
@@ -32,7 +33,7 @@ const MilestoneDetailModal = ({ milestone, onClose }) => {
   if (!milestone) return null;
 
   const {
-    emoji = '🔒',
+    emoji = null,
     titleKey = '',
     descriptionKey = '',
     xpReward = 0,
@@ -103,7 +104,11 @@ const MilestoneDetailModal = ({ milestone, onClose }) => {
               }
             `}
           >
-            <span className="text-4xl">{isUnlocked ? emoji : '🔒'}</span>
+            {isUnlocked && emoji ? (
+              <EmojiIcon emoji={emoji} className="w-9 h-9 text-amber-600" />
+            ) : (
+              <Lock className="w-8 h-8 text-neutral-400" />
+            )}
           </motion.div>
 
           {/* Title */}

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion as Motion } from 'framer-motion';
 import { Check } from 'lucide-react';
 import { useI18n } from '../../i18n';
+import EmojiIcon from '../shared/EmojiIcon';
 
 const OptionsStep = ({
     options,
@@ -9,7 +10,8 @@ const OptionsStep = ({
     onOptionSelect,
     multiSelect = false,
     allowCustom = false,
-    fieldName = ''
+    fieldName = '',
+    iconMode = 'emoji'
 }) => {
     const { t } = useI18n();
     const [customInput, setCustomInput] = useState('');
@@ -56,7 +58,11 @@ const OptionsStep = ({
                             }`}
                         >
                             <div className="flex items-start gap-3">
-                                <span className="text-2xl flex-shrink-0">{option.emoji}</span>
+                                <span className="text-2xl flex-shrink-0">
+                                    {iconMode === 'icon'
+                                        ? <EmojiIcon emoji={option.emoji} className="w-6 h-6 text-amber-600" />
+                                        : option.emoji}
+                                </span>
                                 <div className="flex-1 min-w-0">
                                     <p className={`font-bold break-words ${selected ? 'text-court-brown' : 'text-neutral-700'}`}>
                                         {optionLabel}

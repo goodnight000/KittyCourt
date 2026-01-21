@@ -123,8 +123,8 @@ const UpcomingEvents = memo(({
             <div className="relative z-10">
                 <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-rose-100/80 via-white/70 to-amber-50/60 border border-white/70 shadow-soft flex items-center justify-center">
-                            <Calendar className="w-5 h-5 text-[#B85C6B]" />
+                        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-court-gold/15 via-white/70 to-court-tan/40 border border-white/70 shadow-soft flex items-center justify-center">
+                            <Calendar className="w-5 h-5 text-court-gold" />
                         </div>
                         <div>
                             <h3 className="text-lg font-extrabold text-neutral-700">{t('calendar.upcoming.title')}</h3>
@@ -139,8 +139,8 @@ const UpcomingEvents = memo(({
                 {upcomingEvents.length === 0 ? (
                     <div className="rounded-3xl p-[1px] bg-gradient-to-br from-white/80 via-amber-100/40 to-rose-100/50">
                         <div className="rounded-[23px] bg-white/65 border border-white/60 p-5 text-center">
-                            <div className="w-16 h-16 mx-auto rounded-3xl bg-gradient-to-br from-violet-100/70 to-pink-100/70 border border-white/70 shadow-soft flex items-center justify-center text-3xl">
-                                📅
+                            <div className="w-16 h-16 mx-auto rounded-3xl bg-gradient-to-br from-court-gold/15 to-court-tan/40 border border-court-gold/20 shadow-soft flex items-center justify-center">
+                                <Calendar className="w-7 h-7 text-court-gold" />
                             </div>
                             <p className="text-neutral-700 text-sm font-extrabold mt-3">{t('calendar.upcoming.emptyTitle')}</p>
                             <p className="text-neutral-500 text-xs mt-1">{t('calendar.upcoming.emptyHint')}</p>

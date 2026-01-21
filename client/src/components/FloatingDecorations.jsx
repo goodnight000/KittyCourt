@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import EmojiIcon from './shared/EmojiIcon';
 
 /**
  * FloatingDecorations - Cute floating decorative elements
@@ -37,12 +38,12 @@ const FloatingDecorations = ({ variant = 'default' }) => {
                         ease: "easeInOut",
                         delay: index * 0.5,
                     }}
-                    className="absolute text-2xl"
+                    className="absolute text-2xl text-neutral-300/70"
                     style={{
                         left: `${15 + (index * 22)}%`,
                     }}
                 >
-                    {emoji}
+                    <EmojiIcon emoji={emoji} className="w-6 h-6 text-current" />
                 </motion.div>
             ))}
         </div>
@@ -64,7 +65,7 @@ export const PawPrints = ({ count = 5 }) => {
                         transition={{ delay: i * 0.2 }}
                         className="text-pink-300 text-xl"
                     >
-                        🐾
+                        <EmojiIcon emoji="🐾" className="w-5 h-5 text-current" />
                     </motion.div>
                 ))}
             </div>
@@ -96,7 +97,7 @@ export const Sparkle = ({ delay = 0, size = 'md', className = '' }) => {
             }}
             className={`${sizes[size]} ${className}`}
         >
-            ✨
+            <EmojiIcon emoji="✨" className="w-full h-full text-current" />
         </motion.div>
     );
 };
@@ -119,7 +120,7 @@ export const HeartBubble = ({ delay = 0 }) => {
             }}
             className="text-pink-400 text-lg"
         >
-            💕
+            <EmojiIcon emoji="💕" className="w-5 h-5 text-current" />
         </motion.div>
     );
 };

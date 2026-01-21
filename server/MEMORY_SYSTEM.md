@@ -11,7 +11,7 @@ The memory system combines two tiers of context:
    - Retrieved on every verdict to provide stable, low-latency context.
 
 2. **Dynamic memory embeddings**
-   - Long-term memories extracted from resolved cases and daily answers.
+   - Long-term memories extracted from resolved cases, daily answers, appreciations, and memory captions.
    - Stored as vector embeddings and retrieved by similarity during the verdict pipeline.
 
 Together, these tiers provide durable background context without leaking sensitive or irrelevant details.
@@ -58,7 +58,7 @@ After a verdict is delivered, the Stenographer agent runs asynchronously:
 4. **Persistence**
    - New insights are stored in Supabase for future retrieval.
 
-There is a parallel extraction flow for daily question answers with a smaller schema and tighter limits.
+There are parallel extraction flows for daily question answers, appreciation messages, and memory captions, each with smaller schemas and tighter limits.
 
 ## Configuration Notes
 

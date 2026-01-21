@@ -140,7 +140,7 @@ const usePartnerStore = create(
           if (!_authUserId) return { error: 'Not authenticated' }
 
           if (_authProfile?.partner_code === partnerCode) {
-            return { error: "You can't connect with yourself! 😹" }
+            return { error: "You can't connect with yourself!" }
           }
 
           const { data: targetUserLookup, error: findError } = await findByPartnerCode(partnerCode)

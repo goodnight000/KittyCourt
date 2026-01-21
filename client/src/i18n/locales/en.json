@@ -26,21 +26,21 @@
     "daysAgo": "{count} days ago",
     "tapToClose": "Tap outside to close",
     "catMessages": [
-      "Purr-fectly acceptable! 🐱",
-      "The judge approves... for now. 👁️",
-      "Meow-gnificent work! ✨",
-      "You've earned my respect (and maybe some kibble) 🪙",
-      "The court is pleased! ⚖️",
-      "Excellent submission, human! 📜",
-      "*approving purr* 😺",
-      "Justice has been served! 🎉"
+      "Purr-fectly acceptable.",
+      "The judge approves... for now.",
+      "Meow-gnificent work!",
+      "You've earned my respect (and maybe some kibble).",
+      "The court is pleased!",
+      "Excellent submission, human!",
+      "*approving purr*",
+      "Justice has been served!"
     ],
     "streakMessages": {
-      "legendary": "Legendary lovers! 👑",
-      "pawSome": "Paw-some duo! 🌟",
-      "steady": "Keeping the love alive! 💕",
-      "start": "Great start! 🐾",
-      "new": "Just getting started! ✨"
+      "legendary": "Legendary lovers!",
+      "pawSome": "Paw-some duo!",
+      "steady": "Keeping the love alive!",
+      "start": "Great start!",
+      "new": "Just getting started!"
     }
   },
   "nav": {
@@ -55,7 +55,7 @@
   },
   "profile": {
     "languageLabel": "Preferred language",
-    "loveLanguageLabel": "Love Language 💝",
+    "loveLanguageLabel": "Love Language",
     "saveProfile": "Save Profile",
     "unlockHint": "Earn XP together by answering Daily Meow, sending appreciations, and resolving cases."
   },
@@ -286,8 +286,8 @@
   },
   "calendar": {
     "iconAlt": "Calendar",
-    "title": "Our Calendar",
-    "subtitle": "Important dates & memories",
+    "title": "Our calendar",
+    "subtitle": "Schedule",
     "addEventAria": "Add event",
     "eventCount": {
       "one": "1 event",
@@ -318,16 +318,16 @@
       "secret": "Secret"
     },
     "addEvent": {
-      "title": "Add Event ✨",
+      "title": "Add Event",
       "visibilityLabel": "Visibility",
       "secretHint": "Secret events are only visible to you.",
       "sharedHint": "Shared events are visible to you and your partner.",
       "typeLabel": "Event Type",
       "titleLabel": "Event Title",
-      "titlePlaceholder": "e.g., Our Anniversary 💕",
+      "titlePlaceholder": "e.g., Our Anniversary",
       "dateLabel": "Date",
-      "emojiLabel": "Choose Emoji",
-      "repeatYearly": "🔄 Repeat yearly",
+      "emojiLabel": "Mark the moment",
+      "repeatYearly": "Repeat yearly",
       "notesLabel": "Notes (optional)",
       "notesPlaceholder": "Add any special notes...",
       "submit": "Add Event"
@@ -337,8 +337,8 @@
       "eventsOnDayOther": "{count} events on this day",
       "yearly": "Yearly",
       "personal": "Personal",
-      "defaultHoliday": "📅 Default Holiday",
-      "fromProfile": "💕 From Profile",
+      "defaultHoliday": "Default Holiday",
+      "fromProfile": "From Profile",
       "addedBy": "Added by {name}",
       "addAnother": "Add Another Event"
     },
@@ -368,6 +368,7 @@
       "anniversary": "Anniversary",
       "holiday": "Holiday",
       "dateNight": "Date night",
+      "milestone": "Milestone",
       "custom": "Custom"
     },
     "planning": {
@@ -995,14 +996,14 @@
     },
     "name": {
       "placeholder": "Your name or nickname",
-      "helper": "This is how you'll appear to your partner 💕"
+      "helper": "This is how you'll appear to your partner"
     },
     "birthday": {
-      "helper": "Your partner will be reminded to wish you a happy birthday! 🎈"
+      "helper": "Your partner will be reminded to wish you a happy birthday!"
     },
     "avatar": {
       "selectedAlt": "Your avatar",
-      "selectedHint": "Looking good! ✨",
+      "selectedHint": "Looking good!",
       "requiredHint": "Please select a profile picture",
       "presetLabel": "Pick an animal friend",
       "presetAlt": "{name} avatar",
@@ -1011,7 +1012,7 @@
       "changeLater": "You can change this later in your profile settings"
     },
     "complete": {
-      "connectTitle": "Ready to connect with your partner? 💕",
+      "connectTitle": "Ready to connect with your partner?",
       "connectSubtitle": "You can share your unique code or enter theirs to link your accounts.",
       "partnerCodeLabel": "Your Partner Code",
       "connectNow": "Connect with Partner Now",
@@ -1020,7 +1021,7 @@
       "summaryName": "Name",
       "summaryLoveLanguage": "Love Language",
       "oneMoreThing": "One more thing...",
-      "savedNotice": "Your profile is saved! 🎉"
+      "savedNotice": "Your profile is saved!"
     },
     "customOptionPlaceholder": "+ Add your own...",
     "paywall": {
@@ -1485,7 +1486,7 @@
       "subtitle": "Patterns and gentle nudges.",
       "level": "Level {level}"
     },
-    "countOne": "insight",
+    "countOne": "{count} insight",
     "countOther": "{count} insights",
     "status": {
       "syncing": "Syncing",
@@ -1730,8 +1731,8 @@
       "perMonth": "per month"
     },
     "pricingNote": {
-      "yearly": "Less than 2 ☕ cups of coffee a month",
-      "monthly": "Less than 2 ☕ cups of coffee a month"
+      "yearly": "Less than 2 cups of coffee a month",
+      "monthly": "Less than 2 cups of coffee a month"
     },
     "cancelAnytime": "Cancel anytime",
     "social": {
@@ -1761,8 +1762,8 @@
     "settingsHint": "Manage your subscription in Settings.",
     "usage": {
       "used": "{used}/{limit} used",
-      "unlimited": "✨ Unlimited",
-      "locked": "🔒 Locked"
+      "unlimited": "Unlimited",
+      "locked": "Locked"
     },
     "remaining": {
       "left": "{count} left",
@@ -1805,8 +1806,8 @@
     },
     "usage": {
       "used": "{used}/{limit} used",
-      "unlimited": "✨ Unlimited",
-      "locked": "🔒 Locked"
+      "unlimited": "Unlimited",
+      "locked": "Locked"
     },
     "remaining": {
       "left": "{count} left",
@@ -1817,7 +1818,7 @@
   "profilePage": {
     "header": {
       "kicker": "Profile",
-      "title": "Your profile",
+      "title": "About you",
       "settingsAria": "Profile settings"
     },
     "tabs": {
@@ -1854,8 +1855,8 @@
       "ctaHint": "7-day free trial",
       "usage": {
         "used": "{used}/{limit} used",
-        "unlimited": "✨ Unlimited",
-        "locked": "🔒 Locked"
+        "unlimited": "Unlimited",
+        "locked": "Locked"
       },
       "remaining": {
         "left": "{count} left",
@@ -2131,7 +2132,7 @@
       "partnerActivity": "Partner activity"
     },
     "preferences": {
-      "title": "Preferences",
+      "title": "Edit Language",
       "language": "Language",
       "confirmLanguage": "Confirm language"
     },
@@ -2240,7 +2241,7 @@
     "messageLabel": "Your message",
     "messagePlaceholder": "Tell us what's on your mind...",
     "submit": "Submit Feedback",
-    "success": "Thanks for your feedback! 💕",
+    "success": "Thanks for your feedback!",
     "errors": {
       "reasonRequired": "Please select a reason",
       "messageRequired": "Please enter a message",

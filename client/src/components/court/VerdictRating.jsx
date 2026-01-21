@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Star, X } from 'lucide-react';
+import { Scale, Star, X } from 'lucide-react';
 import useCourtStore from '../../store/useCourtStore';
 import { useI18n } from '../../i18n';
+import EmojiIcon from '../shared/EmojiIcon';
 
 /**
  * Verdict Rating Component
@@ -118,9 +119,9 @@ export default function VerdictRating({ onRate, onSkip }) {
                                     <motion.div
                                         animate={{ rotate: [0, -5, 5, 0] }}
                                         transition={{ duration: 0.5, delay: 0.3 }}
-                                        className="text-5xl mb-3"
+                                        className="mb-3 flex items-center justify-center"
                                     >
-                                        ⚖️
+                                        <Scale className="w-12 h-12 text-court-gold" />
                                     </motion.div>
                                     <h2 className="text-2xl font-bold text-court-brown mb-1">
                                         {t('court.rating.title')}
@@ -176,9 +177,9 @@ export default function VerdictRating({ onRate, onSkip }) {
                                                 initial={{ opacity: 0, y: 5 }}
                                                 animate={{ opacity: 1, y: 0 }}
                                                 exit={{ opacity: 0, y: -5 }}
-                                                className="text-lg text-court-brown"
+                                                className="text-lg text-court-brown inline-flex items-center justify-center gap-2"
                                             >
-                                                <span className="mr-2">{ratingInfo.emoji}</span>
+                                                <EmojiIcon emoji={ratingInfo.emoji} className="w-5 h-5 text-court-gold" />
                                                 {t(ratingInfo.textKey)}
                                             </motion.p>
                                         )}

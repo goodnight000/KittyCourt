@@ -7,6 +7,7 @@ import useCourtStore, { VIEW_PHASE } from '../store/useCourtStore';
 import useAuthStore from '../store/useAuthStore';
 import usePartnerStore from '../store/usePartnerStore';
 import useLevelStore from '../store/useLevelStore';
+import useUiStore from '../store/useUiStore';
 import useCourtSocket from '../hooks/useCourtSocket';
 import useKeyboardAvoidance from '../hooks/useKeyboardAvoidance';
 import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
@@ -26,7 +27,9 @@ const MainLayout = () => {
     const { t } = useI18n();
     const { keyboardVisible, keyboardHeight } = useKeyboardAvoidance();
     const prefersReducedMotion = usePrefersReducedMotion();
+    const isDockHidden = useUiStore((state) => state.dockHiddenCount > 0);
     const baseBottomPadding = 80;
+    const dockVisible = !keyboardVisible && !isDockHidden;
     const contentBottomPadding = keyboardVisible
         ? `${baseBottomPadding + keyboardHeight}px`
         : undefined;
@@ -94,7 +97,7 @@ const MainLayout = () => {
     return (
         <div className="min-h-screen min-h-[100dvh] flex flex-col font-sans">
             {/* Main Scrollable Content - with safe area for Dynamic Island/notch */}
-            <main ref={mainRef} className="flex-1 overflow-y-auto overscroll-contain safe-top" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
+            <main ref={mainRef} className="flex-1 overflow-y-auto safe-top relative" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
                 <div
                     className="px-4 py-5 pb-20 max-w-lg mx-auto"
                     style={contentBottomPadding ? { paddingBottom: contentBottomPadding } : undefined}
@@ -116,12 +119,12 @@ const MainLayout = () => {
             {/* Bottom Tab Bar */}
             <motion.nav
                 initial={{ y: prefersReducedMotion ? 0 : 100 }}
-                animate={{ y: keyboardVisible ? 120 : 0, opacity: keyboardVisible ? 0 : 1 }}
+                animate={{ y: dockVisible ? 0 : 120, opacity: dockVisible ? 1 : 0 }}
                 transition={prefersReducedMotion
                     ? { duration: 0.1 }
                     : { delay: 0.1, type: "spring", stiffness: 300, damping: 30 }}
                 className="fixed bottom-0 left-1/2 -translate-x-1/2 z-40 w-full max-w-lg bg-white/80 backdrop-blur-xl border-t border-court-tan/30 shadow-soft-lg pb-2 rounded-t-2xl"
-                style={{ pointerEvents: keyboardVisible ? 'none' : 'auto' }}
+                style={{ pointerEvents: dockVisible ? 'auto' : 'none' }}
             >
                 <div className="flex items-center justify-around h-18 px-2">
                     <TabItem to="/" icon={<Home size={26} />} label={t('nav.home')} prefersReducedMotion={prefersReducedMotion} />

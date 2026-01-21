@@ -6,6 +6,7 @@ import usePartnerStore from '../store/usePartnerStore'
 import useSubscriptionStore from '../store/useSubscriptionStore'
 import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion'
 import { useI18n } from '../i18n'
+import StandardButton from './shared/StandardButton'
 
 const FEATURES = [
   {
@@ -167,15 +168,16 @@ const GoldWelcomeModal = ({ isOpen, onClose, meta }) => {
               )}
 
               <div className="mt-6 grid gap-3">
-                <button
+                <StandardButton
+                  size="lg"
                   onClick={() => handleNavigate('/courtroom')}
-                  className="w-full rounded-2xl bg-gradient-to-r from-court-gold to-court-goldDark px-4 py-3 text-sm font-bold text-white shadow-lg shadow-amber-500/30"
+                  className="w-full px-4 py-3 text-sm"
                 >
                   <span className="inline-flex items-center justify-center gap-2">
                     {t('subscription.welcome.actions.startCase')}
                     <ArrowRight className="h-4 w-4" />
                   </span>
-                </button>
+                </StandardButton>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {!hasPartner && (
                     <button

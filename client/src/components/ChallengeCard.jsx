@@ -3,8 +3,11 @@
  */
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Clock, Check, ChevronRight } from 'lucide-react';
+import { Check, ChevronRight, Clock } from 'lucide-react';
 import { useI18n } from '../i18n';
+import EmojiIcon from './shared/EmojiIcon';
+import StandardButton from './shared/StandardButton';
+import ButtonLoader from './shared/ButtonLoader';
 
 const ChallengeCard = ({
     title,
@@ -20,7 +23,9 @@ const ChallengeCard = ({
     actionLabel,
     onAction,
     actionDisabled = false,
+    actionLoading = false,
     onSkip,
+    skipLoading = false,
     onClick,
     className = '',
 }) => {
@@ -75,7 +80,7 @@ const ChallengeCard = ({
                             {t('challenges.card.status.completed')}
                         </div>
                         <div className="mt-1 flex items-center gap-2">
-                            <span className="text-lg">{emoji}</span>
+                            <EmojiIcon emoji={emoji} className="w-5 h-5 text-emerald-600" />
                             <span className="font-display font-bold text-neutral-800">{title}</span>
                         </div>
                         <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.2em]">
@@ -109,8 +114,8 @@ const ChallengeCard = ({
 
             <div className="relative space-y-4">
                 <div className="flex items-start gap-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/80 bg-white/90 text-2xl shadow-inner-soft">
-                        {emoji}
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/80 bg-white/90 shadow-inner-soft">
+                        <EmojiIcon emoji={emoji} className="w-6 h-6 text-amber-600" />
                     </div>
                     <div className="flex-1">
                         <div className="flex items-start justify-between gap-2">
@@ -160,33 +165,39 @@ const ChallengeCard = ({
 
                     <div className="flex items-center gap-2">
                         {actionLabel && (
-                            <motion.button
-                                whileTap={{ scale: actionDisabled ? 1 : 0.95 }}
+                            <StandardButton
+                                size="sm"
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    if (actionDisabled || !onAction) return;
+                                    if (actionDisabled || actionLoading || !onAction) return;
                                     onAction();
                                 }}
-                                disabled={actionDisabled || !onAction}
-                                className={`rounded-full px-3 py-1 text-xs font-bold ${
-                                    actionDisabled
-                                        ? 'bg-neutral-200/70 text-neutral-500'
-                                        : 'bg-gradient-to-r from-[#C9A227] to-[#8B7019] text-white shadow-soft'
-                                }`}
+                                disabled={actionDisabled || actionLoading || !onAction}
+                                className="text-xs"
                             >
-                                {actionLabel}
-                            </motion.button>
+                                {actionLoading ? (
+                                    <ButtonLoader size="sm" tone="amber" />
+                                ) : (
+                                    actionLabel
+                                )}
+                            </StandardButton>
                         )}
                         {onSkip && (
                             <motion.button
                                 whileTap={{ scale: 0.9 }}
                                 onClick={(e) => {
                                     e.stopPropagation();
+                                    if (skipLoading) return;
                                     onSkip();
                                 }}
-                                className="px-2 py-1 text-[11px] font-semibold text-neutral-500 hover:text-neutral-600"
+                                disabled={skipLoading}
+                                className="px-2 py-1 text-[11px] font-semibold text-neutral-500 hover:text-neutral-600 disabled:opacity-60"
                             >
-                                {t('challenges.actions.skip')}
+                                {skipLoading ? (
+                                    <ButtonLoader size="sm" tone="neutral" variant="dots" />
+                                ) : (
+                                    t('challenges.actions.skip')
+                                )}
                             </motion.button>
                         )}
                         {isClickable && <ChevronRight className="w-4 h-4 text-neutral-500" />}

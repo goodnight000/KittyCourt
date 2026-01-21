@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { Cat, Eye, Moon, Zap, HelpCircle, Heart, Crown } from 'lucide-react';
 import clsx from 'clsx';
 
 /**
@@ -18,19 +19,26 @@ const CatAvatar = ({
     className = '',
 }) => {
     const moods = {
-        happy: '😺',
-        judging: '🐱',
-        sleeping: '😿',
-        excited: '😻',
-        thinking: '🙀',
-        love: '😽',
+        happy: Cat,
+        judging: Eye,
+        sleeping: Moon,
+        excited: Zap,
+        thinking: HelpCircle,
+        love: Heart,
     };
 
     const sizes = {
-        sm: 'w-12 h-12 text-2xl',
-        md: 'w-20 h-20 text-4xl',
-        lg: 'w-28 h-28 text-5xl',
-        xl: 'w-36 h-36 text-6xl',
+        sm: 'w-12 h-12',
+        md: 'w-20 h-20',
+        lg: 'w-28 h-28',
+        xl: 'w-36 h-36',
+    };
+
+    const iconSizes = {
+        sm: 'w-6 h-6',
+        md: 'w-10 h-10',
+        lg: 'w-12 h-12',
+        xl: 'w-16 h-16',
     };
 
     const crownSizes = {
@@ -58,7 +66,9 @@ const CatAvatar = ({
                 'border-4 border-white shadow-soft-lg',
                 'relative'
             )}>
-                <span>{moods[mood]}</span>
+                {React.createElement(moods[mood] || Cat, {
+                    className: clsx(iconSizes[size], 'text-amber-700')
+                })}
                 
                 {/* Blush marks */}
                 <div className="absolute left-1 top-1/2 w-2 h-1 bg-pink-200 rounded-full opacity-60" />
@@ -74,7 +84,7 @@ const CatAvatar = ({
                         crownSizes[size]
                     )}
                 >
-                    👑
+                    <Crown className={clsx('text-amber-500', iconSizes[size])} />
                 </motion.div>
             )}
             

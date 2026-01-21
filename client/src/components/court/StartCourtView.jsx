@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Scale, Gavel, Bell, ChevronRight, History } from 'lucide-react';
+import { Scale, Gavel, Bell, ChevronRight, History, Star } from 'lucide-react';
 import { useI18n } from '../../i18n';
 
 /**
@@ -13,11 +13,11 @@ const StartCourtView = ({ onServe, navigate }) => {
 
     // Floating decorative elements for visual delight
     const floatingElements = [
-        { type: '✦', color: 'text-court-gold', size: 'text-sm', left: '8%', top: '5%', delay: 0 },
-        { type: '✦', color: 'text-court-goldLight/60', size: 'text-xs', left: '85%', top: '10%', delay: 0.5 },
-        { type: '⚖️', color: '', size: 'text-xs', left: '92%', top: '35%', delay: 1 },
-        { type: '✦', color: 'text-lavender-300/50', size: 'text-xs', left: '5%', top: '45%', delay: 1.5 },
-        { type: '✦', color: 'text-court-gold/40', size: 'text-sm', left: '90%', top: '60%', delay: 2 },
+        { Icon: Star, color: 'text-court-gold', size: 'w-3.5 h-3.5', left: '8%', top: '5%', delay: 0 },
+        { Icon: Star, color: 'text-court-goldLight/60', size: 'w-3 h-3', left: '85%', top: '10%', delay: 0.5 },
+        { Icon: Scale, color: 'text-court-gold/70', size: 'w-3 h-3', left: '92%', top: '35%', delay: 1 },
+        { Icon: Star, color: 'text-lavender-300/50', size: 'w-3 h-3', left: '5%', top: '45%', delay: 1.5 },
+        { Icon: Star, color: 'text-court-gold/40', size: 'w-3.5 h-3.5', left: '90%', top: '60%', delay: 2 },
     ];
 
     return (
@@ -42,10 +42,10 @@ const StartCourtView = ({ onServe, navigate }) => {
                         delay: el.delay,
                         ease: "easeInOut"
                     }}
-                    className={`absolute ${el.color} ${el.size} opacity-60 pointer-events-none drop-shadow-sm`}
+                    className={`absolute ${el.color} opacity-60 pointer-events-none drop-shadow-sm`}
                     style={{ left: el.left, top: el.top }}
                 >
-                    {el.type}
+                    <el.Icon className={el.size} />
                 </motion.span>
             ))}
 

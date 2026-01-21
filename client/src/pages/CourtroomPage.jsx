@@ -15,6 +15,7 @@ import useSubscriptionStore from '../store/useSubscriptionStore';
 import useUpsellStore from '../store/useUpsellStore';
 import RequirePartner from '../components/RequirePartner';
 import Paywall from '../components/Paywall';
+import ButtonLoader from '../components/shared/ButtonLoader';
 
 import {
     CourtAtRest,
@@ -298,11 +299,12 @@ export default function CourtroomPageV2() {
                         myName={myName}
                         isCreator
                         onCancel={cancel}
+                        isSubmitting={isSubmitting}
                     />
                 );
 
             case VIEW_PHASE.PENDING_PARTNER:
-                return <SummonsReceived session={session} senderName={partnerName} onJoin={accept} />;
+                return <SummonsReceived session={session} senderName={partnerName} onJoin={accept} isSubmitting={isSubmitting} />;
 
             case VIEW_PHASE.EVIDENCE:
                 return (
@@ -461,7 +463,7 @@ export default function CourtroomPageV2() {
             feature={t('courtroom.feature')}
             description={t('courtroom.requirePartnerDescription')}
         >
-            <div className={`relative min-h-screen bg-gradient-to-b from-court-cream to-court-tan/20 ${isIdleView ? '' : 'overflow-hidden'}`}>
+            <div className={`relative min-h-screen ${isIdleView ? '' : 'overflow-hidden'}`}>
                 {!isIdleView && (
                     <>
                         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(70%_55%_at_50%_0%,_rgba(212,175,55,0.18),_transparent_65%)]" />
@@ -751,7 +753,16 @@ function AddendumModal({ open, onClose, value, onChange, onSubmit, isSubmitting,
                                 disabled={limitReached || isSubmitting || !value?.trim()}
                                 className="court-btn-primary flex-1 disabled:opacity-60"
                             >
-                                {limitReached ? t('courtroom.addendum.limitReached') : t('courtroom.addendum.submit')}
+                                {limitReached ? (
+                                    t('courtroom.addendum.limitReached')
+                                ) : isSubmitting ? (
+                                    <ButtonLoader
+                                        size="sm"
+                                        tone="white"
+                                    />
+                                ) : (
+                                    t('courtroom.addendum.submit')
+                                )}
                             </button>
                         </div>
                     </Motion.div>

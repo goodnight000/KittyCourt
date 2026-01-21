@@ -13,6 +13,7 @@ const router = express.Router();
 const { requireSupabase, requireAuthUserId, getPartnerIdForUser } = require('../lib/auth');
 const { awardXP, ACTION_TYPES, isXPSystemEnabled } = require('../lib/xpService');
 const { recordChallengeAction, CHALLENGE_ACTIONS } = require('../lib/challengeService');
+const { INSIGHT_EVENT_TYPES, recordInsightEvent } = require('../lib/insightEventService');
 const { checkMemoriesBySource } = require('../lib/supabase');
 const { triggerDailyQuestionExtraction } = require('../lib/stenographer');
 const { resolveRequestLanguage, normalizeLanguage } = require('../lib/language');
@@ -341,6 +342,23 @@ router.post('/answer', llmSecurityMiddleware('dailyQuestions'), async (req, res)
                     body: 'You and your partner both answered today\'s question',
                     data: { screen: 'daily_meow' }
                 }).catch(err => console.warn('[Daily Questions] Push notification failed:', err?.message));
+            }
+
+            try {
+                await Promise.all([
+                    recordInsightEvent({
+                        userId: assignment.user_a_id,
+                        eventType: INSIGHT_EVENT_TYPES.DAILY_QUESTION,
+                        sourceId: assignmentId,
+                    }),
+                    recordInsightEvent({
+                        userId: assignment.user_b_id,
+                        eventType: INSIGHT_EVENT_TYPES.DAILY_QUESTION,
+                        sourceId: assignmentId,
+                    }),
+                ]);
+            } catch (eventError) {
+                console.warn('[Daily Questions] Insight event record failed:', eventError?.message || eventError);
             }
         }
 

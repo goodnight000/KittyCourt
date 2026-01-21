@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Handshake, Heart } from 'lucide-react';
+import { Cat, Handshake, Heart } from 'lucide-react';
 import { useI18n } from '../../i18n';
 
 /**
@@ -9,6 +9,7 @@ import { useI18n } from '../../i18n';
  */
 const SettleSuccessAnimation = ({ partnerName }) => {
     const { t } = useI18n();
+    const heartColors = ['text-rose-400', 'text-pink-400', 'text-amber-300', 'text-rose-300', 'text-pink-300'];
     return (
         <motion.div
             initial={{ opacity: 0 }}
@@ -31,9 +32,9 @@ const SettleSuccessAnimation = ({ partnerName }) => {
                         delay: Math.random() * 2,
                         repeat: Infinity
                     }}
-                    className="absolute text-2xl"
+                    className="absolute"
                 >
-                    {['💕', '💗', '💖', '🤍', '💛'][i % 5]}
+                    <Heart className={`w-6 h-6 ${heartColors[i % heartColors.length]} fill-current`} />
                 </motion.div>
             ))}
 
@@ -81,12 +82,12 @@ const SettleSuccessAnimation = ({ partnerName }) => {
                     className="bg-white/85 backdrop-blur-sm rounded-3xl p-6 shadow-xl max-w-xs mx-auto border border-court-tan/30"
                 >
                     <div className="flex items-center justify-center gap-3 mb-4">
-                        <div className="w-12 h-12 bg-court-cream rounded-full flex items-center justify-center text-2xl border border-court-tan/30">
-                            🐱
+                        <div className="w-12 h-12 bg-court-cream rounded-full flex items-center justify-center border border-court-tan/30">
+                            <Cat className="w-6 h-6 text-court-brown" />
                         </div>
                         <Heart className="w-6 h-6 text-court-gold fill-court-gold" />
-                        <div className="w-12 h-12 bg-court-cream rounded-full flex items-center justify-center text-2xl border border-court-tan/30">
-                            🐱
+                        <div className="w-12 h-12 bg-court-cream rounded-full flex items-center justify-center border border-court-tan/30">
+                            <Cat className="w-6 h-6 text-court-brown" />
                         </div>
                     </div>
                     <p className="text-sm text-court-brownLight italic">

@@ -22,14 +22,14 @@ export function formatKibble(amount) {
  */
 export function getRandomCatMessage(language) {
     const fallbackMessages = [
-        "Purr-fectly acceptable! 🐱",
-        "The judge approves... for now. 👁️",
-        "Meow-gnificent work! ✨",
-        "You've earned my respect (and maybe some kibble) 🪙",
-        "The court is pleased! ⚖️",
-        "Excellent submission, human! 📜",
-        "*approving purr* 😺",
-        "Justice has been served! 🎉",
+        "Purr-fectly acceptable!",
+        "The judge approves... for now.",
+        "Meow-gnificent work!",
+        "You've earned my respect (and maybe some kibble).",
+        "The court is pleased!",
+        "Excellent submission, human!",
+        "*approving purr*",
+        "Justice has been served!",
     ];
     const messages = translate(language, 'common.catMessages');
     const options = Array.isArray(messages) && messages.length > 0 ? messages : fallbackMessages;
@@ -40,11 +40,11 @@ export function getRandomCatMessage(language) {
  * Get mood emoji based on vibe score
  */
 export function getVibeEmoji(score) {
-    if (score >= 90) return '😻';
-    if (score >= 70) return '😺';
-    if (score >= 50) return '🐱';
-    if (score >= 30) return '😿';
-    return '🙀';
+    if (score >= 90) return 'excited';
+    if (score >= 70) return 'happy';
+    if (score >= 50) return 'neutral';
+    if (score >= 30) return 'sad';
+    return 'worried';
 }
 
 /**
@@ -52,11 +52,11 @@ export function getVibeEmoji(score) {
  */
 export function getStreakMessage(days, language) {
     const fallbackMessages = {
-        legendary: "Legendary lovers! 👑",
-        pawSome: "Paw-some duo! 🌟",
-        steady: "Keeping the love alive! 💕",
-        start: "Great start! 🐾",
-        new: "Just getting started! ✨",
+        legendary: "Legendary lovers!",
+        pawSome: "Paw-some duo!",
+        steady: "Keeping the love alive!",
+        start: "Great start!",
+        new: "Just getting started!",
     };
     const messageSet = translate(language, 'common.streakMessages');
     const resolved = messageSet && typeof messageSet === 'object' && !Array.isArray(messageSet)

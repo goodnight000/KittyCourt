@@ -5,6 +5,7 @@ import usePartnerStore from '../store/usePartnerStore';
 import { validateAnniversaryDate } from '../utils/helpers';
 import Paywall from './Paywall';
 import ProfilePicture from './ProfilePicture';
+import StandardButton from './shared/StandardButton';
 
 const PartnerRequestModal = () => {
     const { pendingRequests, acceptRequest, rejectRequest } = usePartnerStore();
@@ -82,7 +83,7 @@ const PartnerRequestModal = () => {
             <Paywall
                 isOpen={true}
                 onClose={() => setShowPaywall(false)}
-                triggerReason="Congratulations on connecting with your partner! 🎉 Upgrade to Pause Gold for unlimited access."
+                triggerReason="Congratulations on connecting with your partner! Upgrade to Pause Gold for unlimited access."
             />
         );
     }
@@ -120,8 +121,18 @@ const PartnerRequestModal = () => {
                                 <UserPlus className="w-8 h-8 text-white" />
                             )}
                         </motion.div>
-                        <h2 className="text-xl font-bold text-white">
-                            {showAnniversaryStep ? 'Set Your Anniversary 💕' : 'Partner Request! 💕'}
+                        <h2 className="text-xl font-bold text-white flex items-center justify-center gap-2">
+                            {showAnniversaryStep ? (
+                                <>
+                                    <Calendar className="w-4 h-4" />
+                                    Set Your Anniversary
+                                </>
+                            ) : (
+                                <>
+                                    <Heart className="w-4 h-4" />
+                                    Partner Request
+                                </>
+                            )}
                         </h2>
                         <p className="text-pink-100 text-sm mt-1">
                             {showAnniversaryStep
@@ -188,12 +199,11 @@ const PartnerRequestModal = () => {
                                         Back
                                     </motion.button>
 
-                                    <motion.button
-                                        whileTap={{ scale: 0.95 }}
+                                    <StandardButton
+                                        size="lg"
                                         onClick={handleConfirmAccept}
                                         disabled={processingId === request.id}
-                                        className="flex-1 py-3.5 rounded-2xl font-bold text-white shadow-lg flex items-center justify-center gap-2 disabled:opacity-50"
-                                        style={{ background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' }}
+                                        className="flex-1 py-3.5"
                                     >
                                         {processingId === request.id && action === 'accept' ? (
                                             <Loader2 className="w-5 h-5 animate-spin" />
@@ -203,7 +213,7 @@ const PartnerRequestModal = () => {
                                                 Confirm
                                             </>
                                         )}
-                                    </motion.button>
+                                    </StandardButton>
                                 </div>
                             </>
                         ) : (
@@ -271,16 +281,15 @@ const PartnerRequestModal = () => {
                                         )}
                                     </motion.button>
 
-                                    <motion.button
-                                        whileTap={{ scale: 0.95 }}
+                                    <StandardButton
+                                        size="lg"
                                         onClick={handleAcceptClick}
                                         disabled={processingId === request.id}
-                                        className="flex-1 py-3.5 rounded-2xl font-bold text-white shadow-lg flex items-center justify-center gap-2 disabled:opacity-50"
-                                        style={{ background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' }}
+                                        className="flex-1 py-3.5"
                                     >
                                         <Check className="w-5 h-5" />
                                         Accept
-                                    </motion.button>
+                                    </StandardButton>
                                 </div>
                             </>
                         )}

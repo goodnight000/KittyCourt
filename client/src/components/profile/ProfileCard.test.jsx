@@ -140,7 +140,8 @@ describe('ProfileCard', () => {
         it('should render love language when selected', () => {
             renderWithRouter();
             expect(screen.getByText('Words of Affirmation')).toBeInTheDocument();
-            expect(screen.getByText('💬')).toBeInTheDocument();
+            const loveLanguageBadge = screen.getByText('Words of Affirmation').closest('span');
+            expect(loveLanguageBadge?.querySelector('svg')).toBeInTheDocument();
         });
 
         it('should not render love language when not selected', () => {

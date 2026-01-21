@@ -31,7 +31,7 @@ const WaitingForEvidence = ({ session, partnerName, myName }) => {
                         transition={{ duration: 2, repeat: Infinity }}
                         className="inline-block"
                     >
-                        <span className="text-4xl">🗂️</span>
+                        <FileCheck className="w-9 h-9 text-white" />
                     </motion.div>
                     <h2 className="text-xl font-bold text-white mt-2">{t('court.waitingEvidence.title')}</h2>
                     <p className="text-court-cream/80 text-sm">
