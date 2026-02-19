@@ -6,6 +6,8 @@ import useAuthStore from '../store/useAuthStore';
 import { useI18n } from '../i18n';
 import StandardButton from '../components/shared/StandardButton';
 import ButtonLoader from '../components/shared/ButtonLoader';
+import { validateEmail } from '../utils/helpers';
+import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
 
 // Helper to get user-friendly error messages
 const getErrorMessage = (error, t) => {
@@ -64,6 +66,7 @@ const SignInPage = () => {
     const navigate = useNavigate();
     const { t } = useI18n();
     const { signIn, signInWithGoogle } = useAuthStore();
+    const prefersReducedMotion = usePrefersReducedMotion();
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -75,8 +78,9 @@ const SignInPage = () => {
         e.preventDefault();
         setError(null);
         setIsSubmitting(true);
+        const trimmedEmail = email.trim();
 
-        if (!email || !password) {
+        if (!trimmedEmail || !password) {
             setError({
                 type: 'validation',
                 title: t('signIn.errors.validation.title'),
@@ -86,8 +90,18 @@ const SignInPage = () => {
             return;
         }
 
+        if (!validateEmail(trimmedEmail)) {
+            setError({
+                type: 'validation',
+                title: t('signIn.errors.validation.title'),
+                message: t('signIn.errors.validation.invalidEmail')
+            });
+            setIsSubmitting(false);
+            return;
+        }
+
         if (import.meta.env.DEV) console.log('[SignInPage] Calling signIn...');
-        const result = await signIn(email, password);
+        const result = await signIn(trimmedEmail, password);
         if (import.meta.env.DEV) console.log('[SignInPage] signIn result:', result);
         setIsSubmitting(false);
 
@@ -121,22 +135,22 @@ const SignInPage = () => {
             {/* Background Decorations */}
             <div className="fixed inset-0 pointer-events-none overflow-hidden">
                 <Motion.div
-                    animate={{ y: [0, -20, 0], rotate: [0, 5, 0] }}
-                    transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+                    animate={prefersReducedMotion ? undefined : { y: [0, -20, 0], rotate: [0, 5, 0] }}
+                    transition={prefersReducedMotion ? undefined : { duration: 6, repeat: Infinity, ease: "easeInOut" }}
                     className="absolute top-20 left-10 opacity-20"
                 >
                     <Cat className="w-10 h-10 text-amber-600" />
                 </Motion.div>
                 <Motion.div
-                    animate={{ y: [0, 15, 0], rotate: [0, -5, 0] }}
-                    transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+                    animate={prefersReducedMotion ? undefined : { y: [0, 15, 0], rotate: [0, -5, 0] }}
+                    transition={prefersReducedMotion ? undefined : { duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
                     className="absolute top-40 right-16 opacity-20"
                 >
                     <Scale className="w-8 h-8 text-amber-600" />
                 </Motion.div>
                 <Motion.div
-                    animate={{ y: [0, 10, 0] }}
-                    transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+                    animate={prefersReducedMotion ? undefined : { y: [0, 10, 0] }}
+                    transition={prefersReducedMotion ? undefined : { duration: 4, repeat: Infinity, ease: "easeInOut", delay: 2 }}
                     className="absolute bottom-40 left-20 opacity-20"
                 >
                     <Heart className="w-7 h-7 text-rose-400 fill-rose-400" />
@@ -145,13 +159,14 @@ const SignInPage = () => {
 
             {/* Logo & Header */}
             <Motion.div
-                initial={{ opacity: 0, y: -20 }}
+                initial={{ opacity: 0, y: prefersReducedMotion ? 0 : -20 }}
                 animate={{ opacity: 1, y: 0 }}
+                transition={prefersReducedMotion ? { duration: 0.1 } : undefined}
                 className="text-center mb-8"
             >
                 <Motion.div
-                    animate={{ y: [0, -8, 0] }}
-                    transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                    animate={prefersReducedMotion ? undefined : { y: [0, -8, 0] }}
+                    transition={prefersReducedMotion ? undefined : { duration: 3, repeat: Infinity, ease: "easeInOut" }}
                     className="w-20 h-20 mx-auto mb-4 rounded-2xl flex items-center justify-center shadow-lg"
                     style={{ background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' }}
                 >
@@ -163,17 +178,19 @@ const SignInPage = () => {
 
             {/* Sign In Card */}
             <Motion.div
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
+                transition={prefersReducedMotion ? { duration: 0.1 } : { delay: 0.1 }}
                 className="w-full max-w-md"
             >
-                <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-8 shadow-xl border border-white/50">
+                <div className={`${prefersReducedMotion ? 'bg-white/95' : 'bg-white/82 backdrop-blur-md'} rounded-3xl p-8 shadow-xl border border-white/50`}>
                     {/* Error Message */}
                     {error && (
                         <Motion.div
-                            initial={{ opacity: 0, y: -10 }}
+                            initial={{ opacity: 0, y: prefersReducedMotion ? 0 : -10 }}
                             animate={{ opacity: 1, y: 0 }}
+                            transition={prefersReducedMotion ? { duration: 0.1 } : undefined}
+                            role="alert"
                             className="mb-6 p-4 bg-red-50 border border-red-100 rounded-2xl"
                         >
                             <div className="flex items-start gap-3">
@@ -214,8 +231,8 @@ const SignInPage = () => {
 
                     {/* Google Sign In */}
                     <Motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
+                        whileHover={prefersReducedMotion ? undefined : { scale: 1.02 }}
+                        whileTap={prefersReducedMotion ? undefined : { scale: 0.98 }}
                         onClick={handleGoogleSignIn}
                         disabled={isSubmitting}
                         className="w-full py-3.5 bg-white border-2 border-neutral-200 rounded-2xl font-bold text-neutral-700 flex items-center justify-center gap-3 hover:bg-neutral-50 hover:border-neutral-300 transition-all disabled:opacity-50"
@@ -243,7 +260,7 @@ const SignInPage = () => {
                     </div>
 
                     {/* Email Form */}
-                    <form onSubmit={handleEmailSignIn} className="space-y-4">
+                    <form onSubmit={handleEmailSignIn} noValidate className="space-y-4">
                         {/* Email Input */}
                         <div className="relative">
                             <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-500" />
@@ -252,6 +269,8 @@ const SignInPage = () => {
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 placeholder={t('signIn.emailPlaceholder')}
+                                autoComplete="email"
+                                aria-invalid={error?.type === 'validation' && !validateEmail(email.trim()) ? 'true' : 'false'}
                                 className="w-full pl-12 pr-4 py-3.5 bg-neutral-50 border border-neutral-200 rounded-2xl text-neutral-700 placeholder:text-neutral-500 focus:outline-none focus:border-court-gold focus:ring-2 focus:ring-court-gold/20 transition-all"
                             />
                         </div>
@@ -269,6 +288,8 @@ const SignInPage = () => {
                             <button
                                 type="button"
                                 onClick={() => setShowPassword(!showPassword)}
+                                aria-label={showPassword ? t('common.hidePassword') : t('common.showPassword')}
+                                title={showPassword ? t('common.hidePassword') : t('common.showPassword')}
                                 className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-600"
                             >
                                 {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
@@ -284,8 +305,8 @@ const SignInPage = () => {
                         >
                             {isSubmitting ? (
                                 <Motion.div
-                                    animate={{ rotate: 360 }}
-                                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                    animate={prefersReducedMotion ? undefined : { rotate: 360 }}
+                                    transition={prefersReducedMotion ? undefined : { duration: 1, repeat: Infinity, ease: "linear" }}
                                 >
                                     <Loader2 className="w-5 h-5" />
                                 </Motion.div>

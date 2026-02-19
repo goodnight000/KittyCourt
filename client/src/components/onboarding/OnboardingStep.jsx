@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion as Motion } from 'framer-motion';
 import { useI18n } from '../../i18n';
+import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 
 const OnboardingStep = ({
     stepData,
@@ -9,18 +10,19 @@ const OnboardingStep = ({
     children
 }) => {
     const { t } = useI18n();
+    const prefersReducedMotion = usePrefersReducedMotion();
 
     return (
         <div className="glass-card relative overflow-hidden p-6 flex-1 flex flex-col">
-            <div className="absolute -top-10 -right-6 h-20 w-20 rounded-full bg-[#E8DED1]/30 blur-3xl" />
-            <div className="absolute -bottom-12 -left-8 h-24 w-24 rounded-full bg-[#E8DED1]/25 blur-3xl" />
+            <div className="absolute -top-10 -right-6 h-20 w-20 rounded-full bg-[#E8DED1]/30 blur-2xl" />
+            <div className="absolute -bottom-12 -left-8 h-24 w-24 rounded-full bg-[#E8DED1]/25 blur-2xl" />
             <div className="relative flex-1 flex flex-col">
                 {/* Step Header */}
                 <div className="text-center mb-6">
                     {stepData.icon && (
                         <Motion.div
-                            animate={{ y: [0, -5, 0] }}
-                            transition={{ duration: 2, repeat: Infinity }}
+                            animate={prefersReducedMotion ? undefined : { y: [0, -5, 0] }}
+                            transition={prefersReducedMotion ? undefined : { duration: 2, repeat: Infinity }}
                             className="text-5xl mb-3"
                         >
                             {stepData.icon}

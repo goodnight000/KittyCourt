@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion as Motion } from 'framer-motion';
 import { X, Plus, Trash2, Wand2, Check, Lock, RotateCcw, Handshake, Heart } from 'lucide-react';
 import { useI18n } from '../../i18n';
@@ -6,6 +6,7 @@ import { parseLocalDate } from '../../utils/dateFormatters';
 import api from '../../services/api';
 import EmojiIcon from '../shared/EmojiIcon';
 import ButtonLoader from '../shared/ButtonLoader';
+import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 
 /**
  * Helper to generate event key for plan lookup
@@ -39,6 +40,7 @@ const EVENT_GRADIENTS = {
     milestone: 'from-emerald-50/50',
     custom: 'from-blue-50/50',
 };
+const EMPTY_EVENTS = [];
 
 /**
  * EventDetailsModal Component
@@ -46,6 +48,7 @@ const EVENT_GRADIENTS = {
  */
 const EventDetailsModal = ({ events, onDelete, onClose, onAddMore, onPlanClick, partnerId, currentUserId, myDisplayName, partnerDisplayName }) => {
     const { t, language } = useI18n();
+    const prefersReducedMotion = usePrefersReducedMotion();
     const [plannedEventKeys, setPlannedEventKeys] = useState(() => new Set());
     const [deletingId, setDeletingId] = useState(null);
 
@@ -94,25 +97,42 @@ const EventDetailsModal = ({ events, onDelete, onClose, onAddMore, onPlanClick, 
             setDeletingId(null);
         }
     }, [deletingId, onDelete]);
+    const eventList = events || EMPTY_EVENTS;
+    const eventCards = useMemo(() => eventList.map((event) => {
+        const eventType = EVENT_TYPES.find((item) => item.id === event.type)
+            || EVENT_TYPES.find((item) => item.id === 'custom')
+            || EVENT_TYPES[0];
+        const isCreatedByMe = event.createdBy === currentUserId;
+
+        return {
+            event,
+            eventType,
+            eventTypeLabel: t(eventType.labelKey),
+            gradientFrom: EVENT_GRADIENTS[eventType.id] || EVENT_GRADIENTS.custom,
+            canDelete: isCreatedByMe && !event.isDefault && !event.isPersonal,
+            creatorName: isCreatedByMe ? myDisplayName : partnerDisplayName,
+            eventKey: getEventKey(event)
+        };
+    }), [eventList, currentUserId, myDisplayName, partnerDisplayName, t]);
 
     // Guard against empty events array
-    if (!events?.length) {
+    if (!eventList.length) {
         return null;
     }
 
     // Parse date string as local date to prevent timezone shift
-    const dateStr = events[0].date;
+    const dateStr = eventList[0].date;
     const eventDate = parseLocalDate(dateStr) || new Date();
-    const eventCountLabel = events.length === 1
+    const eventCountLabel = eventList.length === 1
         ? t('calendar.details.eventsOnDayOne')
-        : t('calendar.details.eventsOnDayOther', { count: events.length });
+        : t('calendar.details.eventsOnDayOther', { count: eventList.length });
 
     return (
         <Motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] flex items-end justify-center p-4 pb-20"
+            className={`fixed inset-0 bg-black/40 z-[60] flex items-end justify-center p-4 pb-20 ${prefersReducedMotion ? '' : 'fx-modal-backdrop-soft'}`}
             onClick={onClose}
         >
             <Motion.div
@@ -137,36 +157,37 @@ const EventDetailsModal = ({ events, onDelete, onClose, onAddMore, onPlanClick, 
                 </div>
 
                 <div className="space-y-3">
-                    {events.map((event, index) => {
-                        const eventType = EVENT_TYPES.find((item) => item.id === event.type)
-                            || EVENT_TYPES.find((item) => item.id === 'custom')
-                            || EVENT_TYPES[0];
-                        // Determine who created this event
-                        const isCreatedByMe = event.createdBy === currentUserId;
-                        const creatorName = isCreatedByMe ? myDisplayName : partnerDisplayName;
-                        const canDelete = isCreatedByMe && !event.isDefault && !event.isPersonal;
-                        const eventTypeLabel = t(eventType.labelKey);
-                        const gradientFrom = EVENT_GRADIENTS[eventType.id] || EVENT_GRADIENTS.custom;
+                    {eventCards.map(({ event, eventType, eventTypeLabel, gradientFrom, canDelete, creatorName, eventKey }, index) => {
+                        const hasSavedPlan = plannedEventKeys.has(eventKey);
+                        const isSecret = event.isSecret;
+                        const planBorder = isSecret
+                            ? 'from-indigo-300/55 via-court-goldLight/35 to-violet-300/55'
+                            : 'from-rose-300/60 via-amber-300/45 to-pink-300/55';
+                        const planFill = hasSavedPlan
+                            ? 'from-white/80 via-amber-50/65 to-white/75'
+                            : 'from-white/80 via-rose-50/55 to-amber-50/55';
+                        const iconStyle = hasSavedPlan
+                            ? 'bg-amber-50/70 border-amber-200/60 text-amber-800'
+                            : 'bg-rose-50/70 border-rose-200/60 text-rose-800';
+                        const aiBadgeStyle = isSecret
+                            ? 'bg-indigo-50/60 text-indigo-800 border-indigo-200/50'
+                            : 'bg-white/60 text-neutral-700 border-white/60';
 
                         return (
                             <Motion.div
                                 key={event.id}
-                                initial={{ opacity: 0, y: 10 }}
+                                initial={prefersReducedMotion ? false : { opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: index * 0.05 }}
-                                className={`glass-card p-4 bg-gradient-to-r ${gradientFrom} to-white`}
+                                transition={prefersReducedMotion ? { duration: 0.14 } : { delay: index * 0.04, duration: 0.22 }}
+                                className={`glass-card p-4 bg-gradient-to-r ${gradientFrom} to-white perf-content-auto contain-paint`}
                             >
                                 <div className="flex items-start gap-3">
-                                    <Motion.div
-                                        animate={{ scale: [1, 1.05, 1] }}
-                                        transition={{ duration: 2, repeat: Infinity, delay: index * 0.2 }}
-                                        className="flex items-center justify-center"
-                                    >
+                                    <div className="flex items-center justify-center">
                                         <EmojiIcon
                                             emoji={event.emoji || eventType.emoji}
                                             className="w-7 h-7 text-amber-600"
                                         />
-                                    </Motion.div>
+                                    </div>
                                     <div className="flex-1 min-w-0">
                                         <h4 className="font-bold text-neutral-800">{event.title}</h4>
                                         <div className="flex items-center gap-2 mt-1 flex-wrap">
@@ -225,59 +246,33 @@ const EventDetailsModal = ({ events, onDelete, onClose, onAddMore, onPlanClick, 
                                 </div>
 
                                 {/* Help me plan / View my plan button */}
-                                {partnerId && event.date && onPlanClick && (() => {
-                                    const eventKey = getEventKey(event);
-                                    const hasSavedPlan = plannedEventKeys.has(eventKey);
-                                    const isSecret = event.isSecret;
+                                {partnerId && event.date && onPlanClick && (
+                                    <Motion.button
+                                        whileTap={{ scale: 0.98 }}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onPlanClick(event, eventKey, handleSavedPlan);
+                                        }}
+                                        className={`relative w-full mt-3 rounded-full p-[1px] shadow-soft hover:shadow-soft-lg transition-shadow duration-200 ${hasSavedPlan ? 'ring-1 ring-amber-200/30' : ''}`}
+                                    >
+                                        <span aria-hidden="true" className={`absolute inset-0 rounded-full bg-gradient-to-r ${planBorder}`} />
 
-                                    // Border gradient based on secret/shared
-                                    const planBorder = isSecret
-                                        ? 'from-indigo-300/55 via-court-goldLight/35 to-violet-300/55'
-                                        : 'from-rose-300/60 via-amber-300/45 to-pink-300/55';
-
-                                    // Fill gradient based on saved plan state
-                                    const planFill = hasSavedPlan
-                                        ? 'from-white/80 via-amber-50/65 to-white/75'
-                                        : 'from-white/80 via-rose-50/55 to-amber-50/55';
-
-                                    // Icon circle styling
-                                    const iconStyle = hasSavedPlan
-                                        ? 'bg-amber-50/70 border-amber-200/60 text-amber-800'
-                                        : 'bg-rose-50/70 border-rose-200/60 text-rose-800';
-
-                                    // AI badge styling based on secret/shared
-                                    const aiBadgeStyle = isSecret
-                                        ? 'bg-indigo-50/60 text-indigo-800 border-indigo-200/50'
-                                        : 'bg-white/60 text-neutral-700 border-white/60';
-
-                                    return (
-                                        <Motion.button
-                                            whileTap={{ scale: 0.98 }}
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                onPlanClick(event, eventKey, handleSavedPlan);
-                                            }}
-                                            className={`relative w-full mt-3 rounded-full p-[1px] shadow-soft hover:shadow-soft-lg transition-shadow duration-200 ${hasSavedPlan ? 'ring-1 ring-amber-200/30' : ''}`}
-                                        >
-                                            <span aria-hidden="true" className={`absolute inset-0 rounded-full bg-gradient-to-r ${planBorder}`} />
-
-                                            <span className={`relative z-10 flex items-center justify-between gap-3 w-full h-10 rounded-full px-3.5 bg-gradient-to-r ${planFill} border border-white/70`}>
-                                                <span className="flex items-center gap-2.5 min-w-0">
-                                                    <span className={`grid place-items-center w-7 h-7 rounded-full border shadow-inner-soft ${iconStyle}`}>
-                                                        {hasSavedPlan ? <Check className="w-4 h-4" /> : <Wand2 className="w-4 h-4" />}
-                                                    </span>
-                                                    <span className="text-[12px] font-extrabold tracking-tight text-neutral-800 truncate">
-                                                        {hasSavedPlan ? t('calendar.plan.view') : t('calendar.plan.help')}
-                                                    </span>
+                                        <span className={`relative z-10 flex items-center justify-between gap-3 w-full h-10 rounded-full px-3.5 bg-gradient-to-r ${planFill} border border-white/70`}>
+                                            <span className="flex items-center gap-2.5 min-w-0">
+                                                <span className={`grid place-items-center w-7 h-7 rounded-full border shadow-inner-soft ${iconStyle}`}>
+                                                    {hasSavedPlan ? <Check className="w-4 h-4" /> : <Wand2 className="w-4 h-4" />}
                                                 </span>
-
-                                                <span className={`text-[10px] font-extrabold px-2 py-1 rounded-full border shadow-soft ${aiBadgeStyle}`}>
-                                                    AI
+                                                <span className="text-[12px] font-extrabold tracking-tight text-neutral-800 truncate">
+                                                    {hasSavedPlan ? t('calendar.plan.view') : t('calendar.plan.help')}
                                                 </span>
                                             </span>
-                                        </Motion.button>
-                                    );
-                                })()}
+
+                                            <span className={`text-[10px] font-extrabold px-2 py-1 rounded-full border shadow-soft ${aiBadgeStyle}`}>
+                                                AI
+                                            </span>
+                                        </span>
+                                    </Motion.button>
+                                )}
                             </Motion.div>
                         );
                     })}

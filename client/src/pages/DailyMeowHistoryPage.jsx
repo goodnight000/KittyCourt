@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -190,25 +190,26 @@ const DailyMeowHistoryPage = () => {
     };
 
     // Filter and search
-    const filteredHistory = history.filter(item => {
+    const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+
+    const filteredHistory = useMemo(() => history.filter(item => {
         // Apply filter
         if (filter === 'completed' && (!item.my_answer || !item.partner_answer)) return false;
         if (filter === 'mine-only' && !item.my_answer) return false;
 
         // Apply search
-        if (searchQuery) {
-            const query = searchQuery.toLowerCase();
-            const matchesQuestion = item.question?.toLowerCase().includes(query);
-            const matchesMyAnswer = item.my_answer?.answer?.toLowerCase().includes(query);
-            const matchesPartnerAnswer = item.partner_answer?.answer?.toLowerCase().includes(query);
+        if (normalizedSearchQuery) {
+            const matchesQuestion = item.question?.toLowerCase().includes(normalizedSearchQuery);
+            const matchesMyAnswer = item.my_answer?.answer?.toLowerCase().includes(normalizedSearchQuery);
+            const matchesPartnerAnswer = item.partner_answer?.answer?.toLowerCase().includes(normalizedSearchQuery);
             return matchesQuestion || matchesMyAnswer || matchesPartnerAnswer;
         }
 
         return true;
-    });
+    }), [history, filter, normalizedSearchQuery]);
 
     // Group by month
-    const groupedHistory = filteredHistory.reduce((groups, item) => {
+    const groupedHistory = useMemo(() => filteredHistory.reduce((groups, item) => {
         const date = new Date(item.assigned_date);
         const monthYear = date.toLocaleDateString(language, { month: 'long', year: 'numeric' });
 
@@ -217,7 +218,7 @@ const DailyMeowHistoryPage = () => {
         }
         groups[monthYear].push(item);
         return groups;
-    }, {});
+    }, {}), [filteredHistory, language]);
 
     // Stats - use server-side stats when available, with history count as fallback
     const historyAnsweredCount = history.filter(h => h.my_answer).length;

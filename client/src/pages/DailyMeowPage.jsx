@@ -12,6 +12,7 @@ import RequirePartner from '../components/RequirePartner';
 import api from '../services/api';
 import { subscribeToDailyAnswers, supabase } from '../services/supabase';
 import { useI18n } from '../i18n';
+import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
 
 // 20 mood/feeling options with emojis - organized by positive/neutral/challenging
 const MOOD_OPTIONS = [
@@ -42,6 +43,7 @@ const MOOD_OPTIONS = [
 const DailyMeowPage = () => {
     const navigate = useNavigate();
     const { t, language } = useI18n();
+    const prefersReducedMotion = usePrefersReducedMotion();
     const { user: authUser, profile } = useAuthStore();
     const { hasPartner, partner: connectedPartner } = usePartnerStore();
 
@@ -431,8 +433,8 @@ const DailyMeowPage = () => {
         <div className="relative min-h-[calc(100dvh-120px)] flex flex-col overflow-hidden pb-6">
             {/* Background gradient */}
             <div className="fixed inset-0 pointer-events-none">
-                <div className="absolute -top-20 -right-20 h-64 w-64 rounded-full bg-amber-200/30 blur-3xl" />
-                <div className="absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-rose-200/25 blur-3xl" />
+                <div className="absolute -top-20 -right-20 h-64 w-64 rounded-full bg-amber-200/30 blur-2xl" />
+                <div className="absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-rose-200/25 blur-2xl" />
             </div>
             <div className="relative flex-1 flex flex-col">
             {/* Success Toast */}
@@ -455,8 +457,8 @@ const DailyMeowPage = () => {
                 <div className="flex-1 flex items-center justify-center px-4">
                     <div className="glass-card p-6 text-center max-w-sm">
                         <Motion.div
-                            animate={{ rotate: 360 }}
-                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                            animate={prefersReducedMotion ? undefined : { rotate: 360 }}
+                            transition={prefersReducedMotion ? undefined : { duration: 1, repeat: Infinity, ease: "linear" }}
                             className="w-10 h-10 border-3 border-amber-400 border-t-transparent rounded-full mx-auto"
                         />
                         <p className="text-neutral-500 mt-4">{t('dailyMeow.loading')}</p>
@@ -509,8 +511,8 @@ const DailyMeowPage = () => {
                         className="glass-card relative overflow-hidden flex-1 flex flex-col"
                     >
                         <div className="absolute inset-0 pointer-events-none">
-                            <div className="absolute -top-12 -right-8 h-28 w-28 rounded-full bg-amber-200/30 blur-3xl" />
-                            <div className="absolute -bottom-12 -left-8 h-32 w-32 rounded-full bg-rose-200/25 blur-3xl" />
+                            <div className="absolute -top-12 -right-8 h-28 w-28 rounded-full bg-amber-200/30 blur-2xl" />
+                            <div className="absolute -bottom-12 -left-8 h-32 w-32 rounded-full bg-rose-200/25 blur-2xl" />
                             <div
                                 className="absolute inset-0 opacity-40"
                                 style={{
@@ -874,7 +876,7 @@ const DailyMeowPage = () => {
                                                             setStep('mood');
                                                             fetchTodaysQuestion();
                                                         }}
-                                                        className="group relative w-full overflow-hidden rounded-[28px] border border-amber-200/70 bg-white/85 px-4 py-3 text-left shadow-soft-lg transition-all hover:shadow-soft-xl"
+                                                        className="group relative w-full overflow-hidden rounded-[28px] border border-amber-200/70 bg-white/85 px-4 py-3 text-left shadow-soft-lg transition-shadow hover:shadow-soft-xl"
                                                     >
                                                         <span className="absolute inset-x-6 top-0 h-0.5 bg-gradient-to-r from-transparent via-amber-200/80 to-transparent" />
                                                         <span className="absolute -top-8 -right-6 h-16 w-16 rounded-full bg-amber-200/35 blur-2xl" />
@@ -943,8 +945,8 @@ const DailyMeowPage = () => {
                                             >
                                                 {submitting ? (
                                                     <Motion.div
-                                                        animate={{ rotate: 360 }}
-                                                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                                        animate={prefersReducedMotion ? undefined : { rotate: 360 }}
+                                                        transition={prefersReducedMotion ? undefined : { duration: 1, repeat: Infinity, ease: "linear" }}
                                                         className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
                                                     />
                                                 ) : (
@@ -985,8 +987,8 @@ const DailyMeowPage = () => {
 
 const DailyMeowBackdrop = () => (
     <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute -top-20 -right-20 h-64 w-64 rounded-full bg-amber-200/30 blur-3xl" />
-        <div className="absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-rose-200/25 blur-3xl" />
+        <div className="absolute -top-20 -right-20 h-64 w-64 rounded-full bg-amber-200/30 blur-2xl" />
+        <div className="absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-rose-200/25 blur-2xl" />
     </div>
 );
 

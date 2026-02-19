@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { Scale, BookOpen, Heart, Feather, Star, Gavel } from 'lucide-react';
 import { useI18n } from '../../i18n';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
@@ -40,7 +40,6 @@ const DeliberatingScreen = ({ isLoading = true, judgeAvatar }) => {
     const avatarSrc = judgeAvatar || '/assets/avatars/judge_whiskers.png';
     const [stepIndex, setStepIndex] = useState(0);
     const [quoteIndex, setQuoteIndex] = useState(0);
-    const [pulse, setPulse] = useState(0);
     const localizedQuotes = t('court.deliberating.quotes');
     const localizedFallbackQuotes = t('court.deliberating.fallbackQuotes', { returnObjects: true });
     const fallbackQuotes = Array.isArray(localizedFallbackQuotes) && localizedFallbackQuotes.length
@@ -51,28 +50,20 @@ const DeliberatingScreen = ({ isLoading = true, judgeAvatar }) => {
         : fallbackQuotes;
 
     useEffect(() => {
-        if (!isLoading) return;
+        if (!isLoading || prefersReducedMotion) return;
         const t = setInterval(() => {
             setStepIndex((prev) => (prev + 1) % STEPS.length);
         }, 3000);
         return () => clearInterval(t);
-    }, [isLoading]);
+    }, [isLoading, prefersReducedMotion]);
 
     useEffect(() => {
-        if (!isLoading) return;
+        if (!isLoading || prefersReducedMotion) return;
         const t = setInterval(() => {
             setQuoteIndex((prev) => (prev + 1) % quotes.length);
         }, 6000);
         return () => clearInterval(t);
-    }, [isLoading, quotes.length]);
-
-    useEffect(() => {
-        if (!isLoading) return;
-        const t = setInterval(() => {
-            setPulse((p) => (p + 1) % 1000);
-        }, 1200);
-        return () => clearInterval(t);
-    }, [isLoading]);
+    }, [isLoading, prefersReducedMotion, quotes.length]);
 
     const activeStep = useMemo(() => STEPS[stepIndex], [stepIndex]);
 
@@ -82,7 +73,7 @@ const DeliberatingScreen = ({ isLoading = true, judgeAvatar }) => {
     const fadeTransition = prefersReducedMotion ? { duration: 0.1 } : undefined;
 
     return (
-        <motion.div
+        <Motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -94,23 +85,23 @@ const DeliberatingScreen = ({ isLoading = true, judgeAvatar }) => {
                 <div className="relative">
                     {!prefersReducedMotion && (
                         <>
-                            <motion.div
+                            <Motion.div
                                 aria-hidden
                                 animate={{
                                     opacity: [0.25, 0.45, 0.25],
                                     scale: [1, 1.05, 1],
                                 }}
                                 transition={{ duration: 3.6, repeat: Infinity, ease: 'easeInOut' }}
-                                className="absolute -top-10 -left-10 w-48 h-48 rounded-full bg-court-gold/15 blur-2xl"
+                                className="absolute -top-10 -left-10 w-48 h-48 rounded-full bg-court-gold/15 blur-xl"
                             />
-                            <motion.div
+                            <Motion.div
                                 aria-hidden
                                 animate={{
                                     opacity: [0.18, 0.35, 0.18],
                                     y: [0, -10, 0],
                                 }}
                                 transition={{ duration: 4.2, repeat: Infinity, ease: 'easeInOut' }}
-                                className="absolute -bottom-10 -right-10 w-56 h-56 rounded-full bg-court-maroon/10 blur-2xl"
+                                className="absolute -bottom-10 -right-10 w-56 h-56 rounded-full bg-court-maroon/10 blur-xl"
                             />
                         </>
                     )}
@@ -118,11 +109,11 @@ const DeliberatingScreen = ({ isLoading = true, judgeAvatar }) => {
                         <>
                             <div
                                 aria-hidden
-                                className="absolute -top-10 -left-10 w-48 h-48 rounded-full bg-court-gold/15 blur-2xl opacity-35"
+                                className="absolute -top-10 -left-10 w-48 h-48 rounded-full bg-court-gold/15 blur-xl opacity-35"
                             />
                             <div
                                 aria-hidden
-                                className="absolute -bottom-10 -right-10 w-56 h-56 rounded-full bg-court-maroon/10 blur-2xl opacity-25"
+                                className="absolute -bottom-10 -right-10 w-56 h-56 rounded-full bg-court-maroon/10 blur-xl opacity-25"
                             />
                         </>
                     )}
@@ -130,7 +121,7 @@ const DeliberatingScreen = ({ isLoading = true, judgeAvatar }) => {
                     <div className="glass-card p-6 relative overflow-hidden border border-court-gold/15 bg-white/85">
                         {/* Shimmer sweep - only show when not reduced motion */}
                         {!prefersReducedMotion && (
-                            <motion.div
+                            <Motion.div
                                 aria-hidden
                                 animate={{ x: ['-120%', '120%'] }}
                                 transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
@@ -145,13 +136,13 @@ const DeliberatingScreen = ({ isLoading = true, judgeAvatar }) => {
                                         <Scale className="w-6 h-6 text-court-gold" />
                                     </div>
                                 ) : (
-                                    <motion.div
+                                    <Motion.div
                                         animate={{ rotate: [0, 10, -10, 0] }}
                                         transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
                                         className="w-12 h-12 rounded-2xl bg-court-gold/15 flex items-center justify-center"
                                     >
                                         <Scale className="w-6 h-6 text-court-gold" />
-                                    </motion.div>
+                                    </Motion.div>
                                 )}
                                 <div className="flex-1">
                                     <div className="flex items-center gap-2">
@@ -161,13 +152,13 @@ const DeliberatingScreen = ({ isLoading = true, judgeAvatar }) => {
                                                 <Star className="w-4 h-4" />
                                             </div>
                                         ) : (
-                                            <motion.div
+                                            <Motion.div
                                                 animate={{ rotate: [0, 12, -12, 0] }}
                                                 transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
                                                 className="text-court-gold"
                                             >
                                                 <Star className="w-4 h-4" />
-                                            </motion.div>
+                                            </Motion.div>
                                         )}
                                     </div>
                                     <p className="text-sm text-court-brownLight">{t('court.deliberating.subtitle')}</p>
@@ -185,7 +176,7 @@ const DeliberatingScreen = ({ isLoading = true, judgeAvatar }) => {
                                         />
                                     </div>
                                 ) : (
-                                    <motion.div
+                                    <Motion.div
                                         animate={{ y: [0, -6, 0] }}
                                         transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
                                         className="w-14 h-14 rounded-2xl overflow-hidden border border-court-gold/40 shadow-soft"
@@ -195,7 +186,7 @@ const DeliberatingScreen = ({ isLoading = true, judgeAvatar }) => {
                                             alt={t('court.deliberating.judgeAlt')}
                                             className="w-full h-full object-cover"
                                         />
-                                    </motion.div>
+                                    </Motion.div>
                                 )}
 
                                 <div className="flex-1">
@@ -205,19 +196,16 @@ const DeliberatingScreen = ({ isLoading = true, judgeAvatar }) => {
                                                 <Gavel className="w-5 h-5 text-court-brown" />
                                             </div>
                                         ) : (
-                                            <motion.div
+                                            <Motion.div
                                                 animate={{
-                                                    boxShadow: [
-                                                        '0 0 0 0 rgba(201,162,39,0)',
-                                                        '0 0 0 10px rgba(201,162,39,0.18)',
-                                                        '0 0 0 0 rgba(201,162,39,0)',
-                                                    ],
+                                                    scale: [1, 1.06, 1],
+                                                    opacity: [0.9, 1, 0.9]
                                                 }}
                                                 transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
                                                 className="w-9 h-9 rounded-xl bg-court-cream border border-court-tan/30 flex items-center justify-center"
                                             >
                                                 <Gavel className="w-5 h-5 text-court-brown" />
-                                            </motion.div>
+                                            </Motion.div>
                                         )}
                                         <div>
                                             <p className="text-xs font-bold text-court-brown">{t('court.deliberating.analyzingTitle')}</p>
@@ -229,12 +217,12 @@ const DeliberatingScreen = ({ isLoading = true, judgeAvatar }) => {
                                         {prefersReducedMotion ? (
                                             <div className="h-full w-1/2 rounded-full bg-gradient-to-r from-court-gold/50 via-court-gold/70 to-court-gold/50" />
                                         ) : (
-                                            <motion.div
-                                                key={pulse}
-                                                initial={{ width: '8%' }}
-                                                animate={{ width: ['10%', '68%', '38%', '82%'] }}
+                                            <Motion.div
+                                                initial={{ scaleX: 0.08 }}
+                                                animate={{ scaleX: [0.1, 0.68, 0.38, 0.82] }}
                                                 transition={{ duration: 2.6, ease: 'easeInOut' }}
-                                                className="h-full rounded-full bg-gradient-to-r from-court-gold/50 via-court-gold/70 to-court-gold/50"
+                                                style={{ transformOrigin: '0% 50%' }}
+                                                className="h-full w-full rounded-full bg-gradient-to-r from-court-gold/50 via-court-gold/70 to-court-gold/50"
                                             />
                                         )}
                                     </div>
@@ -243,7 +231,7 @@ const DeliberatingScreen = ({ isLoading = true, judgeAvatar }) => {
 
                             <div className="mt-5">
                                 <AnimatePresence mode="wait">
-                                    <motion.div
+                                    <Motion.div
                                         key={activeStep.titleKey}
                                         initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 10, scale: prefersReducedMotion ? 1 : 0.98 }}
                                         animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -257,13 +245,13 @@ const DeliberatingScreen = ({ isLoading = true, judgeAvatar }) => {
                                                     <activeStep.Icon className="w-5 h-5 text-court-brown" />
                                                 </div>
                                             ) : (
-                                                <motion.div
+                                                <Motion.div
                                                     animate={{ rotate: [0, 4, -4, 0] }}
                                                     transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
                                                     className="w-10 h-10 rounded-2xl bg-court-cream flex items-center justify-center border border-court-tan/30"
                                                 >
                                                     <activeStep.Icon className="w-5 h-5 text-court-brown" />
-                                                </motion.div>
+                                                </Motion.div>
                                             )}
                                             <div className="flex-1">
                                                 <p className="text-sm font-extrabold text-court-brown">{t(activeStep.titleKey)}</p>
@@ -277,7 +265,7 @@ const DeliberatingScreen = ({ isLoading = true, judgeAvatar }) => {
                                                     {prefersReducedMotion ? (
                                                         <div className="h-full w-1/3 rounded-full bg-court-gold/50" />
                                                     ) : (
-                                                        <motion.div
+                                                        <Motion.div
                                                             animate={{
                                                                 x: ['-20%', '120%'],
                                                             }}
@@ -291,23 +279,23 @@ const DeliberatingScreen = ({ isLoading = true, judgeAvatar }) => {
                                                         {t('court.deliberating.working')}
                                                     </div>
                                                 ) : (
-                                                    <motion.div
+                                                    <Motion.div
                                                         animate={{ opacity: [0.4, 1, 0.4] }}
                                                         transition={{ duration: 1.2, repeat: Infinity }}
                                                         className="text-[10px] font-bold text-court-brownLight"
                                                     >
                                                         {t('court.deliberating.working')}
-                                                    </motion.div>
+                                                    </Motion.div>
                                                 )}
                                             </div>
                                         </div>
-                                    </motion.div>
+                                    </Motion.div>
                                 </AnimatePresence>
                             </div>
 
                             <div className="mt-4">
                                 <AnimatePresence mode="wait">
-                                    <motion.p
+                                    <Motion.p
                                         key={quoteIndex}
                                         initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 6 }}
                                         animate={{ opacity: 1, y: 0 }}
@@ -316,7 +304,7 @@ const DeliberatingScreen = ({ isLoading = true, judgeAvatar }) => {
                                         className="text-xs text-court-brownLight italic text-center"
                                     >
                                         {quotes[quoteIndex % quotes.length]}
-                                    </motion.p>
+                                    </Motion.p>
                                 </AnimatePresence>
                             </div>
 
@@ -328,7 +316,7 @@ const DeliberatingScreen = ({ isLoading = true, judgeAvatar }) => {
                                             className="w-2 h-2 rounded-full bg-court-gold/70"
                                         />
                                     ) : (
-                                        <motion.div
+                                        <Motion.div
                                             key={i}
                                             animate={{ opacity: [0.35, 1, 0.35], y: [0, -2, 0] }}
                                             transition={{ duration: 1.1, delay: i * 0.15, repeat: Infinity, ease: 'easeInOut' }}
@@ -345,7 +333,7 @@ const DeliberatingScreen = ({ isLoading = true, judgeAvatar }) => {
                     {t('court.deliberating.note')}
                 </p>
             </div>
-        </motion.div>
+        </Motion.div>
     );
 };
 

@@ -2,6 +2,7 @@ import React from 'react';
 import { motion as Motion } from 'framer-motion';
 import { Check } from 'lucide-react';
 import { useI18n } from '../../i18n';
+import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 
 const LanguageStep = ({
     supportedLanguages,
@@ -9,11 +10,13 @@ const LanguageStep = ({
     onLanguageSelect
 }) => {
     const { t } = useI18n();
+    const prefersReducedMotion = usePrefersReducedMotion();
 
     return (
         <Motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
+            transition={prefersReducedMotion ? { duration: 0.15 } : undefined}
             className="space-y-4"
         >
             <div className={`grid gap-3 ${supportedLanguages.length > 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
@@ -21,6 +24,9 @@ const LanguageStep = ({
                     const label = languageOption.labelKey
                         ? t(languageOption.labelKey)
                         : (languageOption.label || languageOption.code);
+                    const languageBadge = (languageOption.code || '')
+                        .split('-')[0]
+                        .toUpperCase();
                     const nativeLabel = languageOption.nativeLabel;
                     const isSelected = selectedLanguage === languageOption.code;
                     const showNativeLabel = nativeLabel && nativeLabel !== label;
@@ -30,10 +36,10 @@ const LanguageStep = ({
                             key={languageOption.code}
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: index * 0.05 }}
-                            whileTap={{ scale: 0.97 }}
+                            transition={prefersReducedMotion ? { duration: 0.15 } : { delay: index * 0.05 }}
+                            whileTap={prefersReducedMotion ? undefined : { scale: 0.97 }}
                             onClick={() => onLanguageSelect(languageOption.code)}
-                            className={`p-4 rounded-2xl text-left transition-all border ${
+                            className={`p-4 rounded-2xl text-left transition-colors border ${
                                 isSelected
                                     ? 'border-[#D2BC76] bg-[#FBF6E8] shadow-soft'
                                     : 'border-white/80 bg-white/80 hover:bg-white'
@@ -45,7 +51,7 @@ const LanguageStep = ({
                                         ? 'bg-white/80 text-[#8B7019]'
                                         : 'bg-white/70 text-neutral-500'
                                 }`}>
-                                    {languageOption.code}
+                                    {languageBadge}
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <p className={`font-bold break-words ${isSelected ? 'text-court-brown' : 'text-neutral-700'}`}>

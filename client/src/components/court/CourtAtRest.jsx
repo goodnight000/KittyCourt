@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Moon, History, Gavel, ChevronRight, Heart, Star } from 'lucide-react';
 import JudgeSelection from './JudgeSelection';
 import { useI18n } from '../../i18n';
+import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 
 /**
  * CourtAtRest - Premium Court Idle Experience V2
@@ -19,6 +20,7 @@ const CourtAtRest = ({ onServe, navigate }) => {
     const [showJudgeSelection, setShowJudgeSelection] = useState(false);
     const [displayText, setDisplayText] = useState('');
     const { t } = useI18n();
+    const prefersReducedMotion = usePrefersReducedMotion();
 
     const localizedPhrases = t('court.atRest.sleepingPhrases');
     const sleepingPhrases = Array.isArray(localizedPhrases) && localizedPhrases.length
@@ -91,7 +93,7 @@ const CourtAtRest = ({ onServe, navigate }) => {
                     transition={{
                         duration: 3 + Math.random() * 2,
                         delay: el.delay,
-                        repeat: Infinity,
+                        repeat: prefersReducedMotion ? 0 : Infinity,
                         ease: "easeInOut",
                     }}
                     className={`absolute ${el.color} drop-shadow-sm pointer-events-none`}
@@ -111,11 +113,11 @@ const CourtAtRest = ({ onServe, navigate }) => {
                 >
                     {/* Avatar with gentle breathing */}
                     <motion.div
-                        animate={{
+                        animate={prefersReducedMotion ? undefined : {
                             y: [0, -4, 0],
                             rotate: [-1, 1, -1]
                         }}
-                        transition={{
+                        transition={prefersReducedMotion ? undefined : {
                             duration: 4,
                             repeat: Infinity,
                             ease: "easeInOut"
@@ -124,11 +126,11 @@ const CourtAtRest = ({ onServe, navigate }) => {
                     >
                         {/* Outer glow - multi-color */}
                         <motion.div
-                            animate={{
+                            animate={prefersReducedMotion ? undefined : {
                                 scale: [1, 1.05, 1],
                                 opacity: [0.3, 0.5, 0.3]
                             }}
-                            transition={{ duration: 3, repeat: Infinity }}
+                            transition={prefersReducedMotion ? undefined : { duration: 3, repeat: Infinity }}
                             className="absolute -inset-3 bg-gradient-to-br from-court-gold/20 via-lavender-200/15 to-blush-200/20 rounded-full blur-xl"
                         />
 
@@ -146,12 +148,12 @@ const CourtAtRest = ({ onServe, navigate }) => {
                             {['z', 'Z', 'Z'].map((letter, i) => (
                                 <motion.span
                                     key={i}
-                                    animate={{
+                                    animate={prefersReducedMotion ? undefined : {
                                         opacity: [0, 1, 0],
                                         x: [0, 8 + i * 3, 16 + i * 5],
                                         y: [0, -10 - i * 5, -24 - i * 8]
                                     }}
-                                    transition={{
+                                    transition={prefersReducedMotion ? undefined : {
                                         duration: 2.5,
                                         delay: i * 0.5,
                                         repeat: Infinity,
@@ -179,8 +181,8 @@ const CourtAtRest = ({ onServe, navigate }) => {
                         <p className="text-court-brownLight text-sm italic min-h-[1.25rem]">
                             {displayText}
                             <motion.span
-                                animate={{ opacity: [1, 0] }}
-                                transition={{ duration: 0.5, repeat: Infinity }}
+                                animate={prefersReducedMotion ? undefined : { opacity: [1, 0] }}
+                                transition={prefersReducedMotion ? undefined : { duration: 0.5, repeat: Infinity }}
                                 className="ml-0.5 text-court-gold"
                             >
                                 |
@@ -201,8 +203,8 @@ const CourtAtRest = ({ onServe, navigate }) => {
                         border border-court-gold/20 shadow-sm"
                     >
                         <motion.div
-                            animate={{ rotate: 360 }}
-                            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                            animate={prefersReducedMotion ? undefined : { rotate: 360 }}
+                            transition={prefersReducedMotion ? undefined : { duration: 20, repeat: Infinity, ease: "linear" }}
                         >
                             <Moon className="w-3.5 h-3.5 text-lavender-400" />
                         </motion.div>

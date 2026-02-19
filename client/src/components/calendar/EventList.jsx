@@ -1,9 +1,10 @@
-import React, { memo, useMemo, useState, useEffect } from 'react';
+import React, { memo, useState } from 'react';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { ChevronRight, Check, Wand2, Lock } from 'lucide-react';
 import { useI18n } from '../../i18n';
 import { parseLocalDate, startOfDay } from '../../utils/dateFormatters';
 import PlanOnboardingTooltip from './PlanOnboardingTooltip';
+import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 
 const ONBOARDING_STORAGE_KEY = 'pause_plan_onboarding_seen';
 
@@ -15,6 +16,7 @@ const EVENT_TYPES = [
     { id: 'milestone', labelKey: 'calendar.eventTypes.milestone', emoji: '🏆', color: 'emerald' },
     { id: 'custom', labelKey: 'calendar.eventTypes.custom', emoji: '📅', color: 'blue' },
 ];
+const EVENT_TYPE_LOOKUP = Object.fromEntries(EVENT_TYPES.map((eventType) => [eventType.id, eventType]));
 
 /**
  * EventCard Component
@@ -23,7 +25,6 @@ const EVENT_TYPES = [
  */
 const EventCard = memo(({
     event,
-    delay = 0,
     onClick,
     onPlanClick = null,
     showPlanButton = false,
@@ -31,66 +32,44 @@ const EventCard = memo(({
     isFirstPlanButton = false
 }) => {
     const { t, language } = useI18n();
-    const eventType = EVENT_TYPES.find((item) => item.id === event.type)
-        || EVENT_TYPES.find((item) => item.id === 'custom')
-        || EVENT_TYPES[0];
+    const prefersReducedMotion = usePrefersReducedMotion();
+    const eventType = EVENT_TYPE_LOOKUP[event.type] || EVENT_TYPE_LOOKUP.custom || EVENT_TYPES[0];
 
-    // Onboarding tooltip state
-    const [showOnboarding, setShowOnboarding] = useState(false);
-
-    useEffect(() => {
-        // Only show onboarding for the first plan button that hasn't been dismissed
-        if (isFirstPlanButton && showPlanButton && !hasSavedPlan) {
-            const hasSeenOnboarding = localStorage.getItem(ONBOARDING_STORAGE_KEY);
-            if (!hasSeenOnboarding) {
-                setShowOnboarding(true);
-            }
+    const [hasDismissedOnboarding, setHasDismissedOnboarding] = useState(() => {
+        if (typeof window === 'undefined') {
+            return false;
         }
-    }, [isFirstPlanButton, showPlanButton, hasSavedPlan]);
+        return localStorage.getItem(ONBOARDING_STORAGE_KEY) === 'true';
+    });
+    const showOnboarding = isFirstPlanButton && showPlanButton && !hasSavedPlan && !hasDismissedOnboarding;
 
     const handleDismissOnboarding = (e) => {
         e.stopPropagation();
         localStorage.setItem(ONBOARDING_STORAGE_KEY, 'true');
-        setShowOnboarding(false);
+        setHasDismissedOnboarding(true);
     };
 
-    // Memoize date parsing and timing calculations - these are expensive
-    const dateInfo = useMemo(() => {
-        const dateStr = event?.date || '';
-        if (!dateStr) return null;
+    const dateStr = event?.date || '';
+    if (!dateStr) return null;
 
-        const eventDate = parseLocalDate(dateStr);
-        const today = startOfDay(new Date());
-        const eventStart = startOfDay(eventDate);
-        if (!eventDate || !today || !eventStart) return null;
+    const eventDate = parseLocalDate(dateStr);
+    const today = startOfDay(new Date());
+    const eventStart = startOfDay(eventDate);
+    if (!eventDate || !today || !eventStart) return null;
 
-        const daysAway = Math.round((eventStart.getTime() - today.getTime()) / (24 * 60 * 60 * 1000));
-        const timingLabel = daysAway === 0
-            ? t('calendar.timing.today')
-            : daysAway === 1
-                ? t('calendar.timing.tomorrow')
-                : daysAway > 1
-                    ? t('calendar.timing.inDays', { count: daysAway })
-                    : null;
-        const isToday = daysAway === 0;
-        const isSoon = daysAway >= 0 && daysAway <= 7;
-
-        return {
-            eventDate,
-            daysAway,
-            timingLabel,
-            isToday,
-            isSoon,
-            monthLabel: eventDate.toLocaleDateString(language, { month: 'short' }),
-            weekdayLabel: eventDate.toLocaleDateString(language, { weekday: 'short' }),
-            dayNumber: eventDate.getDate()
-        };
-    }, [event?.date, language, t]);
-
-    // Early return if no valid date
-    if (!dateInfo) return null;
-
-    const { eventDate, daysAway, timingLabel, isToday, isSoon, monthLabel, weekdayLabel, dayNumber } = dateInfo;
+    const daysAway = Math.round((eventStart.getTime() - today.getTime()) / (24 * 60 * 60 * 1000));
+    const timingLabel = daysAway === 0
+        ? t('calendar.timing.today')
+        : daysAway === 1
+            ? t('calendar.timing.tomorrow')
+            : daysAway > 1
+                ? t('calendar.timing.inDays', { count: daysAway })
+                : null;
+    const isToday = daysAway === 0;
+    const isSoon = daysAway >= 0 && daysAway <= 7;
+    const monthLabel = eventDate.toLocaleDateString(language, { month: 'short' });
+    const weekdayLabel = eventDate.toLocaleDateString(language, { weekday: 'short' });
+    const dayNumber = eventDate.getDate();
 
     // Gradient classes
     const cardFrame = event.isSecret
@@ -118,7 +97,7 @@ const EventCard = memo(({
         ? event.isSecret
             ? 'from-indigo-200/35 via-amber-100/25 to-violet-200/35'
             : 'from-rose-200/35 via-amber-100/25 to-pink-200/35'
-        : 'from-transparent via-transparent to-transparent';
+        : null;
 
     const planFill = hasSavedPlan
         ? 'from-white/80 via-amber-50/65 to-white/75'
@@ -128,12 +107,13 @@ const EventCard = memo(({
         <Motion.div
             whileTap={{ scale: 0.995 }}
             onClick={onClick}
-            className={`group relative w-full rounded-3xl p-[1px] bg-gradient-to-br ${cardFrame} shadow-soft hover:shadow-soft-lg transition-shadow duration-200 cursor-pointer`}
+            className={`group relative w-full rounded-3xl p-[1px] bg-gradient-to-br ${cardFrame} shadow-soft hover:shadow-soft-lg transition-shadow duration-200 cursor-pointer perf-content-auto contain-paint`}
         >
-            {/* Shimmer animation overlay */}
-            <div aria-hidden="true" className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
-            </div>
+            {!prefersReducedMotion && (
+                <div aria-hidden="true" className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
+                </div>
+            )}
 
             {/* Card content */}
             <div className="relative rounded-[23px] bg-white/90 border border-white/60">
@@ -201,7 +181,7 @@ const EventCard = memo(({
                         </AnimatePresence>
 
                         <Motion.button
-                            whileHover={{ y: -1 }}
+                            whileHover={prefersReducedMotion ? undefined : { y: -1 }}
                             whileTap={{ scale: 0.98 }}
                             onClick={onPlanClick}
                             aria-label={planLabel}
@@ -211,7 +191,7 @@ const EventCard = memo(({
 
                             {/* Glow effect */}
                             {planGlow && (
-                                <span aria-hidden="true" className={`absolute -inset-1 rounded-full bg-gradient-to-r ${planGlow} blur-xl opacity-60`} />
+                                <span aria-hidden="true" className={`absolute -inset-1 rounded-full bg-gradient-to-r ${planGlow} fx-glow-soft opacity-50`} />
                             )}
 
                             {/* Plan button content */}

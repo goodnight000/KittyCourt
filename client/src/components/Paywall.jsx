@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { X, Crown, Heart, Check, Users, Zap, Gavel, Wand2, ChevronRight, Clock, Star, RotateCcw, Brain } from 'lucide-react';
 import useSubscriptionStore from '../store/useSubscriptionStore';
 import usePartnerStore from '../store/usePartnerStore';
@@ -26,6 +26,76 @@ const isActiveGold = (profile) => {
     const expiresAt = new Date(profile.subscription_expires_at);
     return !Number.isNaN(expiresAt.valueOf()) && expiresAt >= new Date();
 };
+
+const seededRandom = (seed) => {
+    const x = Math.sin(seed * 12.9898) * 43758.5453;
+    return x - Math.floor(x);
+};
+
+const SPARKLE_PARTICLES = Array.from({ length: 12 }, (_, index) => ({
+    id: index,
+    x: `${Math.round(seededRandom(index + 1) * 100)}%`,
+    duration: 4 + seededRandom(index + 101) * 3,
+    delay: seededRandom(index + 201) * 4,
+    size: 6 + Math.round(seededRandom(index + 301) * 4),
+}));
+
+const SparkleParticles = ({ prefersReducedMotion }) => {
+    if (prefersReducedMotion) {
+        return null;
+    }
+
+    return (
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            {SPARKLE_PARTICLES.map((particle) => (
+                <Motion.div
+                    key={particle.id}
+                    className="absolute rounded-full bg-amber-300/70 shadow-[0_0_10px_rgba(245,158,11,0.45)]"
+                    style={{
+                        width: particle.size,
+                        height: particle.size,
+                    }}
+                    initial={{
+                        x: particle.x,
+                        y: '110%',
+                        opacity: 0,
+                        scale: 0.5,
+                    }}
+                    animate={{
+                        y: '-10%',
+                        opacity: [0, 1, 1, 0],
+                        scale: [0.5, 1, 0.8, 0.3],
+                    }}
+                    transition={{
+                        duration: particle.duration,
+                        repeat: Infinity,
+                        delay: particle.delay,
+                        ease: 'easeOut',
+                    }}
+                />
+            ))}
+        </div>
+    );
+};
+
+const PaywallBackdrop = ({ prefersReducedMotion }) => (
+    <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute -top-32 -right-20 h-64 w-64 rounded-full bg-amber-200/30 blur-2xl" />
+        {!prefersReducedMotion && (
+            <>
+                <div className="absolute top-20 -left-24 h-72 w-72 rounded-full bg-rose-200/25 blur-2xl" />
+                <div className="absolute bottom-0 right-0 h-72 w-72 rounded-full bg-amber-100/40 blur-2xl" />
+            </>
+        )}
+        <div
+            className="absolute inset-0 opacity-50"
+            style={{
+                backgroundImage:
+                    'radial-gradient(circle at 18% 20%, rgba(255,255,255,0.8) 0%, transparent 55%), radial-gradient(circle at 80% 12%, rgba(255,235,210,0.9) 0%, transparent 60%)'
+            }}
+        />
+    </div>
+);
 
 const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
     const { purchaseGold, restorePurchases, isLoading, trialEligible, isGold, checkEntitlement } = useSubscriptionStore();
@@ -195,58 +265,6 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
         'paywall.withoutGold.items.risk',
     ];
 
-    // Floating sparkle particles - respects reduced motion preference
-    const SparkleParticles = () => {
-        // Don't render animated particles if user prefers reduced motion
-        if (prefersReducedMotion) {
-            return null;
-        }
-
-        return (
-            <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                {[...Array(12)].map((_, i) => (
-                    <motion.div
-                        key={i}
-                        className="absolute"
-                        initial={{
-                            x: Math.random() * 100 + '%',
-                            y: '110%',
-                            opacity: 0,
-                            scale: 0.5,
-                        }}
-                        animate={{
-                            y: '-10%',
-                            opacity: [0, 1, 1, 0],
-                            scale: [0.5, 1, 0.8, 0.3],
-                        }}
-                        transition={{
-                            duration: 4 + Math.random() * 3,
-                            repeat: Infinity,
-                            delay: Math.random() * 4,
-                            ease: 'easeOut',
-                        }}
-                    >
-                    </motion.div>
-                ))}
-            </div>
-        );
-    };
-
-    const PaywallBackdrop = () => (
-        <div className="absolute inset-0 pointer-events-none">
-            <div className="absolute -top-32 -right-20 h-64 w-64 rounded-full bg-amber-200/30 blur-3xl" />
-            <div className="absolute top-20 -left-24 h-72 w-72 rounded-full bg-rose-200/25 blur-3xl" />
-            <div className="absolute bottom-0 right-0 h-72 w-72 rounded-full bg-amber-100/40 blur-3xl" />
-            <div
-                className="absolute inset-0 opacity-50"
-                style={{
-                    backgroundImage:
-                        'radial-gradient(circle at 18% 20%, rgba(255,255,255,0.8) 0%, transparent 55%), radial-gradient(circle at 80% 12%, rgba(255,235,210,0.9) 0%, transparent 60%)'
-                }}
-            />
-        </div>
-    );
-
     const translatedError = error
         ? (error === 'Purchases are only available in the iOS/Android app.'
             ? t('paywall.errors.unavailable')
@@ -258,7 +276,7 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
     return (
         <AnimatePresence>
             {isOpen && (
-                <motion.div
+                <Motion.div
                     ref={modalRef}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -282,13 +300,13 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                         <X className="w-5 h-5 text-neutral-600" />
                     </button>
 
-                    <PaywallBackdrop />
-                    <SparkleParticles />
+                    <PaywallBackdrop prefersReducedMotion={prefersReducedMotion} />
+                    <SparkleParticles prefersReducedMotion={prefersReducedMotion} />
 
                     {/* Scrollable content - with bottom padding for sticky CTA */}
                     <div className="flex-1 overflow-y-auto px-6 pb-48 relative z-10">
                         {/* Hero Section - More Impactful */}
-                        <motion.div
+                        <Motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.1 }}
@@ -297,28 +315,28 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                             <div className="relative overflow-hidden rounded-[32px] border border-white/80 bg-white/85 px-6 py-8 text-center shadow-soft-lg">
                                 <div className="absolute -top-10 -right-10 h-24 w-24 rounded-full bg-amber-200/35 blur-2xl" />
                                 <div className="absolute -bottom-12 -left-10 h-28 w-28 rounded-full bg-rose-200/30 blur-3xl" />
-                                <motion.div
+                                <Motion.div
                                     initial={{ scale: 0, rotate: -180 }}
                                     animate={{ scale: 1, rotate: 0 }}
                                     transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
                                     className="inline-flex items-center justify-center w-20 h-20 rounded-3xl mb-4 relative border border-amber-200/80 bg-amber-100/80 shadow-soft"
                                 >
-                                    <motion.div
+                                    <Motion.div
                                         className="absolute inset-0 rounded-3xl border border-amber-300/70"
-                                        animate={{
+                                        animate={prefersReducedMotion ? undefined : {
                                             scale: [1, 1.2, 1.2],
                                             opacity: [0.6, 0, 0],
                                         }}
-                                        transition={{
+                                        transition={prefersReducedMotion ? undefined : {
                                             duration: 2,
                                             repeat: Infinity,
                                             ease: 'easeOut',
                                         }}
                                     />
                                     <Crown className="w-10 h-10 text-amber-700" />
-                                </motion.div>
+                                </Motion.div>
 
-                                <motion.h1
+                                <Motion.h1
                                     id="paywall-title"
                                     className="text-3xl font-bold text-court-brown mb-2 font-display"
                                     initial={{ opacity: 0, y: 10 }}
@@ -326,21 +344,21 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                                     transition={{ delay: 0.3 }}
                                 >
                                     {t('paywall.title')}
-                                </motion.h1>
-                                <motion.p
+                                </Motion.h1>
+                                <Motion.p
                                     className="text-court-brownLight text-sm max-w-xs mx-auto"
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
                                     transition={{ delay: 0.4 }}
                                 >
                                     {t('paywall.subtitle')}
-                                </motion.p>
+                                </Motion.p>
                             </div>
-                        </motion.div>
+                        </Motion.div>
 
                         {/* Free Trial Badge - Only show if eligible */}
                         {trialEligible && (
-                            <motion.div
+                            <Motion.div
                                 initial={{ opacity: 0, scale: 0.9 }}
                                 animate={{ opacity: 1, scale: 1 }}
                                 transition={{ delay: 0.25, type: 'spring' }}
@@ -358,11 +376,11 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                                         {t('paywall.trialBadge')}
                                     </span>
                                 </div>
-                            </motion.div>
+                            </Motion.div>
                         )}
 
                         {/* Key Value Prop - Both Partners */}
-                        <motion.div
+                        <Motion.div
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.3 }}
@@ -381,17 +399,17 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                                     <span className="text-amber-600">{t('paywall.bundleNotice.emphasis')}</span>{' '}
                                     {t('paywall.bundleNotice.suffix')}
                                 </span>
-                                <motion.div
-                                    animate={{ scale: [1, 1.2, 1] }}
-                                    transition={{ duration: 1.5, repeat: Infinity }}
+                                <Motion.div
+                                    animate={prefersReducedMotion ? undefined : { scale: [1, 1.2, 1] }}
+                                    transition={prefersReducedMotion ? undefined : { duration: 1.5, repeat: Infinity }}
                                 >
                                     <Heart className="w-4 h-4 text-amber-600" />
-                                </motion.div>
+                                </Motion.div>
                             </div>
-                        </motion.div>
+                        </Motion.div>
 
                         {purchaseBlocked && (
-                            <motion.div
+                            <Motion.div
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.32 }}
@@ -405,22 +423,22 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                                         {t('paywall.partnerActive.subtitle')}
                                     </div>
                                 </div>
-                            </motion.div>
+                            </Motion.div>
                         )}
 
                         {/* Trigger Reason */}
                         {triggerReason && (
-                            <motion.p
+                            <Motion.p
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 className="text-xs text-court-maroon text-center mb-4 bg-white/70 border border-amber-200/60 rounded-2xl px-3 py-2"
                             >
                                 {triggerReason}
-                            </motion.p>
+                            </Motion.p>
                         )}
 
                         {/* Benefits Section - Outcome-Focused with Varied Colors */}
-                        <motion.div
+                        <Motion.div
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.35 }}
@@ -431,7 +449,7 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                             </h3>
                             <div className="space-y-3">
                                 {benefits.map((benefit, index) => (
-                                    <motion.div
+                                    <Motion.div
                                         key={benefit.titleKey}
                                         initial={{ opacity: 0, x: -10 }}
                                         animate={{ opacity: 1, x: 0 }}
@@ -458,13 +476,13 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                                                 {t(benefit.descriptionKey)}
                                             </p>
                                         </div>
-                                    </motion.div>
+                                    </Motion.div>
                                 ))}
                             </div>
-                        </motion.div>
+                        </Motion.div>
 
                         {/* Loss Aversion Section - MOVED ABOVE PRICING */}
-                        <motion.div
+                        <Motion.div
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.5 }}
@@ -481,11 +499,11 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                                     </li>
                                 ))}
                             </ul>
-                        </motion.div>
+                        </Motion.div>
 
                         {/* Pricing Plans */}
                         {!purchaseBlocked && (
-                            <motion.div
+                            <Motion.div
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.55 }}
@@ -496,7 +514,7 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                                 </h3>
                                 <div className="space-y-3">
                                     {/* Yearly Plan - Recommended */}
-                                    <motion.div
+                                    <Motion.div
                                         className="relative"
                                         animate={{ scale: selectedPlan === 'yearly' ? 1 : 0.94 }}
                                         transition={{ duration: 0.2, ease: 'easeOut' }}
@@ -512,7 +530,7 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                                         </div>
                                         <button
                                             onClick={() => setSelectedPlan('yearly')}
-                                            className={`w-full p-4 pt-5 rounded-[28px] text-left transition-all duration-200 ease-out border relative overflow-hidden ${selectedPlan === 'yearly'
+                                            className={`w-full p-4 pt-5 rounded-[28px] text-left transition-[transform,border-color,background-color,box-shadow] duration-200 ease-out border relative overflow-hidden ${selectedPlan === 'yearly'
                                                 ? 'border-amber-300/80 bg-white shadow-soft-lg'
                                                 : 'border-white/80 bg-white/70 hover:border-amber-200/70'
                                                 }`}
@@ -521,7 +539,7 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                                             <div className="flex items-center gap-3 relative z-10">
                                                 {/* Selection Circle */}
                                                 <div
-                                                    className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center border-2 transition-all duration-200"
+                                                    className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center border-2 transition-colors duration-200"
                                                     style={{
                                                         borderColor: selectedPlan === 'yearly' ? '#C9A227' : '#D4C4A8',
                                                         backgroundColor: selectedPlan === 'yearly' ? '#C9A227' : 'white',
@@ -553,16 +571,16 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                                                 </div>
                                             </div>
                                         </button>
-                                    </motion.div>
+                                    </Motion.div>
 
                                     {/* Monthly Plan */}
-                                    <motion.div
+                                    <Motion.div
                                         animate={{ scale: selectedPlan === 'monthly' ? 1 : 0.94 }}
                                         transition={{ duration: 0.2, ease: 'easeOut' }}
                                     >
                                         <button
                                             onClick={() => setSelectedPlan('monthly')}
-                                            className={`w-full p-4 rounded-[28px] text-left transition-all duration-200 ease-out border relative overflow-hidden ${selectedPlan === 'monthly'
+                                            className={`w-full p-4 rounded-[28px] text-left transition-[transform,border-color,background-color,box-shadow] duration-200 ease-out border relative overflow-hidden ${selectedPlan === 'monthly'
                                                 ? 'border-amber-300/80 bg-white shadow-soft-lg'
                                                 : 'border-white/80 bg-white/70 hover:border-amber-200/70'
                                                 }`}
@@ -571,7 +589,7 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                                             <div className="flex items-center gap-3 relative z-10">
                                                 {/* Selection Circle */}
                                                 <div
-                                                    className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center border-2 transition-all duration-200"
+                                                    className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center border-2 transition-colors duration-200"
                                                     style={{
                                                         borderColor: selectedPlan === 'monthly' ? '#C9A227' : '#D4C4A8',
                                                         backgroundColor: selectedPlan === 'monthly' ? '#C9A227' : 'white',
@@ -601,7 +619,7 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                                                 </div>
                                             </div>
                                         </button>
-                                    </motion.div>
+                                    </Motion.div>
                                 </div>
 
                                 {/* Price context + Cancel anytime */}
@@ -617,11 +635,11 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                                         {t('paywall.cancelAnytime')}
                                     </p>
                                 </div>
-                            </motion.div>
+                            </Motion.div>
                         )}
 
                         {/* Social Proof - Specific Names */}
-                        <motion.div
+                        <Motion.div
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.6 }}
@@ -644,19 +662,19 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                                     {t('paywall.social.count')}
                                 </p>
                             </div>
-                        </motion.div>
+                        </Motion.div>
 
 
 
                         {/* Error display */}
                         {error && (
-                            <motion.div
+                            <Motion.div
                                 initial={{ opacity: 0, y: -10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 className="bg-rose-50 text-rose-600 text-sm rounded-2xl p-3 mb-4 text-center border border-rose-200/70"
                             >
                                 {translatedError}
-                            </motion.div>
+                            </Motion.div>
                         )}
 
                         {/* Restore Purchases */}
@@ -676,17 +694,17 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                         </button>
 
                         {/* Maybe Later with consequence */}
-                        <motion.div
+                        <Motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             transition={{ delay: 0.7 }}
                             className="text-center pb-4"
                         >
-                        </motion.div>
+                        </Motion.div>
                     </div>
 
                     {/* STICKY CTA BUTTON - Fixed at bottom */}
-                    <motion.div
+                    <Motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.5 }}
@@ -713,12 +731,12 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                                     </div>
                                 </div>
                             ) : (
-                                <motion.button
+                                <Motion.button
                                     onClick={handlePurchase}
                                     disabled={isLoading}
-                                    whileHover={{ scale: 1.01 }}
-                                    whileTap={{ scale: 0.98 }}
-                                    className="w-full rounded-[28px] border border-amber-200/80 bg-white/90 px-4 py-4 text-left disabled:opacity-50 transition-all font-display relative overflow-hidden shadow-soft-lg"
+                                    whileHover={prefersReducedMotion ? undefined : { scale: 1.01 }}
+                                    whileTap={prefersReducedMotion ? undefined : { scale: 0.98 }}
+                                    className="w-full rounded-[28px] border border-amber-200/80 bg-white/90 px-4 py-4 text-left disabled:opacity-50 transition-[transform,opacity] font-display relative overflow-hidden shadow-soft-lg"
                                 >
                                     <div className="absolute inset-x-6 top-0 h-0.5 bg-gradient-to-r from-transparent via-amber-200/80 to-transparent" />
                                     <div className="absolute -top-8 -right-6 h-16 w-16 rounded-full bg-amber-200/35 blur-2xl" />
@@ -750,7 +768,7 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                                             </div>
                                         </div>
                                     )}
-                                </motion.button>
+                                </Motion.button>
                             )}
                             {trialEligible && !purchaseBlocked && (
                                 <p className="text-xs text-court-brownLight/70 text-center mt-2">
@@ -769,8 +787,8 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                                 {t('paywall.settingsHint')}
                             </p>
                         </div>
-                    </motion.div>
-                </motion.div>
+                    </Motion.div>
+                </Motion.div>
             )}
         </AnimatePresence>
     );

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, Suspense, lazy } from 'react';
+import React, { useEffect, useRef, useState, Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 
 // Layout
@@ -96,6 +96,7 @@ const AppRoutes = () => {
         closeGoldWelcome,
     } = useUpsellStore();
     const initializedRef = useRef(false);
+    const [authInitTimedOut, setAuthInitTimedOut] = useState(false);
     const wrap = (element, message) => (
         <ErrorBoundary message={message}>
             {element}
@@ -152,6 +153,16 @@ const AppRoutes = () => {
         });
     }, [initialize]);
 
+    useEffect(() => {
+        if (hasCheckedAuth && !isLoading) return;
+
+        const timeoutId = setTimeout(() => {
+            setAuthInitTimedOut(true);
+        }, 12000);
+
+        return () => clearTimeout(timeoutId);
+    }, [hasCheckedAuth, isLoading]);
+
     // Initialize push notifications when user is authenticated
     useEffect(() => {
         if (!isAuthenticated) return;
@@ -199,6 +210,39 @@ const AppRoutes = () => {
     // Show loading screen until initial auth check completes
     // This prevents the flash of onboarding page on refresh
     if (!hasCheckedAuth || isLoading) {
+        if (authInitTimedOut) {
+            return (
+                <div className="min-h-screen flex items-center justify-center p-6">
+                    <div className="bg-white/85 backdrop-blur-xl rounded-3xl p-6 shadow-xl border border-white/60 max-w-sm w-full text-center">
+                        <h2 className="text-xl font-bold text-neutral-800 mb-2">Still loading your session</h2>
+                        <p className="text-neutral-600 text-sm mb-5">
+                            We couldn&apos;t finish the startup check. Retry now or go to sign in.
+                        </p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => {
+                                    setAuthInitTimedOut(false);
+                                    initialize().catch((err) => {
+                                        console.error('[App] Retry initialize failed:', err);
+                                    });
+                                }}
+                                className="flex-1 py-2.5 rounded-xl font-semibold text-white bg-gradient-to-r from-[#C9A227] via-[#B9911F] to-[#8B7019]"
+                            >
+                                Retry
+                            </button>
+                            <button
+                                onClick={() => {
+                                    window.location.assign('/signin');
+                                }}
+                                className="flex-1 py-2.5 rounded-xl font-semibold text-neutral-700 bg-neutral-100 border border-neutral-200"
+                            >
+                                Sign in
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
         return <LoadingScreen />;
     }
 

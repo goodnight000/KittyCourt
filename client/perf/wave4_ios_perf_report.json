@@ -1,0 +1,356 @@
+{
+  "meta": {
+    "generatedAtUtc": "2026-02-19T03:41:37.668197+00:00",
+    "baseUrl": "http://127.0.0.1:5173",
+    "browser": "webkit",
+    "deviceProfile": "iPhone 13"
+  },
+  "config": {
+    "startupRuns": 3,
+    "transitionRounds": 2,
+    "startupFpsSampleMs": 3000,
+    "transitionFpsSampleMs": 1800,
+    "transitionTimeoutMs": 5000,
+    "authEntryRoute": "/signin",
+    "transitions": [
+      {
+        "from": "/signin",
+        "to": "/signup",
+        "selector": "a[href=\"/signup\"]"
+      },
+      {
+        "from": "/signup",
+        "to": "/signin",
+        "selector": "a[href=\"/signin\"]"
+      },
+      {
+        "from": "/signin",
+        "to": "/forgot-password",
+        "selector": "a[href=\"/forgot-password\"]"
+      },
+      {
+        "from": "/forgot-password",
+        "to": "/signin",
+        "selector": "a[href=\"/signin\"]"
+      }
+    ]
+  },
+  "startup": {
+    "runs": [
+      {
+        "run": 1,
+        "route": "http://127.0.0.1:5173/signin",
+        "metrics": {
+          "navigation": {
+            "unloadEventEnd": 0,
+            "redirectCount": 0,
+            "domainLookupStart": 11,
+            "domainLookupEnd": 11,
+            "connectStart": 11,
+            "secureConnectionStart": 0,
+            "connectEnd": 11,
+            "requestStart": 12,
+            "responseStart": 468,
+            "responseEnd": 468,
+            "domInteractive": 495,
+            "domContentLoadedEventStart": 800,
+            "domContentLoadedEventEnd": 800,
+            "domComplete": 966,
+            "loadEventStart": 968,
+            "loadEventEnd": 968
+          },
+          "paint": {
+            "first-contentful-paint": 1032
+          },
+          "startupFps": {
+            "avgFps": 60.013,
+            "p95FrameMs": 18,
+            "droppedFrameRatio": 0,
+            "totalFrames": 181,
+            "sampleDurationMs": 3016
+          }
+        }
+      },
+      {
+        "run": 2,
+        "route": "http://127.0.0.1:5173/signin",
+        "metrics": {
+          "navigation": {
+            "unloadEventEnd": 0,
+            "redirectCount": 0,
+            "domainLookupStart": 2,
+            "domainLookupEnd": 2,
+            "connectStart": 2,
+            "secureConnectionStart": 0,
+            "connectEnd": 2,
+            "requestStart": 3,
+            "responseStart": 7,
+            "responseEnd": 7,
+            "domInteractive": 16,
+            "domContentLoadedEventStart": 175,
+            "domContentLoadedEventEnd": 175,
+            "domComplete": 255,
+            "loadEventStart": 256,
+            "loadEventEnd": 256
+          },
+          "paint": {
+            "first-contentful-paint": 275
+          },
+          "startupFps": {
+            "avgFps": 60,
+            "p95FrameMs": 18,
+            "droppedFrameRatio": 0,
+            "totalFrames": 180,
+            "sampleDurationMs": 3000
+          }
+        }
+      },
+      {
+        "run": 3,
+        "route": "http://127.0.0.1:5173/signin",
+        "metrics": {
+          "navigation": {
+            "unloadEventEnd": 0,
+            "redirectCount": 0,
+            "domainLookupStart": 0,
+            "domainLookupEnd": 0,
+            "connectStart": 0,
+            "secureConnectionStart": 0,
+            "connectEnd": 0,
+            "requestStart": 0,
+            "responseStart": 2,
+            "responseEnd": 2,
+            "domInteractive": 6,
+            "domContentLoadedEventStart": 152,
+            "domContentLoadedEventEnd": 152,
+            "domComplete": 218,
+            "loadEventStart": 219,
+            "loadEventEnd": 219
+          },
+          "paint": {
+            "first-contentful-paint": 236
+          },
+          "startupFps": {
+            "avgFps": 60,
+            "p95FrameMs": 18,
+            "droppedFrameRatio": 0,
+            "totalFrames": 180,
+            "sampleDurationMs": 3000
+          }
+        }
+      }
+    ],
+    "summary": {
+      "navigationMsMedian": {
+        "responseStart": 7.0,
+        "responseEnd": 7.0,
+        "domInteractive": 16.0,
+        "domContentLoadedEventEnd": 175.0,
+        "domComplete": 255.0,
+        "loadEventEnd": 256.0
+      },
+      "paintMsMedian": {
+        "first-paint": null,
+        "first-contentful-paint": 275.0
+      },
+      "startupFpsMedian": {
+        "avgFps": 60.0,
+        "p95FrameMs": 18.0,
+        "droppedFrameRatio": 0.0
+      }
+    }
+  },
+  "transitions": {
+    "rounds": [
+      {
+        "round": 1,
+        "transitions": [
+          {
+            "from": "/signin",
+            "to": "/signup",
+            "selector": "a[href=\"/signup\"]",
+            "metrics": {
+              "from": "/signin",
+              "to": "/signup",
+              "expectedTo": "/signup",
+              "navigationDurationMs": 2,
+              "reachedExpectedPath": true,
+              "avgFps": 60.045,
+              "p95FrameMs": 18,
+              "droppedFrameRatio": 0,
+              "totalFrames": 107,
+              "sampleDurationMs": 1782
+            }
+          },
+          {
+            "from": "/signup",
+            "to": "/signin",
+            "selector": "a[href=\"/signin\"]",
+            "metrics": {
+              "from": "/signup",
+              "to": "/signin",
+              "expectedTo": "/signin",
+              "navigationDurationMs": 0,
+              "reachedExpectedPath": true,
+              "avgFps": 59.978,
+              "p95FrameMs": 18,
+              "droppedFrameRatio": 0,
+              "totalFrames": 107,
+              "sampleDurationMs": 1784
+            }
+          },
+          {
+            "from": "/signin",
+            "to": "/forgot-password",
+            "selector": "a[href=\"/forgot-password\"]",
+            "metrics": {
+              "from": "/signin",
+              "to": "/forgot-password",
+              "expectedTo": "/forgot-password",
+              "navigationDurationMs": 1,
+              "reachedExpectedPath": true,
+              "avgFps": 58.361,
+              "p95FrameMs": 18,
+              "droppedFrameRatio": 0.0096,
+              "totalFrames": 104,
+              "sampleDurationMs": 1782
+            }
+          },
+          {
+            "from": "/forgot-password",
+            "to": "/signin",
+            "selector": "a[href=\"/signin\"]",
+            "metrics": {
+              "from": "/forgot-password",
+              "to": "/signin",
+              "expectedTo": "/signin",
+              "navigationDurationMs": 1,
+              "reachedExpectedPath": true,
+              "avgFps": 60.146,
+              "p95FrameMs": 18,
+              "droppedFrameRatio": 0.0093,
+              "totalFrames": 107,
+              "sampleDurationMs": 1779
+            }
+          }
+        ]
+      },
+      {
+        "round": 2,
+        "transitions": [
+          {
+            "from": "/signin",
+            "to": "/signup",
+            "selector": "a[href=\"/signup\"]",
+            "metrics": {
+              "from": "/signin",
+              "to": "/signup",
+              "expectedTo": "/signup",
+              "navigationDurationMs": 1,
+              "reachedExpectedPath": true,
+              "avgFps": 60.045,
+              "p95FrameMs": 18,
+              "droppedFrameRatio": 0,
+              "totalFrames": 107,
+              "sampleDurationMs": 1782
+            }
+          },
+          {
+            "from": "/signup",
+            "to": "/signin",
+            "selector": "a[href=\"/signin\"]",
+            "metrics": {
+              "from": "/signup",
+              "to": "/signin",
+              "expectedTo": "/signin",
+              "navigationDurationMs": 0,
+              "reachedExpectedPath": true,
+              "avgFps": 60,
+              "p95FrameMs": 18,
+              "droppedFrameRatio": 0,
+              "totalFrames": 108,
+              "sampleDurationMs": 1800
+            }
+          },
+          {
+            "from": "/signin",
+            "to": "/forgot-password",
+            "selector": "a[href=\"/forgot-password\"]",
+            "metrics": {
+              "from": "/signin",
+              "to": "/forgot-password",
+              "expectedTo": "/forgot-password",
+              "navigationDurationMs": 1,
+              "reachedExpectedPath": true,
+              "avgFps": 60.146,
+              "p95FrameMs": 18,
+              "droppedFrameRatio": 0,
+              "totalFrames": 107,
+              "sampleDurationMs": 1779
+            }
+          },
+          {
+            "from": "/forgot-password",
+            "to": "/signin",
+            "selector": "a[href=\"/signin\"]",
+            "metrics": {
+              "from": "/forgot-password",
+              "to": "/signin",
+              "expectedTo": "/signin",
+              "navigationDurationMs": 0,
+              "reachedExpectedPath": true,
+              "avgFps": 60.011,
+              "p95FrameMs": 18,
+              "droppedFrameRatio": 0.0093,
+              "totalFrames": 107,
+              "sampleDurationMs": 1783
+            }
+          }
+        ]
+      }
+    ],
+    "summaryByRouteEdge": {
+      "/signin->/signup": {
+        "avgFpsMean": 60.045,
+        "avgFpsMedian": 60.045,
+        "p95FrameMsMedian": 18.0,
+        "droppedFrameRatioMedian": 0.0,
+        "navigationDurationMsMedian": 1.5,
+        "expectedPathReachRate": 1.0,
+        "samples": 2
+      },
+      "/signup->/signin": {
+        "avgFpsMean": 59.989,
+        "avgFpsMedian": 59.989,
+        "p95FrameMsMedian": 18.0,
+        "droppedFrameRatioMedian": 0.0,
+        "navigationDurationMsMedian": 0.0,
+        "expectedPathReachRate": 1.0,
+        "samples": 2
+      },
+      "/signin->/forgot-password": {
+        "avgFpsMean": 59.254,
+        "avgFpsMedian": 59.254,
+        "p95FrameMsMedian": 18.0,
+        "droppedFrameRatioMedian": 0.0048,
+        "navigationDurationMsMedian": 1.0,
+        "expectedPathReachRate": 1.0,
+        "samples": 2
+      },
+      "/forgot-password->/signin": {
+        "avgFpsMean": 60.079,
+        "avgFpsMedian": 60.079,
+        "p95FrameMsMedian": 18.0,
+        "droppedFrameRatioMedian": 0.0093,
+        "navigationDurationMsMedian": 0.5,
+        "expectedPathReachRate": 1.0,
+        "samples": 2
+      }
+    }
+  },
+  "caveats": [
+    "Metrics are captured in headless WebKit using iPhone device emulation; absolute FPS may differ from physical iOS hardware.",
+    "Startup navigation timing reflects warm local dev-server conditions after helper startup, not app-store cold boot.",
+    "Transition FPS samples use in-app Link clicks and requestAnimationFrame windows around route changes."
+  ]
+}

@@ -1,12 +1,15 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion as Motion } from 'framer-motion';
 import { HeartHandshake, Eye, MessageCircle, HelpCircle, ArrowRight, Star, Clock, Feather } from 'lucide-react';
 import { useI18n } from '../../i18n';
+import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 import JourneyProgress from './JourneyProgress';
 
 const PrimingPage = ({ priming, myName, partnerName, onComplete, isSubmitting }) => {
     const { t } = useI18n();
+    const prefersReducedMotion = usePrefersReducedMotion();
     const displayPartnerName = partnerName || t('common.yourPartner');
+    const entryTransition = prefersReducedMotion ? { duration: 0.16 } : undefined;
     if (!priming) {
         return (
             <div className="max-w-md mx-auto glass-card p-4 text-center">
@@ -18,33 +21,53 @@ const PrimingPage = ({ priming, myName, partnerName, onComplete, isSubmitting })
 
     return (
         <div className="max-w-2xl mx-auto space-y-5 pb-6 relative">
-            <motion.div
-                aria-hidden
-                animate={{ opacity: [0.3, 0.5, 0.3], y: [0, -8, 0] }}
-                transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
-                className="absolute -top-10 -right-8 w-32 h-32 rounded-full bg-blush-200/25 blur-2xl pointer-events-none"
-            />
-            <motion.div
-                aria-hidden
-                animate={{ opacity: [0.25, 0.45, 0.25], scale: [1, 1.05, 1] }}
-                transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
-                className="absolute top-1/3 -left-10 w-36 h-36 rounded-full bg-lavender-200/25 blur-2xl pointer-events-none"
-            />
-            <motion.div
-                aria-hidden
-                animate={{ opacity: [0.2, 0.4, 0.2], y: [0, 6, 0] }}
-                transition={{ duration: 5.5, repeat: Infinity, ease: 'easeInOut' }}
-                className="absolute bottom-10 right-6 w-28 h-28 rounded-full bg-court-gold/15 blur-2xl pointer-events-none"
-            />
+            {prefersReducedMotion ? (
+                <>
+                    <div
+                        aria-hidden
+                        className="absolute -top-10 -right-8 w-32 h-32 rounded-full bg-blush-200/20 blur-xl pointer-events-none"
+                    />
+                    <div
+                        aria-hidden
+                        className="absolute top-1/3 -left-10 w-36 h-36 rounded-full bg-lavender-200/20 blur-xl pointer-events-none"
+                    />
+                    <div
+                        aria-hidden
+                        className="absolute bottom-10 right-6 w-28 h-28 rounded-full bg-court-gold/10 blur-xl pointer-events-none"
+                    />
+                </>
+            ) : (
+                <>
+                    <Motion.div
+                        aria-hidden
+                        animate={{ opacity: [0.3, 0.5, 0.3], y: [0, -8, 0] }}
+                        transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
+                        className="absolute -top-10 -right-8 w-32 h-32 rounded-full bg-blush-200/25 blur-xl pointer-events-none"
+                    />
+                    <Motion.div
+                        aria-hidden
+                        animate={{ opacity: [0.25, 0.45, 0.25], scale: [1, 1.05, 1] }}
+                        transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+                        className="absolute top-1/3 -left-10 w-36 h-36 rounded-full bg-lavender-200/25 blur-xl pointer-events-none"
+                    />
+                    <Motion.div
+                        aria-hidden
+                        animate={{ opacity: [0.2, 0.4, 0.2], y: [0, 6, 0] }}
+                        transition={{ duration: 5.5, repeat: Infinity, ease: 'easeInOut' }}
+                        className="absolute bottom-10 right-6 w-28 h-28 rounded-full bg-court-gold/15 blur-xl pointer-events-none"
+                    />
+                </>
+            )}
 
             <JourneyProgress currentStep={1} />
-            <motion.div
+            <Motion.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
+                transition={entryTransition}
                 className="glass-card p-5 bg-gradient-to-br from-court-ivory via-white/95 to-court-tan/40 relative overflow-hidden border border-court-gold/15"
             >
-                <div className="absolute -top-10 -right-8 w-32 h-32 rounded-full bg-court-gold/10 blur-2xl" />
-                <div className="absolute -bottom-12 -left-10 w-40 h-40 rounded-full bg-court-tan/20 blur-2xl" />
+                <div className="absolute -top-10 -right-8 w-32 h-32 rounded-full bg-court-gold/10 blur-xl" />
+                <div className="absolute -bottom-12 -left-10 w-40 h-40 rounded-full bg-court-tan/20 blur-xl" />
                 <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-court-gold/60 to-transparent" />
                 <div className="absolute left-6 top-4 h-2 w-12 rounded-full bg-court-gold/20" />
                 <div className="flex items-start gap-3 relative">
@@ -72,12 +95,12 @@ const PrimingPage = ({ priming, myName, partnerName, onComplete, isSubmitting })
                         </div>
                     </div>
                 </div>
-            </motion.div>
+            </Motion.div>
 
-            <motion.div
+            <Motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
+                transition={prefersReducedMotion ? entryTransition : { delay: 0.1 }}
                 className="glass-card p-4 space-y-3 border-l-4 border-blush-300/70 relative overflow-hidden bg-gradient-to-br from-blush-50/70 via-white/85 to-court-cream/80"
             >
                 <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-court-gold/60 to-transparent" />
@@ -93,12 +116,12 @@ const PrimingPage = ({ priming, myName, partnerName, onComplete, isSubmitting })
                 <div className="rounded-2xl border border-blush-200/60 bg-white/80 p-3 text-sm text-court-brown leading-relaxed">
                     {priming.yourFeelings}
                 </div>
-            </motion.div>
+            </Motion.div>
 
-            <motion.div
+            <Motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.15 }}
+                transition={prefersReducedMotion ? entryTransition : { delay: 0.15 }}
                 className="glass-card p-4 space-y-3 border-l-4 border-sky-300/70 relative overflow-hidden bg-gradient-to-br from-sky-50/70 via-white/85 to-court-cream/80"
             >
                 <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-court-tan/60 to-transparent" />
@@ -114,12 +137,12 @@ const PrimingPage = ({ priming, myName, partnerName, onComplete, isSubmitting })
                 <div className="rounded-2xl border border-sky-200/60 bg-white/80 p-3 text-sm text-court-brown leading-relaxed">
                     {priming.partnerPerspective}
                 </div>
-            </motion.div>
+            </Motion.div>
 
-            <motion.div
+            <Motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
+                transition={prefersReducedMotion ? entryTransition : { delay: 0.2 }}
                 className="glass-card p-4 space-y-3 relative overflow-hidden bg-gradient-to-br from-lavender-50/70 via-white/85 to-court-cream/80 border border-lavender-100/60"
             >
                 <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-court-cream/80 to-transparent" />
@@ -142,12 +165,12 @@ const PrimingPage = ({ priming, myName, partnerName, onComplete, isSubmitting })
                         </li>
                     ))}
                 </ul>
-            </motion.div>
+            </Motion.div>
 
-            <motion.div
+            <Motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.25 }}
+                transition={prefersReducedMotion ? entryTransition : { delay: 0.25 }}
                 className="glass-card p-4 space-y-3 relative overflow-hidden bg-gradient-to-br from-amber-50/70 via-white/85 to-court-cream/80 border border-amber-100/60"
             >
                 <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-court-gold/40 to-transparent" />
@@ -172,17 +195,17 @@ const PrimingPage = ({ priming, myName, partnerName, onComplete, isSubmitting })
                         </li>
                     ))}
                 </ul>
-            </motion.div>
+            </Motion.div>
 
-            <motion.button
-                whileHover={{ scale: 1.01 }}
-                whileTap={{ scale: 0.98 }}
+            <Motion.button
+                whileHover={prefersReducedMotion ? undefined : { scale: 1.01 }}
+                whileTap={prefersReducedMotion ? undefined : { scale: 0.98 }}
                 onClick={onComplete}
                 disabled={isSubmitting}
                 className="court-btn-primary w-full disabled:opacity-60 disabled:cursor-not-allowed"
             >
                 {isSubmitting ? (
-                    <motion.div
+                    <Motion.div
                         animate={{ rotate: 360 }}
                         transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
                         className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
@@ -193,7 +216,7 @@ const PrimingPage = ({ priming, myName, partnerName, onComplete, isSubmitting })
                         {t('court.priming.actions.continue')}
                     </>
                 )}
-            </motion.button>
+            </Motion.button>
         </div>
     );
 };

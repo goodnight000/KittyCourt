@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion as Motion } from 'framer-motion';
 import { CheckCircle, Clock, ArrowRight, Star } from 'lucide-react';
 import { useI18n } from '../../i18n';
+import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 
 const ResolutionSelectPage = ({
     resolutions = [],
@@ -18,8 +19,10 @@ const ResolutionSelectPage = ({
     hybridPending = false
 }) => {
     const { t } = useI18n();
+    const prefersReducedMotion = usePrefersReducedMotion();
     const displayPartnerName = partnerName || t('common.yourPartner');
     const displayMyName = myName || t('common.you');
+    const entryTransition = prefersReducedMotion ? { duration: 0.16 } : undefined;
     const isMismatch = mode === 'mismatch';
     const [pendingPick, setPendingPick] = useState(null);
     const optionLabels = ['A', 'B', 'C'].map((label) => t('court.resolution.optionLabel', { label }));
@@ -40,6 +43,7 @@ const ResolutionSelectPage = ({
 
     useEffect(() => {
         if (isMismatch) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setPendingPick(mismatchPick || null);
             return;
         }
@@ -65,16 +69,6 @@ const ResolutionSelectPage = ({
         if (!pendingPick) return t('court.resolution.confirm.selectPlan');
         return t('court.resolution.confirm.confirmMine');
     }, [isMismatch, pendingPick, mismatchPick, displayPartnerName, isMismatchChanging, t]);
-
-    if (!resolutions.length) {
-        return (
-            <div className="max-w-md mx-auto glass-card p-4 text-center">
-                <p className="text-sm text-court-brown">{t('court.resolution.loadingTitle')}</p>
-                <p className="text-xs text-court-brownLight mt-1">{t('court.resolution.loadingSubtitle')}</p>
-            </div>
-        );
-    }
-
 
     const renderJourneyMap = () => (
         <div className="sticky top-3 z-10">
@@ -134,23 +128,34 @@ const ResolutionSelectPage = ({
         return options;
     }, [isMismatch, myOriginalPickId, partnerOriginalPickId, hybridResolution, hybridPending, resolutions, t]);
 
+    if (!resolutions.length) {
+        return (
+            <div className="max-w-md mx-auto glass-card p-4 text-center">
+                <p className="text-sm text-court-brown">{t('court.resolution.loadingTitle')}</p>
+                <p className="text-xs text-court-brownLight mt-1">{t('court.resolution.loadingSubtitle')}</p>
+            </div>
+        );
+    }
+
     const renderResolutionCard = (resolution, selected, onSelect, badge, disabled = false) => {
         const description = resolution.combinedDescription || resolution.description;
         return (
-            <motion.div
+            <Motion.div
                 key={resolution.id}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{
                     opacity: 1,
                     y: 0,
-                    scale: selected ? 1.02 : 1
+                    scale: selected && !prefersReducedMotion ? 1.02 : 1
                 }}
                 transition={{
-                    scale: { type: 'spring', stiffness: 400, damping: 25 }
+                    scale: prefersReducedMotion ? { duration: 0.16 } : { type: 'spring', stiffness: 400, damping: 25 }
                 }}
-                whileTap={!disabled ? { scale: 0.98 } : undefined}
+                whileTap={!disabled && !prefersReducedMotion ? { scale: 0.98 } : undefined}
                 className={`glass-card p-4 space-y-3 border-2 relative overflow-hidden cursor-pointer ${
-                    selected ? 'border-green-500/80 bg-white animate-glow-green' : 'border-court-gold/15 bg-white/85'
+                    selected
+                        ? `border-green-500/80 bg-white ${prefersReducedMotion ? '' : 'animate-glow-green'}`
+                        : 'border-court-gold/15 bg-white/85'
                 } ${disabled ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
                 <div
@@ -177,20 +182,22 @@ const ResolutionSelectPage = ({
                             </div>
                         </div>
                         {selected && (
-                            <motion.div
+                            <Motion.div
                                 initial={{ scale: 0, opacity: 0 }}
                                 animate={{ scale: 1, opacity: 1 }}
-                                transition={{
-                                    type: 'spring',
-                                    stiffness: 500,
-                                    damping: 15,
-                                    delay: 0.05
-                                }}
+                                transition={prefersReducedMotion
+                                    ? { duration: 0.16 }
+                                    : {
+                                        type: 'spring',
+                                        stiffness: 500,
+                                        damping: 15,
+                                        delay: 0.05
+                                    }}
                                 className="flex items-center gap-1 text-xs font-bold text-green-600"
                             >
                                 <CheckCircle className="w-4 h-4" />
                                 {t('court.resolution.selected')}
-                            </motion.div>
+                            </Motion.div>
                         )}
                     </div>
                     <p className="text-sm text-court-brown leading-relaxed">
@@ -200,7 +207,7 @@ const ResolutionSelectPage = ({
                         {resolution.rationale}
                     </p>
                 </button>
-            </motion.div>
+            </Motion.div>
         );
     };
 
@@ -209,22 +216,30 @@ const ResolutionSelectPage = ({
     if (mode === 'waiting') {
         return (
             <div className="max-w-2xl mx-auto space-y-5 pb-6 relative">
-                <motion.div
-                    aria-hidden
-                    animate={{ opacity: [0.25, 0.45, 0.25], y: [0, -6, 0] }}
-                    transition={{ duration: 5.5, repeat: Infinity, ease: 'easeInOut' }}
-                    className="absolute -top-12 -right-8 w-32 h-32 rounded-full bg-court-gold/15 blur-2xl pointer-events-none"
-                />
+                {prefersReducedMotion ? (
+                    <div
+                        aria-hidden
+                        className="absolute -top-12 -right-8 w-32 h-32 rounded-full bg-court-gold/12 blur-xl pointer-events-none"
+                    />
+                ) : (
+                    <Motion.div
+                        aria-hidden
+                        animate={{ opacity: [0.25, 0.45, 0.25], y: [0, -6, 0] }}
+                        transition={{ duration: 5.5, repeat: Infinity, ease: 'easeInOut' }}
+                        className="absolute -top-12 -right-8 w-32 h-32 rounded-full bg-court-gold/15 blur-xl pointer-events-none"
+                    />
+                )}
                 {renderJourneyMap()}
-                <motion.div
+                <Motion.div
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
+                    transition={entryTransition}
                     className="glass-card p-5 bg-gradient-to-br from-court-ivory via-white/95 to-court-tan/40 text-center relative overflow-hidden border border-court-gold/15"
                 >
                     <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-court-gold/60 to-transparent" />
                     <h2 className="text-lg font-bold text-court-brown">{t('court.resolution.waiting.title')}</h2>
                     <p className="text-sm text-court-brownLight">{t('court.resolution.waiting.subtitle', { name: displayPartnerName })}</p>
-                </motion.div>
+                </Motion.div>
                 {myResolution && renderResolutionCard(myResolution, true, null, t('court.resolution.waiting.badge'), true)}
             </div>
         );
@@ -248,23 +263,39 @@ const ResolutionSelectPage = ({
 
     return (
         <div className="max-w-2xl mx-auto space-y-5 pb-6 relative">
-            <motion.div
-                aria-hidden
-                animate={{ opacity: [0.2, 0.4, 0.2], scale: [1, 1.05, 1] }}
-                transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
-                className="absolute -top-10 -left-10 w-32 h-32 rounded-full bg-mint-200/20 blur-2xl pointer-events-none"
-            />
-            <motion.div
-                aria-hidden
-                animate={{ opacity: [0.25, 0.45, 0.25], y: [0, -6, 0] }}
-                transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
-                className="absolute top-1/3 -right-10 w-36 h-36 rounded-full bg-court-gold/15 blur-2xl pointer-events-none"
-            />
+            {prefersReducedMotion ? (
+                <>
+                    <div
+                        aria-hidden
+                        className="absolute -top-10 -left-10 w-32 h-32 rounded-full bg-mint-200/16 blur-xl pointer-events-none"
+                    />
+                    <div
+                        aria-hidden
+                        className="absolute top-1/3 -right-10 w-36 h-36 rounded-full bg-court-gold/12 blur-xl pointer-events-none"
+                    />
+                </>
+            ) : (
+                <>
+                    <Motion.div
+                        aria-hidden
+                        animate={{ opacity: [0.2, 0.4, 0.2], scale: [1, 1.05, 1] }}
+                        transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+                        className="absolute -top-10 -left-10 w-32 h-32 rounded-full bg-mint-200/20 blur-xl pointer-events-none"
+                    />
+                    <Motion.div
+                        aria-hidden
+                        animate={{ opacity: [0.25, 0.45, 0.25], y: [0, -6, 0] }}
+                        transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
+                        className="absolute top-1/3 -right-10 w-36 h-36 rounded-full bg-court-gold/15 blur-xl pointer-events-none"
+                    />
+                </>
+            )}
             {renderJourneyMap()}
 
-            <motion.div
+            <Motion.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
+                transition={entryTransition}
                 className="glass-card p-5 bg-gradient-to-br from-court-ivory via-white/95 to-court-tan/40 relative overflow-hidden border border-court-gold/15"
             >
                 <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-court-gold/70 via-court-tan/40 to-transparent" />
@@ -289,13 +320,13 @@ const ResolutionSelectPage = ({
                         </div>
                     </div>
                 </div>
-            </motion.div>
+            </Motion.div>
 
             {isMismatch && (
-                <motion.div
+                <Motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.05 }}
+                    transition={prefersReducedMotion ? entryTransition : { delay: 0.05 }}
                     className="glass-card p-4 space-y-2 border-l-4 border-court-gold/50 relative overflow-hidden bg-white/80"
                 >
                     <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-court-gold/60 to-transparent" />
@@ -305,14 +336,14 @@ const ResolutionSelectPage = ({
                     <p className="text-xs text-court-brownLight">
                         {t('court.resolution.mismatch.hint')}
                     </p>
-                </motion.div>
+                </Motion.div>
             )}
 
             {isMismatch && mismatchPick && !isMismatchChanging && (
-                <motion.div
+                <Motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.08 }}
+                    transition={prefersReducedMotion ? entryTransition : { delay: 0.08 }}
                     className="glass-card p-4 border border-court-tan/30 bg-white/85 flex items-center gap-3 relative overflow-hidden"
                 >
                     <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-green-500/60 to-transparent" />
@@ -323,7 +354,7 @@ const ResolutionSelectPage = ({
                         <p className="text-sm font-semibold text-court-brown">{t('court.resolution.mismatch.lockedTitle')}</p>
                         <p className="text-xs text-court-brownLight">{t('court.resolution.mismatch.lockedSubtitle', { name: displayPartnerName })}</p>
                     </div>
-                </motion.div>
+                </Motion.div>
             )}
 
             <div className="space-y-4">
@@ -351,15 +382,15 @@ const ResolutionSelectPage = ({
                         {t('court.resolution.selectionHint')}
                     </div>
                 )}
-                <motion.button
-                    whileHover={{ scale: canConfirm ? 1.01 : 1 }}
-                    whileTap={{ scale: canConfirm ? 0.98 : 1 }}
+                <Motion.button
+                    whileHover={!prefersReducedMotion ? { scale: canConfirm ? 1.01 : 1 } : undefined}
+                    whileTap={!prefersReducedMotion ? { scale: canConfirm ? 0.98 : 1 } : undefined}
                     onClick={() => onConfirm?.(pendingPick)}
                     disabled={!canConfirm}
                     className="court-btn-primary w-full disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                     {isSubmitting ? (
-                        <motion.div
+                        <Motion.div
                             animate={{ rotate: 360 }}
                             transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
                             className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
@@ -370,7 +401,7 @@ const ResolutionSelectPage = ({
                             {confirmLabel}
                         </>
                     )}
-                </motion.button>
+                </Motion.button>
             </div>
         </div>
     );

@@ -97,6 +97,23 @@ const CalendarGrid = memo(({
         return map;
     }, [events]);
 
+    const eventMetaByDate = useMemo(() => {
+        const meta = new Map();
+        for (const [key, dayEvents] of eventsByDate.entries()) {
+            let sharedCount = 0;
+            let secretCount = 0;
+            dayEvents.forEach((event) => {
+                if (event.isSecret) {
+                    secretCount += 1;
+                } else {
+                    sharedCount += 1;
+                }
+            });
+            meta.set(key, { sharedCount, secretCount, totalCount: dayEvents.length });
+        }
+        return meta;
+    }, [eventsByDate]);
+
     // Compute today's date key once (not 42 times)
     const todayKey = useMemo(() => formatDateKey(new Date()), []);
 
@@ -156,9 +173,10 @@ const CalendarGrid = memo(({
                     {days.map((dayInfo, index) => {
                         const dateKey = formatDateKey(dayInfo.date);
                         const dayEvents = eventsByDate.get(dateKey) || [];
-                        const sharedCount = dayEvents.filter(e => !e.isSecret).length;
-                        const secretCount = dayEvents.filter(e => e.isSecret).length;
-                        const hasEvents = dayEvents.length > 0;
+                        const dayMeta = eventMetaByDate.get(dateKey) || { sharedCount: 0, secretCount: 0, totalCount: 0 };
+                        const sharedCount = dayMeta.sharedCount;
+                        const secretCount = dayMeta.secretCount;
+                        const hasEvents = dayMeta.totalCount > 0;
                         const hasSharedEvents = sharedCount > 0;
                         const hasSecretEvents = secretCount > 0;
                         const today = dateKey === todayKey;
@@ -168,9 +186,9 @@ const CalendarGrid = memo(({
                             day: 'numeric',
                             year: 'numeric'
                         });
-                        const eventCountLabel = dayEvents.length === 1
+                        const eventCountLabel = dayMeta.totalCount === 1
                             ? t('calendar.eventCount.one')
-                            : t('calendar.eventCount.other', { count: dayEvents.length });
+                            : t('calendar.eventCount.other', { count: dayMeta.totalCount });
 
                         // Frame class with gradients and shadows
                         const frameClass = today
@@ -232,9 +250,9 @@ const CalendarGrid = memo(({
                                             {hasSecretEvents && (
                                                 <span className="w-1.5 h-1.5 rounded-full shadow-sm bg-gradient-to-br from-indigo-600 to-violet-700" />
                                             )}
-                                            {dayEvents.length > 1 && (
+                                            {dayMeta.totalCount > 1 && (
                                                 <span className="text-[10px] font-extrabold tabular-nums text-neutral-500">
-                                                    {dayEvents.length}
+                                                    {dayMeta.totalCount}
                                                 </span>
                                             )}
                                         </div>

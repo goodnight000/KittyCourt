@@ -50,8 +50,8 @@ const LevelProgress = ({
                 transition={{ duration: 0.3 }}
             >
                 <div className="absolute inset-0 pointer-events-none">
-                    <div className="absolute -top-10 -right-6 h-24 w-24 rounded-full bg-amber-200/50 blur-2xl" />
-                    <div className="absolute -bottom-12 -left-6 h-24 w-24 rounded-full bg-rose-200/40 blur-2xl" />
+                    <div className="absolute -top-10 -right-6 h-24 w-24 rounded-full bg-amber-200/50 blur-xl" />
+                    <div className="absolute -bottom-12 -left-6 h-24 w-24 rounded-full bg-rose-200/40 blur-xl" />
                     <div className="absolute inset-0 opacity-30" style={{
                         backgroundImage: 'linear-gradient(120deg, rgba(255,255,255,0.6) 0%, transparent 40%), linear-gradient(0deg, rgba(255,255,255,0.3), transparent 60%)'
                     }} />
@@ -79,9 +79,10 @@ const LevelProgress = ({
                 <div className="relative mt-3 h-2.5 rounded-full bg-white/70 border border-white/80 overflow-hidden">
                     <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.4),transparent_40%)]" />
                     <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${progress}%` }}
+                        initial={false}
+                        animate={{ scaleX: progress / 100 }}
                         transition={{ duration: 0.8, ease: 'easeOut' }}
+                        style={{ transformOrigin: 'left center' }}
                         className="h-full rounded-full bg-[linear-gradient(90deg,#F59E0B_0%,#F97316_45%,#FB7185_100%)] shadow-[0_0_12px_rgba(251,146,60,0.35)]"
                     />
                 </div>
@@ -98,8 +99,8 @@ const LevelProgress = ({
             transition={{ duration: 0.3 }}
         >
             <div className="absolute inset-0 pointer-events-none">
-                <div className="absolute -top-16 -right-10 h-44 w-44 rounded-full bg-amber-200/50 blur-3xl" />
-                <div className="absolute -bottom-20 -left-12 h-48 w-48 rounded-full bg-rose-200/40 blur-3xl" />
+                <div className="absolute -top-16 -right-10 h-44 w-44 rounded-full bg-amber-200/50 blur-2xl" />
+                <div className="absolute -bottom-20 -left-12 h-48 w-48 rounded-full bg-rose-200/40 blur-2xl" />
                 <div className="absolute inset-0 opacity-40" style={{
                     backgroundImage: 'radial-gradient(circle at 20% 0%, rgba(255,255,255,0.6), transparent 55%), radial-gradient(circle at 80% 100%, rgba(255,255,255,0.5), transparent 60%)'
                 }} />
@@ -144,9 +145,10 @@ const LevelProgress = ({
                     <div className="relative h-3 rounded-full bg-white/80 border border-white/80 overflow-hidden">
                         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.5),transparent_40%)]" />
                         <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${progress}%` }}
+                            initial={false}
+                            animate={{ scaleX: progress / 100 }}
                             transition={{ duration: 1, ease: 'easeOut', delay: 0.15 }}
+                            style={{ transformOrigin: 'left center' }}
                             className="h-full rounded-full bg-[linear-gradient(90deg,#FBBF24_0%,#F97316_45%,#FB7185_100%)] shadow-[0_0_18px_rgba(249,115,22,0.35)]"
                         />
                     </div>

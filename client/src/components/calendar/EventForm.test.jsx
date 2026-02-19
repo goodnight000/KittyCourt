@@ -10,7 +10,7 @@ vi.mock('../../i18n', () => ({
 }));
 
 vi.mock('../../utils/helpers', () => ({
-    validateDate: (date) => ({ isValid: true }),
+    validateDate: () => ({ isValid: true }),
 }));
 
 describe('EventForm', () => {
@@ -55,7 +55,7 @@ describe('EventForm', () => {
     });
 
     it('should toggle between shared and secret visibility', () => {
-        const { container } = render(<EventForm {...defaultProps} />);
+        render(<EventForm {...defaultProps} />);
 
         const secretButton = screen.getByText(/secret/i);
         fireEvent.click(secretButton);
@@ -103,7 +103,7 @@ describe('EventForm', () => {
     it('should allow emoji selection', () => {
         render(<EventForm {...defaultProps} />);
 
-        const emojiLabel = screen.getByText(/mark the moment/i);
+        const emojiLabel = screen.getByText(/emojiLabel/i);
         const emojiSection = emojiLabel.parentElement;
         const emojiButtons = emojiSection ? emojiSection.querySelectorAll('button') : [];
 

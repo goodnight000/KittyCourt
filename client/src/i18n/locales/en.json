@@ -1,6 +1,7 @@
 {
   "common": {
     "loadingPause": "Loading Pause...",
+    "loading": "Loading...",
     "you": "You",
     "partner": "Partner",
     "yourPartner": "your partner",
@@ -14,6 +15,9 @@
     "change": "Change",
     "waiting": "Waiting",
     "edit": "Edit",
+    "close": "Close",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
     "cancel": "Cancel",
     "ok": "OK",
     "saveChanges": "Save changes",
@@ -312,6 +316,10 @@
     "plan": {
       "view": "View my plan",
       "help": "Help me plan"
+    },
+    "navigation": {
+      "previousMonth": "Previous month",
+      "nextMonth": "Next month"
     },
     "visibility": {
       "shared": "Shared",
@@ -1040,6 +1048,7 @@
       "unexpected": "An unexpected error occurred. Please try again.",
       "googleFailed": "Failed to continue with Google.",
       "missingFields": "Please fill in all fields",
+      "invalidEmail": "Please enter a valid email address",
       "passwordsMismatch": "Passwords do not match",
       "passwordTooShort": "Password must be at least 8 characters",
       "signUpFailed": "Failed to create account",
@@ -2066,7 +2075,8 @@
       },
       "validation": {
         "title": "Missing info",
-        "message": "Enter both email and password."
+        "message": "Enter both email and password.",
+        "invalidEmail": "Enter a valid email address."
       },
       "generic": {
         "title": "Sign in failed",
@@ -2090,6 +2100,7 @@
     },
     "errors": {
       "missingFields": "Please fill in all fields.",
+      "invalidEmail": "Please enter a valid email address.",
       "mismatch": "Passwords do not match.",
       "requirements": "Password does not meet requirements.",
       "alreadyRegistered": "An account already exists with this email.",

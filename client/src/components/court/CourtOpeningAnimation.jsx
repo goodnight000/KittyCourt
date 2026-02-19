@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Gavel } from 'lucide-react';
 import { useI18n } from '../../i18n';
+import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 
 /**
  * CourtOpeningAnimation - Plays when both partners join court
@@ -9,6 +10,7 @@ import { useI18n } from '../../i18n';
  */
 const CourtOpeningAnimation = ({ onComplete, judgeAvatar }) => {
     const { t } = useI18n();
+    const prefersReducedMotion = usePrefersReducedMotion();
     const avatarSrc = judgeAvatar || '/assets/avatars/judge_whiskers.png';
     useEffect(() => {
         const timer = setTimeout(onComplete, 4200);
@@ -24,15 +26,15 @@ const CourtOpeningAnimation = ({ onComplete, judgeAvatar }) => {
         >
             <motion.div
                 aria-hidden
-                animate={{ opacity: [0.2, 0.4, 0.2], scale: [1, 1.04, 1] }}
-                transition={{ duration: 4.2, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute -top-16 -right-8 w-72 h-72 rounded-full bg-court-gold/20 blur-3xl"
+                animate={prefersReducedMotion ? undefined : { opacity: [0.2, 0.4, 0.2], scale: [1, 1.04, 1] }}
+                transition={prefersReducedMotion ? undefined : { duration: 4.2, repeat: Infinity, ease: "easeInOut" }}
+                className="absolute -top-16 -right-8 w-72 h-72 rounded-full bg-court-gold/20 blur-2xl"
             />
             <motion.div
                 aria-hidden
-                animate={{ opacity: [0.15, 0.35, 0.15], y: [0, -8, 0] }}
-                transition={{ duration: 5.4, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute -bottom-24 -left-12 w-80 h-80 rounded-full bg-lavender-200/20 blur-3xl"
+                animate={prefersReducedMotion ? undefined : { opacity: [0.15, 0.35, 0.15], y: [0, -8, 0] }}
+                transition={prefersReducedMotion ? undefined : { duration: 5.4, repeat: Infinity, ease: "easeInOut" }}
+                className="absolute -bottom-24 -left-12 w-80 h-80 rounded-full bg-lavender-200/20 blur-2xl"
             />
 
             {/* Curtains */}
@@ -60,19 +62,19 @@ const CourtOpeningAnimation = ({ onComplete, judgeAvatar }) => {
                     className="relative mx-auto w-36 h-36"
                 >
                     <motion.div
-                        animate={{ rotate: [0, 4, -4, 0] }}
-                        transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}
+                        animate={prefersReducedMotion ? undefined : { rotate: [0, 4, -4, 0] }}
+                        transition={prefersReducedMotion ? undefined : { duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}
                         className="absolute inset-0 rounded-[32px] bg-gradient-to-br from-court-gold/40 via-court-gold/15 to-transparent border border-court-gold/30 shadow-2xl"
                     />
                     <motion.div
-                        animate={{ scale: [0.9, 1.05, 0.9] }}
-                        transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
+                        animate={prefersReducedMotion ? undefined : { scale: [0.9, 1.05, 0.9] }}
+                        transition={prefersReducedMotion ? undefined : { duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
                         className="absolute -inset-3 rounded-[40px] border border-court-gold/30 opacity-60"
                     />
                     <motion.div
                         initial={{ rotate: -20, y: -10 }}
-                        animate={{ rotate: [0, -12, 0], y: [0, -6, 0] }}
-                        transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+                        animate={prefersReducedMotion ? { rotate: 0, y: 0 } : { rotate: [0, -12, 0], y: [0, -6, 0] }}
+                        transition={prefersReducedMotion ? { duration: 0.2 } : { duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
                         className="relative w-36 h-36 rounded-[32px] bg-gradient-to-br from-court-gold to-court-goldDark flex items-center justify-center shadow-2xl"
                     >
                         <Gavel className="w-16 h-16 text-white" />
@@ -104,8 +106,8 @@ const CourtOpeningAnimation = ({ onComplete, judgeAvatar }) => {
                     className="mt-4"
                 >
                     <motion.div
-                        animate={{ y: [0, -6, 0] }}
-                        transition={{ duration: 2, repeat: Infinity, delay: 2.6 }}
+                        animate={prefersReducedMotion ? undefined : { y: [0, -6, 0] }}
+                        transition={prefersReducedMotion ? undefined : { duration: 2, repeat: Infinity, delay: 2.6 }}
                         className="w-36 h-36 rounded-full mx-auto overflow-hidden shadow-2xl border-4 border-court-gold"
                     >
                         <img

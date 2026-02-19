@@ -204,3 +204,15 @@ export function formatDate(dateInput, options = {}) {
     const resolvedLocale = locale || 'en-US';
     return date.toLocaleDateString(resolvedLocale, { ...defaultOptions, ...formatOptions });
 }
+
+/**
+ * Basic email format validation used by auth forms
+ */
+export function validateEmail(emailInput) {
+    const email = (emailInput || '').trim();
+    if (!email) {
+        return false;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+}

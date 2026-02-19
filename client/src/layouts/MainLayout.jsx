@@ -1,7 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef } from 'react';
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { Gavel, Home, Calendar, User, Cat } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion as Motion, AnimatePresence } from 'framer-motion';
 import useAppStore from '../store/useAppStore';
 import useCourtStore, { VIEW_PHASE } from '../store/useCourtStore';
 import useAuthStore from '../store/useAuthStore';
@@ -16,7 +16,7 @@ import LevelUpOverlay from '../components/LevelUpOverlay';
 import { useI18n } from '../i18n';
 
 const MainLayout = () => {
-    const { currentUser, users, fetchUsers, switchUser } = useAppStore();
+    const { currentUser, fetchUsers } = useAppStore();
     const { fetchState, myViewPhase, hasUnreadVerdict } = useCourtStore();
     const { user: authUser } = useAuthStore();
     const { hasPartner } = usePartnerStore();
@@ -57,7 +57,7 @@ const MainLayout = () => {
         }, 10000);
 
         return () => clearInterval(interval);
-    }, [authUser?.id]);
+    }, [authUser?.id, fetchState, fetchUsers]);
 
     useEffect(() => {
         if (!authUser?.id || !hasPartner) return;
@@ -79,18 +79,19 @@ const MainLayout = () => {
 
     if (!currentUser) return (
         <div className="min-h-screen flex items-center justify-center px-6">
-            <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
+            <Motion.div
+                initial={{ opacity: 0, scale: prefersReducedMotion ? 1 : 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
+                transition={prefersReducedMotion ? { duration: 0.1 } : undefined}
                 className="text-center space-y-4"
             >
-                <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                <Motion.div
+                    animate={prefersReducedMotion ? undefined : { rotate: 360 }}
+                    transition={prefersReducedMotion ? undefined : { duration: 2, repeat: Infinity, ease: "linear" }}
                     className="w-12 h-12 mx-auto rounded-full border-3 border-court-tan border-t-court-gold"
                 />
                 <p className="text-court-brownLight font-medium">{t('common.loadingPause')}</p>
-            </motion.div>
+            </Motion.div>
         </div>
     );
 
@@ -103,27 +104,32 @@ const MainLayout = () => {
                     style={contentBottomPadding ? { paddingBottom: contentBottomPadding } : undefined}
                 >
                     <AnimatePresence mode="wait">
-                        <motion.div
+                        <Motion.div
                             key={location.pathname}
-                            initial={{ opacity: 0, y: 10 }}
+                            initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 10 }}
                             animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -10 }}
-                            transition={{ duration: 0.2, ease: "easeOut" }}
+                            exit={{ opacity: 0, y: prefersReducedMotion ? 0 : -10 }}
+                            transition={{ duration: prefersReducedMotion ? 0.1 : 0.2, ease: "easeOut" }}
                         >
                             <Outlet />
-                        </motion.div>
+                        </Motion.div>
                     </AnimatePresence>
                 </div>
             </main>
 
             {/* Bottom Tab Bar */}
-            <motion.nav
+            <Motion.nav
                 initial={{ y: prefersReducedMotion ? 0 : 100 }}
                 animate={{ y: dockVisible ? 0 : 120, opacity: dockVisible ? 1 : 0 }}
                 transition={prefersReducedMotion
                     ? { duration: 0.1 }
                     : { delay: 0.1, type: "spring", stiffness: 300, damping: 30 }}
-                className="fixed bottom-0 left-1/2 -translate-x-1/2 z-40 w-full max-w-lg bg-white/80 backdrop-blur-xl border-t border-court-tan/30 shadow-soft-lg pb-2 rounded-t-2xl"
+                className={clsx(
+                    "fixed bottom-0 left-1/2 -translate-x-1/2 z-40 w-full max-w-lg border-t border-court-tan/30 shadow-soft-lg pb-2 rounded-t-2xl",
+                    prefersReducedMotion
+                        ? "bg-white/95 backdrop-blur-none"
+                        : "bg-white/82 backdrop-blur-md"
+                )}
                 style={{ pointerEvents: dockVisible ? 'auto' : 'none' }}
             >
                 <div className="flex items-center justify-around h-18 px-2">
@@ -138,7 +144,7 @@ const MainLayout = () => {
                     <TabItem to="/calendar" icon={<Calendar size={26} />} label={t('nav.calendar')} prefersReducedMotion={prefersReducedMotion} />
                     <TabItem to="/profile" icon={<User size={26} />} label={t('nav.profile')} prefersReducedMotion={prefersReducedMotion} />
                 </div>
-            </motion.nav>
+            </Motion.nav>
 
             <LevelUpOverlay
                 levelUp={activeLevelUp}
@@ -169,7 +175,7 @@ const TabItem = ({ to, icon, label, isAlerting, prefersReducedMotion }) => (
             <div className="relative flex flex-col items-center">
                 {/* Bouncy Bubble Indicator */}
                 {isActive && (
-                    <motion.div
+                    <Motion.div
                         layoutId="activeDockBubble"
                         className="absolute -inset-1 translate-y-1 rounded-3xl border border-court-gold/35 bg-gradient-to-br from-court-goldLight via-court-gold/35 to-court-tan pointer-events-none"
                         style={{ zIndex: 0 }}
@@ -185,7 +191,7 @@ const TabItem = ({ to, icon, label, isAlerting, prefersReducedMotion }) => (
                     >
                         <span className="absolute inset-0 rounded-3xl bg-gradient-to-b from-white/45 via-white/10 to-transparent opacity-60" />
                         <span className="absolute top-1 left-2 right-2 h-2 rounded-full bg-white/60 blur-[1px] opacity-50" />
-                    </motion.div>
+                    </Motion.div>
                 )}
 
                 {/* Icon container */}
@@ -195,7 +201,7 @@ const TabItem = ({ to, icon, label, isAlerting, prefersReducedMotion }) => (
                         ? ""
                         : "active:bg-court-cream/50"
                 )}>
-                    <motion.span
+                    <Motion.span
                         className="relative z-10"
                         animate={isAlerting && !prefersReducedMotion ? {
                             rotate: [0, -15, 15, -15, 15, 0],
@@ -215,7 +221,7 @@ const TabItem = ({ to, icon, label, isAlerting, prefersReducedMotion }) => (
                                 !prefersReducedMotion && "animate-pulse"
                             )} />
                         )}
-                    </motion.span>
+                    </Motion.span>
                 </div>
                 <span className={clsx(
                     "relative z-10 text-[10px] font-bold -mt-1",

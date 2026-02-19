@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
+import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 
 /**
  * Reusable modal wrapper with animation and accessibility
@@ -26,6 +27,7 @@ export default function Modal({
   showCloseButton = true,
   closeOnBackdropClick = true
 }) {
+  const prefersReducedMotion = usePrefersReducedMotion()
   const sizeClasses = {
     sm: 'max-w-md',
     md: 'max-w-lg',
@@ -68,10 +70,10 @@ export default function Modal({
             onKeyDown={handleKeyDown}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              transition={{ duration: 0.2 }}
+              initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95, y: 20 }}
+              animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, scale: 1, y: 0 }}
+              exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ duration: prefersReducedMotion ? 0.12 : 0.2 }}
               className={`glass-card p-6 w-full ${sizeClasses[size]} pointer-events-auto relative max-h-[90dvh] overflow-y-auto`}
               onClick={(e) => e.stopPropagation()}
             >

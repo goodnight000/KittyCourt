@@ -35,7 +35,22 @@ const interpolate = (template, params) => {
   })
 }
 
-const translate = (language, key, params) => {
+const resolveTranslationArgs = (paramsOrFallback, maybeParams) => {
+  if (typeof paramsOrFallback === 'string') {
+    return {
+      fallback: paramsOrFallback,
+      params: maybeParams
+    }
+  }
+
+  return {
+    fallback: null,
+    params: paramsOrFallback
+  }
+}
+
+const translate = (language, key, paramsOrFallback, maybeParams) => {
+  const { fallback, params } = resolveTranslationArgs(paramsOrFallback, maybeParams)
   const normalized = normalizeLanguage(language)
     || RESOLVED_SUPPORTED_LANGUAGES.find((lang) => lang.toLowerCase() === String(language || '').toLowerCase())
     || DEFAULT_LANGUAGE
@@ -43,6 +58,7 @@ const translate = (language, key, params) => {
   const fallbackDictionary = TRANSLATIONS[DEFAULT_LANGUAGE]
   const raw = getNestedValue(activeDictionary, key)
     ?? getNestedValue(fallbackDictionary, key)
+    ?? fallback
     ?? key
   return typeof raw === 'string' ? interpolate(raw, params) : raw
 }
@@ -52,7 +68,9 @@ const useI18n = () => {
   const setPreferredLanguage = useAuthStore((state) => state.setPreferredLanguage)
   const language = normalizeLanguage(preferredLanguage) || DEFAULT_LANGUAGE
 
-  const t = useCallback((key, params) => translate(language, key, params), [language])
+  const t = useCallback((key, paramsOrFallback, maybeParams) => (
+    translate(language, key, paramsOrFallback, maybeParams)
+  ), [language])
 
   useEffect(() => {
     document.documentElement.lang = language

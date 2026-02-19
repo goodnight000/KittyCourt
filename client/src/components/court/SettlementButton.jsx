@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence, useMotionValue, useTransform, useSpring } from 'framer-motion';
+import { motion as Motion, AnimatePresence, useMotionValue, useTransform, useSpring } from 'framer-motion';
 import { Handshake, Heart, X } from 'lucide-react';
 import useCourtStore from '../../store/useCourtStore';
 import useAuthStore from '../../store/useAuthStore';
 import usePartnerStore from '../../store/usePartnerStore';
 import { useI18n } from '../../i18n';
 import ButtonLoader from '../shared/ButtonLoader';
+import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 
 /**
  * Settlement Button Component
@@ -19,15 +20,23 @@ export default function SettlementButton({ className = '' }) {
     const [isLoading, setIsLoading] = useState(false);
     const [showConfirmation, setShowConfirmation] = useState(false);
     const { t } = useI18n();
+    const prefersReducedMotion = usePrefersReducedMotion();
 
     // Single animated value driving the entire modal transition (blur, opacity, scale)
     const animationProgress = useMotionValue(0);
-    const springProgress = useSpring(animationProgress, { stiffness: 400, damping: 30, mass: 0.8 });
+    const springProgress = useSpring(
+        animationProgress,
+        prefersReducedMotion
+            ? { stiffness: 480, damping: 56, mass: 0.9 }
+            : { stiffness: 400, damping: 30, mass: 0.8 }
+    );
 
     // Derived values from the single progress
     const popupOpacity = useTransform(springProgress, [0, 1], [0, 1]);
-    const popupScale = useTransform(springProgress, [0, 1], [0.92, 1]);
-    const overlayAlpha = useTransform(springProgress, [0, 1], [0, 0.03]);
+    const popupScale = useTransform(springProgress, [0, 1], prefersReducedMotion ? [1, 1] : [0.94, 1]);
+    const overlayAlpha = useTransform(springProgress, [0, 1], [0, prefersReducedMotion ? 0.02 : 0.03]);
+    const glassFilter = prefersReducedMotion ? 'blur(8px) saturate(120%)' : 'blur(14px) saturate(130%)';
+    const noticeFilter = prefersReducedMotion ? 'blur(6px) saturate(120%)' : 'blur(10px) saturate(130%)';
 
     // Drive animation when showConfirmation changes
     useEffect(() => {
@@ -99,10 +108,10 @@ export default function SettlementButton({ className = '' }) {
 
     if (partnerWantsToSettle && !iHaveRequested) {
         return (
-            <motion.div
+            <Motion.div
                 initial={{ opacity: 0, y: -10, scale: 0.96 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ type: 'spring', stiffness: 400, damping: 28 }}
+                transition={prefersReducedMotion ? { duration: 0.16 } : { type: 'spring', stiffness: 400, damping: 28 }}
                 className={`relative overflow-hidden ${className}`}
                 style={{
                     borderRadius: '24px',
@@ -117,8 +126,8 @@ export default function SettlementButton({ className = '' }) {
                     className="absolute inset-0 pointer-events-none"
                     style={{
                         borderRadius: '24px',
-                        backdropFilter: 'blur(40px) saturate(150%)',
-                        WebkitBackdropFilter: 'blur(40px) saturate(150%)',
+                        backdropFilter: glassFilter,
+                        WebkitBackdropFilter: glassFilter,
                     }}
                 />
 
@@ -203,21 +212,21 @@ export default function SettlementButton({ className = '' }) {
                         </button>
                     </div>
                 </div>
-            </motion.div>
+            </Motion.div>
         );
     }
 
     // If I already requested, show waiting state
     if (iHaveRequested) {
         return (
-            <motion.div
+            <Motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 className={`inline-flex items-center gap-2 rounded-full border border-court-gold/20 bg-court-cream/80 px-3 py-1 text-court-brown ${className}`}
             >
                 <Handshake className="w-4 h-4" />
                 <span className="text-sm">{t('court.settlement.waiting', { name: partnerName })}</span>
-            </motion.div>
+            </Motion.div>
         );
     }
 
@@ -225,17 +234,18 @@ export default function SettlementButton({ className = '' }) {
     return (
         <>
             {settlementDeclinedNotice && (
-                <motion.div
+                <Motion.div
                     initial={{ opacity: 0, y: -6 }}
                     animate={{ opacity: 1, y: 0 }}
+                    transition={prefersReducedMotion ? { duration: 0.12 } : undefined}
                     className={`relative overflow-hidden ${className}`}
                     style={{ borderRadius: '18px' }}
                 >
                     <div
                         className="absolute inset-0 pointer-events-none"
                         style={{
-                            backdropFilter: 'blur(18px) saturate(140%)',
-                            WebkitBackdropFilter: 'blur(18px) saturate(140%)',
+                            backdropFilter: noticeFilter,
+                            WebkitBackdropFilter: noticeFilter,
                             background: 'rgba(255, 255, 255, 0.22)'
                         }}
                     />
@@ -255,7 +265,7 @@ export default function SettlementButton({ className = '' }) {
                             <X className="w-4 h-4" style={{ color: 'rgba(60, 45, 40, 0.75)' }} />
                         </button>
                     </div>
-                </motion.div>
+                </Motion.div>
             )}
 
             <button
@@ -269,16 +279,16 @@ export default function SettlementButton({ className = '' }) {
             {/* Confirmation Modal - Apple Liquid Glass with Synchronized Animation */}
             <AnimatePresence>
                 {showConfirmation && (
-                    <motion.div
+                    <Motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        transition={{ duration: 0.2 }}
+                        transition={{ duration: prefersReducedMotion ? 0.12 : 0.2 }}
                         className="fixed inset-0 z-50 flex items-center justify-center p-4"
                         onClick={() => setShowConfirmation(false)}
                     >
                         {/* Light overlay (barely visible) - animated alpha */}
-                        <motion.div
+                        <Motion.div
                             className="absolute inset-0 pointer-events-none"
                             style={{
                                 backgroundColor: 'black',
@@ -287,7 +297,7 @@ export default function SettlementButton({ className = '' }) {
                         />
 
                         {/* Popup Container */}
-                        <motion.div
+                        <Motion.div
                             onClick={(e) => e.stopPropagation()}
                             className="relative max-w-sm w-full overflow-hidden"
                             style={{
@@ -296,16 +306,17 @@ export default function SettlementButton({ className = '' }) {
                                 scale: popupScale,
                                 boxShadow: '0 25px 60px rgba(0, 0, 0, 0.18), 0 10px 30px rgba(0, 0, 0, 0.10)',
                             }}
+                            transition={prefersReducedMotion ? { duration: 0.12 } : undefined}
                         >
                             {/* ═══ GLASS MATERIAL LAYERS ═══ */}
 
                             {/* Layer 1: True Background Blur (opacity animated in sync with popup) */}
-                            <motion.div
+                            <Motion.div
                                 className="absolute inset-0 pointer-events-none"
                                 style={{
                                     borderRadius: '28px',
-                                    backdropFilter: 'blur(40px) saturate(150%)',
-                                    WebkitBackdropFilter: 'blur(40px) saturate(150%)',
+                                    backdropFilter: glassFilter,
+                                    WebkitBackdropFilter: glassFilter,
                                     opacity: popupOpacity,
                                 }}
                             />
@@ -355,7 +366,7 @@ export default function SettlementButton({ className = '' }) {
                                         style={{
                                             color: 'rgba(80, 60, 55, 0.5)',
                                             background: 'rgba(255, 255, 255, 0.15)',
-                                            backdropFilter: 'blur(8px)',
+                                            backdropFilter: prefersReducedMotion ? 'none' : 'blur(4px)',
                                         }}
                                         onMouseEnter={(e) => {
                                             e.currentTarget.style.background = 'rgba(255, 255, 255, 0.35)';
@@ -418,8 +429,8 @@ export default function SettlementButton({ className = '' }) {
                                     </button>
                                 </div>
                             </div>
-                        </motion.div>
-                    </motion.div>
+                        </Motion.div>
+                    </Motion.div>
                 )}
             </AnimatePresence>
         </>

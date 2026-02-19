@@ -6,7 +6,7 @@ import useAuthStore from '../store/useAuthStore';
 import useOnboardingStore from '../store/useOnboardingStore';
 import useSubscriptionStore from '../store/useSubscriptionStore';
 import useUpsellStore from '../store/useUpsellStore';
-import { validateDate } from '../utils/helpers';
+import { validateDate, validateEmail } from '../utils/helpers';
 import Paywall from '../components/Paywall';
 import { useI18n } from '../i18n';
 import { DEFAULT_LANGUAGE, normalizeLanguage } from '../i18n/languageConfig';
@@ -17,6 +17,7 @@ import AuthStep from '../components/onboarding/AuthStep';
 import ProfileFieldStep from '../components/onboarding/ProfileFieldStep';
 import OptionsStep from '../components/onboarding/OptionsStep';
 import CompleteStep from '../components/onboarding/CompleteStep';
+import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
 
 // Onboarding Steps Configuration
 const ONBOARDING_STEPS = [
@@ -197,6 +198,7 @@ const OnboardingPage = () => {
     const [authError, setAuthError] = useState(null);
     const [authSubmitting, setAuthSubmitting] = useState(false);
     const [emailConfirmationPending, setEmailConfirmationPending] = useState(null);
+    const prefersReducedMotion = usePrefersReducedMotion();
     const logDebug = (...args) => {
         if (import.meta.env.DEV) console.log(...args);
     };
@@ -397,6 +399,12 @@ const OnboardingPage = () => {
             return;
         }
 
+        if (!validateEmail(trimmedEmail)) {
+            setAuthError(t('onboarding.errors.invalidEmail'));
+            setAuthSubmitting(false);
+            return;
+        }
+
         if (password !== confirmPassword) {
             setAuthError(t('onboarding.errors.passwordsMismatch'));
             setAuthSubmitting(false);
@@ -440,14 +448,6 @@ const OnboardingPage = () => {
         } else {
             updateOnboardingData({ [currentStepData.field]: optionId });
         }
-    };
-
-    const isOptionSelected = (optionId) => {
-        const value = onboardingData[currentStepData.field];
-        if (currentStepData.multiSelect) {
-            return (value || []).includes(optionId);
-        }
-        return value === optionId;
     };
 
     const handleLanguageSelect = (languageCode) => {
@@ -623,12 +623,13 @@ const OnboardingPage = () => {
                                     <span className="text-[#8B7019]">{Math.round(progress)}%</span>
                                 </div>
                                 <div className="h-2 bg-white/80 rounded-full overflow-hidden shadow-inner-soft">
-                                        <Motion.div
-                                            initial={{ width: 0 }}
-                                            animate={{ width: `${progress}%` }}
-                                            transition={{ duration: 0.5, ease: "easeOut" }}
-                                            className="h-full rounded-full bg-gradient-to-r from-[#C9A227] via-[#B9911F] to-[#8B7019] shadow-[0_0_8px_rgba(201,162,39,0.35)]"
-                                        />
+                                    <Motion.div
+                                        initial={false}
+                                        animate={{ scaleX: progress / 100 }}
+                                        transition={{ duration: prefersReducedMotion ? 0 : 0.5, ease: "easeOut" }}
+                                        style={{ transformOrigin: 'left center' }}
+                                        className="h-full rounded-full bg-gradient-to-r from-[#C9A227] via-[#B9911F] to-[#8B7019] shadow-[0_0_8px_rgba(201,162,39,0.35)]"
+                                    />
                                 </div>
                             </div>
                         </div>
@@ -678,14 +679,14 @@ const OnboardingPage = () => {
                                 whileTap={{ scale: 0.97 }}
                                 onClick={handleNext}
                                 disabled={!canProceed() || isSubmitting}
-                                className={`flex-1 py-3.5 rounded-2xl font-bold text-white flex items-center justify-center gap-2 transition-all disabled:opacity-50 ${goldButtonBase}`}
+                                className={`flex-1 py-3.5 rounded-2xl font-bold text-white flex items-center justify-center gap-2 transition-[transform,filter,opacity] disabled:opacity-50 ${goldButtonBase}`}
                             >
                                 <span aria-hidden="true" className="absolute inset-0 opacity-60" style={goldButtonShineStyle} />
                                 <span className="relative z-10 flex items-center gap-2">
                                 {isSubmitting ? (
                                     <Motion.div
-                                        animate={{ rotate: 360 }}
-                                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                        animate={prefersReducedMotion ? undefined : { rotate: 360 }}
+                                        transition={prefersReducedMotion ? undefined : { duration: 1, repeat: Infinity, ease: "linear" }}
                                     >
                                         <Sparkles className="w-5 h-5" />
                                     </Motion.div>
@@ -717,8 +718,8 @@ const OnboardingPage = () => {
 
 const OnboardingBackdrop = () => (
     <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute -top-20 -right-20 h-64 w-64 rounded-full bg-amber-200/30 blur-3xl" />
-        <div className="absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-rose-200/25 blur-3xl" />
+        <div className="absolute -top-20 -right-20 h-64 w-64 rounded-full bg-amber-200/30 blur-2xl" />
+        <div className="absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-rose-200/25 blur-2xl" />
     </div>
 );
 

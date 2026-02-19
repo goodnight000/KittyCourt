@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import api from '../services/api';
 import useCacheStore, { CACHE_POLICY, cacheKey } from './useCacheStore';
+import useCourtStore from './useCourtStore';
 import { quotaSafeLocalStorage, sanitizeProfileForStorage } from './quotaSafeStorage';
 import { eventBus, EVENTS } from '../lib/eventBus';
 
@@ -147,22 +148,20 @@ const useAppStore = create(
                     : caseItem.verdict;
 
                 // This updates useCourtStore's session for viewing
-                import('./useCourtStore').then(m => {
-                    m.default.setState({
-                        activeCase: {
-                            id: caseItem.id,
-                            userAInput: caseItem.userAInput,
-                            userAFeelings: caseItem.userAFeelings,
-                            userBInput: caseItem.userBInput,
-                            userBFeelings: caseItem.userBFeelings,
-                            verdict,
-                            allVerdicts: caseItem.allVerdicts || [],
-                            caseTitle: caseItem.caseTitle,
-                            severityLevel: caseItem.severityLevel,
-                            primaryHissTag: caseItem.primaryHissTag,
-                            shortResolution: caseItem.shortResolution
-                        }
-                    });
+                useCourtStore.setState({
+                    activeCase: {
+                        id: caseItem.id,
+                        userAInput: caseItem.userAInput,
+                        userAFeelings: caseItem.userAFeelings,
+                        userBInput: caseItem.userBInput,
+                        userBFeelings: caseItem.userBFeelings,
+                        verdict,
+                        allVerdicts: caseItem.allVerdicts || [],
+                        caseTitle: caseItem.caseTitle,
+                        severityLevel: caseItem.severityLevel,
+                        primaryHissTag: caseItem.primaryHissTag,
+                        shortResolution: caseItem.shortResolution
+                    }
                 });
             },
 

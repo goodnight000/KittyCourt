@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import api from '../services/api';
 import { quotaSafeSessionStorage } from './quotaSafeStorage';
 
 const isOnline = () => typeof navigator !== 'undefined' && navigator.onLine;
@@ -127,6 +128,7 @@ const inflightRequests = new Map();
 const fetchRegistry = new Map();
 const keyListeners = new Map();
 const ACTIVE_WINDOW_MS = 5 * 60 * 1000;
+const CACHE_ACCESS_TOUCH_INTERVAL_MS = 15 * 1000;
 
 const normalizeStaleMs = (ttlMs, staleMs) => {
     if (!Number.isFinite(ttlMs) || ttlMs <= 0) return 0;
@@ -199,16 +201,19 @@ const useCacheStore = create(
                     return null;
                 }
 
-                // Update lastAccessedAt for LRU tracking (non-blocking)
-                set((state) => ({
-                    cache: {
-                        ...state.cache,
-                        [key]: {
-                            ...state.cache[key],
-                            lastAccessedAt: Date.now(),
+                const now = Date.now();
+                if (!entry.lastAccessedAt || now - entry.lastAccessedAt >= CACHE_ACCESS_TOUCH_INTERVAL_MS) {
+                    // Throttle metadata writes to avoid serializing the full cache on every read.
+                    set((state) => ({
+                        cache: {
+                            ...state.cache,
+                            [key]: {
+                                ...state.cache[key],
+                                lastAccessedAt: now,
+                            },
                         },
-                    },
-                }));
+                    }));
+                }
 
                 return entry.data;
             },
@@ -549,8 +554,6 @@ const useCacheStore = create(
                 const { getOrFetch } = get();
 
                 try {
-                    const api = (await import('../services/api')).default;
-
                     const fetches = [
                         // Stats (always fetch - used in profile section)
                         getOrFetch({

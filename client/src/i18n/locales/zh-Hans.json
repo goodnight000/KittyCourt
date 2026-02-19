@@ -1,6 +1,7 @@
 {
   "common": {
     "loadingPause": "正在加载 Pause...",
+    "loading": "加载中...",
     "you": "你",
     "partner": "伴侣",
     "yourPartner": "你的伴侣",
@@ -13,6 +14,9 @@
     "change": "更改",
     "waiting": "等待中",
     "edit": "编辑",
+    "close": "关闭",
+    "showPassword": "显示密码",
+    "hidePassword": "隐藏密码",
     "cancel": "取消",
     "ok": "好的",
     "saveChanges": "保存更改",
@@ -316,6 +320,10 @@
     "plan": {
       "view": "查看我的计划",
       "help": "帮我计划"
+    },
+    "navigation": {
+      "previousMonth": "上个月",
+      "nextMonth": "下个月"
     },
     "visibility": {
       "shared": "共享",
@@ -1044,6 +1052,7 @@
       "unexpected": "发生未知错误，请稍后再试。",
       "googleFailed": "无法使用 Google 继续。",
       "missingFields": "请填写所有字段。",
+      "invalidEmail": "请输入有效的邮箱地址。",
       "passwordsMismatch": "两次密码不一致。",
       "passwordTooShort": "密码至少 8 位。",
       "signUpFailed": "创建账号失败。",
@@ -2070,7 +2079,8 @@
       },
       "validation": {
         "title": "信息不完整",
-        "message": "请输入邮箱和密码。"
+        "message": "请输入邮箱和密码。",
+        "invalidEmail": "请输入有效的邮箱地址。"
       },
       "generic": {
         "title": "登录失败",
@@ -2094,6 +2104,7 @@
     },
     "errors": {
       "missingFields": "请填写所有字段。",
+      "invalidEmail": "请输入有效的邮箱地址。",
       "mismatch": "两次密码不一致。",
       "requirements": "密码未满足要求。",
       "alreadyRegistered": "该邮箱已注册。",

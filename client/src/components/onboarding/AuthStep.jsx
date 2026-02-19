@@ -36,7 +36,7 @@ const AuthStep = ({
             className="space-y-6"
         >
             {authError && (
-                <div className="glass-card p-4 border border-[#E2D6C7] text-[#6B4F3C] text-sm">
+                <div role="alert" className="glass-card p-4 border border-[#E2D6C7] text-[#6B4F3C] text-sm">
                     {authError}
                 </div>
             )}
@@ -62,7 +62,7 @@ const AuthStep = ({
                 <div className="flex-1 h-px bg-neutral-200" />
             </div>
 
-            <form onSubmit={handleEmailSubmit} className="space-y-4">
+            <form onSubmit={handleEmailSubmit} noValidate className="space-y-4">
                 <div className="relative">
                     <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-500" />
                     <input
@@ -71,6 +71,7 @@ const AuthStep = ({
                         onChange={(e) => setAuthEmail(e.target.value)}
                         placeholder={t('onboarding.auth.emailPlaceholder')}
                         className="w-full pl-12 pr-4 py-4 bg-white/90 border border-white/80 rounded-2xl text-neutral-700 text-base placeholder:text-neutral-500 focus:outline-none focus:border-[#D2BC76] focus:ring-2 focus:ring-[#F1E3B6] transition-all shadow-inner-soft"
+                        autoComplete="email"
                         autoFocus
                     />
                 </div>
@@ -83,10 +84,13 @@ const AuthStep = ({
                         onChange={(e) => setAuthPassword(e.target.value)}
                         placeholder={t('onboarding.auth.passwordPlaceholder')}
                         className="w-full pl-12 pr-12 py-4 bg-white/90 border border-white/80 rounded-2xl text-neutral-700 text-base placeholder:text-neutral-500 focus:outline-none focus:border-[#D2BC76] focus:ring-2 focus:ring-[#F1E3B6] transition-all shadow-inner-soft"
+                        autoComplete="new-password"
                     />
                     <button
                         type="button"
                         onClick={() => setAuthShowPassword(!authShowPassword)}
+                        aria-label={authShowPassword ? t('common.hidePassword') : t('common.showPassword')}
+                        title={authShowPassword ? t('common.hidePassword') : t('common.showPassword')}
                         className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-600"
                     >
                         {authShowPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
@@ -101,6 +105,7 @@ const AuthStep = ({
                         onChange={(e) => setAuthConfirmPassword(e.target.value)}
                         placeholder={t('onboarding.auth.confirmPasswordPlaceholder')}
                         className="w-full pl-12 pr-4 py-4 bg-white/90 border border-white/80 rounded-2xl text-neutral-700 text-base placeholder:text-neutral-500 focus:outline-none focus:border-[#D2BC76] focus:ring-2 focus:ring-[#F1E3B6] transition-all shadow-inner-soft"
+                        autoComplete="new-password"
                     />
                 </div>
 

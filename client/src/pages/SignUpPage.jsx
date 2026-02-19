@@ -6,11 +6,14 @@ import useAuthStore from '../store/useAuthStore';
 import { useI18n } from '../i18n';
 import StandardButton from '../components/shared/StandardButton';
 import ButtonLoader from '../components/shared/ButtonLoader';
+import { validateEmail } from '../utils/helpers';
+import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
 
 const SignUpPage = () => {
     const navigate = useNavigate();
     const { t } = useI18n();
     const { signUp, signInWithGoogle } = useAuthStore();
+    const prefersReducedMotion = usePrefersReducedMotion();
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -31,9 +34,16 @@ const SignUpPage = () => {
         e.preventDefault();
         setError('');
         setIsSubmitting(true);
+        const trimmedEmail = email.trim();
 
-        if (!email || !password || !confirmPassword) {
+        if (!trimmedEmail || !password || !confirmPassword) {
             setError(t('signUp.errors.missingFields'));
+            setIsSubmitting(false);
+            return;
+        }
+
+        if (!validateEmail(trimmedEmail)) {
+            setError(t('signUp.errors.invalidEmail'));
             setIsSubmitting(false);
             return;
         }
@@ -50,7 +60,7 @@ const SignUpPage = () => {
             return;
         }
 
-        const { error, needsEmailConfirmation, email: signUpEmail } = await signUp(email, password);
+        const { error, needsEmailConfirmation, email: signUpEmail } = await signUp(trimmedEmail, password);
         setIsSubmitting(false);
         if (error) {
             if (error.message.includes('already registered') || error.status === 422) {
@@ -89,12 +99,13 @@ const SignUpPage = () => {
                 <Motion.div
                     initial={{ scale: 0.8, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
+                    transition={prefersReducedMotion ? { duration: 0.1 } : undefined}
                     className="text-center max-w-md"
                 >
                     <Motion.div
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
-                        transition={{ type: 'spring', delay: 0.2 }}
+                        transition={prefersReducedMotion ? { duration: 0.1 } : { type: 'spring', delay: 0.2 }}
                         className="w-24 h-24 mx-auto mb-6 rounded-full flex items-center justify-center"
                         style={{ background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' }}
                     >
@@ -106,7 +117,7 @@ const SignUpPage = () => {
                     <p className="text-neutral-600 mb-4">
                         {t('signUp.emailConfirmation.message', { email: emailConfirmationPending })}
                     </p>
-                    <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-4 border border-white/50 mb-6">
+                    <div className={`${prefersReducedMotion ? 'bg-white/95' : 'bg-white/82 backdrop-blur-md'} rounded-2xl p-4 border border-white/50 mb-6`}>
                         <p className="text-sm text-neutral-500">
                             {t('signUp.emailConfirmation.hint')}
                         </p>
@@ -129,12 +140,13 @@ const SignUpPage = () => {
                 <Motion.div
                     initial={{ scale: 0.8, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
+                    transition={prefersReducedMotion ? { duration: 0.1 } : undefined}
                     className="text-center"
                 >
                     <Motion.div
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
-                        transition={{ type: 'spring', delay: 0.2 }}
+                        transition={prefersReducedMotion ? { duration: 0.1 } : { type: 'spring', delay: 0.2 }}
                         className="w-24 h-24 mx-auto mb-6 rounded-full flex items-center justify-center"
                         style={{ background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' }}
                     >
@@ -143,8 +155,8 @@ const SignUpPage = () => {
                     <h2 className="text-2xl font-bold text-neutral-800 mb-2">{t('signUp.success.title')}</h2>
                     <p className="text-neutral-500">{t('signUp.success.subtitle')}</p>
                     <Motion.div
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                        animate={prefersReducedMotion ? undefined : { rotate: 360 }}
+                        transition={prefersReducedMotion ? undefined : { duration: 2, repeat: Infinity, ease: "linear" }}
                         className="mt-6"
                     >
                         <Star className="w-6 h-6 text-court-gold mx-auto" />
@@ -159,15 +171,15 @@ const SignUpPage = () => {
             {/* Background Decorations */}
             <div className="fixed inset-0 pointer-events-none overflow-hidden">
                 <Motion.div
-                    animate={{ y: [0, -20, 0], rotate: [0, 5, 0] }}
-                    transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+                    animate={prefersReducedMotion ? undefined : { y: [0, -20, 0], rotate: [0, 5, 0] }}
+                    transition={prefersReducedMotion ? undefined : { duration: 6, repeat: Infinity, ease: "easeInOut" }}
                     className="absolute top-20 right-10 opacity-20"
                 >
                     <Star className="w-9 h-9 text-amber-500" />
                 </Motion.div>
                 <Motion.div
-                    animate={{ y: [0, 15, 0], rotate: [0, -5, 0] }}
-                    transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+                    animate={prefersReducedMotion ? undefined : { y: [0, 15, 0], rotate: [0, -5, 0] }}
+                    transition={prefersReducedMotion ? undefined : { duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
                     className="absolute bottom-32 left-16 opacity-20"
                 >
                     <Cat className="w-8 h-8 text-amber-600" />
@@ -176,13 +188,14 @@ const SignUpPage = () => {
 
             {/* Logo & Header */}
             <Motion.div
-                initial={{ opacity: 0, y: -20 }}
+                initial={{ opacity: 0, y: prefersReducedMotion ? 0 : -20 }}
                 animate={{ opacity: 1, y: 0 }}
+                transition={prefersReducedMotion ? { duration: 0.1 } : undefined}
                 className="text-center mb-6"
             >
                 <Motion.div
-                    animate={{ y: [0, -8, 0] }}
-                    transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                    animate={prefersReducedMotion ? undefined : { y: [0, -8, 0] }}
+                    transition={prefersReducedMotion ? undefined : { duration: 3, repeat: Infinity, ease: "easeInOut" }}
                     className="w-20 h-20 mx-auto mb-4 rounded-2xl flex items-center justify-center shadow-lg"
                     style={{ background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' }}
                 >
@@ -194,17 +207,19 @@ const SignUpPage = () => {
 
             {/* Sign Up Card */}
             <Motion.div
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
+                transition={prefersReducedMotion ? { duration: 0.1 } : { delay: 0.1 }}
                 className="w-full max-w-md"
             >
-                <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-8 shadow-xl border border-white/50">
+                <div className={`${prefersReducedMotion ? 'bg-white/95' : 'bg-white/82 backdrop-blur-md'} rounded-3xl p-8 shadow-xl border border-white/50`}>
                     {/* Error Message */}
                     {error && (
                         <Motion.div
-                            initial={{ opacity: 0, y: -10 }}
+                            initial={{ opacity: 0, y: prefersReducedMotion ? 0 : -10 }}
                             animate={{ opacity: 1, y: 0 }}
+                            transition={prefersReducedMotion ? { duration: 0.1 } : undefined}
+                            role="alert"
                             className="mb-6 p-4 bg-red-50 border border-red-100 rounded-2xl"
                         >
                             <p className="text-red-600 text-sm text-center">{error}</p>
@@ -213,8 +228,8 @@ const SignUpPage = () => {
 
                     {/* Google Sign Up */}
                     <Motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
+                        whileHover={prefersReducedMotion ? undefined : { scale: 1.02 }}
+                        whileTap={prefersReducedMotion ? undefined : { scale: 0.98 }}
                         onClick={handleGoogleSignUp}
                         disabled={isSubmitting}
                         className="w-full py-3.5 bg-white border-2 border-neutral-200 rounded-2xl font-bold text-neutral-700 flex items-center justify-center gap-3 hover:bg-neutral-50 hover:border-neutral-300 transition-all disabled:opacity-50"
@@ -242,7 +257,7 @@ const SignUpPage = () => {
                     </div>
 
                     {/* Email Form */}
-                    <form onSubmit={handleEmailSignUp} className="space-y-4">
+                    <form onSubmit={handleEmailSignUp} noValidate className="space-y-4">
                         {/* Email Input */}
                         <div className="relative">
                             <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-500" />
@@ -251,6 +266,7 @@ const SignUpPage = () => {
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 placeholder={t('signUp.emailPlaceholder')}
+                                autoComplete="email"
                                 className="w-full pl-12 pr-4 py-3.5 bg-neutral-50 border border-neutral-200 rounded-2xl text-neutral-700 placeholder:text-neutral-500 focus:outline-none focus:border-court-gold focus:ring-2 focus:ring-court-gold/20 transition-all"
                             />
                         </div>
@@ -263,11 +279,14 @@ const SignUpPage = () => {
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 placeholder={t('signUp.passwordPlaceholder')}
+                                autoComplete="new-password"
                                 className="w-full pl-12 pr-12 py-3.5 bg-neutral-50 border border-neutral-200 rounded-2xl text-neutral-700 placeholder:text-neutral-500 focus:outline-none focus:border-court-gold focus:ring-2 focus:ring-court-gold/20 transition-all"
                             />
                             <button
                                 type="button"
                                 onClick={() => setShowPassword(!showPassword)}
+                                aria-label={showPassword ? t('common.hidePassword') : t('common.showPassword')}
+                                title={showPassword ? t('common.hidePassword') : t('common.showPassword')}
                                 className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-600"
                             >
                                 {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
@@ -277,8 +296,9 @@ const SignUpPage = () => {
                         {/* Password Requirements */}
                         {password && (
                             <Motion.div
-                                initial={{ opacity: 0, height: 0 }}
-                                animate={{ opacity: 1, height: 'auto' }}
+                                initial={{ opacity: 0, y: prefersReducedMotion ? 0 : -4 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={prefersReducedMotion ? { duration: 0.1 } : { duration: 0.18, ease: 'easeOut' }}
                                 className="space-y-1.5 pl-1"
                             >
                                 {passwordRequirements.map((req, i) => (
@@ -300,6 +320,7 @@ const SignUpPage = () => {
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
                                 placeholder={t('signUp.confirmPlaceholder')}
+                                autoComplete="new-password"
                                 className={`w-full pl-12 pr-4 py-3.5 bg-neutral-50 border rounded-2xl text-neutral-700 placeholder:text-neutral-500 focus:outline-none focus:ring-2 transition-all ${confirmPassword && password !== confirmPassword
                                     ? 'border-red-300 focus:border-red-400 focus:ring-red-100'
                                     : 'border-neutral-200 focus:border-court-gold focus:ring-court-gold/20'
@@ -316,8 +337,8 @@ const SignUpPage = () => {
                         >
                             {isSubmitting ? (
                                 <Motion.div
-                                    animate={{ rotate: 360 }}
-                                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                    animate={prefersReducedMotion ? undefined : { rotate: 360 }}
+                                    transition={prefersReducedMotion ? undefined : { duration: 1, repeat: Infinity, ease: "linear" }}
                                 >
                                     <Loader2 className="w-5 h-5" />
                                 </Motion.div>

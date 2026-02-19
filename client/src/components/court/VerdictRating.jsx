@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { Scale, Star, X } from 'lucide-react';
 import useCourtStore from '../../store/useCourtStore';
 import { useI18n } from '../../i18n';
 import EmojiIcon from '../shared/EmojiIcon';
+import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 
 /**
  * Verdict Rating Component
@@ -30,6 +31,7 @@ export default function VerdictRating({ onRate, onSkip }) {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [localError, setLocalError] = useState('');
     const { t } = useI18n();
+    const prefersReducedMotion = usePrefersReducedMotion();
 
     const {
         showRatingPopup,
@@ -51,7 +53,7 @@ export default function VerdictRating({ onRate, onSkip }) {
             // Only close after successful submission.
             dismissRating(session?.id);
             setShowRatingPopup(false);
-        } catch (e) {
+        } catch {
             setLocalError(t('court.rating.saveError'));
         } finally {
             setIsSubmitting(false);
@@ -68,31 +70,35 @@ export default function VerdictRating({ onRate, onSkip }) {
 
     const displayRating = hoveredStar || selectedRating;
     const ratingInfo = RATING_DESCRIPTIONS[displayRating];
+    const modalTransition = prefersReducedMotion
+        ? { duration: 0.16 }
+        : { type: 'spring', damping: 20, stiffness: 300 };
 
     return (
         <AnimatePresence>
             {showRatingPopup && (
-                <motion.div
+                <Motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     className="fixed inset-0 z-50 flex items-center justify-center p-4"
                 >
                     {/* Backdrop */}
-                    <motion.div
+                    <Motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="absolute inset-0 bg-black/70 backdrop-blur-md"
+                        transition={prefersReducedMotion ? { duration: 0.12 } : undefined}
+                        className={`absolute inset-0 bg-black/70 ${prefersReducedMotion ? 'backdrop-blur-sm' : 'backdrop-blur-md'}`}
                         onClick={handleSkip}
                     />
 
                     {/* Modal */}
-                    <motion.div
-                        initial={{ scale: 0.8, opacity: 0, y: 20 }}
+                    <Motion.div
+                        initial={{ scale: prefersReducedMotion ? 1 : 0.92, opacity: 0, y: prefersReducedMotion ? 8 : 20 }}
                         animate={{ scale: 1, opacity: 1, y: 0 }}
-                        exit={{ scale: 0.8, opacity: 0, y: 20 }}
-                        transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+                        exit={{ scale: prefersReducedMotion ? 1 : 0.92, opacity: 0, y: prefersReducedMotion ? 8 : 20 }}
+                        transition={modalTransition}
                         className="relative z-10 w-full max-w-md"
                     >
                         {/* Glassmorphic Card */}
@@ -101,7 +107,7 @@ export default function VerdictRating({ onRate, onSkip }) {
                             <div className="absolute inset-0 bg-gradient-to-br from-court-ivory via-white to-court-tan/60" />
 
                             {/* Glass overlay - warm tint */}
-                            <div className="absolute inset-0 bg-white/60 backdrop-blur-xl" />
+                            <div className={`absolute inset-0 bg-white/60 ${prefersReducedMotion ? 'backdrop-blur-sm' : 'backdrop-blur-md'}`} />
                             <div className="absolute inset-x-8 top-0 h-0.5 bg-gradient-to-r from-transparent via-court-gold/60 to-transparent" />
 
                             {/* Content */}
@@ -116,13 +122,13 @@ export default function VerdictRating({ onRate, onSkip }) {
 
                                 {/* Header */}
                                 <div className="text-center mb-6">
-                                    <motion.div
-                                        animate={{ rotate: [0, -5, 5, 0] }}
-                                        transition={{ duration: 0.5, delay: 0.3 }}
+                                    <Motion.div
+                                        animate={prefersReducedMotion ? { opacity: 1 } : { rotate: [0, -5, 5, 0] }}
+                                        transition={prefersReducedMotion ? { duration: 0.12 } : { duration: 0.5, delay: 0.3 }}
                                         className="mb-3 flex items-center justify-center"
                                     >
                                         <Scale className="w-12 h-12 text-court-gold" />
-                                    </motion.div>
+                                    </Motion.div>
                                     <h2 className="text-2xl font-bold text-court-brown mb-1">
                                         {t('court.rating.title')}
                                     </h2>
@@ -140,13 +146,13 @@ export default function VerdictRating({ onRate, onSkip }) {
                                 {/* Stars */}
                                 <div className="flex justify-center gap-2 mb-4">
                                     {[1, 2, 3, 4, 5].map((star) => (
-                                        <motion.button
+                                        <Motion.button
                                             key={star}
                                             onMouseEnter={() => setHoveredStar(star)}
                                             onMouseLeave={() => setHoveredStar(0)}
                                             onClick={() => setSelectedRating(star)}
-                                            whileHover={{ scale: 1.15 }}
-                                            whileTap={{ scale: 0.95 }}
+                                            whileHover={prefersReducedMotion ? undefined : { scale: 1.15 }}
+                                            whileTap={prefersReducedMotion ? undefined : { scale: 0.95 }}
                                             className="relative p-1"
                                         >
                                             <Star
@@ -156,15 +162,21 @@ export default function VerdictRating({ onRate, onSkip }) {
                                                     }`}
                                             />
                                             {star <= displayRating && (
-                                                <motion.div
-                                                    initial={{ scale: 0 }}
-                                                    animate={{ scale: 1 }}
-                                                    className="absolute inset-0 flex items-center justify-center"
-                                                >
-                                                    <div className="w-2 h-2 rounded-full bg-yellow-200 blur-sm" />
-                                                </motion.div>
+                                                prefersReducedMotion ? (
+                                                    <div className="absolute inset-0 flex items-center justify-center">
+                                                        <div className="w-2 h-2 rounded-full bg-yellow-200/80" />
+                                                    </div>
+                                                ) : (
+                                                    <Motion.div
+                                                        initial={{ scale: 0 }}
+                                                        animate={{ scale: 1 }}
+                                                        className="absolute inset-0 flex items-center justify-center"
+                                                    >
+                                                        <div className="w-2 h-2 rounded-full bg-yellow-200/90 blur-[1px]" />
+                                                    </Motion.div>
+                                                )
                                             )}
-                                        </motion.button>
+                                        </Motion.button>
                                     ))}
                                 </div>
 
@@ -172,16 +184,17 @@ export default function VerdictRating({ onRate, onSkip }) {
                                 <div className="h-8 mb-6 text-center">
                                     <AnimatePresence mode="wait">
                                         {ratingInfo && (
-                                            <motion.p
+                                            <Motion.p
                                                 key={displayRating}
-                                                initial={{ opacity: 0, y: 5 }}
+                                                initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 5 }}
                                                 animate={{ opacity: 1, y: 0 }}
-                                                exit={{ opacity: 0, y: -5 }}
+                                                exit={{ opacity: 0, y: prefersReducedMotion ? 0 : -5 }}
+                                                transition={prefersReducedMotion ? { duration: 0.1 } : undefined}
                                                 className="text-lg text-court-brown inline-flex items-center justify-center gap-2"
                                             >
                                                 <EmojiIcon emoji={ratingInfo.emoji} className="w-5 h-5 text-court-gold" />
                                                 {t(ratingInfo.textKey)}
-                                            </motion.p>
+                                            </Motion.p>
                                         )}
                                     </AnimatePresence>
                                 </div>
@@ -194,11 +207,11 @@ export default function VerdictRating({ onRate, onSkip }) {
                                     >
                                         {t('court.rating.skip')}
                                     </button>
-                                    <motion.button
+                                    <Motion.button
                                         onClick={handleSubmit}
                                         disabled={selectedRating === 0 || isSubmitting}
-                                        whileHover={{ scale: 1.02 }}
-                                        whileTap={{ scale: 0.98 }}
+                                        whileHover={prefersReducedMotion ? undefined : { scale: 1.02 }}
+                                        whileTap={prefersReducedMotion ? undefined : { scale: 0.98 }}
                                         className={`flex-1 transition ${selectedRating > 0
                                             ? 'court-btn-primary'
                                             : 'py-3 px-4 rounded-xl font-semibold bg-court-tan/40 text-court-brownLight border border-court-tan/40 cursor-not-allowed'
@@ -206,7 +219,7 @@ export default function VerdictRating({ onRate, onSkip }) {
                                     >
                                         {isSubmitting ? (
                                             <span className="flex items-center justify-center gap-2">
-                                                <motion.div
+                                                <Motion.div
                                                     animate={{ rotate: 360 }}
                                                     transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
                                                     className="w-4 h-4 border-2 border-court-gold/40 border-t-court-gold rounded-full"
@@ -216,7 +229,7 @@ export default function VerdictRating({ onRate, onSkip }) {
                                         ) : (
                                             t('court.rating.submit')
                                         )}
-                                    </motion.button>
+                                    </Motion.button>
                                 </div>
 
                                 {/* Footer hint */}
@@ -225,8 +238,8 @@ export default function VerdictRating({ onRate, onSkip }) {
                                 </p>
                             </div>
                         </div>
-                    </motion.div>
-                </motion.div>
+                    </Motion.div>
+                </Motion.div>
             )}
         </AnimatePresence>
     );

@@ -10,9 +10,59 @@ export default defineConfig(({ mode }) => {
   const apiBase = env.VITE_API_URL
   const apiTarget = apiBase ? String(apiBase).replace(/\/api\/?$/, '') : `http://${devHost}:3001`
   const repoRoot = path.resolve(__dirname, '..')
+  const manualChunks = (id) => {
+    if (!id.includes('node_modules')) return
+
+    if (
+      id.includes('/react/') ||
+      id.includes('/react-dom/') ||
+      id.includes('/react-router/') ||
+      id.includes('/react-router-dom/') ||
+      id.includes('/scheduler/')
+    ) {
+      return 'vendor-react'
+    }
+
+    if (id.includes('/framer-motion/')) {
+      return 'vendor-motion'
+    }
+
+    if (id.includes('/@supabase/')) {
+      return 'vendor-supabase'
+    }
+
+    if (
+      id.includes('/socket.io-client/') ||
+      id.includes('/engine.io-client/') ||
+      id.includes('/socket.io-parser/')
+    ) {
+      return 'vendor-realtime'
+    }
+
+    if (
+      id.includes('/@capacitor/') ||
+      id.includes('/@revenuecat/') ||
+      id.includes('/@sentry/')
+    ) {
+      return 'vendor-native'
+    }
+
+    if (id.includes('/lucide-react/')) {
+      return 'vendor-icons'
+    }
+
+    return 'vendor'
+  }
 
   return {
     plugins: [react()],
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks,
+        },
+      },
+    },
     server: {
       host: devHost,
       port: devPort,

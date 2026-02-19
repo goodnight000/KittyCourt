@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useI18n } from '../i18n';
 import EmojiIcon from './shared/EmojiIcon';
+import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
 
 /**
  * LoadingScreen - Premium, cute, full, and immersive loading experience
@@ -184,6 +185,7 @@ const LoadingScreen = ({
     onReset = null,
 }) => {
     const { t } = useI18n();
+    const prefersReducedMotion = usePrefersReducedMotion();
     const [showReset, setShowReset] = useState(false);
     const [messageIndex, setMessageIndex] = useState(0);
     const localizedMessages = t('loadingScreen.messages');
@@ -228,61 +230,67 @@ const LoadingScreen = ({
             {/* Warm atmospheric layers */}
             <div className="absolute inset-0 pointer-events-none">
                 <motion.div
-                    animate={{
+                    animate={prefersReducedMotion ? undefined : {
                         opacity: [0.4, 0.6, 0.4],
                         scale: [1, 1.2, 1],
                     }}
-                    transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-                    className="absolute top-0 left-0 w-[60%] h-[50%] rounded-full bg-gradient-to-br from-amber-200/40 to-transparent blur-[80px]"
+                    transition={prefersReducedMotion ? undefined : { duration: 6, repeat: Infinity, ease: "easeInOut" }}
+                    className="absolute top-0 left-0 w-[60%] h-[50%] rounded-full bg-gradient-to-br from-amber-200/40 to-transparent blur-[56px]"
                 />
                 <motion.div
-                    animate={{
+                    animate={prefersReducedMotion ? undefined : {
                         opacity: [0.3, 0.5, 0.3],
                         scale: [1, 1.15, 1],
                     }}
-                    transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-                    className="absolute bottom-0 right-0 w-[50%] h-[60%] rounded-full bg-gradient-to-tl from-rose-200/40 to-transparent blur-[80px]"
+                    transition={prefersReducedMotion ? undefined : { duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+                    className="absolute bottom-0 right-0 w-[50%] h-[60%] rounded-full bg-gradient-to-tl from-rose-200/40 to-transparent blur-[56px]"
                 />
                 <motion.div
-                    animate={{
+                    animate={prefersReducedMotion ? undefined : {
                         opacity: [0.2, 0.4, 0.2],
                         y: [0, -30, 0],
                     }}
-                    transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[40%] rounded-full bg-gradient-to-r from-orange-100/30 via-rose-100/40 to-amber-100/30 blur-[60px]"
+                    transition={prefersReducedMotion ? undefined : { duration: 8, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[40%] rounded-full bg-gradient-to-r from-orange-100/30 via-rose-100/40 to-amber-100/30 blur-[48px]"
                 />
             </div>
 
             {/* Walking paw prints */}
-            <div className="absolute inset-0 pointer-events-none">
-                {PAW_POSITIONS.map((pos, index) => (
-                    <AnimatedPaw key={index} {...pos} />
-                ))}
-            </div>
+            {!prefersReducedMotion && (
+                <div className="absolute inset-0 pointer-events-none">
+                    {PAW_POSITIONS.map((pos, index) => (
+                        <AnimatedPaw key={index} {...pos} />
+                    ))}
+                </div>
+            )}
 
             {/* Floating sparkles */}
-            <div className="absolute inset-0 pointer-events-none">
-                {SPARKLE_POSITIONS.map((pos, index) => (
-                    <FloatingSparkle key={index} {...pos} />
-                ))}
-            </div>
+            {!prefersReducedMotion && (
+                <div className="absolute inset-0 pointer-events-none">
+                    {SPARKLE_POSITIONS.map((pos, index) => (
+                        <FloatingSparkle key={index} {...pos} />
+                    ))}
+                </div>
+            )}
 
             {/* Floating hearts */}
-            <div className="absolute inset-0 pointer-events-none">
-                {HEART_POSITIONS.map((pos, index) => (
-                    <FloatingHeart key={index} {...pos} />
-                ))}
-            </div>
+            {!prefersReducedMotion && (
+                <div className="absolute inset-0 pointer-events-none">
+                    {HEART_POSITIONS.map((pos, index) => (
+                        <FloatingHeart key={index} {...pos} />
+                    ))}
+                </div>
+            )}
 
             {/* Main content */}
             <div className="relative z-10 text-center px-8 flex flex-col items-center">
                 {/* Animated cat face - no box, just the cute face */}
                 <motion.div
-                    animate={{
+                    animate={prefersReducedMotion ? undefined : {
                         y: [0, -12, 0],
                         rotate: [0, -3, 3, 0],
                     }}
-                    transition={{
+                    transition={prefersReducedMotion ? undefined : {
                         duration: 3,
                         repeat: Infinity,
                         ease: "easeInOut"
@@ -290,10 +298,10 @@ const LoadingScreen = ({
                     className="mb-8"
                 >
                     <motion.div
-                        animate={{
+                        animate={prefersReducedMotion ? undefined : {
                             scale: [1, 1.05, 1],
                         }}
-                        transition={{
+                        transition={prefersReducedMotion ? undefined : {
                             duration: 2,
                             repeat: Infinity,
                             ease: "easeInOut"
@@ -316,7 +324,7 @@ const LoadingScreen = ({
                             transition={{
                                 duration: 1.5,
                                 delay: i * 0.2,
-                                repeat: Infinity,
+                                repeat: prefersReducedMotion ? 0 : Infinity,
                                 ease: "easeInOut"
                             }}
                         >
@@ -339,11 +347,11 @@ const LoadingScreen = ({
                             {currentMessage.text}
                         </h2>
                         <motion.div
-                            animate={{
+                            animate={prefersReducedMotion ? undefined : {
                                 scale: [1, 1.3, 1],
                                 rotate: [0, 10, -10, 0]
                             }}
-                            transition={{ duration: 2, repeat: Infinity }}
+                            transition={prefersReducedMotion ? undefined : { duration: 2, repeat: Infinity }}
                             className="flex items-center justify-center"
                         >
                             <currentMessage.Icon className="w-7 h-7 text-amber-600/80" />
@@ -363,7 +371,7 @@ const LoadingScreen = ({
                             transition={{
                                 duration: 1.4,
                                 delay: i * 0.12,
-                                repeat: Infinity,
+                                repeat: prefersReducedMotion ? 0 : Infinity,
                                 ease: "easeInOut"
                             }}
                             className="w-2 h-2 rounded-full bg-gradient-to-br from-amber-400 to-amber-600"
@@ -378,7 +386,7 @@ const LoadingScreen = ({
                         animate={{ opacity: 1, y: 0 }}
                         onClick={handleReset}
                         aria-label="Reset loading state"
-                        className="mt-10 px-6 py-2.5 bg-white/80 backdrop-blur-sm border border-amber-200/60 rounded-full text-sm text-amber-700 hover:bg-amber-50 hover:text-red-500 hover:border-red-200 transition-all shadow-sm"
+                        className="mt-10 px-6 py-2.5 bg-white/80 backdrop-blur-sm border border-amber-200/60 rounded-full text-sm text-amber-700 hover:bg-amber-50 hover:text-red-500 hover:border-red-200 transition-colors shadow-sm"
                     >
                         {t('loadingScreen.reset')}
                     </motion.button>
@@ -388,8 +396,8 @@ const LoadingScreen = ({
             {/* Bottom decorative wave */}
             <div className="absolute bottom-0 left-0 right-0 h-24 pointer-events-none overflow-hidden">
                 <motion.div
-                    animate={{ x: [0, -50, 0] }}
-                    transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+                    animate={prefersReducedMotion ? undefined : { x: [0, -50, 0] }}
+                    transition={prefersReducedMotion ? undefined : { duration: 10, repeat: Infinity, ease: "easeInOut" }}
                     className="absolute bottom-0 left-0 right-0 h-full"
                     style={{
                         background: 'linear-gradient(to top, rgba(251, 191, 36, 0.1) 0%, transparent 100%)',

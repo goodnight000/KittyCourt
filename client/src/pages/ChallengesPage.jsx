@@ -4,7 +4,7 @@
  * Phase 2B: Uses useChallengeStore for API data.
  */
 import React, { useEffect, useMemo, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Trophy, Sparkles, ChevronDown, ChevronUp, RefreshCw, AlertCircle } from 'lucide-react';
 import ChallengeCard from '../components/ChallengeCard';
@@ -15,6 +15,7 @@ import usePartnerStore from '../store/usePartnerStore';
 import { useI18n } from '../i18n';
 import BackButton from '../components/shared/BackButton';
 import StandardButton from '../components/shared/StandardButton';
+import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
 
 // Loading skeleton component
 const ChallengeSkeleton = () => (
@@ -30,16 +31,17 @@ const ChallengeSkeleton = () => (
     </div>
 );
 
-const ChallengeBackdrop = () => (
+const ChallengeBackdrop = ({ prefersReducedMotion = false }) => (
     <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute -top-20 -right-20 h-64 w-64 rounded-full bg-amber-200/30 blur-3xl" />
-        <div className="absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-rose-200/25 blur-3xl" />
+        <div className={`absolute -top-20 -right-20 h-64 w-64 rounded-full bg-amber-200/30 ${prefersReducedMotion ? 'blur-xl' : 'blur-2xl'}`} />
+        <div className={`absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-rose-200/25 ${prefersReducedMotion ? 'blur-xl' : 'blur-2xl'}`} />
     </div>
 );
 
 const ChallengesPage = () => {
     const navigate = useNavigate();
     const { t, language } = useI18n();
+    const prefersReducedMotion = usePrefersReducedMotion();
     const handleBack = () => navigate('/profile', { state: { tab: 'us' } });
     const { user } = useAuthStore();
     const { hasPartner } = usePartnerStore();
@@ -117,19 +119,19 @@ const ChallengesPage = () => {
     if (!shouldShowChallenges()) {
         return (
             <div className="relative min-h-screen overflow-hidden pb-6">
-                <ChallengeBackdrop />
+                <ChallengeBackdrop prefersReducedMotion={prefersReducedMotion} />
                 <div className="relative">
-                    <motion.button
+                    <Motion.button
                         whileTap={{ scale: 0.95 }}
                         onClick={handleBack}
                         className="flex items-center gap-2 text-sm font-semibold text-neutral-600"
                     >
                         <ArrowLeft className="w-5 h-5" />
                         <span>{t('common.back')}</span>
-                    </motion.button>
+                    </Motion.button>
 
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
+                    <Motion.div
+                        initial={prefersReducedMotion ? false : { opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         className="mt-10 glass-card text-center px-6 py-8"
                     >
@@ -149,7 +151,7 @@ const ChallengesPage = () => {
                         >
                             {t('challenges.locked.cta')}
                         </StandardButton>
-                    </motion.div>
+                    </Motion.div>
                 </div>
             </div>
         );
@@ -157,7 +159,7 @@ const ChallengesPage = () => {
 
     return (
         <div className="relative min-h-screen overflow-hidden pb-6">
-            <ChallengeBackdrop />
+            <ChallengeBackdrop prefersReducedMotion={prefersReducedMotion} />
             <div className="relative space-y-6">
                 <header className="flex items-start gap-3">
                     <BackButton onClick={handleBack} ariaLabel={t('common.back')} />
@@ -174,14 +176,14 @@ const ChallengesPage = () => {
                     </div>
                 </header>
 
-                <motion.section
-                    initial={{ opacity: 0, y: 12 }}
+                <Motion.section
+                    initial={prefersReducedMotion ? false : { opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="glass-card relative overflow-hidden"
                 >
                     <div className="absolute inset-0 pointer-events-none">
-                        <div className="absolute -top-10 -right-8 h-20 w-20 rounded-full bg-amber-200/35 blur-2xl" />
-                        <div className="absolute -bottom-12 -left-10 h-24 w-24 rounded-full bg-rose-200/30 blur-3xl" />
+                        <div className={`absolute -top-10 -right-8 h-20 w-20 rounded-full bg-amber-200/35 ${prefersReducedMotion ? 'blur-xl' : 'blur-2xl'}`} />
+                        <div className={`absolute -bottom-12 -left-10 h-24 w-24 rounded-full bg-rose-200/30 ${prefersReducedMotion ? 'blur-xl' : 'blur-2xl'}`} />
                     </div>
                     <div className="relative space-y-4">
                         <div className="flex flex-wrap items-center justify-between gap-4">
@@ -239,10 +241,10 @@ const ChallengesPage = () => {
                             </div>
                         </div>
                     </div>
-                </motion.section>
+                </Motion.section>
 
                 {errorMessage && (
-                    <motion.div
+                    <Motion.div
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
                         className="flex items-start gap-3 rounded-2xl border border-rose-200/70 bg-rose-50/70 p-4"
@@ -251,14 +253,14 @@ const ChallengesPage = () => {
                         <div className="flex-1">
                             <p className="text-sm text-rose-700">{errorMessage}</p>
                         </div>
-                        <motion.button
+                        <Motion.button
                             whileTap={{ scale: 0.95 }}
                             onClick={handleRetry}
                             className="rounded-xl border border-rose-200/70 bg-white/80 p-2 text-rose-600"
                         >
                             <RefreshCw className="w-4 h-4" />
-                        </motion.button>
-                    </motion.div>
+                        </Motion.button>
+                    </Motion.div>
                 )}
 
                 {isLoading && (
@@ -283,42 +285,43 @@ const ChallengesPage = () => {
                         </div>
                         <div className="space-y-3">
                             {active.map((challenge) => (
-                                <ChallengeCard
-                                    key={challenge.id}
-                                    {...challenge}
-                                    actionLabel={
-                                        challenge.requiresConfirmation
-                                            ? challenge.confirmationStatus === 'none'
-                                                ? t('challenges.actions.markDone')
-                                                : challenge.confirmationStatus === 'pending'
-                                                    ? (challenge.confirmRequestedBy && challenge.confirmRequestedBy !== currentUserId
-                                                        ? t('challenges.actions.confirm')
-                                                        : t('challenges.actions.waiting'))
-                                                    : null
-                                            : null
-                                    }
-                                    actionDisabled={
-                                        challenge.requiresConfirmation
-                                            && challenge.confirmationStatus === 'pending'
-                                            && (!challenge.confirmRequestedBy || challenge.confirmRequestedBy === currentUserId)
-                                    }
-                                    onAction={() => {
-                                        if (!challenge.requiresConfirmation) return;
-                                        if (challenge.confirmationStatus === 'none') {
-                                            handleComplete(challenge.id);
-                                        } else if (challenge.confirmationStatus === 'pending'
-                                            && challenge.confirmRequestedBy
-                                            && challenge.confirmRequestedBy !== currentUserId) {
-                                            handleConfirm(challenge.id);
+                                <div key={challenge.id} className="perf-content-auto-compact contain-paint">
+                                    <ChallengeCard
+                                        {...challenge}
+                                        actionLabel={
+                                            challenge.requiresConfirmation
+                                                ? challenge.confirmationStatus === 'none'
+                                                    ? t('challenges.actions.markDone')
+                                                    : challenge.confirmationStatus === 'pending'
+                                                        ? (challenge.confirmRequestedBy && challenge.confirmRequestedBy !== currentUserId
+                                                            ? t('challenges.actions.confirm')
+                                                            : t('challenges.actions.waiting'))
+                                                        : null
+                                                : null
                                         }
-                                    }}
-                                    actionLoading={
-                                        !!pendingActions[`complete:${challenge.id}`]
-                                        || !!pendingActions[`confirm:${challenge.id}`]
-                                    }
-                                    onSkip={() => handleSkip(challenge.id)}
-                                    skipLoading={!!pendingActions[`skip:${challenge.id}`]}
-                                />
+                                        actionDisabled={
+                                            challenge.requiresConfirmation
+                                                && challenge.confirmationStatus === 'pending'
+                                                && (!challenge.confirmRequestedBy || challenge.confirmRequestedBy === currentUserId)
+                                        }
+                                        onAction={() => {
+                                            if (!challenge.requiresConfirmation) return;
+                                            if (challenge.confirmationStatus === 'none') {
+                                                handleComplete(challenge.id);
+                                            } else if (challenge.confirmationStatus === 'pending'
+                                                && challenge.confirmRequestedBy
+                                                && challenge.confirmRequestedBy !== currentUserId) {
+                                                handleConfirm(challenge.id);
+                                            }
+                                        }}
+                                        actionLoading={
+                                            !!pendingActions[`complete:${challenge.id}`]
+                                            || !!pendingActions[`confirm:${challenge.id}`]
+                                        }
+                                        onSkip={() => handleSkip(challenge.id)}
+                                        skipLoading={!!pendingActions[`skip:${challenge.id}`]}
+                                    />
+                                </div>
                             ))}
                         </div>
                     </section>
@@ -326,7 +329,7 @@ const ChallengesPage = () => {
 
                 {!isLoading && completed.length > 0 && (
                     <section className="glass-card space-y-3">
-                        <motion.button
+                        <Motion.button
                             whileTap={{ scale: 0.98 }}
                             onClick={() => setShowCompleted(!showCompleted)}
                             className="flex w-full items-center justify-between text-neutral-600"
@@ -344,31 +347,33 @@ const ChallengesPage = () => {
                             ) : (
                                 <ChevronDown className="w-5 h-5" />
                             )}
-                        </motion.button>
+                        </Motion.button>
 
-                        <AnimatePresence>
+                        <AnimatePresence initial={false}>
                             {showCompleted && (
-                                <motion.div
-                                    initial={{ height: 0, opacity: 0 }}
-                                    animate={{ height: 'auto', opacity: 1 }}
-                                    exit={{ height: 0, opacity: 0 }}
-                                    className="space-y-3 overflow-hidden"
+                                <Motion.div
+                                    initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: -6, scaleY: 0.97 }}
+                                    animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: 0, scaleY: 1 }}
+                                    exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: -6, scaleY: 0.97 }}
+                                    transition={{ duration: prefersReducedMotion ? 0.14 : 0.22, ease: 'easeOut' }}
+                                    className="space-y-3 overflow-hidden origin-top"
                                 >
                                     {completed.map((challenge) => (
-                                        <ChallengeCard
-                                            key={challenge.id}
-                                            {...challenge}
-                                            status="completed"
-                                        />
+                                        <div key={challenge.id} className="perf-content-auto-compact contain-paint">
+                                            <ChallengeCard
+                                                {...challenge}
+                                                status="completed"
+                                            />
+                                        </div>
                                     ))}
-                                </motion.div>
+                                </Motion.div>
                             )}
                         </AnimatePresence>
                     </section>
                 )}
 
                 {!isLoading && !errorMessage && active.length === 0 && (
-                    <motion.div
+                    <Motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         className="glass-card text-center px-6 py-10"
@@ -380,7 +385,7 @@ const ChallengesPage = () => {
                             {t('challenges.empty.title')}
                         </h3>
                         <p className="mt-2 text-sm text-neutral-500">{t('challenges.empty.subtitle')}</p>
-                    </motion.div>
+                    </Motion.div>
                 )}
             </div>
         </div>

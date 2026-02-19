@@ -70,7 +70,7 @@ const ChallengeCard = ({
                 animate={{ opacity: 1, scale: 1 }}
                 className={`relative overflow-hidden rounded-[28px] border border-emerald-200/70 bg-gradient-to-br from-emerald-50 via-white to-emerald-100/70 p-4 shadow-soft ${className}`}
             >
-                <div className="absolute -top-12 -right-8 h-24 w-24 rounded-full bg-emerald-200/40 blur-3xl" />
+                <div className="absolute -top-12 -right-8 h-24 w-24 rounded-full bg-emerald-200/40 blur-2xl" />
                 <div className="relative flex items-start gap-3">
                     <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500 text-white shadow-soft">
                         <Check className="w-6 h-6" />
@@ -109,7 +109,7 @@ const ChallengeCard = ({
         >
             <div className="absolute inset-0 pointer-events-none">
                 <div className={`absolute -top-10 -right-6 h-20 w-20 rounded-full blur-2xl ${colors.accent}`} />
-                <div className="absolute -bottom-12 -left-10 h-24 w-24 rounded-full bg-amber-100/45 blur-3xl" />
+                <div className="absolute -bottom-12 -left-10 h-24 w-24 rounded-full bg-amber-100/45 blur-2xl" />
             </div>
 
             <div className="relative space-y-4">
@@ -147,9 +147,10 @@ const ChallengeCard = ({
                     </div>
                     <div className="h-2.5 rounded-full bg-white/80 shadow-inner-soft overflow-hidden">
                         <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${progress}%` }}
+                            initial={false}
+                            animate={{ scaleX: progress / 100 }}
                             transition={{ duration: 0.6, ease: 'easeOut' }}
+                            style={{ transformOrigin: 'left center' }}
                             className={`h-full rounded-full ${isComplete ? 'bg-emerald-500' : 'bg-gradient-to-r from-[#C9A227] to-[#8B7019]'}`}
                         />
                     </div>

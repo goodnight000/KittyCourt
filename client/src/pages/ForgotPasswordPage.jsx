@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion as Motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { AlertCircle, ArrowLeft, Cat, CheckCircle, Key, Lock, Mail, Send } from 'lucide-react';
 import { resetPassword } from '../services/supabase';
 import { useI18n } from '../i18n';
 import StandardButton from '../components/shared/StandardButton';
+import { validateEmail } from '../utils/helpers';
+import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
 
 const ForgotPasswordPage = () => {
     const { t } = useI18n();
+    const prefersReducedMotion = usePrefersReducedMotion();
     const [email, setEmail] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
@@ -22,9 +25,7 @@ const ForgotPasswordPage = () => {
             return;
         }
 
-        // Basic email validation
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
+        if (!validateEmail(email)) {
             setError(t('forgotPassword.errors.emailInvalid'));
             return;
         }
@@ -44,7 +45,7 @@ const ForgotPasswordPage = () => {
             } else {
                 setSuccess(true);
             }
-        } catch (err) {
+        } catch {
             setError(t('forgotPassword.errors.generic'));
         } finally {
             setIsLoading(false);
@@ -56,36 +57,37 @@ const ForgotPasswordPage = () => {
             <div className="min-h-screen flex flex-col items-center justify-center p-6 safe-top">
                 {/* Background Decorations */}
                 <div className="fixed inset-0 pointer-events-none overflow-hidden">
-                    <motion.div
-                        animate={{ y: [0, -20, 0], rotate: [0, 5, 0] }}
-                        transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+                    <Motion.div
+                        animate={prefersReducedMotion ? undefined : { y: [0, -20, 0], rotate: [0, 5, 0] }}
+                        transition={prefersReducedMotion ? undefined : { duration: 6, repeat: Infinity, ease: "easeInOut" }}
                         className="absolute top-20 left-10 opacity-20"
                     >
                         <Mail className="w-10 h-10 text-amber-500" />
-                    </motion.div>
-                    <motion.div
-                        animate={{ y: [0, 15, 0], rotate: [0, -5, 0] }}
-                        transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+                    </Motion.div>
+                    <Motion.div
+                        animate={prefersReducedMotion ? undefined : { y: [0, 15, 0], rotate: [0, -5, 0] }}
+                        transition={prefersReducedMotion ? undefined : { duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
                         className="absolute top-40 right-16 opacity-20"
                     >
                         <Key className="w-8 h-8 text-amber-500" />
-                    </motion.div>
+                    </Motion.div>
                 </div>
 
-                <motion.div
+                <Motion.div
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
+                    transition={prefersReducedMotion ? { duration: 0.1 } : undefined}
                     className="w-full max-w-md"
                 >
-                    <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-8 shadow-xl border border-white/50 text-center">
-                        <motion.div
+                    <div className={`${prefersReducedMotion ? 'bg-white/95' : 'bg-white/82 backdrop-blur-md'} rounded-3xl p-8 shadow-xl border border-white/50 text-center`}>
+                        <Motion.div
                             initial={{ scale: 0 }}
                             animate={{ scale: 1 }}
-                            transition={{ type: "spring", delay: 0.2 }}
+                            transition={prefersReducedMotion ? { duration: 0.1 } : { type: "spring", delay: 0.2 }}
                             className="w-20 h-20 mx-auto mb-6 rounded-full bg-green-100 flex items-center justify-center"
                         >
                             <CheckCircle className="w-10 h-10 text-green-600" />
-                        </motion.div>
+                        </Motion.div>
 
                         <h1 className="text-2xl font-bold text-neutral-800 mb-3">{t('forgotPassword.success.title')}</h1>
                         <p className="text-neutral-600 mb-2">
@@ -122,7 +124,7 @@ const ForgotPasswordPage = () => {
                             {t('forgotPassword.success.backToSignIn')}
                         </Link>
                     </div>
-                </motion.div>
+                </Motion.div>
             </div>
         );
     }
@@ -131,26 +133,27 @@ const ForgotPasswordPage = () => {
         <div className="min-h-screen flex flex-col items-center justify-center p-6 safe-top">
             {/* Background Decorations */}
             <div className="fixed inset-0 pointer-events-none overflow-hidden">
-                <motion.div
-                    animate={{ y: [0, -20, 0], rotate: [0, 5, 0] }}
-                    transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+                <Motion.div
+                    animate={prefersReducedMotion ? undefined : { y: [0, -20, 0], rotate: [0, 5, 0] }}
+                    transition={prefersReducedMotion ? undefined : { duration: 6, repeat: Infinity, ease: "easeInOut" }}
                     className="absolute top-20 left-10 opacity-20"
                 >
                     <Cat className="w-10 h-10 text-amber-600" />
-                </motion.div>
-                <motion.div
-                    animate={{ y: [0, 15, 0], rotate: [0, -5, 0] }}
-                    transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+                </Motion.div>
+                <Motion.div
+                    animate={prefersReducedMotion ? undefined : { y: [0, 15, 0], rotate: [0, -5, 0] }}
+                    transition={prefersReducedMotion ? undefined : { duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
                     className="absolute top-40 right-16 opacity-20"
                 >
                     <Key className="w-8 h-8 text-amber-600" />
-                </motion.div>
+                </Motion.div>
             </div>
 
             {/* Back Button */}
-            <motion.div
-                initial={{ opacity: 0, x: -20 }}
+            <Motion.div
+                initial={{ opacity: 0, x: prefersReducedMotion ? 0 : -20 }}
                 animate={{ opacity: 1, x: 0 }}
+                transition={prefersReducedMotion ? { duration: 0.1 } : undefined}
                 className="absolute top-6 left-6"
             >
                 <Link
@@ -160,53 +163,56 @@ const ForgotPasswordPage = () => {
                     <ArrowLeft className="w-5 h-5" />
                     <span className="font-medium">{t('common.back')}</span>
                 </Link>
-            </motion.div>
+            </Motion.div>
 
             {/* Header */}
-            <motion.div
-                initial={{ opacity: 0, y: -20 }}
+            <Motion.div
+                initial={{ opacity: 0, y: prefersReducedMotion ? 0 : -20 }}
                 animate={{ opacity: 1, y: 0 }}
+                transition={prefersReducedMotion ? { duration: 0.1 } : undefined}
                 className="text-center mb-8"
             >
-                <motion.div
-                    animate={{ y: [0, -8, 0] }}
-                    transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                <Motion.div
+                    animate={prefersReducedMotion ? undefined : { y: [0, -8, 0] }}
+                    transition={prefersReducedMotion ? undefined : { duration: 3, repeat: Infinity, ease: "easeInOut" }}
                     className="w-20 h-20 mx-auto mb-4 rounded-2xl flex items-center justify-center shadow-lg"
                     style={{ background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' }}
                 >
                     <Lock className="w-10 h-10 text-white" />
-                </motion.div>
+                </Motion.div>
                 <h1 className="text-3xl font-bold text-gradient font-display">{t('forgotPassword.title')}</h1>
                 <p className="text-neutral-500 mt-2">{t('forgotPassword.subtitle')}</p>
-            </motion.div>
+            </Motion.div>
 
             {/* Reset Form */}
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
+            <Motion.div
+                initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
+                transition={prefersReducedMotion ? { duration: 0.1 } : { delay: 0.1 }}
                 className="w-full max-w-md"
             >
-                <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-8 shadow-xl border border-white/50">
+                <div className={`${prefersReducedMotion ? 'bg-white/95' : 'bg-white/82 backdrop-blur-md'} rounded-3xl p-8 shadow-xl border border-white/50`}>
                     {/* Error Message */}
                     {error && (
-                        <motion.div
-                            initial={{ opacity: 0, y: -10 }}
+                        <Motion.div
+                            initial={{ opacity: 0, y: prefersReducedMotion ? 0 : -10 }}
                             animate={{ opacity: 1, y: 0 }}
+                            transition={prefersReducedMotion ? { duration: 0.1 } : undefined}
+                            role="alert"
                             className="mb-6 p-4 bg-red-50 border border-red-100 rounded-2xl"
                         >
                             <div className="flex items-center gap-3">
                                 <AlertCircle className="w-5 h-5 text-red-600 shrink-0" />
                                 <p className="text-red-600 text-sm">{error}</p>
                             </div>
-                        </motion.div>
+                        </Motion.div>
                     )}
 
                     <p className="text-neutral-600 text-sm mb-6 text-center">
                         {t('forgotPassword.description')}
                     </p>
 
-                    <form onSubmit={handleSubmit} className="space-y-4">
+                    <form onSubmit={handleSubmit} noValidate className="space-y-4">
                         {/* Email Field */}
                         <div>
                             <label className="block text-sm font-medium text-neutral-700 mb-2">
@@ -221,6 +227,7 @@ const ForgotPasswordPage = () => {
                                     placeholder={t('forgotPassword.emailPlaceholder')}
                                     className="w-full pl-12 pr-4 py-3.5 bg-neutral-50 border-2 border-neutral-200 rounded-2xl focus:border-court-gold focus:bg-white transition-all outline-none"
                                     autoComplete="email"
+                                    aria-invalid={error === t('forgotPassword.errors.emailInvalid') ? 'true' : 'false'}
                                     autoFocus
                                 />
                             </div>
@@ -235,9 +242,9 @@ const ForgotPasswordPage = () => {
                         >
                             {isLoading ? (
                                 <>
-                                    <motion.div
-                                        animate={{ rotate: 360 }}
-                                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                    <Motion.div
+                                        animate={prefersReducedMotion ? undefined : { rotate: 360 }}
+                                        transition={prefersReducedMotion ? undefined : { duration: 1, repeat: Infinity, ease: "linear" }}
                                         className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
                                     />
                                     {t('forgotPassword.sending')}
@@ -259,7 +266,7 @@ const ForgotPasswordPage = () => {
                         </Link>
                     </p>
                 </div>
-            </motion.div>
+            </Motion.div>
         </div>
     );
 };
