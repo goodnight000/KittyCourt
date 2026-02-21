@@ -28,11 +28,10 @@ The retrieval flow is executed before verdict generation:
    - Check if either user has stored memories to avoid unnecessary embedding work.
 
 3. **Embedding generation**
-   - V1: single case-level query embedding (camera facts + feelings + addendums).
-   - V2 (feature-flagged): per-user query embeddings using user-specific inputs.
+   - Per-user query embeddings using user-specific inputs (facts, feelings, addendums).
 
 4. **Memory retrieval**
-   - Query the memory table using similarity search.
+   - Query the memory table using the V2 retrieval path (`retrieveRelevantMemoriesV2`).
    - Apply thresholds (`minSimilarityScore`, `minScore`) and caps (`maxMemoriesToRetrieve`, per-user caps).
    - If language-specific search yields no results, fall back to English.
 
@@ -60,14 +59,41 @@ After a verdict is delivered, the Stenographer agent runs asynchronously:
 
 There are parallel extraction flows for daily question answers, appreciation messages, and memory captions, each with smaller schemas and tighter limits.
 
+Trigger behavior is queue-first and queue-only by default:
+- When Supabase is configured, trigger paths enqueue memory jobs (`case_extraction`, `daily_question_extraction`, `appreciation_extraction`, `memory_caption_extraction`).
+- On enqueue failure, triggers log the error and do not run inline fallback extraction.
+- When Supabase is not configured, trigger paths log and return without inline extraction attempts.
+
 ## Configuration Notes
 
-- Memory retrieval behavior is feature-flagged by `MEMORY_ENGINE_V2_ENABLED`.
 - Extraction is rate-limited and guarded by the prompt security layer.
 - Language normalization is applied to both retrieval and extraction to keep results consistent.
+
+## Queue + Worker Runtime
+
+Memory extraction now defaults to queue-only runtime:
+
+1. **Queue-only (default, production-safe for dedicated workers)**  
+   - `MEMORY_QUEUE_ONLY=true`  
+   - Requires one of:
+     - `MEMORY_JOBS_WORKER_ENABLED=true` (embedded worker loop in API process), or
+     - `MEMORY_JOBS_WORKER_EXTERNAL=true` (standalone worker process expected)
+
+Additional runtime control:
+
+- `MEMORY_JOBS_POLL_INTERVAL_MS`  
+  - Poll interval for worker loops in milliseconds.
+  - Defaults to `1000` and falls back to `1000` if invalid.
+
+Recommended local queue-only split:
+
+- API process: `MEMORY_QUEUE_ONLY=true`, `MEMORY_JOBS_WORKER_ENABLED=false`, `MEMORY_JOBS_WORKER_EXTERNAL=true`
+- Worker process: run `npm run worker:memory` (or `npm run worker:memory:dev`)
 
 ## Related Files
 
 - Retrieval: `server/src/lib/memoryRetrieval.js`
 - Extraction: `server/src/lib/stenographer.js`
 - Embeddings: `server/src/lib/embeddings.js`
+- Runtime config: `server/src/lib/memoryRuntimeConfig.js`
+- Worker entrypoint: `server/src/workers/memoryJobsWorkerProcess.js`

@@ -28,6 +28,8 @@ const { isOpenRouterConfigured } = require('./lib/openrouter');
 const { corsMiddleware, securityHeaders } = require('./lib/security');
 const { initSentry, setupSentryErrorHandler, captureException } = require('./lib/sentry');
 const { isRedisConfigured } = require('./lib/redis');
+const { runMemoryJobsWorker } = require('./lib/memoryJobsWorker');
+const { assertMemoryRuntimeConfig } = require('./lib/memoryRuntimeConfig');
 
 // Import routes
 const memoryRoutes = require('./routes/memory');
@@ -96,10 +98,62 @@ if (isProd && !isRedisConfigured()) {
     process.exit(1);
 }
 
-// Initialize court services (WebSocket, SessionManager, DB recovery)
-initializeCourtServices(server).catch(err => {
-    console.error('[App] Court services initialization failed:', err);
-    captureException(err);
+let memoryRuntimeConfig;
+try {
+    memoryRuntimeConfig = assertMemoryRuntimeConfig({
+        supabaseConfigured: isSupabaseConfigured(),
+    });
+} catch (error) {
+    console.error('[MemoryWorker] FATAL: Invalid memory runtime configuration.');
+    console.error(`[MemoryWorker] ${error.message}`);
+    process.exit(1);
+}
+
+let embeddedMemoryWorkerStarted = false;
+let embeddedMemoryWorkerStopRequested = false;
+
+function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function startEmbeddedMemoryWorker(pollIntervalMs) {
+    if (embeddedMemoryWorkerStarted) {
+        return;
+    }
+
+    embeddedMemoryWorkerStarted = true;
+    console.log(`[MemoryWorker] Starting embedded memory jobs worker (poll interval: ${pollIntervalMs}ms).`);
+
+    const runLoop = async () => {
+        while (!embeddedMemoryWorkerStopRequested) {
+            try {
+                const summary = await runMemoryJobsWorker({
+                    pollIntervalMs,
+                    once: true,
+                });
+
+                if (summary?.emptyPolls > 0 && !embeddedMemoryWorkerStopRequested) {
+                    await sleep(pollIntervalMs);
+                }
+            } catch (error) {
+                console.error('[MemoryWorker] Embedded memory worker iteration failed:', error);
+                if (!embeddedMemoryWorkerStopRequested) {
+                    await sleep(pollIntervalMs);
+                }
+            }
+        }
+    };
+
+    runLoop().catch((error) => {
+        console.error('[MemoryWorker] Embedded memory worker loop crashed:', error);
+    });
+}
+
+server.on('close', () => {
+    if (embeddedMemoryWorkerStarted) {
+        embeddedMemoryWorkerStopRequested = true;
+        console.log('[MemoryWorker] Embedded memory worker stop requested.');
+    }
 });
 
 // Security: Verify production environment is properly configured
@@ -244,8 +298,30 @@ server.on('error', (error) => {
     process.exit(1);
 });
 
-server.listen(PORT, HOST, () => {
-    console.log(`Server running on port ${PORT}`);
-    console.log(`Supabase configured: ${isSupabaseConfigured()}`);
-    console.log(`WebSocket server initialized`);
-});
+async function startServer() {
+    try {
+        // Initialize court services (WebSocket, SessionManager, DB recovery)
+        await initializeCourtServices(server);
+    } catch (error) {
+        console.error('[App] Court services initialization failed:', error);
+        captureException(error);
+        process.exit(1);
+    }
+
+    server.listen(PORT, HOST, () => {
+        console.log(`Server running on port ${PORT}`);
+        console.log(`Supabase configured: ${isSupabaseConfigured()}`);
+        console.log('WebSocket server initialized');
+        console.log(
+            `[MemoryWorker] Runtime config: queueOnly=${memoryRuntimeConfig.queueOnlyMode}, embedded=${memoryRuntimeConfig.embeddedWorkerEnabled}, external=${memoryRuntimeConfig.externalWorkerExpected}, pollIntervalMs=${memoryRuntimeConfig.pollIntervalMs}`
+        );
+
+        if (memoryRuntimeConfig.embeddedWorkerEnabled) {
+            startEmbeddedMemoryWorker(memoryRuntimeConfig.pollIntervalMs);
+        } else if (memoryRuntimeConfig.queueOnlyMode && memoryRuntimeConfig.externalWorkerExpected) {
+            console.log('[MemoryWorker] Queue-only mode active. External memory worker is expected.');
+        }
+    });
+}
+
+startServer();

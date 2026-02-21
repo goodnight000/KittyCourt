@@ -12,10 +12,63 @@ const { createClient } = require('@supabase/supabase-js');
 let _supabase = null;
 const LEGACY_CATEGORY_BY_TYPE = {
     trigger: 'triggers',
+    conflict_trigger: 'triggers',
     core_value: 'strengths',
     pattern: 'patterns',
     preference: 'preferences',
+    long_term_preference: 'preferences',
+    repair_strategy: 'patterns',
 };
+const SUPPORTED_MEMORY_TYPE_FILTERS = new Set([
+    'trigger',
+    'triggers',
+    'conflict_trigger',
+    'emotional_trigger',
+    'preference',
+    'preferences',
+    'long_term_preference',
+    'core_value',
+    'strengths',
+    'pattern',
+    'patterns',
+    'repair_strategy',
+    'behavioral_pattern',
+]);
+const MEMORY_TYPE_COMPATIBILITY = {
+    trigger: ['trigger', 'conflict_trigger', 'triggers'],
+    conflict_trigger: ['conflict_trigger', 'trigger', 'triggers'],
+    triggers: ['triggers', 'trigger', 'conflict_trigger'],
+    emotional_trigger: ['emotional_trigger', 'conflict_trigger', 'trigger', 'triggers'],
+    preference: ['preference', 'long_term_preference', 'preferences'],
+    long_term_preference: ['long_term_preference', 'preference', 'preferences'],
+    preferences: ['preferences', 'preference', 'long_term_preference'],
+    pattern: ['pattern', 'repair_strategy', 'patterns'],
+    patterns: ['patterns', 'pattern', 'repair_strategy'],
+    repair_strategy: ['repair_strategy', 'pattern', 'patterns'],
+    behavioral_pattern: ['behavioral_pattern', 'pattern', 'repair_strategy', 'patterns'],
+    core_value: ['core_value', 'strengths'],
+    strengths: ['strengths', 'core_value'],
+};
+
+function isSupportedMemoryTypeFilter(memoryType) {
+    return typeof memoryType === 'string' && SUPPORTED_MEMORY_TYPE_FILTERS.has(memoryType);
+}
+
+function getCompatibleMemoryTypes(memoryType) {
+    if (!memoryType || typeof memoryType !== 'string') {
+        return [];
+    }
+
+    return MEMORY_TYPE_COMPATIBILITY[memoryType] || [memoryType];
+}
+
+function getLegacyCategoryForMemoryType(memoryType) {
+    if (typeof memoryType !== 'string') {
+        return 'patterns';
+    }
+
+    return LEGACY_CATEGORY_BY_TYPE[memoryType] || 'patterns';
+}
 
 /**
  * Get the Supabase client instance
@@ -158,7 +211,7 @@ async function insertMemory(memory) {
     const observedAt = memory.observedAt || nowIso;
     const lastObservedAt = memory.lastObservedAt || nowIso;
 
-    const legacyCategory = LEGACY_CATEGORY_BY_TYPE[memory.memoryType] || 'patterns';
+    const legacyCategory = getLegacyCategoryForMemoryType(memory.memoryType);
     const legacySubcategory = memory.memorySubtype || memory.memoryType || null;
 
     const { data, error } = await supabase
@@ -388,7 +441,7 @@ async function getUserMemories(userId, memoryType = null, language = null) {
         .order('reinforcement_count', { ascending: false });
 
     if (memoryType) {
-        query = query.eq('memory_type', memoryType);
+        query = query.in('memory_type', getCompatibleMemoryTypes(memoryType));
     }
     if (language) {
         query = query.eq('language', language);
@@ -468,6 +521,9 @@ module.exports = {
     getUserProfile,
     getUserDisplayNames,
     updateUserProfile,
+    isSupportedMemoryTypeFilter,
+    getLegacyCategoryForMemoryType,
+    getCompatibleMemoryTypes,
     getUserMemories,
     checkUserHasMemories,
     checkMemoriesBySource,

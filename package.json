@@ -3,10 +3,13 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"PORT=3001 HOST=127.0.0.1 npm run server\" \"VITE_API_URL=http://127.0.0.1:3001/api VITE_DEV_HOST=127.0.0.1 npm run client\"",
+    "dev": "concurrently \"MEMORY_QUEUE_ONLY=true MEMORY_JOBS_WORKER_ENABLED=false MEMORY_JOBS_WORKER_EXTERNAL=true PORT=3001 HOST=127.0.0.1 npm run server\" \"MEMORY_QUEUE_ONLY=true MEMORY_JOBS_WORKER_ENABLED=false MEMORY_JOBS_WORKER_EXTERNAL=true npm run worker:memory:dev\" \"VITE_API_URL=http://127.0.0.1:3001/api VITE_DEV_HOST=127.0.0.1 npm run client\"",
     "server": "cd server && npm run dev",
     "client": "cd client && npm run dev",
-    "install:all": "npm install && cd client && npm install && cd ../server && npm install"
+    "install:all": "npm install && cd client && npm install && cd ../server && npm install",
+    "worker:memory": "cd server && npm run worker:memory",
+    "worker:memory:dev": "cd server && npm run worker:memory:dev",
+    "dev:with-memory-worker": "concurrently \"MEMORY_QUEUE_ONLY=true MEMORY_JOBS_WORKER_ENABLED=false MEMORY_JOBS_WORKER_EXTERNAL=true PORT=3001 HOST=127.0.0.1 npm run server\" \"MEMORY_QUEUE_ONLY=true MEMORY_JOBS_WORKER_ENABLED=false MEMORY_JOBS_WORKER_EXTERNAL=true npm run worker:memory:dev\" \"VITE_API_URL=http://127.0.0.1:3001/api VITE_DEV_HOST=127.0.0.1 npm run client\""
   },
   "devDependencies": {
     "concurrently": "^9.0.0"

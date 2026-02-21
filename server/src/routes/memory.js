@@ -6,7 +6,13 @@
  */
 
 const express = require('express');
-const { isSupabaseConfigured, getUserProfile, updateUserProfile, getUserMemories } = require('../lib/supabase');
+const {
+    isSupabaseConfigured,
+    getUserProfile,
+    updateUserProfile,
+    getUserMemories,
+    isSupportedMemoryTypeFilter,
+} = require('../lib/supabase');
 const { requireAuthUserId } = require('../lib/auth');
 const { safeErrorMessage } = require('../lib/shared/errorUtils');
 
@@ -121,7 +127,7 @@ router.get('/memories/:userId', async (req, res) => {
 
         const allowedTypes = new Set(['trigger', 'core_value', 'pattern', 'preference']);
         const type = typeof req.query.type === 'string' ? req.query.type : null;
-        if (type && !allowedTypes.has(type)) {
+        if (type && !isSupportedMemoryTypeFilter(type) && !allowedTypes.has(type)) {
             return res.status(400).json({ error: 'Invalid type' });
         }
 

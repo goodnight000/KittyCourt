@@ -5,9 +5,8 @@
  * before verdict generation to provide historical context.
  */
 
-const { generateCaseQueryEmbedding, generateUserQueryEmbedding } = require('./embeddings');
+const { generateUserQueryEmbedding } = require('./embeddings');
 const {
-    retrieveRelevantMemories,
     retrieveRelevantMemoriesV2,
     getUserProfile,
     isSupabaseConfigured,
@@ -24,8 +23,6 @@ const CONFIG = {
     minSimilarityScore: 0.5, // Minimum similarity threshold
     minScore: 0.0, // Minimum composite score (v2)
 };
-
-const USE_V2 = process.env.MEMORY_ENGINE_V2_ENABLED === 'true';
 
 const buildUserQueryInputs = (submissions, addendumHistory, userKey) => {
     const addendumForUser = Array.isArray(addendumHistory)
@@ -99,149 +96,82 @@ async function retrieveHistoricalContext(caseData) {
             };
         }
 
-        const retrieveMemoriesV1 = async () => {
-            console.log(`[Memory Retrieval] Generating query embedding (found ${userAMemoryCount + userBMemoryCount} total memories)...`);
-            const queryEmbedding = await generateCaseQueryEmbedding({
-                userAFacts: submissions.userA.cameraFacts,
-                userAFeelings: submissions.userA.theStoryIamTellingMyself,
-                userBFacts: submissions.userB.cameraFacts,
-                userBFeelings: submissions.userB.theStoryIamTellingMyself,
-                addendumHistory: caseData.addendumHistory || []
-            });
+        console.log('[Memory Retrieval] Using v2 retrieval pipeline...');
+        const addendumHistory = caseData.addendumHistory || [];
+        const userAInputs = buildUserQueryInputs(submissions, addendumHistory, 'userA');
+        const userBInputs = buildUserQueryInputs(submissions, addendumHistory, 'userB');
 
-            console.log('[Memory Retrieval] Searching for relevant memories...');
-            const retrieveForUser = async (userId, language) => {
-                if (!userId) return [];
-                const normalizedLanguage = normalizeLanguage(language) || 'en';
-                let results = await retrieveRelevantMemories(
-                    queryEmbedding,
+        const userAEmbedding = (userAMemoryCount > 0 && hasQueryInputs(userAInputs))
+            ? await generateUserQueryEmbedding(userAInputs)
+            : null;
+        const userBEmbedding = (userBMemoryCount > 0 && hasQueryInputs(userBInputs))
+            ? await generateUserQueryEmbedding(userBInputs)
+            : null;
+
+        console.log('[Memory Retrieval] Searching for relevant memories (v2)...');
+        const retrieveForUser = async (embedding, userId, language) => {
+            const normalizedLanguage = normalizeLanguage(language) || 'en';
+            let results = await retrieveRelevantMemoriesV2(
+                embedding,
+                [userId],
+                CONFIG.maxMemoriesPerUser,
+                CONFIG.candidateMultiplier,
+                normalizedLanguage
+            );
+            if (results.length === 0 && normalizedLanguage !== 'en') {
+                results = await retrieveRelevantMemoriesV2(
+                    embedding,
                     [userId],
                     CONFIG.maxMemoriesPerUser,
-                    normalizedLanguage
+                    CONFIG.candidateMultiplier,
+                    'en'
                 );
-                if (results.length === 0 && normalizedLanguage !== 'en') {
-                    results = await retrieveRelevantMemories(
-                        queryEmbedding,
-                        [userId],
-                        CONFIG.maxMemoriesPerUser,
-                        'en'
-                    );
-                }
-                return results;
-            };
-
-            const [memoriesA, memoriesB] = await Promise.all([
-                userAMemoryCount > 0 ? retrieveForUser(userAId, userALanguage) : [],
-                userBMemoryCount > 0 ? retrieveForUser(userBId, userBLanguage) : [],
-            ]);
-
-            const combined = [...memoriesA, ...memoriesB];
-            const filteredMemories = combined.filter(
-                m => m.similarity >= CONFIG.minSimilarityScore
-            );
-
-            filteredMemories.sort((a, b) => (b.similarity || 0) - (a.similarity || 0));
-
-            console.log(`[Memory Retrieval] Found ${filteredMemories.length} relevant memories`);
-
-            return filteredMemories.slice(0, CONFIG.maxMemoriesToRetrieve).map(memory => ({
-                userId: memory.user_id,
-                userName: memory.user_id === userAId
-                    ? participants.userA.name
-                    : participants.userB.name,
-                text: memory.memory_text,
-                type: memory.memory_type,
-                relevance: Math.round(memory.similarity * 100),
-            }));
-        };
-
-        let formattedMemories = [];
-
-        if (USE_V2) {
-            console.log('[Memory Retrieval] Using v2 retrieval pipeline...');
-            try {
-                const addendumHistory = caseData.addendumHistory || [];
-                const userAInputs = buildUserQueryInputs(submissions, addendumHistory, 'userA');
-                const userBInputs = buildUserQueryInputs(submissions, addendumHistory, 'userB');
-
-                const userAEmbedding = (userAMemoryCount > 0 && hasQueryInputs(userAInputs))
-                    ? await generateUserQueryEmbedding(userAInputs)
-                    : null;
-                const userBEmbedding = (userBMemoryCount > 0 && hasQueryInputs(userBInputs))
-                    ? await generateUserQueryEmbedding(userBInputs)
-                    : null;
-
-                console.log('[Memory Retrieval] Searching for relevant memories (v2)...');
-                const retrieveForUser = async (embedding, userId, language) => {
-                    const normalizedLanguage = normalizeLanguage(language) || 'en';
-                    let results = await retrieveRelevantMemoriesV2(
-                        embedding,
-                        [userId],
-                        CONFIG.maxMemoriesPerUser,
-                        CONFIG.candidateMultiplier,
-                        normalizedLanguage
-                    );
-                    if (results.length === 0 && normalizedLanguage !== 'en') {
-                        results = await retrieveRelevantMemoriesV2(
-                            embedding,
-                            [userId],
-                            CONFIG.maxMemoriesPerUser,
-                            CONFIG.candidateMultiplier,
-                            'en'
-                        );
-                    }
-                    return results;
-                };
-                const [memoriesA, memoriesB] = await Promise.all([
-                    userAEmbedding
-                        ? retrieveForUser(userAEmbedding, userAId, userALanguage)
-                        : [],
-                    userBEmbedding
-                        ? retrieveForUser(userBEmbedding, userBId, userBLanguage)
-                        : [],
-                ]);
-
-                const combined = [...memoriesA, ...memoriesB];
-                const filtered = combined.filter(memory => (
-                    memory.similarity >= CONFIG.minSimilarityScore
-                    && (memory.score || 0) >= CONFIG.minScore
-                ));
-
-                filtered.sort((a, b) => (b.score - a.score) || (b.similarity - a.similarity));
-
-                const perTypeCounts = new Map();
-                const selected = [];
-                for (const memory of filtered) {
-                    const type = memory.memory_type || 'unknown';
-                    const currentCount = perTypeCounts.get(type) || 0;
-                    if (currentCount >= CONFIG.maxMemoriesPerType) continue;
-                    selected.push(memory);
-                    perTypeCounts.set(type, currentCount + 1);
-                    if (selected.length >= CONFIG.maxMemoriesToRetrieve) break;
-                }
-
-                console.log(`[Memory Retrieval] Found ${selected.length} relevant memories (v2)`);
-
-                formattedMemories = selected.map(memory => ({
-                    userId: memory.user_id,
-                    userName: memory.user_id === userAId
-                        ? participants.userA.name
-                        : participants.userB.name,
-                    text: memory.memory_text,
-                    type: memory.memory_type,
-                    relevance: Math.round(memory.similarity * 100),
-                    confidenceScore: memory.confidence_score,
-                    lastObservedAt: memory.last_observed_at,
-                    sourceType: memory.source_type,
-                    memorySubtype: memory.memory_subtype,
-                }));
-            } catch (error) {
-                console.warn('[Memory Retrieval] v2 retrieval failed, falling back to v1:', error.message);
-                formattedMemories = await retrieveMemoriesV1();
             }
-        } else {
-            formattedMemories = await retrieveMemoriesV1();
+            return results;
+        };
+        const [memoriesA, memoriesB] = await Promise.all([
+            userAEmbedding
+                ? retrieveForUser(userAEmbedding, userAId, userALanguage)
+                : [],
+            userBEmbedding
+                ? retrieveForUser(userBEmbedding, userBId, userBLanguage)
+                : [],
+        ]);
+
+        const combined = [...memoriesA, ...memoriesB];
+        const filtered = combined.filter(memory => (
+            memory.similarity >= CONFIG.minSimilarityScore
+            && (memory.score || 0) >= CONFIG.minScore
+        ));
+
+        filtered.sort((a, b) => (b.score - a.score) || (b.similarity - a.similarity));
+
+        const perTypeCounts = new Map();
+        const selected = [];
+        for (const memory of filtered) {
+            const type = memory.memory_type || 'unknown';
+            const currentCount = perTypeCounts.get(type) || 0;
+            if (currentCount >= CONFIG.maxMemoriesPerType) continue;
+            selected.push(memory);
+            perTypeCounts.set(type, currentCount + 1);
+            if (selected.length >= CONFIG.maxMemoriesToRetrieve) break;
         }
+
+        console.log(`[Memory Retrieval] Found ${selected.length} relevant memories (v2)`);
+
+        const formattedMemories = selected.map(memory => ({
+            userId: memory.user_id,
+            userName: memory.user_id === userAId
+                ? participants.userA.name
+                : participants.userB.name,
+            text: memory.memory_text,
+            type: memory.memory_type,
+            relevance: Math.round(memory.similarity * 100),
+            confidenceScore: memory.confidence_score,
+            lastObservedAt: memory.last_observed_at,
+            sourceType: memory.source_type,
+            memorySubtype: memory.memory_subtype,
+        }));
 
         return {
             enabled: true,

@@ -18,6 +18,10 @@ const {
     buildAppreciationPrompt,
     buildMemoryCaptionPrompt,
     processUserInsights,
+    triggerBackgroundExtraction,
+    triggerDailyQuestionExtraction,
+    triggerAppreciationExtraction,
+    triggerMemoryCaptionExtraction,
     STENOGRAPHER_SYSTEM_PROMPT,
 } = require('./stenographer');
 const { formatContextForPrompt, hasHistoricalContext } = require('./memoryRetrieval');
@@ -27,6 +31,53 @@ let insertMemory;
 let reinforceMemory;
 let generateEmbeddings;
 let isSupabaseConfigured;
+const MEMORY_RUNTIME_ENV_KEYS = [
+    'MEMORY_QUEUE_ONLY',
+    'MEMORY_EMBEDDED_WORKER_ENABLED',
+    'MEMORY_EXTERNAL_WORKER_EXPECTED',
+];
+
+function createMemoryJobsClientMock({ data = { id: 'job-1' }, error = null } = {}) {
+    const single = vi.fn().mockResolvedValue({ data, error });
+    const select = vi.fn(() => ({ single }));
+    const insert = vi.fn(() => ({ select }));
+    const from = vi.fn(() => ({ insert }));
+
+    return {
+        client: { from },
+        from,
+        insert,
+        select,
+        single,
+    };
+}
+
+function getInsertedMemoryJob(insertSpy) {
+    const [insertArg] = insertSpy.mock.calls[0] || [];
+    return Array.isArray(insertArg) ? insertArg[0] : insertArg;
+}
+
+async function withMemoryRuntimeDefaults(testFn) {
+    const previousValues = new Map(
+        MEMORY_RUNTIME_ENV_KEYS.map((key) => [key, process.env[key]])
+    );
+
+    for (const key of MEMORY_RUNTIME_ENV_KEYS) {
+        delete process.env[key];
+    }
+
+    try {
+        await testFn();
+    } finally {
+        for (const [key, value] of previousValues.entries()) {
+            if (value === undefined) {
+                delete process.env[key];
+            } else {
+                process.env[key] = value;
+            }
+        }
+    }
+}
 
 beforeEach(() => {
     vi.restoreAllMocks();
@@ -87,7 +138,7 @@ describe('Stenographer Agent', () => {
 
             expect(prompt).toContain('Alex');
             expect(prompt).toContain('Sam');
-            expect(prompt).toContain('make me laugh');
+            expect(prompt).toContain(payload.message);
             expect(prompt).toContain('support');
         });
     });
@@ -152,12 +203,179 @@ describe('Stenographer Agent', () => {
             expect(insertMemory).not.toHaveBeenCalled();
         });
 
+        it('should reinforce when similar memory uses legacy plural triggers and incoming insight type is trigger', async () => {
+            const mockEmbedding = new Array(1536).fill(0.11);
+            generateEmbeddings.mockResolvedValue([mockEmbedding]);
+            searchSimilarMemories.mockResolvedValue([
+                { id: 'legacy-trigger-mem', memory_text: 'Legacy plural trigger memory', memory_type: 'triggers', similarity: 0.96 },
+            ]);
+            reinforceMemory.mockResolvedValue({ id: 'legacy-trigger-mem' });
+            insertMemory.mockResolvedValue({ id: 'new-mem-unexpected' });
+
+            const insights = [
+                { text: 'Feels dismissed when concerns are joked away', type: 'trigger', confidence: 0.91 },
+            ];
+
+            const stats = await processUserInsights('user-123', insights, 'case-legacy');
+
+            expect(stats.stored).toBe(0);
+            expect(stats.reinforced).toBe(1);
+            expect(stats.discarded).toBe(0);
+            expect(reinforceMemory).toHaveBeenCalledWith('legacy-trigger-mem');
+            expect(insertMemory).not.toHaveBeenCalled();
+        });
+
         it('should return empty stats for empty insights', async () => {
             const stats = await processUserInsights('user-123', [], 'case-456');
 
             expect(stats.stored).toBe(0);
             expect(stats.reinforced).toBe(0);
             expect(stats.discarded).toBe(0);
+        });
+
+        it('should normalize legacy trigger insights to conflict_trigger before insert', async () => {
+            const mockEmbedding = new Array(1536).fill(0.1);
+            generateEmbeddings.mockResolvedValue([mockEmbedding]);
+            searchSimilarMemories.mockResolvedValue([]);
+            insertMemory.mockResolvedValue({ id: 'mem-1' });
+
+            const insights = [
+                { text: 'Feels abandoned when plans change abruptly', type: 'trigger', confidence: 0.9 },
+            ];
+
+            const stats = await processUserInsights('user-123', insights, 'case-456');
+
+            expect(stats.stored).toBe(1);
+            expect(insertMemory).toHaveBeenCalledTimes(1);
+            expect(insertMemory).toHaveBeenCalledWith(expect.objectContaining({
+                memoryType: 'conflict_trigger',
+            }));
+        });
+
+        it('should normalize emotional_trigger insights to conflict_trigger before insert', async () => {
+            const mockEmbedding = new Array(1536).fill(0.12);
+            generateEmbeddings.mockResolvedValue([mockEmbedding]);
+            searchSimilarMemories.mockResolvedValue([]);
+            insertMemory.mockResolvedValue({ id: 'mem-emotional-trigger' });
+
+            const insights = [
+                { text: 'Feels panic when conversations become abrupt', type: 'emotional_trigger', confidence: 0.9 },
+            ];
+
+            const stats = await processUserInsights('user-123', insights, 'case-456');
+
+            expect(stats.stored).toBe(1);
+            expect(insertMemory).toHaveBeenCalledTimes(1);
+            expect(insertMemory).toHaveBeenCalledWith(expect.objectContaining({
+                memoryType: 'conflict_trigger',
+            }));
+        });
+
+        it('should normalize legacy preference insights to long_term_preference before insert', async () => {
+            const mockEmbedding = new Array(1536).fill(0.2);
+            generateEmbeddings.mockResolvedValue([mockEmbedding]);
+            searchSimilarMemories.mockResolvedValue([]);
+            insertMemory.mockResolvedValue({ id: 'mem-2' });
+
+            const insights = [
+                { text: 'Prefers direct communication after conflicts', type: 'preference', confidence: 0.84 },
+            ];
+
+            const stats = await processUserInsights('user-123', insights, 'case-456');
+
+            expect(stats.stored).toBe(1);
+            expect(insertMemory).toHaveBeenCalledTimes(1);
+            expect(insertMemory).toHaveBeenCalledWith(expect.objectContaining({
+                memoryType: 'long_term_preference',
+            }));
+        });
+
+        it('should normalize behavioral_pattern insights to pattern before insert', async () => {
+            const mockEmbedding = new Array(1536).fill(0.25);
+            generateEmbeddings.mockResolvedValue([mockEmbedding]);
+            searchSimilarMemories.mockResolvedValue([]);
+            insertMemory.mockResolvedValue({ id: 'mem-behavioral-pattern' });
+
+            const insights = [
+                { text: 'Tends to go silent when feeling criticized', type: 'behavioral_pattern', confidence: 0.82 },
+            ];
+
+            const stats = await processUserInsights('user-123', insights, 'case-456');
+
+            expect(stats.stored).toBe(1);
+            expect(insertMemory).toHaveBeenCalledTimes(1);
+            expect(insertMemory).toHaveBeenCalledWith(expect.objectContaining({
+                memoryType: 'pattern',
+            }));
+        });
+
+        it('should reinforce existing repair_strategy memory when incoming behavioral_pattern normalizes to pattern', async () => {
+            const mockEmbedding = new Array(1536).fill(0.27);
+            generateEmbeddings.mockResolvedValue([mockEmbedding]);
+            searchSimilarMemories.mockResolvedValue([
+                {
+                    id: 'existing-repair-strategy',
+                    memory_text: 'Take a 20-minute timeout and return calmly',
+                    memory_type: 'repair_strategy',
+                    similarity: 0.97,
+                },
+            ]);
+            reinforceMemory.mockResolvedValue({ id: 'existing-repair-strategy' });
+            insertMemory.mockResolvedValue({ id: 'unexpected-pattern-duplicate' });
+
+            const insights = [
+                {
+                    text: 'Tends to regulate first, then re-engage in conflict',
+                    type: 'behavioral_pattern',
+                    confidence: 0.86,
+                },
+            ];
+
+            const stats = await processUserInsights('user-123', insights, 'case-456');
+
+            expect(stats.stored).toBe(0);
+            expect(stats.reinforced).toBe(1);
+            expect(stats.discarded).toBe(0);
+            expect(reinforceMemory).toHaveBeenCalledWith('existing-repair-strategy');
+            expect(insertMemory).not.toHaveBeenCalled();
+        });
+
+        it('should reject unknown insight types without write calls', async () => {
+            const mockEmbedding = new Array(1536).fill(0.3);
+            generateEmbeddings.mockResolvedValue([mockEmbedding]);
+            searchSimilarMemories.mockResolvedValue([]);
+            insertMemory.mockResolvedValue({ id: 'mem-3' });
+
+            const insights = [
+                { text: 'Invented taxonomy that should be ignored', type: 'mystery_bucket', confidence: 0.7 },
+            ];
+
+            const stats = await processUserInsights('user-123', insights, 'case-456');
+
+            expect(stats.stored).toBe(0);
+            expect(stats.reinforced).toBe(0);
+            expect(stats.discarded).toBe(1);
+            expect(insertMemory).not.toHaveBeenCalled();
+            expect(reinforceMemory).not.toHaveBeenCalled();
+        });
+
+        it('should accept tier-native repair_strategy insights as-is', async () => {
+            const mockEmbedding = new Array(1536).fill(0.4);
+            generateEmbeddings.mockResolvedValue([mockEmbedding]);
+            searchSimilarMemories.mockResolvedValue([]);
+            insertMemory.mockResolvedValue({ id: 'mem-4' });
+
+            const insights = [
+                { text: 'Needs a short timeout before re-engaging', type: 'repair_strategy', confidence: 0.88 },
+            ];
+
+            const stats = await processUserInsights('user-123', insights, 'case-456');
+
+            expect(stats.stored).toBe(1);
+            expect(insertMemory).toHaveBeenCalledTimes(1);
+            expect(insertMemory).toHaveBeenCalledWith(expect.objectContaining({
+                memoryType: 'repair_strategy',
+            }));
         });
     });
 
@@ -173,6 +391,435 @@ describe('Stenographer Agent', () => {
             expect(STENOGRAPHER_SYSTEM_PROMPT).toContain('userB');
             expect(STENOGRAPHER_SYSTEM_PROMPT).toContain('insights');
         });
+    });
+});
+
+describe('Trigger queueing behavior', () => {
+    it('triggerDailyQuestionExtraction skips enqueue when supabase is unconfigured and does not call setImmediate', async () => {
+        const payload = {
+            questionId: 'dq-unconfigured',
+            userAId: 'user-a',
+            userBId: 'user-b',
+            userAAnswer: 'I need more reassurance.',
+            userBAnswer: 'I need clearer plans.',
+        };
+
+        isSupabaseConfigured.mockReturnValue(false);
+        const getSupabaseSpy = vi.spyOn(supabase, 'getSupabase');
+        const setImmediateSpy = vi.spyOn(global, 'setImmediate').mockImplementation(() => 0);
+        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+        triggerDailyQuestionExtraction(payload);
+        await Promise.resolve();
+
+        expect(getSupabaseSpy).not.toHaveBeenCalled();
+        expect(setImmediateSpy).not.toHaveBeenCalled();
+
+        consoleErrorSpy.mockRestore();
+    });
+
+    it('triggerDailyQuestionExtraction enqueues daily_question_extraction without calling setImmediate under default mode', async () => {
+        const payload = {
+            questionId: 'dq-1',
+            userAId: 'user-a',
+            userBId: 'user-b',
+            userAAnswer: 'I need more reassurance.',
+            userBAnswer: 'I need clearer plans.',
+        };
+
+        await withMemoryRuntimeDefaults(async () => {
+            const setImmediateSpy = vi.spyOn(global, 'setImmediate').mockImplementation(() => 0);
+            const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+            const { client, from, insert } = createMemoryJobsClientMock();
+
+            vi.spyOn(supabase, 'getSupabase').mockReturnValue(client);
+
+            triggerDailyQuestionExtraction(payload);
+            await Promise.resolve();
+
+            expect(from).toHaveBeenCalledWith('memory_jobs');
+            expect(insert).toHaveBeenCalledTimes(1);
+
+            const queuedJob = getInsertedMemoryJob(insert);
+            expect(queuedJob).toEqual(expect.objectContaining({
+                job_type: 'daily_question_extraction',
+                payload,
+            }));
+            expect(setImmediateSpy).not.toHaveBeenCalled();
+
+            consoleErrorSpy.mockRestore();
+        });
+    });
+
+    it('triggerDailyQuestionExtraction queue-only mode enqueues daily_question_extraction without calling setImmediate', async () => {
+        const payload = {
+            questionId: 'dq-queue-only',
+            userAId: 'user-a',
+            userBId: 'user-b',
+            userAAnswer: 'I need more reassurance.',
+            userBAnswer: 'I need clearer plans.',
+        };
+
+        const previousQueueOnly = process.env.MEMORY_QUEUE_ONLY;
+        process.env.MEMORY_QUEUE_ONLY = 'true';
+
+        const setImmediateSpy = vi.spyOn(global, 'setImmediate').mockImplementation(() => 0);
+        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        const { client, from, insert } = createMemoryJobsClientMock();
+
+        vi.spyOn(supabase, 'getSupabase').mockReturnValue(client);
+
+        try {
+            triggerDailyQuestionExtraction(payload);
+            await Promise.resolve();
+
+            expect(from).toHaveBeenCalledWith('memory_jobs');
+            expect(insert).toHaveBeenCalledTimes(1);
+
+            const queuedJob = getInsertedMemoryJob(insert);
+            expect(queuedJob).toEqual(expect.objectContaining({
+                job_type: 'daily_question_extraction',
+                payload,
+            }));
+            expect(setImmediateSpy).not.toHaveBeenCalled();
+        } finally {
+            if (previousQueueOnly === undefined) {
+                delete process.env.MEMORY_QUEUE_ONLY;
+            } else {
+                process.env.MEMORY_QUEUE_ONLY = previousQueueOnly;
+            }
+            consoleErrorSpy.mockRestore();
+        }
+    });
+
+    it('triggerBackgroundExtraction enqueues case_extraction without calling setImmediate under default mode when supabase is configured', async () => {
+        const caseData = {
+            participants: {
+                userA: { id: 'user-a', name: 'Alex' },
+                userB: { id: 'user-b', name: 'Sam' },
+            },
+            submissions: {
+                userA: { cameraFacts: 'A felt unheard.' },
+                userB: { cameraFacts: 'B felt criticized.' },
+            },
+        };
+        const caseId = 'case-default-queue-only';
+
+        await withMemoryRuntimeDefaults(async () => {
+            const setImmediateSpy = vi.spyOn(global, 'setImmediate').mockImplementation(() => 0);
+            const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+            const { client, from, insert } = createMemoryJobsClientMock();
+
+            vi.spyOn(supabase, 'getSupabase').mockReturnValue(client);
+
+            triggerBackgroundExtraction(caseData, caseId);
+            await Promise.resolve();
+
+            expect(from).toHaveBeenCalledWith('memory_jobs');
+            expect(insert).toHaveBeenCalledTimes(1);
+            expect(getInsertedMemoryJob(insert)).toEqual(expect.objectContaining({
+                job_type: 'case_extraction',
+            }));
+            expect(setImmediateSpy).not.toHaveBeenCalled();
+            consoleErrorSpy.mockRestore();
+        });
+    });
+
+    it('triggerDailyQuestionExtraction logs enqueue failures without setImmediate fallback', async () => {
+        const payload = {
+            questionId: 'dq-queue-only-fallback',
+            userAId: 'user-a',
+            userBId: 'user-b',
+            userAAnswer: 'I need us to slow down and listen.',
+            userBAnswer: 'I need us to avoid jumping to conclusions.',
+        };
+
+        const previousQueueOnly = process.env.MEMORY_QUEUE_ONLY;
+        process.env.MEMORY_QUEUE_ONLY = 'true';
+
+        const queueError = new Error('queue failed');
+        const setImmediateSpy = vi.spyOn(global, 'setImmediate').mockImplementation(() => 0);
+        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        const { client, from, insert } = createMemoryJobsClientMock({ data: null, error: queueError });
+
+        vi.spyOn(supabase, 'getSupabase').mockReturnValue(client);
+
+        try {
+            triggerDailyQuestionExtraction(payload);
+            await Promise.resolve();
+            await Promise.resolve();
+
+            expect(from).toHaveBeenCalledWith('memory_jobs');
+            expect(insert).toHaveBeenCalledTimes(1);
+            expect(getInsertedMemoryJob(insert)).toEqual(expect.objectContaining({
+                job_type: 'daily_question_extraction',
+                payload,
+            }));
+            expect(setImmediateSpy).not.toHaveBeenCalled();
+            expect(consoleErrorSpy).toHaveBeenCalledWith(
+                '[Stenographer] Failed to enqueue daily question extraction job:',
+                queueError
+            );
+        } finally {
+            if (previousQueueOnly === undefined) {
+                delete process.env.MEMORY_QUEUE_ONLY;
+            } else {
+                process.env.MEMORY_QUEUE_ONLY = previousQueueOnly;
+            }
+            consoleErrorSpy.mockRestore();
+        }
+    });
+
+    it('triggerAppreciationExtraction enqueues appreciation_extraction without calling setImmediate under default mode', async () => {
+        const payload = {
+            appreciationId: 'appr-queue-only',
+            userAId: 'user-a',
+            userBId: 'user-b',
+            message: 'Thanks for helping me reset after a hard day.',
+            coupleId: 'couple-1',
+        };
+
+        await withMemoryRuntimeDefaults(async () => {
+            const setImmediateSpy = vi.spyOn(global, 'setImmediate').mockImplementation(() => 0);
+            const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+            const { client, from, insert } = createMemoryJobsClientMock();
+
+            vi.spyOn(supabase, 'getSupabase').mockReturnValue(client);
+
+            triggerAppreciationExtraction(payload);
+            await Promise.resolve();
+
+            expect(from).toHaveBeenCalledWith('memory_jobs');
+            expect(insert).toHaveBeenCalledTimes(1);
+            expect(getInsertedMemoryJob(insert)).toEqual(expect.objectContaining({
+                job_type: 'appreciation_extraction',
+                payload,
+            }));
+            expect(setImmediateSpy).not.toHaveBeenCalled();
+            consoleErrorSpy.mockRestore();
+        });
+    });
+
+    it('triggerAppreciationExtraction logs enqueue failures without setImmediate fallback', async () => {
+        const payload = {
+            appreciationId: 'appr-queue-only-fallback',
+            userAId: 'user-a',
+            userBId: 'user-b',
+            message: 'Thanks for grounding me after that conflict.',
+            coupleId: 'couple-1',
+        };
+
+        const previousQueueOnly = process.env.MEMORY_QUEUE_ONLY;
+        process.env.MEMORY_QUEUE_ONLY = 'true';
+
+        const queueError = new Error('queue failed');
+        const setImmediateSpy = vi.spyOn(global, 'setImmediate').mockImplementation(() => 0);
+        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        const { client, from, insert } = createMemoryJobsClientMock({ data: null, error: queueError });
+
+        vi.spyOn(supabase, 'getSupabase').mockReturnValue(client);
+
+        try {
+            triggerAppreciationExtraction(payload);
+            await Promise.resolve();
+            await Promise.resolve();
+
+            expect(from).toHaveBeenCalledWith('memory_jobs');
+            expect(insert).toHaveBeenCalledTimes(1);
+            expect(getInsertedMemoryJob(insert)).toEqual(expect.objectContaining({
+                job_type: 'appreciation_extraction',
+                payload,
+            }));
+            expect(setImmediateSpy).not.toHaveBeenCalled();
+            expect(consoleErrorSpy).toHaveBeenCalledWith(
+                '[Stenographer] Failed to enqueue appreciation extraction job:',
+                queueError
+            );
+        } finally {
+            if (previousQueueOnly === undefined) {
+                delete process.env.MEMORY_QUEUE_ONLY;
+            } else {
+                process.env.MEMORY_QUEUE_ONLY = previousQueueOnly;
+            }
+            consoleErrorSpy.mockRestore();
+        }
+    });
+
+    it('triggerMemoryCaptionExtraction enqueues memory_caption_extraction without calling setImmediate under default mode', async () => {
+        const payload = {
+            memoryId: 'memory-queue-only',
+            userAId: 'user-a',
+            userBId: 'user-b',
+            caption: 'Late-night ramen and long talks',
+            coupleId: 'couple-1',
+        };
+
+        await withMemoryRuntimeDefaults(async () => {
+            const setImmediateSpy = vi.spyOn(global, 'setImmediate').mockImplementation(() => 0);
+            const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+            const { client, from, insert } = createMemoryJobsClientMock();
+
+            vi.spyOn(supabase, 'getSupabase').mockReturnValue(client);
+
+            triggerMemoryCaptionExtraction(payload);
+            await Promise.resolve();
+
+            expect(from).toHaveBeenCalledWith('memory_jobs');
+            expect(insert).toHaveBeenCalledTimes(1);
+            expect(getInsertedMemoryJob(insert)).toEqual(expect.objectContaining({
+                job_type: 'memory_caption_extraction',
+                payload,
+            }));
+            expect(setImmediateSpy).not.toHaveBeenCalled();
+            consoleErrorSpy.mockRestore();
+        });
+    });
+
+    it('triggerMemoryCaptionExtraction logs enqueue failures without setImmediate fallback', async () => {
+        const payload = {
+            memoryId: 'memory-queue-only-fallback',
+            userAId: 'user-a',
+            userBId: 'user-b',
+            caption: 'We laughed through the rain on our night walk',
+            coupleId: 'couple-1',
+        };
+
+        const previousQueueOnly = process.env.MEMORY_QUEUE_ONLY;
+        process.env.MEMORY_QUEUE_ONLY = 'true';
+
+        const queueError = new Error('queue failed');
+        const setImmediateSpy = vi.spyOn(global, 'setImmediate').mockImplementation(() => 0);
+        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        const { client, from, insert } = createMemoryJobsClientMock({ data: null, error: queueError });
+
+        vi.spyOn(supabase, 'getSupabase').mockReturnValue(client);
+
+        try {
+            triggerMemoryCaptionExtraction(payload);
+            await Promise.resolve();
+            await Promise.resolve();
+
+            expect(from).toHaveBeenCalledWith('memory_jobs');
+            expect(insert).toHaveBeenCalledTimes(1);
+            expect(getInsertedMemoryJob(insert)).toEqual(expect.objectContaining({
+                job_type: 'memory_caption_extraction',
+                payload,
+            }));
+            expect(setImmediateSpy).not.toHaveBeenCalled();
+            expect(consoleErrorSpy).toHaveBeenCalledWith(
+                '[Stenographer] Failed to enqueue memory caption extraction job:',
+                queueError
+            );
+        } finally {
+            if (previousQueueOnly === undefined) {
+                delete process.env.MEMORY_QUEUE_ONLY;
+            } else {
+                process.env.MEMORY_QUEUE_ONLY = previousQueueOnly;
+            }
+            consoleErrorSpy.mockRestore();
+        }
+    });
+
+    it('triggerAppreciationExtraction skips enqueue when supabase is unconfigured and does not call setImmediate', async () => {
+        const payload = {
+            appreciationId: 'appr-unconfigured',
+            userAId: 'user-a',
+            userBId: 'user-b',
+            message: 'Thanks for checking in with me.',
+            coupleId: 'couple-1',
+        };
+
+        const previousQueueOnly = process.env.MEMORY_QUEUE_ONLY;
+        process.env.MEMORY_QUEUE_ONLY = 'true';
+
+        isSupabaseConfigured.mockReturnValue(false);
+        const getSupabaseSpy = vi.spyOn(supabase, 'getSupabase');
+        const setImmediateSpy = vi.spyOn(global, 'setImmediate').mockImplementation(() => 0);
+        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+        try {
+            triggerAppreciationExtraction(payload);
+            await Promise.resolve();
+
+            expect(getSupabaseSpy).not.toHaveBeenCalled();
+            expect(setImmediateSpy).not.toHaveBeenCalled();
+        } finally {
+            if (previousQueueOnly === undefined) {
+                delete process.env.MEMORY_QUEUE_ONLY;
+            } else {
+                process.env.MEMORY_QUEUE_ONLY = previousQueueOnly;
+            }
+            consoleErrorSpy.mockRestore();
+        }
+    });
+
+    it('triggerMemoryCaptionExtraction skips enqueue when supabase is unconfigured and does not call setImmediate', async () => {
+        const payload = {
+            memoryId: 'memory-unconfigured',
+            userAId: 'user-a',
+            userBId: 'user-b',
+            caption: 'Weekend farmers market and coffee',
+            coupleId: 'couple-1',
+        };
+
+        const previousQueueOnly = process.env.MEMORY_QUEUE_ONLY;
+        process.env.MEMORY_QUEUE_ONLY = 'true';
+
+        isSupabaseConfigured.mockReturnValue(false);
+        const getSupabaseSpy = vi.spyOn(supabase, 'getSupabase');
+        const setImmediateSpy = vi.spyOn(global, 'setImmediate').mockImplementation(() => 0);
+        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+        try {
+            triggerMemoryCaptionExtraction(payload);
+            await Promise.resolve();
+
+            expect(getSupabaseSpy).not.toHaveBeenCalled();
+            expect(setImmediateSpy).not.toHaveBeenCalled();
+        } finally {
+            if (previousQueueOnly === undefined) {
+                delete process.env.MEMORY_QUEUE_ONLY;
+            } else {
+                process.env.MEMORY_QUEUE_ONLY = previousQueueOnly;
+            }
+            consoleErrorSpy.mockRestore();
+        }
+    });
+
+    it('triggerAppreciationExtraction enqueues appreciation_extraction and logs when enqueue rejects without setImmediate fallback', async () => {
+        const payload = {
+            appreciationId: 'appr-1',
+            userAId: 'user-a',
+            userBId: 'user-b',
+            message: 'Thanks for supporting me this week.',
+        };
+
+        const setImmediateSpy = vi.spyOn(global, 'setImmediate').mockImplementation(() => 0);
+        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        const queueError = new Error('queue failed');
+        const { client, from, insert } = createMemoryJobsClientMock({ data: null, error: queueError });
+
+        vi.spyOn(supabase, 'getSupabase').mockReturnValue(client);
+
+        triggerAppreciationExtraction(payload);
+        await Promise.resolve();
+        await Promise.resolve();
+
+        expect(from).toHaveBeenCalledWith('memory_jobs');
+        expect(insert).toHaveBeenCalledTimes(1);
+
+        const queuedJob = getInsertedMemoryJob(insert);
+        expect(queuedJob).toEqual(expect.objectContaining({
+            job_type: 'appreciation_extraction',
+            payload,
+        }));
+        expect(setImmediateSpy).not.toHaveBeenCalled();
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+            '[Stenographer] Failed to enqueue appreciation extraction job:',
+            queueError
+        );
+
+        consoleErrorSpy.mockRestore();
     });
 });
 

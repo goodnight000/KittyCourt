@@ -12,7 +12,6 @@ const { generateEmbedding, isEmbeddingsConfigured } = require('./embeddings');
 const {
     isSupabaseConfigured,
     getUserProfile,
-    retrieveRelevantMemories,
     retrieveRelevantMemoriesV2,
     checkUserHasMemories,
 } = require('./supabase');
@@ -28,8 +27,6 @@ const CONFIG = {
     maxTokens: 4500,
     maxRetries: 3,
 };
-
-const USE_V2 = process.env.MEMORY_ENGINE_V2_ENABLED === 'true';
 
 const EVENT_PLAN_JSON_SCHEMA = {
     name: 'pause_event_plan',
@@ -361,14 +358,22 @@ async function retrievePartnerRagContext({ partnerId, event, language }) {
 
     const normalizedLanguage = normalizeLanguage(language) || 'en';
     const queryEmbedding = await generateEmbedding(buildQueryText({ event }));
-    let retrieved = USE_V2
-        ? await retrieveRelevantMemoriesV2(queryEmbedding, [partnerId], CONFIG.maxMemoriesToRetrieve, 5, normalizedLanguage)
-        : await retrieveRelevantMemories(queryEmbedding, [partnerId], CONFIG.maxMemoriesToRetrieve, normalizedLanguage);
+    let retrieved = await retrieveRelevantMemoriesV2(
+        queryEmbedding,
+        [partnerId],
+        CONFIG.maxMemoriesToRetrieve,
+        5,
+        normalizedLanguage
+    );
 
     if ((!retrieved || retrieved.length === 0) && normalizedLanguage !== 'en') {
-        retrieved = USE_V2
-            ? await retrieveRelevantMemoriesV2(queryEmbedding, [partnerId], CONFIG.maxMemoriesToRetrieve, 5, 'en')
-            : await retrieveRelevantMemories(queryEmbedding, [partnerId], CONFIG.maxMemoriesToRetrieve, 'en');
+        retrieved = await retrieveRelevantMemoriesV2(
+            queryEmbedding,
+            [partnerId],
+            CONFIG.maxMemoriesToRetrieve,
+            5,
+            'en'
+        );
     }
 
     const filtered = (retrieved || [])

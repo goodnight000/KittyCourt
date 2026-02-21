@@ -10,6 +10,7 @@
 
 const embeddings = require('./embeddings');
 const supabase = require('./supabase');
+const { enqueueMemoryJob } = require('./supabaseMemoryJobs');
 const { createChatCompletion, isOpenRouterConfigured } = require('./openrouter');
 const { repairAndParseJSON } = require('./jsonRepair');
 const { getLanguageLabel, normalizeLanguage } = require('./language');
@@ -42,6 +43,47 @@ const MEMORY_CAPTION_CONFIG = {
     maxTokens: 2000,
     similarityThreshold: 0.9,
 };
+
+const INSIGHT_TYPE_NORMALIZATION = {
+    trigger: 'conflict_trigger',
+    triggers: 'conflict_trigger',
+    preference: 'long_term_preference',
+    preferences: 'long_term_preference',
+    emotional_trigger: 'conflict_trigger',
+    behavioral_pattern: 'pattern',
+    patterns: 'pattern',
+    strengths: 'core_value',
+};
+
+const SUPPORTED_INSIGHT_TYPES = new Set([
+    'conflict_trigger',
+    'long_term_preference',
+    'core_value',
+    'pattern',
+    'repair_strategy',
+]);
+
+function normalizeInsightType(type) {
+    if (typeof type !== 'string') {
+        return null;
+    }
+
+    const normalized = INSIGHT_TYPE_NORMALIZATION[type] || type;
+    return SUPPORTED_INSIGHT_TYPES.has(normalized) ? normalized : null;
+}
+
+function getInsightDedupeBucket(type) {
+    const normalized = normalizeInsightType(type);
+    if (!normalized) {
+        return null;
+    }
+
+    if (normalized === 'pattern' || normalized === 'repair_strategy') {
+        return 'pattern_or_repair_strategy';
+    }
+
+    return normalized;
+}
 
 /**
  * System prompt for the Stenographer/Extractor Agent
@@ -462,6 +504,12 @@ async function processUserInsights(userId, insights, sourceCaseIdOrOptions) {
             stats.discarded++;
             continue;
         }
+        const insightType = normalizeInsightType(insight.type);
+        if (!insightType) {
+            console.log(`[Stenographer] Skipped unsupported insight type: ${insight?.type || 'unknown'}`);
+            stats.discarded++;
+            continue;
+        }
         const embedding = embeddingsBatch[i];
 
         try {
@@ -474,7 +522,10 @@ async function processUserInsights(userId, insights, sourceCaseIdOrOptions) {
                 language
             );
 
-            const matchingType = similar.find(entry => entry.memory_type === insight.type);
+            const insightDedupeBucket = getInsightDedupeBucket(insightType);
+            const matchingType = similar.find(
+                entry => getInsightDedupeBucket(entry.memory_type) === insightDedupeBucket
+            );
 
             if (matchingType) {
                 // Found a similar memory - reinforce it instead of duplicating
@@ -486,7 +537,7 @@ async function processUserInsights(userId, insights, sourceCaseIdOrOptions) {
                 await supabase.insertMemory({
                     userId,
                     memoryText: insight.text,
-                    memoryType: insight.type,
+                    memoryType: insightType,
                     memorySubtype: insight.subtype || null,
                     embedding,
                     sourceCaseId: options.sourceCaseId || null,
@@ -832,13 +883,26 @@ async function extractAndStoreMemoryCaptionInsights(payload) {
  * @param {object} payload - Daily question payload
  */
 function triggerDailyQuestionExtraction(payload) {
-    setImmediate(async () => {
-        try {
-            await extractAndStoreDailyQuestionInsights(payload);
-        } catch (error) {
-            console.error('[Stenographer] Daily question background extraction failed:', error);
-        }
-    });
+    if (!supabase.isSupabaseConfigured()) {
+        console.log('[Stenographer] Supabase not configured, skipping daily question extraction enqueue');
+        return;
+    }
+
+    const queuePayload = {
+        jobType: 'daily_question_extraction',
+        payload: payload && typeof payload === 'object' ? payload : {},
+        source_type: 'daily_question',
+        source_id: payload?.assignmentId,
+        couple_id: payload?.coupleId,
+    };
+
+    try {
+        enqueueMemoryJob(queuePayload).catch((error) => {
+            console.error('[Stenographer] Failed to enqueue daily question extraction job:', error);
+        });
+    } catch (error) {
+        console.error('[Stenographer] Failed to enqueue daily question extraction job:', error);
+    }
 }
 
 /**
@@ -847,13 +911,26 @@ function triggerDailyQuestionExtraction(payload) {
  * @param {object} payload - Appreciation payload
  */
 function triggerAppreciationExtraction(payload) {
-    setImmediate(async () => {
-        try {
-            await extractAndStoreAppreciationInsights(payload);
-        } catch (error) {
-            console.error('[Stenographer] Appreciation background extraction failed:', error);
-        }
-    });
+    if (!supabase.isSupabaseConfigured()) {
+        console.log('[Stenographer] Supabase not configured, skipping appreciation extraction enqueue');
+        return;
+    }
+
+    const queuePayload = {
+        jobType: 'appreciation_extraction',
+        payload: payload && typeof payload === 'object' ? payload : {},
+        source_type: 'appreciation',
+        source_id: payload?.appreciationId,
+        couple_id: payload?.coupleId,
+    };
+
+    try {
+        enqueueMemoryJob(queuePayload).catch((error) => {
+            console.error('[Stenographer] Failed to enqueue appreciation extraction job:', error);
+        });
+    } catch (error) {
+        console.error('[Stenographer] Failed to enqueue appreciation extraction job:', error);
+    }
 }
 
 /**
@@ -862,13 +939,26 @@ function triggerAppreciationExtraction(payload) {
  * @param {object} payload - Memory caption payload
  */
 function triggerMemoryCaptionExtraction(payload) {
-    setImmediate(async () => {
-        try {
-            await extractAndStoreMemoryCaptionInsights(payload);
-        } catch (error) {
-            console.error('[Stenographer] Memory caption background extraction failed:', error);
-        }
-    });
+    if (!supabase.isSupabaseConfigured()) {
+        console.log('[Stenographer] Supabase not configured, skipping memory caption extraction enqueue');
+        return;
+    }
+
+    const queuePayload = {
+        jobType: 'memory_caption_extraction',
+        payload: payload && typeof payload === 'object' ? payload : {},
+        source_type: 'memory_upload',
+        source_id: payload?.memoryId,
+        couple_id: payload?.coupleId,
+    };
+
+    try {
+        enqueueMemoryJob(queuePayload).catch((error) => {
+            console.error('[Stenographer] Failed to enqueue memory caption extraction job:', error);
+        });
+    } catch (error) {
+        console.error('[Stenographer] Failed to enqueue memory caption extraction job:', error);
+    }
 }
 
 /**
@@ -879,14 +969,29 @@ function triggerMemoryCaptionExtraction(payload) {
  * @param {string} caseId - The case ID
  */
 function triggerBackgroundExtraction(caseData, caseId) {
-    // Run extraction in the background without awaiting
-    setImmediate(async () => {
-        try {
-            await extractAndStoreInsights(caseData, caseId);
-        } catch (error) {
-            console.error('[Stenographer] Background extraction failed:', error);
-        }
-    });
+    if (!supabase.isSupabaseConfigured()) {
+        console.log('[Stenographer] Supabase not configured, skipping case extraction enqueue');
+        return;
+    }
+
+    const queuePayload = {
+        jobType: 'case_extraction',
+        payload: {
+            caseData: caseData && typeof caseData === 'object' ? caseData : {},
+            caseId,
+        },
+        source_type: 'case',
+        source_id: caseId,
+        couple_id: caseData?.coupleId,
+    };
+
+    try {
+        enqueueMemoryJob(queuePayload).catch((error) => {
+            console.error('[Stenographer] Failed to enqueue case extraction job:', error);
+        });
+    } catch (error) {
+        console.error('[Stenographer] Failed to enqueue case extraction job:', error);
+    }
 }
 
 module.exports = {

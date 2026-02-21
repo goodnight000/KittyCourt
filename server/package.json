@@ -7,7 +7,9 @@
     "start": "node src/app.js",
     "dev": "nodemon --watch src --ext js,json src/app.js",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "worker:memory": "node src/workers/memoryJobsWorkerProcess.js",
+    "worker:memory:dev": "nodemon --watch src --ext js,json src/workers/memoryJobsWorkerProcess.js"
   },
   "keywords": [],
   "author": "",
