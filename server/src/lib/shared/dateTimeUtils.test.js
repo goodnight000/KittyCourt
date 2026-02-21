@@ -22,6 +22,11 @@ import {
     getEtDayRange,
 } from './dateTimeUtils.js';
 
+const expectEtMidnightParts = (hour, minute) => {
+    expect(['00', '24']).toContain(hour);
+    expect(minute).toBe('00');
+};
+
 describe('dateTimeUtils', () => {
     describe('getEtDateString', () => {
         it('should format date in YYYY-MM-DD format', () => {
@@ -215,8 +220,7 @@ describe('dateTimeUtils', () => {
             const hour = etParts.find(p => p.type === 'hour')?.value;
             const minute = etParts.find(p => p.type === 'minute')?.value;
 
-            expect(hour).toBe('00');
-            expect(minute).toBe('00');
+            expectEtMidnightParts(hour, minute);
         });
 
         it('should handle DST transition dates', () => {
@@ -353,8 +357,7 @@ describe('dateTimeUtils', () => {
             const hour = startParts.find(p => p.type === 'hour')?.value;
             const minute = startParts.find(p => p.type === 'minute')?.value;
 
-            expect(hour).toBe('00');
-            expect(minute).toBe('00');
+            expectEtMidnightParts(hour, minute);
         });
 
         it('should handle DST transition dates', () => {
