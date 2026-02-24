@@ -111,6 +111,8 @@ const useOnboardingStore = create(
               favorite_date_activities: onboardingData.favoriteDateActivities || [],
               pet_peeves: onboardingData.petPeeves || [],
               appreciation_style: onboardingData.appreciationStyle,
+              ai_insights_consent: !!onboardingData.aiConsent,
+              ai_insights_consent_at: onboardingData.aiConsent ? new Date().toISOString() : null,
               bio: onboardingData.bio || null,
               onboarding_complete: true,
               preferred_language: _preferredLanguage || _authProfile?.preferred_language || DEFAULT_LANGUAGE,

@@ -51,9 +51,9 @@ const CONFIG = {
 // Judge types for verdict generation (user-selectable)
 // - classic (Mochi): DeepSeek - thoughtful, methodical reasoning
 // - swift (Dash): Gemini - fast AND brilliant
-// - wise (Whiskers): GPT 5.2 - deepest emotional intelligence
+// - wise (Whiskers): Gemini 3.1 Pro - deepest emotional intelligence
 const JUDGE_MODELS = {
-    wise: 'openai/gpt-5.2-chat',
+    wise: 'google/gemini-3.1-pro-preview',
     classic: 'deepseek/deepseek-v3.2',
     swift: 'google/gemini-3-flash-preview'
 };

@@ -13,6 +13,7 @@ const { isSupabaseConfigured } = require('./supabase');
 const { requireSupabase, getPartnerIdForUser } = require('./auth');
 const { resolveLanguageFromHeader, getUserPreferredLanguage } = require('./language');
 const { safeErrorMessage } = require('./shared/errorUtils');
+const { hasAiConsent } = require('./aiConsent');
 
 /**
  * WebSocket Rate Limiter
@@ -303,6 +304,12 @@ class CourtWebSocketService {
                         return handleRateLimitExceeded(socket, 'court:submit_evidence', ack, rateCheck.retryAfterMs);
                     }
 
+                    if (!(await hasAiConsent(socket.userId))) {
+                        socket.emit('court:error', { message: 'AI consent required to continue.', code: 'AI_CONSENT_REQUIRED' });
+                        if (typeof ack === 'function') ack({ ok: false, error: 'AI_CONSENT_REQUIRED' });
+                        return;
+                    }
+
                     // Validate and sanitize all input fields
                     const evidenceCheck = processSecureInput(evidence, {
                         userId: socket.userId,
@@ -404,6 +411,12 @@ class CourtWebSocketService {
                         return handleRateLimitExceeded(socket, 'court:submit_addendum', ack, rateCheck.retryAfterMs);
                     }
 
+                    if (!(await hasAiConsent(socket.userId))) {
+                        socket.emit('court:error', { message: 'AI consent required to continue.', code: 'AI_CONSENT_REQUIRED' });
+                        if (typeof ack === 'function') ack({ ok: false, error: 'AI_CONSENT_REQUIRED' });
+                        return;
+                    }
+
                     // Security validation for addendum text (CRITICAL-001 fix)
                     const addendumCheck = processSecureInput(text || '', {
                         userId: socket.userId,
@@ -498,6 +511,12 @@ class CourtWebSocketService {
                     const rateCheck = checkWsRateLimit(socket.userId, 'court:resolution_hybrid');
                     if (!rateCheck.allowed) {
                         return handleRateLimitExceeded(socket, 'court:resolution_hybrid', ack, rateCheck.retryAfterMs);
+                    }
+
+                    if (!(await hasAiConsent(socket.userId))) {
+                        socket.emit('court:error', { message: 'AI consent required to continue.', code: 'AI_CONSENT_REQUIRED' });
+                        if (typeof ack === 'function') ack({ ok: false, error: 'AI_CONSENT_REQUIRED' });
+                        return;
                     }
 
                     await courtSessionManager.requestHybridResolution(socket.userId);

@@ -18,6 +18,7 @@ const { sendError } = require('../lib/http');
 const { asyncHandler } = require('../middleware/asyncHandler');
 const { processSecureInput, securityConfig, llmSecurityMiddleware } = require('../lib/security/index');
 const { safeErrorMessage } = require('../lib/shared/errorUtils');
+const { hasAiConsent } = require('../lib/aiConsent');
 
 const isProd = process.env.NODE_ENV === 'production';
 
@@ -171,6 +172,10 @@ router.post('/evidence', llmSecurityMiddleware('court'), asyncHandler(async (req
         const { userId: fallbackUserId, evidence, feelings, needs } = body;
         const userId = await requireUserId(req, fallbackUserId);
 
+        if (!(await hasAiConsent(userId))) {
+            return sendError(res, 403, 'AI_CONSENT_REQUIRED', 'AI consent required');
+        }
+
         // Security context from middleware (for logging/debugging)
         const securityContext = req.securityContext;
         if (securityContext?.flaggedFields?.length > 0) {
@@ -307,6 +312,10 @@ router.post('/addendum', llmSecurityMiddleware('court'), asyncHandler(async (req
         const { userId: fallbackUserId, text } = body;
         const userId = await requireUserId(req, fallbackUserId);
 
+        if (!(await hasAiConsent(userId))) {
+            return sendError(res, 403, 'AI_CONSENT_REQUIRED', 'AI consent required');
+        }
+
         // Security context from middleware (for logging/debugging)
         const securityContext = req.securityContext;
         if (securityContext?.flaggedFields?.length > 0) {
@@ -412,6 +421,10 @@ router.post('/resolution/hybrid', asyncHandler(async (req, res) => {
     try {
         const { userId: fallbackUserId } = req.body;
         const userId = await requireUserId(req, fallbackUserId);
+
+        if (!(await hasAiConsent(userId))) {
+            return sendError(res, 403, 'AI_CONSENT_REQUIRED', 'AI consent required');
+        }
 
         await courtSessionManager.requestHybridResolution(userId);
         const state = courtSessionManager.getStateForUser(userId);

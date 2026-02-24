@@ -24,7 +24,7 @@ vi.mock('../../i18n', () => ({
                 'errors.IMAGE_TOO_LARGE': 'Image is too large (max 5MB)',
                 'errors.IMAGE_READ_FAILED': 'Failed to read image',
                 'validation.DATE_IN_FUTURE': 'Birthday error: Date cannot be in the future',
-                'validation.AGE_TOO_YOUNG': 'Birthday error: You must be at least 13 years old',
+                'validation.AGE_TOO_YOUNG': 'Birthday error: You must be at least 16 years old',
                 'validation.AGE_TOO_OLD': 'Birthday error: Please enter a valid birth year',
             };
             if (key === 'profilePage.edit.avatarAlt' && params?.name) {
@@ -67,8 +67,8 @@ vi.mock('../../utils/helpers', () => ({
             age--;
         }
 
-        if (age < 13) {
-            return { isValid: false, error: 'You must be at least 13 years old', errorCode: 'AGE_TOO_YOUNG' };
+        if (age < 16) {
+            return { isValid: false, error: 'You must be at least 16 years old', errorCode: 'AGE_TOO_YOUNG' };
         }
 
         if (age > 120) {
@@ -304,7 +304,7 @@ describe('ProfileEditForm', () => {
 
             fireEvent.change(birthdayInput, { target: { value: underage } });
 
-            expect(screen.getByText(/must be at least 13 years old/)).toBeInTheDocument();
+            expect(screen.getByText(/must be at least 16 years old/)).toBeInTheDocument();
         });
 
         it('should clear error when valid birthday is entered', () => {
@@ -316,11 +316,11 @@ describe('ProfileEditForm', () => {
             const today = new Date();
             const underageDate = new Date(today.getFullYear() - 10, today.getMonth(), today.getDate());
             fireEvent.change(birthdayInput, { target: { value: underageDate.toISOString().split('T')[0] } });
-            expect(screen.getByText(/must be at least 13 years old/)).toBeInTheDocument();
+            expect(screen.getByText(/must be at least 16 years old/)).toBeInTheDocument();
 
             // Then enter a valid date
             fireEvent.change(birthdayInput, { target: { value: '1990-05-15' } });
-            expect(screen.queryByText(/must be at least 13 years old/)).not.toBeInTheDocument();
+            expect(screen.queryByText(/must be at least 16 years old/)).not.toBeInTheDocument();
         });
 
         it('should clear error when birthday is cleared', () => {

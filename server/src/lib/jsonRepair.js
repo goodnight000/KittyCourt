@@ -18,8 +18,17 @@
  * @returns {object} - The parsed JSON object
  * @throws {Error} - If repair is not possible
  */
-function repairAndParseJSON(jsonString, options = { verbose: true }) {
-    const log = options.verbose ? console.log.bind(console, '[JSON Repair]') : () => { };
+function isRepairVerbose(options = {}) {
+    if (typeof options.verbose === 'boolean') {
+        return options.verbose;
+    }
+
+    const envValue = String(process.env.JSON_REPAIR_VERBOSE || '').trim().toLowerCase();
+    return envValue === '1' || envValue === 'true' || envValue === 'yes' || envValue === 'on';
+}
+
+function repairAndParseJSON(jsonString, options = {}) {
+    const log = isRepairVerbose(options) ? console.log.bind(console, '[JSON Repair]') : () => { };
 
     // First, try direct parsing
     try {
@@ -210,7 +219,7 @@ function repairAndParseJSON(jsonString, options = { verbose: true }) {
  */
 function safeJSONParse(jsonString, fallback = null) {
     try {
-        const result = repairAndParseJSON(jsonString, { verbose: true });
+        const result = repairAndParseJSON(jsonString);
         return [result, true];
     } catch (error) {
         console.error('[JSON Repair] All repair attempts failed:', error.message);

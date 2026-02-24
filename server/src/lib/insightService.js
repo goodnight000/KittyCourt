@@ -231,8 +231,8 @@ const generateInsightsForCouple = async ({ userId, partnerId, existingInsights =
 
         const llmResult = await callLLMWithRetry(
             {
-                llmFunction: (modelOverride) => createChatCompletion({
-                    model: modelOverride || INSIGHTS_MODEL,
+                llmFunction: () => createChatCompletion({
+                    model: INSIGHTS_MODEL,
                     messages,
                     temperature: 0.4,
                     maxTokens: 1400,
@@ -240,13 +240,11 @@ const generateInsightsForCouple = async ({ userId, partnerId, existingInsights =
                     reasoningEffort: 'high',
                 }),
                 schema: InsightsOutputSchema,
-                primaryModel: INSIGHTS_MODEL,
             },
             {
                 maxRetries: 2,
                 baseDelayMs: 900,
                 operationName: 'Insights generation',
-                enableModelFallback: false,
             }
         );
 

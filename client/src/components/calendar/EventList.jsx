@@ -139,7 +139,7 @@ const EventCard = memo(({
                                 {timingLabel && (
                                     <span
                                         className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-extrabold ${isToday
-                                            ? 'bg-white/20 text-white border border-white/30'
+                                            ? 'bg-court-brown/85 text-court-cream border border-court-gold/25'
                                             : 'bg-white/70 border border-white/60 text-neutral-600'
                                             }`}
                                     >

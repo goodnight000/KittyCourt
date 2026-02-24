@@ -16,6 +16,7 @@ import useUpsellStore from '../store/useUpsellStore';
 import RequirePartner from '../components/RequirePartner';
 import Paywall from '../components/Paywall';
 import ButtonLoader from '../components/shared/ButtonLoader';
+import { DEFAULT_JUDGE_ID, getJudgeMetadata } from '../lib/judgeMetadata';
 
 import {
     CourtAtRest,
@@ -112,37 +113,13 @@ export default function CourtroomPageV2() {
     const addendumLimit = session?.addendumLimit ?? 2;
     const addendumCount = session?.addendumCount ?? 0;
     const addendumRemaining = session?.addendumRemaining ?? Math.max(addendumLimit - addendumCount, 0);
-    const judgeType = session?.judgeType || 'swift';
-    const judgeProfile = useMemo(() => {
-        const aliases = {
-            fast: 'classic',
-            logical: 'swift',
-            best: 'wise'
-        };
-        const profiles = {
-            classic: {
-                nameKey: 'court.judges.classic.name',
-                avatar: '/assets/avatars/judge_mochi.png'
-            },
-            swift: {
-                nameKey: 'court.judges.swift.name',
-                avatar: '/assets/avatars/judge_dash.png'
-            },
-            wise: {
-                nameKey: 'court.judges.wise.name',
-                avatar: '/assets/avatars/judge_whiskers.png'
-            }
-        };
-        const normalized = aliases[judgeType] || judgeType;
-        return profiles[normalized] || profiles.swift;
-    }, [judgeType]);
+    const judgeProfile = useMemo(() => getJudgeMetadata(session?.judgeType), [session?.judgeType]);
     const judgeAvatar = judgeProfile.avatar;
     const judgeName = useMemo(() => t(judgeProfile.nameKey), [judgeProfile.nameKey, t]);
 
-    const myPick = useMemo(() => {
-        if (!session?.resolutionPicks) return null;
-        return isCreator ? session.resolutionPicks.userA : session.resolutionPicks.userB;
-    }, [session?.resolutionPicks, isCreator]);
+    const myPick = session?.resolutionPicks
+        ? (isCreator ? session.resolutionPicks.userA : session.resolutionPicks.userB)
+        : null;
 
     const mismatchOriginal = session?.mismatchOriginal || null;
     const mismatchPicks = session?.mismatchPicks || null;
@@ -263,7 +240,7 @@ export default function CourtroomPageV2() {
         handlePostCaseUpsell(pendingSession);
     }, [handlePostCaseUpsell, showRatingPopup]);
 
-    const handleServe = async (judgeType = 'swift') => {
+    const handleServe = async (judgeType = DEFAULT_JUDGE_ID) => {
         const partnerId = partner?.id;
         if (!partnerId) return;
         await serve(partnerId, null, judgeType);
@@ -326,7 +303,7 @@ export default function CourtroomPageV2() {
                 return <WaitingForEvidence session={session} partnerName={partnerName} myName={myName} />;
 
             case VIEW_PHASE.ANALYZING:
-                return <DeliberatingScreen isLoading={isGeneratingVerdict || true} judgeAvatar={judgeAvatar} />;
+                return <DeliberatingScreen isLoading={isGeneratingVerdict} judgeAvatar={judgeAvatar} />;
 
             case VIEW_PHASE.PRIMING:
                 return (

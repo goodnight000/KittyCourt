@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Crown, Gavel, Lock, Medal, Scale, Star, X, Zap } from 'lucide-react';
+import { motion as Motion, AnimatePresence } from 'framer-motion';
+import { Crown, Gavel, Lock, Star, X } from 'lucide-react';
 import useSubscriptionStore from '../../store/useSubscriptionStore';
 import Paywall from '../Paywall';
 import { useI18n } from '../../i18n';
 import StandardButton from '../shared/StandardButton';
 import ButtonLoader from '../shared/ButtonLoader';
+import { JUDGE_OPTIONS } from '../../lib/judgeMetadata';
 
 // Floating decorative elements for premium ambiance
 // Duration is pre-computed to avoid Math.random() during render
@@ -23,41 +24,7 @@ const floatingElements = [
  * Now includes subscription-based usage limits and gating
  */
 
-const JUDGES = [
-    {
-        id: 'classic',
-        nameKey: 'court.judges.classic.name',
-        subtitleKey: 'court.judges.classic.subtitle',
-        descriptionKey: 'court.judges.classic.description',
-        model: 'DeepSeek v3.2',
-        avatar: '/assets/avatars/judge_mochi.png',
-        accentColor: 'bg-amber-400',
-        borderColor: 'border-amber-300',
-        icon: Scale
-    },
-    {
-        id: 'swift',
-        nameKey: 'court.judges.swift.name',
-        subtitleKey: 'court.judges.swift.subtitle',
-        descriptionKey: 'court.judges.swift.description',
-        model: 'Gemini 3 Flash',
-        avatar: '/assets/avatars/judge_dash.png',
-        accentColor: 'bg-teal-500',
-        borderColor: 'border-teal-400',
-        icon: Zap
-    },
-    {
-        id: 'wise',
-        nameKey: 'court.judges.wise.name',
-        subtitleKey: 'court.judges.wise.subtitle',
-        descriptionKey: 'court.judges.wise.description',
-        model: 'GPT 5.2',
-        avatar: '/assets/avatars/judge_whiskers.png',
-        accentColor: 'bg-purple-500',
-        borderColor: 'border-purple-400',
-        icon: Medal
-    }
-];
+const JUDGES = JUDGE_OPTIONS;
 
 const JudgeSelection = ({ isOpen, onClose, onServe }) => {
     const [selectedJudge, setSelectedJudge] = useState(null);
@@ -156,14 +123,14 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
         <>
             <AnimatePresence>
                 {isOpen && (
-                    <motion.div
+                    <Motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         className="fixed inset-0 z-50 flex items-center justify-center p-4 pb-24"
                     >
                         {/* Backdrop */}
-                        <motion.div
+                        <Motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
@@ -180,7 +147,7 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
                         {floatingElements.map((el, i) => {
                             const Icon = el.Icon;
                             return (
-                            <motion.span
+                            <Motion.span
                                 key={i}
                                 animate={{
                                     y: [0, -8, 0],
@@ -197,11 +164,11 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
                                 style={{ left: el.left, top: el.top }}
                             >
                                 <Icon className={`${el.size} ${el.color}`} />
-                            </motion.span>
+                            </Motion.span>
                         )})}
 
                         {/* Modal */}
-                        <motion.div
+                        <Motion.div
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -232,7 +199,7 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
                             {/* Header */}
                             <div className="relative text-center mb-4 pt-2">
                                 {/* Ceremonial gavel icon */}
-                                <motion.div
+                                <Motion.div
                                     animate={{ rotate: [-3, 3, -3] }}
                                     transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
                                     className="inline-flex items-center justify-center w-12 h-12 mb-3
@@ -240,14 +207,14 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
                                         rounded-full border border-court-gold/20"
                                 >
                                     <Gavel className="w-6 h-6 text-court-gold" />
-                                </motion.div>
+                                </Motion.div>
 
                                 <h2 className="text-xl font-bold text-court-brown mb-1">
                                     {t('court.judgeSelection.title')}
                                 </h2>
                                 {/* Gold badge - enhanced styling */}
                                 {isGold && (
-                                    <motion.div
+                                    <Motion.div
                                         initial={{ opacity: 0, scale: 0.9 }}
                                         animate={{ opacity: 1, scale: 1 }}
                                         className="inline-flex items-center gap-1.5 mt-3 px-3 py-1.5
@@ -258,7 +225,7 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
                                         <span className="text-xs font-semibold text-court-gold tracking-wide">
                                             {t('court.judgeSelection.goldBadge')}
                                         </span>
-                                    </motion.div>
+                                    </Motion.div>
                                 )}
                             </div>
 
@@ -273,7 +240,7 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
                                     const judgeName = t(judge.nameKey);
 
                                     return (
-                                        <motion.button
+                                        <Motion.button
                                             key={judge.id}
                                             onClick={() => handleJudgeClick(judge)}
                                             whileTap={{ scale: 0.98 }}
@@ -289,12 +256,12 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
                                             {/* Selection glow effect */}
                                             {isSelected && !isLocked && (
                                                 <>
-                                                    <motion.div
+                                                    <Motion.div
                                                         layoutId="judgeSelectionHalo"
                                                         transition={{ type: 'spring', stiffness: 240, damping: 24 }}
                                                         className={`absolute inset-0 rounded-2xl border-2 ${judge.borderColor} pointer-events-none`}
                                                     />
-                                                    <motion.div
+                                                    <Motion.div
                                                         initial={{ opacity: 0 }}
                                                         animate={{ opacity: [0.35, 0.6, 0.35], scale: [1, 1.02, 1] }}
                                                         transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
@@ -319,7 +286,7 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
                                                         }}
                                                     />
                                                     {isSelected && !isLocked && (
-                                                        <motion.div
+                                                        <Motion.div
                                                             initial={{ scale: 0 }}
                                                             animate={{ scale: 1 }}
                                                             className={`absolute inset-0 ${judge.accentColor}/20`}
@@ -372,7 +339,7 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
                                                         : 'border-court-tan bg-white'
                                                     }`}>
                                                     {isSelected && !isLocked && (
-                                                        <motion.div
+                                                        <Motion.div
                                                             initial={{ scale: 0 }}
                                                             animate={{ scale: [0, 1.2, 1] }}
                                                             transition={{ duration: 0.35, ease: 'easeOut' }}
@@ -394,7 +361,7 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
                                                     </span>
                                                 </div>
                                             )}
-                                        </motion.button>
+                                        </Motion.button>
                                     );
                                 })}
                             </div>
@@ -409,7 +376,7 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
                                 className="relative w-full py-3 overflow-hidden"
                             >
                                 {ctaPulse && (
-                                    <motion.span
+                                    <Motion.span
                                         initial={{ opacity: 0.4, scale: 0.9 }}
                                         animate={{ opacity: 0, scale: 1.35 }}
                                         transition={{ duration: 0.5, ease: 'easeOut' }}
@@ -418,7 +385,7 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
                                 )}
                                 {/* Button shimmer effect when active */}
                                 {canServe && (
-                                    <motion.div
+                                    <Motion.div
                                         animate={{ x: ['-100%', '200%'] }}
                                         transition={{ duration: 2.5, repeat: Infinity, repeatDelay: 4 }}
                                         className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12"
@@ -439,8 +406,8 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
                                     </>
                                 )}
                             </StandardButton>
-                        </motion.div>
-                    </motion.div>
+                        </Motion.div>
+                    </Motion.div>
                 )}
             </AnimatePresence>
 

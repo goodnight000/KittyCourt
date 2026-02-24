@@ -6,7 +6,7 @@ import useAuthStore from '../store/useAuthStore';
 import useOnboardingStore from '../store/useOnboardingStore';
 import useSubscriptionStore from '../store/useSubscriptionStore';
 import useUpsellStore from '../store/useUpsellStore';
-import { validateDate, validateEmail } from '../utils/helpers';
+import { validateBirthdayDate, validateEmail } from '../utils/helpers';
 import Paywall from '../components/Paywall';
 import { useI18n } from '../i18n';
 import { DEFAULT_LANGUAGE, normalizeLanguage } from '../i18n/languageConfig';
@@ -39,6 +39,13 @@ const ONBOARDING_STEPS = [
         titleKey: 'onboarding.steps.auth.title',
         subtitleKey: 'onboarding.steps.auth.subtitle',
         icon: null,
+    },
+    {
+        id: 'aiConsent',
+        titleKey: 'onboarding.steps.aiConsent.title',
+        subtitleKey: 'onboarding.steps.aiConsent.subtitle',
+        icon: '🛡️',
+        field: 'aiConsent',
     },
     {
         id: 'name',
@@ -312,7 +319,7 @@ const OnboardingPage = () => {
 
             // Validate birthday date
             if (currentStepData.field === 'birthday' && value) {
-                const validation = validateDate(value);
+                const validation = validateBirthdayDate(value);
                 if (!validation.isValid) {
                     setBirthdayError(translateValidationError(validation));
                     return;
@@ -540,6 +547,14 @@ const OnboardingPage = () => {
                     />
                 );
 
+            case 'aiConsent':
+                return (
+                    <AIConsentStep
+                        agreed={!!onboardingData.aiConsent}
+                        onToggle={(next) => updateOnboardingData({ aiConsent: next })}
+                    />
+                );
+
             case 'birthday':
                 return (
                     <ProfileFieldStep
@@ -548,7 +563,7 @@ const OnboardingPage = () => {
                         onChange={(value) => {
                             updateOnboardingData({ birthday: value });
                             if (value) {
-                                const validation = validateDate(value);
+                                const validation = validateBirthdayDate(value);
                                 setBirthdayError(validation.isValid ? null : translateValidationError(validation));
                             } else {
                                 setBirthdayError(null);
@@ -722,5 +737,67 @@ const OnboardingBackdrop = () => (
         <div className="absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-rose-200/25 blur-2xl" />
     </div>
 );
+
+function AIConsentStep({ agreed, onToggle }) {
+    const { t } = useI18n();
+
+    return (
+        <Motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-4"
+        >
+            <label className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition-all ${
+                agreed
+                    ? 'border-[#D2BC76] bg-[#FBF6E8] shadow-soft'
+                    : 'border-white/80 bg-white/80 hover:bg-white'
+            }`}>
+                <input
+                    type="checkbox"
+                    checked={agreed}
+                    onChange={(e) => onToggle(e.target.checked)}
+                    className="sr-only"
+                />
+                <div className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${
+                    agreed
+                        ? 'border-[#B9911F] bg-gradient-to-br from-[#C9A227] to-[#8B7019]'
+                        : 'border-neutral-300 bg-white'
+                }`}>
+                    {agreed && <Check className="h-3 w-3 text-white" />}
+                </div>
+                <div className="space-y-1.5">
+                    <p className="text-sm font-bold text-neutral-800">
+                        {t('onboarding.consent.label')}
+                    </p>
+                    <p className="text-xs leading-relaxed text-neutral-500">
+                        {t('onboarding.consent.description')}
+                    </p>
+                </div>
+            </label>
+
+            <p className="text-xs text-neutral-500 text-center leading-relaxed">
+                {t('onboarding.consent.privacyPrefix')}{' '}
+                <a
+                    href="/privacy-policy.html"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-court-gold hover:text-court-goldDark transition-colors"
+                >
+                    {t('settings.legal.privacy')}
+                </a>{' '}
+                {t('onboarding.consent.privacyAnd')}{' '}
+                <a
+                    href="/terms-of-service.html"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-court-gold hover:text-court-goldDark transition-colors"
+                >
+                    {t('settings.legal.terms')}
+                </a>
+                .
+            </p>
+        </Motion.div>
+    );
+}
 
 export default OnboardingPage;

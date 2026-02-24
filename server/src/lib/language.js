@@ -5,8 +5,8 @@ const LANGUAGE_CONFIG_PATH = path.resolve(__dirname, '..', '..', '..', 'i18n.lan
 const FALLBACK_CONFIG = {
     default: 'en',
     supported: [
-        { code: 'en', label: 'English', aliases: [] },
-        { code: 'zh-Hans', label: 'Simplified Chinese', aliases: [] },
+        { code: 'en', labelKey: 'language.en', label: 'English', nativeLabel: 'English', aliases: ['en-US', 'en-GB'] },
+        { code: 'zh-Hans', labelKey: 'language.zhHans', label: 'Simplified Chinese', nativeLabel: '简体中文', aliases: ['zh', 'zh-CN', 'zh-SG'] },
     ],
 };
 

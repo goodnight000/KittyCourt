@@ -180,7 +180,7 @@
     "YEAR_TOO_EARLY": "年份需不早于 {minYear} 年",
     "YEAR_TOO_LATE": "年份需不晚于 {maxYear} 年",
     "DATE_IN_FUTURE": "日期不能是未来时间",
-    "AGE_TOO_YOUNG": "你必须年满 13 岁",
+    "AGE_TOO_YOUNG": "你必须年满 16 岁",
     "AGE_TOO_OLD": "请输入有效的出生年份"
   },
   "errors": {
@@ -934,6 +934,10 @@
         "title": "创建账号",
         "subtitle": "让你的进度安全保存。"
       },
+      "aiConsent": {
+        "title": "开始前点一下同意",
+        "subtitle": "这样 Pause 才能基于你提交的内容生成裁决和洞察。"
+      },
       "name": {
         "title": "我们该怎么称呼你？",
         "subtitle": "选择一个喜欢的名字"
@@ -1005,6 +1009,12 @@
         "hint": "如果没有收到邮件，请检查垃圾邮件文件夹。链接将在24小时后过期。",
         "tryDifferent": "使用其他邮箱"
       }
+    },
+    "consent": {
+      "label": "我同意由 AI 协助我的 Pause 体验。",
+      "description": "我们会用你提交的内容来提供应用内裁决与洞察，不会出售你的个人数据。",
+      "privacyPrefix": "继续即表示你同意我们的",
+      "privacyAnd": "和"
     },
     "name": {
       "placeholder": "你的名字或昵称",

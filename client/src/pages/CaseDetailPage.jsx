@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useParams } from 'react-router-dom';
 import useAuthStore from '../store/useAuthStore';
 import usePartnerStore from '../store/usePartnerStore';
@@ -7,26 +7,12 @@ import { useI18n } from '../i18n';
 import { formatDate } from '../utils/helpers';
 import {
     MessageCircle, Heart, Calendar, Scale,
-    AlertTriangle, Zap, Cloud, FileText, Clock, User, Coffee, Cat,
+    AlertTriangle, Zap, Cloud, FileText, Clock, User,
     ChevronDown, ChevronUp, ChevronRight, CheckCircle, Cpu, Target, Activity
 } from 'lucide-react';
 import api from '../services/api';
 import BackButton from '../components/shared/BackButton';
-
-/**
- * Judge model configuration
- * Includes legacy keys (fast, logical, best) for backward compatibility with existing cases
- */
-const JUDGE_MODELS = {
-    // New judge IDs
-    classic: { name: 'Judge Mochi', Icon: Coffee, description: 'The Gentle Thinker' },
-    swift: { name: 'Judge Dash', Icon: Zap, description: 'Speed Meets Brilliance' },
-    wise: { name: 'Judge Whiskers', Icon: Cat, description: 'The Wise Sage' },
-    // Legacy mappings for existing cases
-    fast: { name: 'Judge Mochi', Icon: Coffee, description: 'The Gentle Thinker' },
-    logical: { name: 'Judge Dash', Icon: Zap, description: 'Speed Meets Brilliance' },
-    best: { name: 'Judge Whiskers', Icon: Cat, description: 'The Wise Sage' },
-};
+import { getJudgeMetadata } from '../lib/judgeMetadata';
 
 /**
  * Subtle page backdrop with gradient orbs
@@ -41,7 +27,7 @@ const PageBackdrop = () => (
 /**
  * Section header component with kicker style
  */
-const SectionHeader = ({ icon: Icon, title, color = 'amber' }) => {
+const SectionHeader = ({ icon, title, color = 'amber' }) => {
     const colorClasses = {
         amber: { icon: 'text-amber-500', text: 'text-amber-700', line: 'bg-amber-200/50' },
         rose: { icon: 'text-rose-500', text: 'text-rose-700', line: 'bg-rose-200/50' },
@@ -49,10 +35,11 @@ const SectionHeader = ({ icon: Icon, title, color = 'amber' }) => {
         green: { icon: 'text-green-500', text: 'text-green-700', line: 'bg-green-200/50' },
     };
     const colors = colorClasses[color] || colorClasses.amber;
+    const iconEl = React.createElement(icon, { className: `w-4 h-4 ${colors.icon}` });
 
     return (
         <div className="flex items-center gap-2">
-            <Icon className={`w-4 h-4 ${colors.icon}`} />
+            {iconEl}
             <span className={`text-[11px] font-semibold ${colors.text} uppercase tracking-[0.2em]`}>
                 {title}
             </span>
@@ -155,7 +142,7 @@ const CaseDetailPage = () => {
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-[60vh]">
-                <motion.div
+                <Motion.div
                     animate={{ rotate: 360 }}
                     transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                     className="w-10 h-10 border-3 border-court-tan border-t-court-gold rounded-full"
@@ -206,7 +193,6 @@ const CaseDetailPage = () => {
     const userAResolutionPick = verdictMeta.userAResolutionPick || null;
     const userBResolutionPick = verdictMeta.userBResolutionPick || null;
     const hybridResolution = verdictMeta.hybridResolution || null;
-    const isHybridCase = verdictMeta.isHybrid || false;
 
     // Determine if this was a mismatch case (users picked different resolutions)
     const hadMismatch = userAResolutionPick && userBResolutionPick
@@ -216,15 +202,16 @@ const CaseDetailPage = () => {
         setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
     };
 
-    // Get judge model info (fallback to swift/Dash as default)
-    const judgeModel = JUDGE_MODELS[caseData.judgeModel] || JUDGE_MODELS.swift;
+    const judgeModel = getJudgeMetadata(caseData.judgeModel);
+    const JudgeIcon = judgeModel.detailIcon;
+    const judgeName = t(judgeModel.nameKey);
 
     return (
         <div className="space-y-5 pb-6">
             <PageBackdrop />
 
             {/* Header with Back Button */}
-            <motion.div
+            <Motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="flex items-center gap-3"
@@ -256,10 +243,9 @@ const CaseDetailPage = () => {
                         })}
                     </div>
                 </div>
-            </motion.div>
-
+            </Motion.div>
             {/* Case Meta Card */}
-            <motion.div
+            <Motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="glass-card p-4 space-y-3"
@@ -324,15 +310,14 @@ const CaseDetailPage = () => {
                     <span className="text-xs text-neutral-500">
                         {t('cases.detail.judgedBy')}:{' '}
                         <span className="inline-flex items-center gap-1 font-semibold text-neutral-700">
-                            <judgeModel.Icon className="w-4 h-4 text-amber-600" />
-                            {judgeModel.name}
+                            <JudgeIcon className="w-4 h-4 text-amber-600" />
+                            {judgeName}
                         </span>
                     </span>
                 </div>
-            </motion.div>
-
+            </Motion.div>
             {/* Partner Perspectives */}
-            <motion.div
+            <Motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
@@ -457,11 +442,10 @@ const CaseDetailPage = () => {
                         </div>
                     )}
                 </div>
-            </motion.div>
-
+            </Motion.div>
             {/* Emotional Analysis - Partner-focused */}
             {analysisData && (analysisData.userA_VulnerableEmotion || analysisData.userB_VulnerableEmotion || analysisData.userA_Horsemen || analysisData.userB_Horsemen) && (
-                <motion.div
+                <Motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.15 }}
@@ -481,7 +465,7 @@ const CaseDetailPage = () => {
 
                     <AnimatePresence initial={false}>
                         {openSections.analysis && (
-                            <motion.div
+                            <Motion.div
                                 initial={{ opacity: 0, y: 6 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, y: -6 }}
@@ -572,15 +556,15 @@ const CaseDetailPage = () => {
                                         </div>
                                     )}
                                 </div>
-                            </motion.div>
+                            </Motion.div>
                         )}
                     </AnimatePresence>
-                </motion.div>
+                </Motion.div>
             )}
 
             {/* Priming Insights */}
             {primingContent && (
-                <motion.div
+                <Motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.18 }}
@@ -612,7 +596,7 @@ const CaseDetailPage = () => {
 
                                 <AnimatePresence initial={false}>
                                     {openSections[sectionKey] && (
-                                        <motion.div
+                                        <Motion.div
                                             initial={{ opacity: 0, y: 6 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             exit={{ opacity: 0, y: -6 }}
@@ -644,18 +628,18 @@ const CaseDetailPage = () => {
                                                     </ul>
                                                 </div>
                                             </div>
-                                        </motion.div>
+                                        </Motion.div>
                                     )}
                                 </AnimatePresence>
                             </div>
                         );
                     })}
-                </motion.div>
+                </Motion.div>
             )}
 
             {/* Joint Menu */}
             {jointMenu && (
-                <motion.div
+                <Motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.2 }}
@@ -675,7 +659,7 @@ const CaseDetailPage = () => {
 
                     <AnimatePresence initial={false}>
                         {openSections.jointMenu && (
-                            <motion.div
+                            <Motion.div
                                 initial={{ opacity: 0, y: 6 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, y: -6 }}
@@ -706,15 +690,15 @@ const CaseDetailPage = () => {
                                         "{jointMenu.closingWisdom}"
                                     </div>
                                 )}
-                            </motion.div>
+                            </Motion.div>
                         )}
                     </AnimatePresence>
-                </motion.div>
+                </Motion.div>
             )}
 
             {/* Resolution Menu */}
             {(resolutionOptions?.length > 0 || hadMismatch) && (
-                <motion.div
+                <Motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.22 }}
@@ -734,7 +718,7 @@ const CaseDetailPage = () => {
 
                     <AnimatePresence initial={false}>
                         {openSections.resolutions && (
-                            <motion.div
+                            <Motion.div
                                 initial={{ opacity: 0, y: 6 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, y: -6 }}
@@ -856,14 +840,14 @@ const CaseDetailPage = () => {
                                         );
                                     })
                                 )}
-                            </motion.div>
+                            </Motion.div>
                         )}
                     </AnimatePresence>
-                </motion.div>
+                </Motion.div>
             )}
 
             {/* Verdict Section */}
-            <motion.div
+            <Motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
@@ -885,7 +869,7 @@ const CaseDetailPage = () => {
                 {openSections.verdict && allVerdicts.length > 1 && (
                     <div className="flex items-center gap-2 overflow-x-auto pb-2">
                         {allVerdicts.map((v, idx) => (
-                            <motion.button
+                            <Motion.button
                                 key={v.id || idx}
                                 whileTap={{ scale: 0.95 }}
                                 onClick={() => setSelectedVerdictIndex(idx)}
@@ -908,14 +892,14 @@ const CaseDetailPage = () => {
                                         </>
                                     )}
                                 </div>
-                            </motion.button>
+                            </Motion.button>
                         ))}
                     </div>
                 )}
 
                 {/* Show Addendum Info if this is an addendum */}
                 {openSections.verdict && currentVerdictData?.addendumBy && (
-                    <motion.div
+                    <Motion.div
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                         className="glass-card p-3 bg-violet-50/50 border border-violet-200"
@@ -947,7 +931,7 @@ const CaseDetailPage = () => {
                                 </p>
                             </div>
                         </div>
-                    </motion.div>
+                    </Motion.div>
                 )}
 
                 {/* Verdict Content */}
@@ -1049,11 +1033,10 @@ const CaseDetailPage = () => {
                         )}
                     </div>
                 )}
-            </motion.div>
-
+            </Motion.div>
             {/* All Addendums Timeline (if there are multiple verdicts) */}
             {allVerdicts.length > 1 && (
-                <motion.div
+                <Motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.3 }}
@@ -1076,7 +1059,7 @@ const CaseDetailPage = () => {
                                             : 'bg-court-gold border-court-goldDark'
                                     }`} />
                                     
-                                    <motion.button
+                                    <Motion.button
                                         whileTap={{ scale: 0.98 }}
                                         onClick={() => setSelectedVerdictIndex(realIndex)}
                                         className={`w-full text-left p-3 rounded-xl transition-all ${
@@ -1116,12 +1099,12 @@ const CaseDetailPage = () => {
                                                 "{v.addendumText}"
                                             </p>
                                         )}
-                                    </motion.button>
+                                    </Motion.button>
                                 </div>
                             );
                         })}
                     </div>
-                </motion.div>
+                </Motion.div>
             )}
         </div>
     );

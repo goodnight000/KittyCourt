@@ -157,25 +157,10 @@ export default function VerdictRating({ onRate, onSkip }) {
                                         >
                                             <Star
                                                 className={`w-10 h-10 transition-all duration-200 ${star <= displayRating
-                                                    ? 'fill-court-gold text-court-gold drop-shadow-[0_0_8px_rgba(212,175,55,0.5)]'
-                                                    : 'text-court-tan/70'
+                                                    ? 'fill-current text-court-gold drop-shadow-[0_0_8px_rgba(212,175,55,0.5)]'
+                                                    : 'fill-transparent text-court-tan/70'
                                                     }`}
                                             />
-                                            {star <= displayRating && (
-                                                prefersReducedMotion ? (
-                                                    <div className="absolute inset-0 flex items-center justify-center">
-                                                        <div className="w-2 h-2 rounded-full bg-yellow-200/80" />
-                                                    </div>
-                                                ) : (
-                                                    <Motion.div
-                                                        initial={{ scale: 0 }}
-                                                        animate={{ scale: 1 }}
-                                                        className="absolute inset-0 flex items-center justify-center"
-                                                    >
-                                                        <div className="w-2 h-2 rounded-full bg-yellow-200/90 blur-[1px]" />
-                                                    </Motion.div>
-                                                )
-                                            )}
                                         </Motion.button>
                                     ))}
                                 </div>

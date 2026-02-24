@@ -355,6 +355,25 @@ const SignUpPage = () => {
                     <p className="mt-4 text-xs text-neutral-500 text-center">
                         {t('signUp.terms')}
                     </p>
+                    <p className="mt-1 text-xs text-neutral-500 text-center">
+                        <a
+                            href="/terms-of-service.html"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-court-gold hover:text-court-goldDark transition-colors"
+                        >
+                            {t('settings.legal.terms')}
+                        </a>
+                        {' · '}
+                        <a
+                            href="/privacy-policy.html"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-court-gold hover:text-court-goldDark transition-colors"
+                        >
+                            {t('settings.legal.privacy')}
+                        </a>
+                    </p>
                 </div>
 
                 {/* Sign In Link */}

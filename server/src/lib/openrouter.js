@@ -8,6 +8,9 @@
 let _openRouterClient = null;
 const DEFAULT_TIMEOUT_MS = Number(process.env.OPENROUTER_TIMEOUT_MS || 60000);
 const DEFAULT_MODERATION_TIMEOUT_MS = Number(process.env.OPENAI_MODERATION_TIMEOUT_MS || 15000);
+const VALID_DATA_COLLECTION_MODES = new Set(['allow', 'deny']);
+const DEFAULT_DATA_COLLECTION_MODE = String(process.env.OPENROUTER_DATA_COLLECTION || 'deny').toLowerCase();
+const DEFAULT_REQUIRE_ZDR = String(process.env.OPENROUTER_ZDR || 'false').toLowerCase() === 'true';
 
 // Rate limit configuration
 const RATE_LIMIT_CONFIG = {
@@ -86,6 +89,33 @@ function sleep(ms) {
 }
 
 /**
+ * Build OpenRouter provider privacy preferences.
+ * See: https://openrouter.ai/docs/features/provider-routing
+ *
+ * data_collection:
+ * - deny: only route to providers that opt out of training/retention collection
+ * - allow: provider default behavior (less strict)
+ *
+ * zdr:
+ * - true: require Zero Data Retention providers only (strictest, may reduce model availability)
+ */
+function buildProviderPreferences() {
+    const mode = VALID_DATA_COLLECTION_MODES.has(DEFAULT_DATA_COLLECTION_MODE)
+        ? DEFAULT_DATA_COLLECTION_MODE
+        : 'deny';
+
+    const provider = {
+        data_collection: mode,
+    };
+
+    if (DEFAULT_REQUIRE_ZDR) {
+        provider.zdr = true;
+    }
+
+    return provider;
+}
+
+/**
  * Get the OpenRouter client instance
  * Uses the standard fetch-based approach for OpenRouter API
  * 
@@ -131,12 +161,14 @@ function isOpenRouterConfigured() {
  */
 async function createChatCompletion({ model, messages, temperature = 0.7, maxTokens = 2000, jsonSchema = null, reasoningEffort = null, skipRateLimitRetry = false }) {
     const client = getOpenRouter();
+    const providerPreferences = buildProviderPreferences();
 
     const body = {
         model,
         messages,
         temperature,
         max_tokens: maxTokens,
+        provider: providerPreferences,
     };
 
     // Add JSON mode with schema if provided (Moonshot API style)
@@ -155,7 +187,7 @@ async function createChatCompletion({ model, messages, temperature = 0.7, maxTok
         };
     }
 
-    console.log(`[OpenRouter] Calling ${model} with JSON schema: ${jsonSchema ? 'yes' : 'no'}, reasoning: ${body.reasoning ? `yes (effort=${body.reasoning.effort})` : 'no'}`);
+    console.log(`[OpenRouter] Calling ${model} with JSON schema: ${jsonSchema ? 'yes' : 'no'}, reasoning: ${body.reasoning ? `yes (effort=${body.reasoning.effort})` : 'no'}, data_collection=${providerPreferences.data_collection}, zdr=${providerPreferences.zdr ? 'true' : 'false'}`);
 
     // Retry loop for rate limiting
     let lastError = null;

@@ -39,9 +39,6 @@ export const VIEW_PHASE = {
     CLOSED: 'CLOSED'
 };
 
-// Alias for UI convenience
-export const COURT_PHASES = VIEW_PHASE;
-
 // API base path
 const COURT_API = '/court';
 const STALE_THRESHOLD_MS = 10000;

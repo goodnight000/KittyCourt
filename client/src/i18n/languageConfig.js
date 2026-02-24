@@ -3,8 +3,8 @@ import languageConfig from '../../../i18n.languages.json'
 const FALLBACK_CONFIG = {
   default: 'en',
   supported: [
-    { code: 'en', label: 'English', nativeLabel: 'English', aliases: [] },
-    { code: 'zh-Hans', label: 'Simplified Chinese', nativeLabel: '简体中文', aliases: [] },
+    { code: 'en', labelKey: 'language.en', label: 'English', nativeLabel: 'English', aliases: ['en-US', 'en-GB'] },
+    { code: 'zh-Hans', labelKey: 'language.zhHans', label: 'Simplified Chinese', nativeLabel: '简体中文', aliases: ['zh', 'zh-CN', 'zh-SG'] },
   ],
 }
 

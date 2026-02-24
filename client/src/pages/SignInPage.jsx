@@ -356,6 +356,30 @@ const SignInPage = () => {
         >
             {t('signIn.footer')}
         </Motion.p>
+        <Motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.45 }}
+            className="mt-1 text-neutral-500 text-xs"
+        >
+            <a
+                href="/terms-of-service.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-court-gold hover:text-court-goldDark transition-colors"
+            >
+                {t('settings.legal.terms')}
+            </a>
+            {' · '}
+            <a
+                href="/privacy-policy.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-court-gold hover:text-court-goldDark transition-colors"
+            >
+                {t('settings.legal.privacy')}
+            </a>
+        </Motion.p>
         </div>
     );
 };

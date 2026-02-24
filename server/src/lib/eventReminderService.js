@@ -149,6 +149,20 @@ async function wasReminderAlreadySent(supabase, userId, eventId, daysUntil) {
 async function getUpcomingEventsForUser(supabase, userId, timezone) {
     const results = [];
     const now = new Date();
+    let partnerId = null;
+
+    // Fetch partner relationship once per user to avoid repeated lookups in event loops
+    const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('partner_id')
+        .eq('id', userId)
+        .maybeSingle();
+
+    if (profileError) {
+        console.error(`[EventReminder] Error fetching profile for user ${userId}:`, profileError);
+    } else {
+        partnerId = profile?.partner_id || null;
+    }
 
     for (const days of REMINDER_DAYS) {
         const targetDate = addDays(now, days);
@@ -175,17 +189,8 @@ async function getUpcomingEventsForUser(supabase, userId, timezone) {
             }
 
             // User can see partner's non-secret events
-            if (!event.is_secret) {
-                // Check if this user is the partner of the event creator
-                const { data: profile } = await supabase
-                    .from('profiles')
-                    .select('partner_id')
-                    .eq('id', userId)
-                    .single();
-
-                if (profile?.partner_id === event.created_by) {
-                    results.push({ event, daysUntil: days });
-                }
+            if (!event.is_secret && partnerId && partnerId === event.created_by) {
+                results.push({ event, daysUntil: days });
             }
         }
     }

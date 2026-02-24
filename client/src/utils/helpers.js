@@ -154,7 +154,7 @@ export function validateAnniversaryDate(dateInput) {
 
 /**
  * Validate a birthday date specifically
- * Must be a valid past date, person must be at least 13 years old
+ * Must be a valid past date, person must be at least 16 years old
  */
 export function validateBirthdayDate(dateInput) {
     const result = validateDate(dateInput, {
@@ -164,7 +164,7 @@ export function validateBirthdayDate(dateInput) {
 
     if (!result.isValid) return result;
 
-    // Check minimum age (13 years)
+    // Check minimum age (16 years)
     const today = new Date();
     const birthDate = result.date;
     let age = today.getFullYear() - birthDate.getFullYear();
@@ -174,8 +174,8 @@ export function validateBirthdayDate(dateInput) {
         age--;
     }
 
-    if (age < 13) {
-        return { isValid: false, errorCode: 'AGE_TOO_YOUNG', error: 'You must be at least 13 years old', date: null };
+    if (age < 16) {
+        return { isValid: false, errorCode: 'AGE_TOO_YOUNG', error: 'You must be at least 16 years old', date: null };
     }
 
     if (age > 120) {

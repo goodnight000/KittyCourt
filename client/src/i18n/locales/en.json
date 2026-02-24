@@ -176,7 +176,7 @@
     "YEAR_TOO_EARLY": "Year must be {minYear} or later",
     "YEAR_TOO_LATE": "Year must be {maxYear} or earlier",
     "DATE_IN_FUTURE": "Date cannot be in the future",
-    "AGE_TOO_YOUNG": "You must be at least 13 years old",
+    "AGE_TOO_YOUNG": "You must be at least 16 years old",
     "AGE_TOO_OLD": "Please enter a valid birth year"
   },
   "errors": {
@@ -930,6 +930,10 @@
         "title": "Create your account",
         "subtitle": "So your progress stays safely saved."
       },
+      "aiConsent": {
+        "title": "A quick yes before we begin",
+        "subtitle": "This lets Pause generate verdicts and insights from what you choose to share."
+      },
       "name": {
         "title": "What should we call you?",
         "subtitle": "Pick a name that feels like you"
@@ -1001,6 +1005,12 @@
         "hint": "Check your spam folder if you don't see the email. The link will expire in 24 hours.",
         "tryDifferent": "Use a different email"
       }
+    },
+    "consent": {
+      "label": "Yes, I'm okay with AI helping with my Pause experience.",
+      "description": "We use your submissions to power verdicts and insights in-app. We do not sell your personal data.",
+      "privacyPrefix": "By continuing, you agree to our",
+      "privacyAnd": "and"
     },
     "name": {
       "placeholder": "Your name or nickname",
