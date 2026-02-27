@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { persist, createJSONStorage } from 'zustand/middleware'
 import { quotaSafeLocalStorage } from './quotaSafeStorage'
 import useCacheStore from './useCacheStore'
 import {
@@ -373,7 +373,7 @@ const usePartnerStore = create(
     },
     {
       name: 'pause-partner',
-      storage: quotaSafeLocalStorage,
+      storage: createJSONStorage(() => quotaSafeLocalStorage),
       partialize: (state) => ({
         partner: state.partner
           ? {

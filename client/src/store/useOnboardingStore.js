@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { persist, createJSONStorage } from 'zustand/middleware'
 import { quotaSafeLocalStorage } from './quotaSafeStorage'
 import { eventBus, EVENTS } from '../lib/eventBus'
 import { DEFAULT_LANGUAGE } from '../i18n/languageConfig'
@@ -151,7 +151,7 @@ const useOnboardingStore = create(
     },
     {
       name: 'pause-onboarding',
-      storage: quotaSafeLocalStorage,
+      storage: createJSONStorage(() => quotaSafeLocalStorage),
       partialize: (state) => ({
         onboardingComplete: state.onboardingComplete,
         onboardingData: state.onboardingData

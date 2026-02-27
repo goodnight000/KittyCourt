@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import api from '../services/api';
 import { quotaSafeSessionStorage } from './quotaSafeStorage';
 
@@ -629,7 +629,7 @@ const useCacheStore = create(
         {
             name: 'pause-cache',
             // Cache can get large (case history/appreciations). Keep it out of localStorage.
-            storage: quotaSafeSessionStorage,
+            storage: createJSONStorage(() => quotaSafeSessionStorage),
             partialize: (state) => ({ cache: state.cache }),
         }
     )

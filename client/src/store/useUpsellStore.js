@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { persist, createJSONStorage } from 'zustand/middleware'
 import { quotaSafeLocalStorage } from './quotaSafeStorage'
 
 const PAYWALL_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000
@@ -39,7 +39,7 @@ const useUpsellStore = create(
     }),
     {
       name: 'pause-upsell',
-      storage: quotaSafeLocalStorage,
+      storage: createJSONStorage(() => quotaSafeLocalStorage),
       partialize: (state) => ({
         lastGoldWelcomeAt: state.lastGoldWelcomeAt,
         caseCompletionCount: state.caseCompletionCount,

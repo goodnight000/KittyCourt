@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { quotaSafeLocalStorage } from './quotaSafeStorage';
 import {
     supabase,
@@ -703,7 +703,7 @@ const useAuthStore = create(
         }),
         {
             name: 'catjudge-auth',
-            storage: quotaSafeLocalStorage,
+            storage: createJSONStorage(() => quotaSafeLocalStorage),
             partialize: (state) => ({
                 // Persist non-secret UI state to avoid blocking on network at boot.
                 // Strip large avatar_url/data URLs to prevent localStorage quota issues.
