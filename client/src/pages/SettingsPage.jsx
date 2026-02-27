@@ -564,8 +564,8 @@ const SettingsPage = () => {
                     </h2>
 
                     {[
-                        { key: 'terms', label: t('settings.legal.terms'), href: '/terms-of-service.html' },
-                        { key: 'privacy', label: t('settings.legal.privacy'), href: '/privacy-policy.html' },
+                        { key: 'terms', label: t('settings.legal.terms'), href: 'https://midnightstudio.app/apps/pause/terms' },
+                        { key: 'privacy', label: t('settings.legal.privacy'), href: 'https://midnightstudio.app/apps/pause/privacy' },
                     ].map(({ key, label, href }) => (
                         <a
                             key={key}

@@ -357,7 +357,7 @@ const SignUpPage = () => {
                     </p>
                     <p className="mt-1 text-xs text-neutral-500 text-center">
                         <a
-                            href="/terms-of-service.html"
+                            href="https://midnightstudio.app/apps/pause/terms"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-court-gold hover:text-court-goldDark transition-colors"
@@ -366,7 +366,7 @@ const SignUpPage = () => {
                         </a>
                         {' · '}
                         <a
-                            href="/privacy-policy.html"
+                            href="https://midnightstudio.app/apps/pause/privacy"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-court-gold hover:text-court-goldDark transition-colors"

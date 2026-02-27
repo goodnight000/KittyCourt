@@ -778,7 +778,7 @@ function AIConsentStep({ agreed, onToggle }) {
             <p className="text-xs text-neutral-500 text-center leading-relaxed">
                 {t('onboarding.consent.privacyPrefix')}{' '}
                 <a
-                    href="/privacy-policy.html"
+                    href="https://midnightstudio.app/apps/pause/privacy"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-court-gold hover:text-court-goldDark transition-colors"
@@ -787,7 +787,7 @@ function AIConsentStep({ agreed, onToggle }) {
                 </a>{' '}
                 {t('onboarding.consent.privacyAnd')}{' '}
                 <a
-                    href="/terms-of-service.html"
+                    href="https://midnightstudio.app/apps/pause/terms"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-court-gold hover:text-court-goldDark transition-colors"

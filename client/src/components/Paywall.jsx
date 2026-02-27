@@ -803,7 +803,7 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                             <p className="text-[10px] text-court-brownLight/50 text-center mt-2 leading-relaxed px-2">
                                 {t('paywall.legal.autoRenewal')}{' '}
                                 <a
-                                    href="/terms-of-service.html"
+                                    href="https://midnightstudio.app/apps/pause/terms"
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="underline"
@@ -812,7 +812,7 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                                 </a>
                                 {' · '}
                                 <a
-                                    href="/privacy-policy.html"
+                                    href="https://midnightstudio.app/apps/pause/privacy"
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="underline"
