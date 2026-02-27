@@ -100,7 +100,7 @@ const CalendarGrid = memo(({
     return meta
   }, [eventsByDate])
 
-  const todayKey = useMemo(() => formatDateKey(new Date()), [])
+  const todayKey = formatDateKey(new Date())
   const dateAriaFormatter = useMemo(
     () => new Intl.DateTimeFormat(language, { month: 'long', day: 'numeric', year: 'numeric' }),
     [language]

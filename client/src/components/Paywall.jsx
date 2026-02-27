@@ -799,6 +799,27 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                             <p className="text-xs text-court-brownLight/60 text-center">
                                 {t('paywall.settingsHint')}
                             </p>
+                            {/* Apple-required auto-renewal disclosure */}
+                            <p className="text-[10px] text-court-brownLight/50 text-center mt-2 leading-relaxed px-2">
+                                {t('paywall.legal.autoRenewal')}{' '}
+                                <a
+                                    href="/terms-of-service.html"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="underline"
+                                >
+                                    {t('paywall.legal.terms')}
+                                </a>
+                                {' · '}
+                                <a
+                                    href="/privacy-policy.html"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="underline"
+                                >
+                                    {t('paywall.legal.privacy')}
+                                </a>
+                            </p>
                         </div>
                     </Motion.div>
                 </Motion.div>

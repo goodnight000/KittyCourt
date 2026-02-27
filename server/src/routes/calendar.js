@@ -226,17 +226,18 @@ router.put('/events/:id', requirePartner, async (req, res) => {
         const canEdit = existing.created_by === viewerId || (partnerId && existing.created_by === partnerId && existing.is_secret === false);
         if (!canEdit) return sendError(res, 403, 'FORBIDDEN', 'Not allowed to update this event');
 
+        const updates = {};
+        if (title !== undefined) updates.title = title;
+        if (date !== undefined) updates.event_date = date;
+        if (type !== undefined) updates.event_type = type;
+        if (emoji !== undefined) updates.emoji = emoji;
+        if (isRecurring !== undefined) updates.is_recurring = isRecurring;
+        if (notes !== undefined) updates.notes = notes;
+        if (isSecret !== undefined && existing.created_by === viewerId) updates.is_secret = !!isSecret;
+
         const { data: event, error } = await supabase
             .from('calendar_events')
-            .update({
-                title,
-                event_date: date,
-                event_type: type,
-                emoji,
-                is_recurring: isRecurring,
-                ...(existing.created_by === viewerId ? { is_secret: !!isSecret } : {}),
-                notes
-            })
+            .update(updates)
             .eq('id', id)
             .select()
             .single();
@@ -265,6 +266,10 @@ router.delete('/events/:id', requirePartner, async (req, res) => {
     try {
         const { id } = req.params;
         const { userId: viewerId, partnerId, supabase } = req;
+
+        if (!UUID_REGEX.test(id)) {
+            return sendError(res, 400, 'INVALID_ID', 'Invalid event ID format');
+        }
 
         const { data: existing, error: existingError } = await supabase
             .from('calendar_events')

@@ -63,6 +63,9 @@ async function generateEmbedding(text, options = {}) {
     }
     
     const data = await response.json();
+    if (!data?.data?.[0]?.embedding) {
+        throw new Error('Unexpected embedding response structure');
+    }
     const embedding = data.data[0].embedding;
 
     const telemetryEvent = buildUsageTelemetryEvent({

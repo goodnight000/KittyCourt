@@ -6,9 +6,11 @@ import { validateAnniversaryDate } from '../utils/helpers';
 import Paywall from './Paywall';
 import ProfilePicture from './ProfilePicture';
 import StandardButton from './shared/StandardButton';
+import { useI18n } from '../i18n';
 
 const PartnerRequestModal = () => {
     const { pendingRequests, acceptRequest, rejectRequest } = usePartnerStore();
+    const { t } = useI18n();
     const [processingId, setProcessingId] = useState(null);
     const [action, setAction] = useState(null); // 'accept' or 'reject'
     const [showAnniversaryStep, setShowAnniversaryStep] = useState(false);
@@ -20,16 +22,14 @@ const PartnerRequestModal = () => {
     const request = pendingRequests?.[0];
 
     const handleAcceptClick = () => {
-        // Show anniversary step first
         setShowAnniversaryStep(true);
     };
 
     const handleConfirmAccept = async () => {
         if (!request) return;
 
-        // Validate anniversary date using our helper
         if (!anniversaryDate) {
-            setAnniversaryError('Please enter your anniversary date');
+            setAnniversaryError(t('partnerRequestModal.dateRequired'));
             return;
         }
 
@@ -56,7 +56,6 @@ const PartnerRequestModal = () => {
         setShowAnniversaryStep(false);
         setAnniversaryDate('');
 
-        // Show paywall after successful connection
         setShowPaywall(true);
     };
 
@@ -77,13 +76,12 @@ const PartnerRequestModal = () => {
         setAnniversaryError('');
     };
 
-    // Show paywall after connection even if no more pending requests
     if (showPaywall) {
         return (
             <Paywall
                 isOpen={true}
                 onClose={() => setShowPaywall(false)}
-                triggerReason="Congratulations on connecting with your partner! Upgrade to Pause Gold for unlimited access."
+                triggerReason={t('partnerRequestModal.paywallTrigger')}
             />
         );
     }
@@ -108,8 +106,8 @@ const PartnerRequestModal = () => {
                     exit={{ opacity: 0, scale: 0.9, y: 20 }}
                     className="w-full max-w-sm bg-white rounded-3xl shadow-2xl overflow-hidden"
                 >
-                    {/* Header */}
-                    <div className="relative bg-gradient-to-br from-pink-400 to-pink-500 p-6 text-center">
+                    {/* Header - court-themed palette */}
+                    <div className="relative bg-gradient-to-br from-court-gold to-court-goldDark p-6 text-center">
                         <motion.div
                             animate={{ scale: [1, 1.1, 1] }}
                             transition={{ duration: 1.5, repeat: Infinity }}
@@ -125,19 +123,19 @@ const PartnerRequestModal = () => {
                             {showAnniversaryStep ? (
                                 <>
                                     <Calendar className="w-4 h-4" />
-                                    Set Your Anniversary
+                                    {t('partnerRequestModal.anniversaryTitle')}
                                 </>
                             ) : (
                                 <>
                                     <Heart className="w-4 h-4" />
-                                    Partner Request
+                                    {t('partnerRequestModal.title')}
                                 </>
                             )}
                         </h2>
-                        <p className="text-pink-100 text-sm mt-1">
+                        <p className="text-amber-100 text-sm mt-1">
                             {showAnniversaryStep
-                                ? 'When did you start dating?'
-                                : `${senderName} wants to connect with you`}
+                                ? t('partnerRequestModal.anniversarySubtitle')
+                                : t('partnerRequestModal.subtitle', { name: senderName })}
                         </p>
                     </div>
 
@@ -155,13 +153,14 @@ const PartnerRequestModal = () => {
                                         />
                                     </div>
                                     <p className="text-sm text-neutral-600">
-                                        Connecting with <span className="font-bold">{senderName}</span>
+                                        {t('partnerRequestModal.connectingWith')}{' '}
+                                        <span className="font-bold">{senderName}</span>
                                     </p>
                                 </div>
 
                                 <div className="mb-4">
                                     <label className="block text-sm font-medium text-neutral-700 mb-2">
-                                        Anniversary Date
+                                        {t('partnerRequestModal.anniversaryLabel')}
                                     </label>
                                     <input
                                         type="date"
@@ -171,7 +170,7 @@ const PartnerRequestModal = () => {
                                             setAnniversaryError('');
                                         }}
                                         max={new Date().toISOString().split('T')[0]}
-                                        className="w-full px-4 py-3 bg-neutral-50 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-pink-200 focus:border-pink-300 focus:outline-none text-neutral-800"
+                                        className="w-full px-4 py-3 bg-neutral-50 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-court-gold/30 focus:border-court-gold/50 focus:outline-none text-neutral-800"
                                     />
                                     {anniversaryError && (
                                         <p className="text-red-500 text-xs mt-2 flex items-center gap-1">
@@ -185,7 +184,8 @@ const PartnerRequestModal = () => {
                                     <p className="text-xs text-amber-800 flex items-start gap-2">
                                         <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
                                         <span>
-                                            <span className="font-bold">This date cannot be changed later.</span> Make sure you and {senderName} agree on your anniversary date before confirming.
+                                            <span className="font-bold">{t('partnerRequestModal.dateImmutable')}</span>{' '}
+                                            {t('partnerRequestModal.dateImmutableBody', { name: senderName })}
                                         </span>
                                     </p>
                                 </div>
@@ -196,7 +196,7 @@ const PartnerRequestModal = () => {
                                         onClick={handleBackToRequest}
                                         className="flex-1 py-3.5 rounded-2xl font-bold text-neutral-600 bg-neutral-100 hover:bg-neutral-200 transition-all flex items-center justify-center gap-2"
                                     >
-                                        Back
+                                        {t('partnerRequestModal.back')}
                                     </motion.button>
 
                                     <StandardButton
@@ -210,7 +210,7 @@ const PartnerRequestModal = () => {
                                         ) : (
                                             <>
                                                 <Check className="w-5 h-5" />
-                                                Confirm
+                                                {t('partnerRequestModal.confirm')}
                                             </>
                                         )}
                                     </StandardButton>
@@ -229,7 +229,7 @@ const PartnerRequestModal = () => {
                                     <div className="flex-1">
                                         <p className="font-bold text-lg text-neutral-800">{senderName}</p>
                                         <p className="text-sm text-neutral-500">
-                                            wants to be your partner in Pause
+                                            {t('partnerRequestModal.wantsToBe')}
                                         </p>
                                     </div>
                                 </div>
@@ -237,12 +237,14 @@ const PartnerRequestModal = () => {
                                 {/* Partner Code for Verification */}
                                 {senderPartnerCode && (
                                     <div className="bg-neutral-50 rounded-xl p-3 mb-4 border border-neutral-100">
-                                        <p className="text-xs text-neutral-500 text-center mb-1">Their Partner Code</p>
+                                        <p className="text-xs text-neutral-500 text-center mb-1">
+                                            {t('partnerRequestModal.theirCode')}
+                                        </p>
                                         <p className="text-lg font-mono font-bold text-neutral-700 text-center tracking-widest">
                                             {senderPartnerCode}
                                         </p>
                                         <p className="text-xs text-neutral-500 text-center mt-1">
-                                            Confirm this matches what they shared with you
+                                            {t('partnerRequestModal.codeConfirm')}
                                         </p>
                                     </div>
                                 )}
@@ -259,7 +261,8 @@ const PartnerRequestModal = () => {
                                 {/* What this means */}
                                 <div className="bg-court-cream/50 rounded-xl p-4 mb-6 border border-court-tan/50">
                                     <p className="text-xs text-court-brown">
-                                        <span className="font-bold">By accepting:</span> You'll be connected as partners and can start resolving disputes together, share appreciations, and more!
+                                        <span className="font-bold">{t('partnerRequestModal.byAccepting')}</span>{' '}
+                                        {t('partnerRequestModal.byAcceptingBody')}
                                     </p>
                                 </div>
 
@@ -276,7 +279,7 @@ const PartnerRequestModal = () => {
                                         ) : (
                                             <>
                                                 <X className="w-5 h-5" />
-                                                Decline
+                                                {t('partnerRequestModal.decline')}
                                             </>
                                         )}
                                     </motion.button>
@@ -288,7 +291,7 @@ const PartnerRequestModal = () => {
                                         className="flex-1 py-3.5"
                                     >
                                         <Check className="w-5 h-5" />
-                                        Accept
+                                        {t('partnerRequestModal.accept')}
                                     </StandardButton>
                                 </div>
                             </>

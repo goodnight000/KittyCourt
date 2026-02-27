@@ -77,7 +77,12 @@ if (workbox) {
 }
 
 self.addEventListener('push', (event) => {
-  const payload = event.data ? event.data.json() : {}
+  let payload = {}
+  try {
+    payload = event.data ? event.data.json() : {}
+  } catch {
+    payload = {}
+  }
   const title = payload.title || 'Pause'
   const options = {
     body: payload.body || 'You have a new update.',

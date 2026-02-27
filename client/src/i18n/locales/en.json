@@ -1780,6 +1780,11 @@
     "trialFootnote": "Free trial available for new subscribers.",
     "maybeLater": "Maybe later",
     "settingsHint": "Manage your subscription in Settings.",
+    "legal": {
+      "autoRenewal": "Subscription automatically renews unless cancelled at least 24 hours before the end of the current period. Payment will be charged to your Apple ID account at confirmation of purchase.",
+      "terms": "Terms of Service",
+      "privacy": "Privacy Policy"
+    },
     "usage": {
       "used": "{used}/{limit} used",
       "unlimited": "Unlimited",
@@ -2340,5 +2345,35 @@
       },
       "unknownValue": "Unknown"
     }
+  },
+  "partnerRequestModal": {
+    "title": "Partner Request",
+    "anniversaryTitle": "Set Your Anniversary",
+    "subtitle": "{name} wants to connect with you",
+    "anniversarySubtitle": "When did you start dating?",
+    "connectingWith": "Connecting with",
+    "wantsToBe": "wants to be your partner in Pause",
+    "theirCode": "Their Partner Code",
+    "codeConfirm": "Confirm this matches what they shared with you",
+    "byAccepting": "By accepting:",
+    "byAcceptingBody": "You'll be connected as partners and can start resolving disputes together, share appreciations, and more!",
+    "anniversaryLabel": "Anniversary Date",
+    "dateImmutable": "This date cannot be changed later.",
+    "dateImmutableBody": "Make sure you and {name} agree on your anniversary date before confirming.",
+    "dateRequired": "Please enter your anniversary date",
+    "back": "Back",
+    "confirm": "Confirm",
+    "accept": "Accept",
+    "decline": "Decline",
+    "paywallTrigger": "Congratulations on connecting with your partner! Upgrade to Pause Gold for unlimited access."
+  },
+  "levelUp": {
+    "badge": "Level up",
+    "levelLabel": "Level",
+    "description": "You just hit a new peak together. Fresh challenges and story beats are ready.",
+    "celebrate": "Celebrate",
+    "explore": "Explore",
+    "unlock": "Unlock",
+    "continue": "Continue"
   }
 }

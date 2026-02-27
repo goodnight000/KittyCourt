@@ -8,7 +8,7 @@ import { initSentry } from './services/sentry'
 initSentry()
 runLocalStorageMaintenance()
 
-if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+if (import.meta.env.PROD && 'serviceWorker' in navigator && !window.Capacitor?.isNativePlatform()) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').catch((error) => {
       console.warn('[ServiceWorker] registration failed:', error)

@@ -440,7 +440,7 @@ async function runModerationCheck(input) {
         return { safe: true, flagged: false };
     } catch (error) {
         console.error('Moderation check failed:', error);
-        return { safe: true, flagged: false, error: error.message };
+        return { safe: false, flagged: true, requiresCounseling: false, error: error.message };
     }
 }
 

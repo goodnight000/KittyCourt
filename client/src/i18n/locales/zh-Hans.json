@@ -1784,6 +1784,11 @@
     "trialFootnote": "新用户可享免费试用。",
     "maybeLater": "稍后再说",
     "settingsHint": "可在设置中管理订阅。",
+    "legal": {
+      "autoRenewal": "订阅将在当前订阅期结束前24小时内自动续订，除非您取消。购买确认后，费用将从您的Apple ID账户中扣取。",
+      "terms": "服务条款",
+      "privacy": "隐私政策"
+    },
     "usage": {
       "used": "已用 {used}/{limit}",
       "unlimited": "不限量",
@@ -2344,5 +2349,35 @@
       },
       "unknownValue": "未知"
     }
+  },
+  "partnerRequestModal": {
+    "title": "伴侣申请",
+    "anniversaryTitle": "设置周年纪念日",
+    "subtitle": "{name} 想与您建立连接",
+    "anniversarySubtitle": "你们是什么时候开始恋爱的？",
+    "connectingWith": "正在连接",
+    "wantsToBe": "想成为您在 Pause 中的伴侣",
+    "theirCode": "对方的伴侣码",
+    "codeConfirm": "请确认与对方分享给您的码一致",
+    "byAccepting": "接受后：",
+    "byAcceptingBody": "您将成为伴侣，可以一起解决争议、分享感激，以及更多！",
+    "anniversaryLabel": "周年纪念日",
+    "dateImmutable": "此日期设置后无法更改。",
+    "dateImmutableBody": "确认前请与 {name} 商定周年纪念日。",
+    "dateRequired": "请输入周年纪念日",
+    "back": "返回",
+    "confirm": "确认",
+    "accept": "接受",
+    "decline": "拒绝",
+    "paywallTrigger": "恭喜与伴侣成功连接！升级至 Pause Gold 享受无限权益。"
+  },
+  "levelUp": {
+    "badge": "升级了",
+    "levelLabel": "等级",
+    "description": "你们共同达到了新的高峰。全新挑战和故事正在等待你们。",
+    "celebrate": "庆祝",
+    "explore": "探索",
+    "unlock": "解锁",
+    "continue": "继续"
   }
 }

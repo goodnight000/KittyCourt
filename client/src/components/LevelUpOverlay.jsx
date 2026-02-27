@@ -1,5 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useI18n } from '../i18n';
+import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
 
 const CONFETTI = [
     { left: '8%', top: '12%', size: 'w-2 h-8', color: 'bg-court-gold/80', rotate: -18, drift: 80, delay: 0.1, duration: 3.8 },
@@ -28,6 +30,8 @@ const RAYS = [0, 24, 48, 72, 96, 120, 144, 168, 192, 216, 240, 264, 288, 312, 33
 const PULSE_RINGS = [0, 1, 2];
 
 const LevelUpOverlay = ({ levelUp, onComplete }) => {
+    const { t } = useI18n();
+    const prefersReducedMotion = usePrefersReducedMotion();
     const hasHandledRef = useRef(false);
 
     useEffect(() => {
@@ -59,7 +63,7 @@ const LevelUpOverlay = ({ levelUp, onComplete }) => {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-court-cream via-white to-court-tan/80"
+                    className="fixed inset-0 z-[60] flex items-center justify-center bg-gradient-to-br from-court-cream via-white to-court-tan/80"
                     role="dialog"
                     aria-modal="true"
                 >
@@ -77,11 +81,11 @@ const LevelUpOverlay = ({ levelUp, onComplete }) => {
                                 backgroundImage:
                                     'conic-gradient(from 90deg, rgba(201,162,39,0.25), rgba(255,255,255,0.2), rgba(114,47,55,0.2), rgba(201,162,39,0.25))',
                             }}
-                            animate={{ rotate: 360 }}
-                            transition={{ duration: 30, repeat: Infinity, ease: 'linear' }}
+                            animate={prefersReducedMotion ? undefined : { rotate: 360 }}
+                            transition={prefersReducedMotion ? undefined : { duration: 30, repeat: Infinity, ease: 'linear' }}
                         />
 
-                        {CONFETTI.map((piece, index) => (
+                        {!prefersReducedMotion && CONFETTI.map((piece, index) => (
                             <motion.div
                                 key={`${piece.left}-${index}`}
                                 className={`absolute ${piece.size} ${piece.color} rounded-full`}
@@ -101,7 +105,7 @@ const LevelUpOverlay = ({ levelUp, onComplete }) => {
                             />
                         ))}
 
-                        {SPARKS.map((spark, index) => (
+                        {!prefersReducedMotion && SPARKS.map((spark, index) => (
                             <motion.div
                                 key={`${spark.left}-${index}`}
                                 className={`absolute ${spark.size} rounded-full bg-white/90 shadow-[0_0_12px_rgba(255,255,255,0.7)]`}
@@ -154,7 +158,7 @@ const LevelUpOverlay = ({ levelUp, onComplete }) => {
                         >
                             <div className="flex h-full w-full flex-col items-center justify-center rounded-[28px] bg-white/95">
                                 <span className="text-[10px] font-semibold uppercase tracking-[0.3em] text-court-brownLight">
-                                    Level
+                                    {t('levelUp.levelLabel')}
                                 </span>
                                 <span className="text-4xl font-black text-court-maroon">
                                     {levelUp.level}
@@ -169,7 +173,7 @@ const LevelUpOverlay = ({ levelUp, onComplete }) => {
                                 transition={{ delay: 0.15 }}
                                 className="inline-flex items-center gap-2 rounded-full border border-court-tan/50 bg-white/80 px-4 py-1 text-[11px] font-semibold uppercase tracking-[0.35em] text-court-brownLight shadow-inner-soft"
                             >
-                                Level up
+                                {t('levelUp.badge')}
                             </motion.div>
                             <motion.h2
                                 initial={{ opacity: 0, y: 12 }}
@@ -185,7 +189,7 @@ const LevelUpOverlay = ({ levelUp, onComplete }) => {
                                 transition={{ delay: 0.35 }}
                                 className="mt-3 text-sm text-court-brownLight"
                             >
-                                You just hit a new peak together. Fresh challenges and story beats are ready.
+                                {t('levelUp.description')}
                             </motion.p>
                         </div>
 
@@ -198,7 +202,7 @@ const LevelUpOverlay = ({ levelUp, onComplete }) => {
                                 show: { transition: { staggerChildren: 0.15, delayChildren: 0.3 } },
                             }}
                         >
-                            {['Celebrate', 'Explore', 'Unlock'].map((word) => (
+                            {[t('levelUp.celebrate'), t('levelUp.explore'), t('levelUp.unlock')].map((word) => (
                                 <motion.div
                                     key={word}
                                     variants={{
@@ -222,7 +226,7 @@ const LevelUpOverlay = ({ levelUp, onComplete }) => {
                                 animate={{ x: ['-120%', '140%'] }}
                                 transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
                             />
-                            <span className="relative">Continue</span>
+                            <span className="relative">{t('levelUp.continue')}</span>
                         </button>
                     </motion.div>
                 </motion.div>

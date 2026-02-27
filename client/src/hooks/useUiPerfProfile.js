@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import usePrefersReducedMotion from './usePrefersReducedMotion'
 import { isNativeIOS } from '../utils/platform'
 
@@ -13,7 +13,7 @@ const readStoredProfile = () => {
 
 export default function useUiPerfProfile() {
   const prefersReducedMotion = usePrefersReducedMotion()
-  const storedProfile = useMemo(() => readStoredProfile(), [])
+  const [storedProfile, setStoredProfile] = useState(readStoredProfile)
 
   const profile = useMemo(() => {
     if (prefersReducedMotion) return 'performance'
@@ -25,6 +25,7 @@ export default function useUiPerfProfile() {
     if (typeof window === 'undefined') return
     if (!VALID_PROFILES.has(nextProfile)) return
     window.localStorage.setItem(UI_PERF_PROFILE_KEY, nextProfile)
+    setStoredProfile(nextProfile)
   }, [])
 
   return {

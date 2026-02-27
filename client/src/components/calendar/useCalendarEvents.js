@@ -103,7 +103,7 @@ const getPersonalEvents = (profile, connectedPartner, myId, partnerId, myDisplay
         // Add birthday events (from profile data if available)
         const birthday = user.birthday || user.birth_date;
         if (birthday) {
-            const bday = new Date(birthday);
+            const bday = new Date(birthday + 'T00:00:00');
             // This year's birthday
             personalEvents.push({
                 id: `birthday_${user.id}_${currentYear}`,
