@@ -88,7 +88,17 @@ async function runVerdictPipeline(session, deps) {
                 return;
             }
         } catch (e) {
-            console.warn('[Court] Failed to verify usage limits:', e?.message || e);
+            console.error('[Court] Failed to verify usage limits:', e?.message || e);
+            session.verdict = {
+                status: 'error',
+                error: 'Unable to verify usage limits right now. Please try again.'
+            };
+            session.resolvedAt = Date.now();
+            session.phase = PHASE.VERDICT;
+            session.phaseStartedAt = Date.now();
+            await dbCheckpoint(session, 'usage_check_failed');
+            notifyBoth(session);
+            return;
         }
 
         // Check V2.0 pipeline availability
@@ -145,7 +155,17 @@ async function runVerdictPipeline(session, deps) {
         try {
             await incrementUsage({ userId: session.creatorId, type: usageType });
         } catch (e) {
-            console.warn('[Court] Failed to increment usage:', e?.message || e);
+            console.error('[Court] Failed to increment usage:', e?.message || e);
+            session.verdict = {
+                status: 'error',
+                error: 'Unable to record usage right now. Please try again.'
+            };
+            session.resolvedAt = Date.now();
+            session.phase = PHASE.VERDICT;
+            session.phaseStartedAt = Date.now();
+            await dbCheckpoint(session, 'usage_increment_failed');
+            notifyBoth(session);
+            return;
         }
 
         // Transition to PRIMING phase

@@ -55,3 +55,23 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
 }
+
+@objc(PauseBridgeViewController)
+class PauseBridgeViewController: CAPBridgeViewController {
+
+    override open func viewDidLoad() {
+        super.viewDidLoad()
+        enableRubberBandBounce()
+    }
+
+    override open func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        enableRubberBandBounce()
+    }
+
+    private func enableRubberBandBounce() {
+        guard let scrollView = webView?.scrollView else { return }
+        scrollView.bounces = true
+        scrollView.alwaysBounceVertical = true
+    }
+}

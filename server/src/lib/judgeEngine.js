@@ -36,6 +36,7 @@ const {
 const { retrieveHistoricalContext, formatContextForPrompt, hasHistoricalContext } = require('./memoryRetrieval');
 const { callLLMWithRetry } = require('./shared/llmRetryHandler');
 const { validateOutput, shouldBlockOutput } = require('./security/outputValidator');
+const { createUsageTelemetryRecorder } = require('./abuse/abuseRepository');
 
 const DEBUG_LOGS = process.env.NODE_ENV !== 'production';
 
@@ -61,6 +62,24 @@ const JUDGE_MODELS = {
 // Hybrid resolution always uses this fast model
 const HYBRID_MODEL = 'x-ai/grok-4.1-fast';
 
+function buildJudgeTelemetryOptions(input, judgeType, pipelineStep, model) {
+    const userId = input?.participants?.userA?.id || null;
+    return {
+        onTelemetry: createUsageTelemetryRecorder({
+            userId,
+            feature: 'court_verdict',
+            judgeType,
+            pipelineStep,
+        }),
+        telemetryContext: {
+            endpoint: 'court.verdict',
+            judgeType,
+            pipelineStep,
+            model,
+        },
+    };
+}
+
 // ============================================================================
 // V2.0 PIPELINE FUNCTIONS
 // ============================================================================
@@ -79,6 +98,7 @@ const HYBRID_MODEL = 'x-ai/grok-4.1-fast';
 async function runAnalystRepair(input, historicalContext = '', judgeType = 'swift') {
     const model = JUDGE_MODELS[judgeType] || CONFIG.model;
     const userPrompt = buildAnalystRepairUserPrompt(input, historicalContext);
+    const telemetryOptions = buildJudgeTelemetryOptions(input, judgeType, 'analyst_repair', model);
 
     const result = await callLLMWithRetry(
         {
@@ -91,6 +111,7 @@ async function runAnalystRepair(input, historicalContext = '', judgeType = 'swif
                 temperature: CONFIG.analysisTemperature,
                 maxTokens: CONFIG.maxTokens,
                 jsonSchema: ANALYST_REPAIR_JSON_SCHEMA,
+                ...telemetryOptions,
             }),
             schema: AnalystRepairOutputSchema,
         },
@@ -147,6 +168,7 @@ async function runPrimingJoint(input, analysis, historicalContext = '', judgeTyp
         analysis.resolutions,
         historicalContext
     );
+    const telemetryOptions = buildJudgeTelemetryOptions(input, judgeType, 'priming_joint', model);
 
     const result = await callLLMWithRetry(
         {
@@ -159,6 +181,7 @@ async function runPrimingJoint(input, analysis, historicalContext = '', judgeTyp
                 temperature: CONFIG.verdictTemperature,
                 maxTokens: CONFIG.maxTokens,
                 jsonSchema: PRIMING_JOINT_JSON_SCHEMA,
+                ...telemetryOptions,
             }),
             schema: PrimingJointOutputSchema,
         },
@@ -221,6 +244,7 @@ async function runHybridResolution(input, analysis, userAChoice, userBChoice, hi
         userBChoice,
         historicalContext
     );
+    const telemetryOptions = buildJudgeTelemetryOptions(input, 'hybrid', 'hybrid_resolution', HYBRID_MODEL);
 
     const result = await callLLMWithRetry(
         {
@@ -233,6 +257,7 @@ async function runHybridResolution(input, analysis, userAChoice, userBChoice, hi
                 temperature: 0.5,
                 maxTokens: 2000,
                 jsonSchema: HYBRID_RESOLUTION_JSON_SCHEMA,
+                ...telemetryOptions,
             }),
             schema: HybridResolutionOutputSchema,
         },

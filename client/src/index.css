@@ -74,6 +74,60 @@ body::after {
   background: rgba(251, 207, 232, 0.25);
 }
 
+/* iOS perf mode: force a single-color app background and remove body glow layers */
+html.ios-flat-bg,
+body.ios-flat-bg {
+  --app-bg: var(--app-bg-solid);
+  background: var(--app-bg-solid) !important;
+  background-color: var(--app-bg-solid) !important;
+  background-image: none !important;
+}
+
+body.ios-flat-bg::before,
+body.ios-flat-bg::after {
+  content: none;
+  display: none;
+}
+
+body.ios-flat-bg .app-background {
+  background: var(--app-bg-solid) !important;
+  background-color: var(--app-bg-solid) !important;
+  background-image: none !important;
+}
+
+/* Flatten page surfaces only (keep element effects like card blur/gradients). */
+body.ios-flat-bg .min-h-screen,
+body.ios-flat-bg .min-h-\[100dvh\],
+body.ios-flat-bg .h-screen {
+  background-color: var(--app-bg-solid) !important;
+}
+
+body.ios-flat-bg .min-h-screen[class*="bg-gradient"],
+body.ios-flat-bg .min-h-\[100dvh\][class*="bg-gradient"],
+body.ios-flat-bg .h-screen[class*="bg-gradient"] {
+  background-image: none !important;
+}
+
+body.ios-flat-bg .min-h-screen[style*="linear-gradient"],
+body.ios-flat-bg .min-h-screen[style*="radial-gradient"],
+body.ios-flat-bg .min-h-\[100dvh\][style*="linear-gradient"],
+body.ios-flat-bg .min-h-\[100dvh\][style*="radial-gradient"],
+body.ios-flat-bg .h-screen[style*="linear-gradient"],
+body.ios-flat-bg .h-screen[style*="radial-gradient"] {
+  background-image: none !important;
+}
+
+/* Routed page roots: keep one plain background and strip page-level decorative overlays. */
+body.ios-flat-bg .app-route-surface > * {
+  background-color: var(--app-bg-solid) !important;
+  background-image: none !important;
+}
+
+body.ios-flat-bg .app-route-surface > * > .pointer-events-none.fixed,
+body.ios-flat-bg .app-route-surface > * > .pointer-events-none.absolute {
+  display: none !important;
+}
+
 #root {
   position: relative;
   z-index: 1;
@@ -146,6 +200,89 @@ input[type='date']::-webkit-date-and-time-value {
     0 8px 32px rgba(74, 55, 40, 0.08),
     0 2px 8px rgba(74, 55, 40, 0.04),
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+/* Calendar iOS perf mode: keep visual style but remove expensive filter/glow work */
+.calendar-lite .glass-card {
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow:
+    0 4px 14px rgba(74, 55, 40, 0.08),
+    0 1px 4px rgba(74, 55, 40, 0.04);
+}
+
+.calendar-lite .fx-glow-soft {
+  filter: none;
+}
+
+.calendar-lite .shadow-soft-lg,
+.calendar-lite .shadow-inner-soft {
+  transform: none;
+  will-change: auto;
+}
+
+.calendar-lite .animate-shimmer,
+.calendar-lite .animate-pulse-soft {
+  animation: none;
+}
+
+/* App-wide iOS/runtime perf mode */
+.app-perf-lite .glass-card,
+.app-perf-lite .glass-depth {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.app-perf-lite .fx-modal-backdrop-soft,
+.app-perf-lite [class*="backdrop-blur"] {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.app-perf-lite .fx-glow-soft {
+  filter: none !important;
+}
+
+.app-perf-lite .animate-shimmer,
+.app-perf-lite .animate-pulse-soft,
+.app-perf-lite .animate-pulse-ring,
+.app-perf-lite .animate-spin-slow,
+.app-perf-lite .animate-glow-green {
+  animation: none !important;
+}
+
+.app-perf-lite .shadow-soft-lg,
+.app-perf-lite .shadow-inner-soft {
+  transform: none;
+  will-change: auto;
+}
+
+.app-perf-balanced .glass-card,
+.app-perf-balanced .glass-depth {
+  backdrop-filter: blur(6px) !important;
+  -webkit-backdrop-filter: blur(6px) !important;
+}
+
+.app-perf-balanced .fx-modal-backdrop-soft,
+.app-perf-balanced [class*="backdrop-blur"] {
+  backdrop-filter: blur(4px) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
+}
+
+.app-perf-balanced .fx-glow-soft {
+  filter: blur(2px) !important;
+}
+
+.app-perf-balanced .animate-shimmer {
+  animation-duration: 3.6s !important;
+}
+
+.app-perf-balanced .animate-pulse-soft,
+.app-perf-balanced .animate-pulse-ring,
+.app-perf-balanced .animate-spin-slow,
+.app-perf-balanced .animate-glow-green {
+  animation-duration: 3.2s !important;
 }
 
 /* Premium Depth Effect */

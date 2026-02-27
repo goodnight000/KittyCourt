@@ -1744,7 +1744,8 @@
         "badge": "最划算",
         "trialNote": "7 天试用后年付",
         "billedNote": "按年计费",
-        "save": "省 23%"
+        "save": "省 23%",
+        "saveDynamic": "省 {percent}%"
       },
       "monthly": {
         "label": "月付",
@@ -2271,6 +2272,77 @@
       "reasonRequired": "请选择反馈类型",
       "messageRequired": "请输入留言内容",
       "submitFailed": "提交失败，请稍后再试。"
+    }
+  }
+  ,
+  "connectivity": {
+    "offline": {
+      "title": "当前离线",
+      "subtitle": "网络恢复后会自动重新连接并同步。",
+      "issue": "你的设备当前未连接到互联网。",
+      "impacts": {
+        "actions": "发送新操作可能失败或延迟。",
+        "realtime": "实时更新会暂停，直到网络恢复。",
+        "cached": "你仍可查看已加载的内容。"
+      },
+      "actionHint": "请检查 Wi-Fi/蜂窝网络，并确认已关闭飞行模式。"
+    },
+    "backendDown": {
+      "title": "服务器暂时不可用",
+      "subtitle": "部分操作可能失败，我们会在后台持续重试。",
+      "issue": "你的网络可用，但 Pause 服务器暂时不可用。",
+      "impacts": {
+        "actions": "发送新操作可能失败或耗时更长。",
+        "realtime": "实时更新可能暂停，直到服务恢复。",
+        "cached": "你仍可查看已加载的内容。"
+      },
+      "actionHint": "请稍后再试。"
+    },
+    "degraded": {
+      "title": "服务降级中",
+      "subtitle": "部分功能可能变慢或暂时不可用。",
+      "issue": "Pause 可访问，但部分服务暂时不稳定。",
+      "impacts": {
+        "actions": "部分操作完成时间可能变长。",
+        "realtime": "服务恢复前，实时更新可能延迟。",
+        "cached": "大多数页面仍可使用已加载数据。"
+      },
+      "actionHint": "你可以继续使用 Pause，若卡住可点击重试。"
+    },
+    "actions": {
+      "retry": "重试",
+      "retryNow": "立即重试"
+    },
+    "popup": {
+      "sections": {
+        "issue": "当前情况",
+        "impact": "影响范围",
+        "pauseDoing": "Pause 正在进行",
+        "actions": "你现在可以做什么"
+      },
+      "reconnectEvery30s": "Pause 正在每 30 秒自动重连一次。",
+      "downReconnectEvery15s": "当服务器不可用时，应用可见期间会每 15 秒检查一次。",
+      "lastChecked": "最近检查：{time}",
+      "lastCheckedUnavailable": "最近检查：暂无记录",
+      "actions": {
+        "showDetails": "查看详情",
+        "hideDetails": "收起详情"
+      },
+      "details": {
+        "connection": "连接状态",
+        "serviceStatus": "服务状态",
+        "errorCode": "错误"
+      },
+      "connection": {
+        "online": "在线",
+        "offline": "离线"
+      },
+      "service": {
+        "unreachable": "离线时不可访问",
+        "down": "服务器不可用",
+        "degraded": "服务降级"
+      },
+      "unknownValue": "未知"
     }
   }
 }

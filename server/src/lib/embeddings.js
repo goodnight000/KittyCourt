@@ -7,16 +7,34 @@
  * - RAG retrieval (similarity search)
  */
 
+const { buildUsageTelemetryEvent, emitUsageTelemetry } = require('./abuse/usageTelemetry');
+
 const EMBEDDING_MODEL = 'text-embedding-3-small';
 const EMBEDDING_DIMENSION = 1536;
+
+function attachTelemetryOutput(target, telemetryOutput) {
+    if (telemetryOutput === undefined || !target || typeof target !== 'object') {
+        return;
+    }
+
+    Object.defineProperty(target, '_telemetry', {
+        value: telemetryOutput,
+        enumerable: false,
+        configurable: true,
+    });
+}
 
 /**
  * Generate an embedding for a single text
  * 
  * @param {string} text - The text to embed
+ * @param {object} options - Optional telemetry options
+ * @param {Function} options.onTelemetry - Optional callback invoked with usage telemetry
+ * @param {object} options.telemetryContext - Optional metadata merged into telemetry event
  * @returns {Promise<number[]>} The embedding vector (1536 dimensions)
  */
-async function generateEmbedding(text) {
+async function generateEmbedding(text, options = {}) {
+    const { onTelemetry = null, telemetryContext = null } = options;
     const apiKey = process.env.OPENAI_API_KEY;
     
     if (!apiKey || apiKey === 'your_openai_api_key_here') {
@@ -45,7 +63,23 @@ async function generateEmbedding(text) {
     }
     
     const data = await response.json();
-    return data.data[0].embedding;
+    const embedding = data.data[0].embedding;
+
+    const telemetryEvent = buildUsageTelemetryEvent({
+        source: 'openai.embeddings',
+        provider: 'openai',
+        model: EMBEDDING_MODEL,
+        usage: data.usage,
+        metadata: {
+            batchSize: 1,
+            ...(telemetryContext && typeof telemetryContext === 'object' ? telemetryContext : {}),
+        },
+    });
+
+    const telemetryOutput = await emitUsageTelemetry(onTelemetry, telemetryEvent);
+    attachTelemetryOutput(embedding, telemetryOutput);
+
+    return embedding;
 }
 
 /**
@@ -53,11 +87,15 @@ async function generateEmbedding(text) {
  * More efficient than calling generateEmbedding multiple times
  * 
  * @param {string[]} texts - Array of texts to embed
+ * @param {object} options - Optional telemetry options
+ * @param {Function} options.onTelemetry - Optional callback invoked with usage telemetry
+ * @param {object} options.telemetryContext - Optional metadata merged into telemetry event
  * @returns {Promise<number[][]>} Array of embedding vectors
  */
-async function generateEmbeddings(texts) {
+async function generateEmbeddings(texts, options = {}) {
+    const { onTelemetry = null, telemetryContext = null } = options;
     if (texts.length === 0) return [];
-    if (texts.length === 1) return [await generateEmbedding(texts[0])];
+    if (texts.length === 1) return [await generateEmbedding(texts[0], options)];
     
     const apiKey = process.env.OPENAI_API_KEY;
     
@@ -90,7 +128,23 @@ async function generateEmbeddings(texts) {
     
     // Sort by index to maintain order
     const sorted = data.data.sort((a, b) => a.index - b.index);
-    return sorted.map(item => item.embedding);
+    const embeddings = sorted.map(item => item.embedding);
+
+    const telemetryEvent = buildUsageTelemetryEvent({
+        source: 'openai.embeddings',
+        provider: 'openai',
+        model: EMBEDDING_MODEL,
+        usage: data.usage,
+        metadata: {
+            batchSize: texts.length,
+            ...(telemetryContext && typeof telemetryContext === 'object' ? telemetryContext : {}),
+        },
+    });
+
+    const telemetryOutput = await emitUsageTelemetry(onTelemetry, telemetryEvent);
+    attachTelemetryOutput(embeddings, telemetryOutput);
+
+    return embeddings;
 }
 
 /**

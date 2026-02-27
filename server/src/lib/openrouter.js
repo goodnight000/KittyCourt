@@ -6,6 +6,7 @@
  */
 
 let _openRouterClient = null;
+const { buildUsageTelemetryEvent, emitUsageTelemetry } = require('./abuse/usageTelemetry');
 const DEFAULT_TIMEOUT_MS = Number(process.env.OPENROUTER_TIMEOUT_MS || 60000);
 const DEFAULT_MODERATION_TIMEOUT_MS = Number(process.env.OPENAI_MODERATION_TIMEOUT_MS || 15000);
 const VALID_DATA_COLLECTION_MODES = new Set(['allow', 'deny']);
@@ -157,9 +158,21 @@ function isOpenRouterConfigured() {
  * @param {object} options.jsonSchema - The JSON schema for structured output
  * @param {string} options.reasoningEffort - Optional reasoning effort: low|medium|high
  * @param {boolean} options.skipRateLimitRetry - Skip rate limit retry (for internal use)
+ * @param {Function} options.onTelemetry - Optional callback invoked with usage telemetry
+ * @param {object} options.telemetryContext - Optional metadata merged into telemetry event
  * @returns {Promise<object>} The completion response
  */
-async function createChatCompletion({ model, messages, temperature = 0.7, maxTokens = 2000, jsonSchema = null, reasoningEffort = null, skipRateLimitRetry = false }) {
+async function createChatCompletion({
+    model,
+    messages,
+    temperature = 0.7,
+    maxTokens = 2000,
+    jsonSchema = null,
+    reasoningEffort = null,
+    skipRateLimitRetry = false,
+    onTelemetry = null,
+    telemetryContext = null,
+}) {
     const client = getOpenRouter();
     const providerPreferences = buildProviderPreferences();
 
@@ -273,11 +286,29 @@ async function createChatCompletion({ model, messages, temperature = 0.7, maxTok
 
         const data = await response.json();
 
-        return {
+        const result = {
             choices: data.choices,
             usage: data.usage,
             _rateLimitRetries: attempt - 1, // Metadata: how many retries were needed
         };
+
+        const telemetryEvent = buildUsageTelemetryEvent({
+            source: 'openrouter.chat.completions',
+            provider: 'openrouter',
+            model,
+            usage: data.usage,
+            metadata: {
+                rateLimitRetries: attempt - 1,
+                ...(telemetryContext && typeof telemetryContext === 'object' ? telemetryContext : {}),
+            },
+        });
+
+        const telemetryOutput = await emitUsageTelemetry(onTelemetry, telemetryEvent);
+        if (telemetryOutput !== undefined) {
+            result._telemetry = telemetryOutput;
+        }
+
+        return result;
     }
 
     // Should not reach here, but safety fallback

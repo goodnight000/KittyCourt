@@ -1740,7 +1740,8 @@
         "badge": "Best value",
         "trialNote": "7-day free trial, then billed yearly",
         "billedNote": "Billed yearly",
-        "save": "Save 23%"
+        "save": "Save 23%",
+        "saveDynamic": "Save {percent}%"
       },
       "monthly": {
         "label": "Monthly",
@@ -2267,6 +2268,77 @@
       "reasonRequired": "Please select a reason",
       "messageRequired": "Please enter a message",
       "submitFailed": "Couldn't submit feedback. Please try again."
+    }
+  }
+  ,
+  "connectivity": {
+    "offline": {
+      "title": "You're offline",
+      "subtitle": "We'll reconnect and sync automatically once your internet is back.",
+      "issue": "Your phone is not connected to the internet.",
+      "impacts": {
+        "actions": "Sending new actions may fail or be delayed.",
+        "realtime": "Real-time updates may pause until your connection returns.",
+        "cached": "You can still view content that's already loaded."
+      },
+      "actionHint": "Check Wi-Fi or cellular, and make sure Airplane Mode is off."
+    },
+    "backendDown": {
+      "title": "Server is unavailable",
+      "subtitle": "Some actions may fail right now. We'll keep retrying in the background.",
+      "issue": "Your internet works, but Pause servers are temporarily unavailable.",
+      "impacts": {
+        "actions": "Sending new actions may fail or take longer than usual.",
+        "realtime": "Live updates may pause until service recovers.",
+        "cached": "You can still view content that's already loaded."
+      },
+      "actionHint": "Please wait a moment and try again."
+    },
+    "degraded": {
+      "title": "Service is degraded",
+      "subtitle": "Some features may be slower or temporarily unavailable.",
+      "issue": "Pause is reachable, but some services are currently unstable.",
+      "impacts": {
+        "actions": "Some actions may take longer before they complete.",
+        "realtime": "Live updates can lag while service is recovering.",
+        "cached": "Most screens remain available with previously loaded data."
+      },
+      "actionHint": "You can continue using Pause and retry if something stalls."
+    },
+    "actions": {
+      "retry": "Retry",
+      "retryNow": "Retry now"
+    },
+    "popup": {
+      "sections": {
+        "issue": "What's happening",
+        "impact": "What this affects",
+        "pauseDoing": "What Pause is doing",
+        "actions": "What you can do now"
+      },
+      "reconnectEvery30s": "Pause is trying to reconnect automatically every 30 seconds.",
+      "downReconnectEvery15s": "When servers are down, we check again every 15 seconds while this app is open.",
+      "lastChecked": "Last checked: {time}",
+      "lastCheckedUnavailable": "Last checked: not available yet",
+      "actions": {
+        "showDetails": "Show details",
+        "hideDetails": "Hide details"
+      },
+      "details": {
+        "connection": "Connection",
+        "serviceStatus": "Service status",
+        "errorCode": "Error"
+      },
+      "connection": {
+        "online": "Online",
+        "offline": "Offline"
+      },
+      "service": {
+        "unreachable": "Unreachable while offline",
+        "down": "Server down",
+        "degraded": "Degraded"
+      },
+      "unknownValue": "Unknown"
     }
   }
 }

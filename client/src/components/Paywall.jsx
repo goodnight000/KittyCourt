@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { X, Crown, Heart, Check, Users, Zap, Gavel, Wand2, ChevronRight, Clock, Star, RotateCcw, Brain } from 'lucide-react';
 import useSubscriptionStore from '../store/useSubscriptionStore';
@@ -6,6 +6,7 @@ import usePartnerStore from '../store/usePartnerStore';
 import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
 import { useI18n } from '../i18n';
 import ButtonLoader from './shared/ButtonLoader';
+import { getRevenueCatPlanPricing } from '../lib/revenuecatPricing';
 
 /**
  * Paywall Modal - High-Converting Premium Experience
@@ -98,15 +99,27 @@ const PaywallBackdrop = ({ prefersReducedMotion }) => (
 );
 
 const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
-    const { purchaseGold, restorePurchases, isLoading, trialEligible, isGold, checkEntitlement } = useSubscriptionStore();
+    const { purchaseGold, restorePurchases, isLoading, trialEligible, isGold, checkEntitlement, offerings } = useSubscriptionStore();
     const { partner } = usePartnerStore();
     const [restoring, setRestoring] = useState(false);
     const [error, setError] = useState(null);
     const [selectedPlan, setSelectedPlan] = useState('yearly');
-    const { t } = useI18n();
+    const { t, language } = useI18n();
     const partnerHasGold = isActiveGold(partner);
     const purchaseBlocked = partnerHasGold && !isGold;
     const prefersReducedMotion = usePrefersReducedMotion();
+    const pricing = useMemo(
+        () => getRevenueCatPlanPricing({
+            offerings,
+            language,
+            fallbackMonthly: '$11.99',
+            fallbackYearlyMonthly: '$9.17',
+        }),
+        [offerings, language]
+    );
+    const yearlySaveLabel = pricing.savePercent != null
+        ? t('paywall.plans.yearly.saveDynamic', { percent: pricing.savePercent })
+        : t('paywall.plans.yearly.save');
 
     // Refs for focus management
     const modalRef = useRef(null);
@@ -562,11 +575,11 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                                                     </div>
                                                     <div className="text-right">
                                                         <div className="flex items-baseline gap-1.5">
-                                                            <del className="text-sm text-court-brownLight/60 line-through">$11.99</del>
-                                                            <span className="text-2xl font-bold text-court-brown font-display">$9.17</span>
+                                                            <del className="text-sm text-court-brownLight/60 line-through">{pricing.monthlyPrice}</del>
+                                                            <span className="text-2xl font-bold text-court-brown font-display">{pricing.yearlyMonthlyPrice}</span>
                                                             <span className="text-sm text-court-brownLight">{t('paywall.plans.perMonth')}</span>
                                                         </div>
-                                                        <p className="text-xs text-green-600 font-semibold">{t('paywall.plans.yearly.save')}</p>
+                                                        <p className="text-xs text-green-600 font-semibold">{yearlySaveLabel}</p>
                                                     </div>
                                                 </div>
                                             </div>
@@ -612,7 +625,7 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                                                     </div>
                                                     <div className="text-right">
                                                         <div className="flex items-baseline gap-1">
-                                                            <span className="text-2xl font-bold text-court-brown font-display">$11.99</span>
+                                                            <span className="text-2xl font-bold text-court-brown font-display">{pricing.monthlyPrice}</span>
                                                             <span className="text-sm text-court-brownLight">{t('paywall.plans.perMonth')}</span>
                                                         </div>
                                                     </div>
@@ -762,7 +775,7 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 <div className="rounded-full border border-amber-200/70 bg-amber-100/70 px-3 py-1 text-xs font-bold text-amber-700">
-                                                    {t('paywall.cta.price', { price: selectedPlan === 'yearly' ? '$9.17' : '$11.99' })}
+                                                    {t('paywall.cta.price', { price: selectedPlan === 'yearly' ? pricing.yearlyMonthlyPrice : pricing.monthlyPrice })}
                                                 </div>
                                                 <ChevronRight className="w-5 h-5 text-amber-600" />
                                             </div>

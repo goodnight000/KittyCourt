@@ -44,13 +44,23 @@ if (workbox) {
     maxRetentionTime: 24 * 60
   })
 
+  // Retry mutation requests when the server returns 5xx so writes are queued and replayed.
+  const retryServerFailuresPlugin = {
+    fetchDidSucceed: async ({ response }) => {
+      if (response?.status >= 500) {
+        throw new Error(`Retryable server response: ${response.status}`)
+      }
+      return response
+    }
+  }
+
   const mutationHandler = new workbox.strategies.NetworkOnly({
-    plugins: [apiQueue]
+    plugins: [retryServerFailuresPlugin, apiQueue]
   })
 
   const registerMutationRoute = (method) => {
     workbox.routing.registerRoute(
-      ({ url }) => url.origin === self.location.origin && url.pathname.startsWith('/api/'),
+      ({ url }) => url.pathname.startsWith('/api/'),
       mutationHandler,
       method
     )

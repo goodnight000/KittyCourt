@@ -1,7 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef } from 'react';
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
-import { Gavel, Home, Calendar, User, Cat } from 'lucide-react';
-import { motion as Motion, AnimatePresence } from 'framer-motion';
+import { Gavel, Home, Calendar, User } from 'lucide-react';
+import { motion as Motion, AnimatePresence, MotionConfig } from 'framer-motion';
 import useAppStore from '../store/useAppStore';
 import useCourtStore, { VIEW_PHASE } from '../store/useCourtStore';
 import useAuthStore from '../store/useAuthStore';
@@ -10,23 +10,28 @@ import useLevelStore from '../store/useLevelStore';
 import useUiStore from '../store/useUiStore';
 import useCourtSocket from '../hooks/useCourtSocket';
 import useKeyboardAvoidance from '../hooks/useKeyboardAvoidance';
-import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
+import useUiPerfProfile from '../hooks/useUiPerfProfile';
 import clsx from 'clsx';
 import LevelUpOverlay from '../components/LevelUpOverlay';
 import { useI18n } from '../i18n';
 
 const MainLayout = () => {
-    const { currentUser, fetchUsers } = useAppStore();
-    const { fetchState, myViewPhase, hasUnreadVerdict } = useCourtStore();
-    const { user: authUser } = useAuthStore();
-    const { hasPartner } = usePartnerStore();
-    const { fetchLevel, pendingLevelUps, acknowledgeLevelUp } = useLevelStore();
+    const currentUser = useAppStore((state) => state.currentUser);
+    const fetchUsers = useAppStore((state) => state.fetchUsers);
+    const fetchState = useCourtStore((state) => state.fetchState);
+    const myViewPhase = useCourtStore((state) => state.myViewPhase);
+    const hasUnreadVerdict = useCourtStore((state) => state.hasUnreadVerdict);
+    const authUser = useAuthStore((state) => state.user);
+    const hasPartner = usePartnerStore((state) => state.hasPartner);
+    const fetchLevel = useLevelStore((state) => state.fetchLevel);
+    const pendingLevelUps = useLevelStore((state) => state.pendingLevelUps);
+    const acknowledgeLevelUp = useLevelStore((state) => state.acknowledgeLevelUp);
     const location = useLocation();
     const mainRef = useRef(null);
     const activeLevelUp = pendingLevelUps?.[0];
     const { t } = useI18n();
     const { keyboardVisible, keyboardHeight } = useKeyboardAvoidance();
-    const prefersReducedMotion = usePrefersReducedMotion();
+    const { prefersReducedMotion } = useUiPerfProfile();
     const isDockHidden = useUiStore((state) => state.dockHiddenCount > 0);
     const baseBottomPadding = 80;
     const dockVisible = !keyboardVisible && !isDockHidden;
@@ -49,12 +54,12 @@ const MainLayout = () => {
             fetchState();
         }
 
-        // Poll for summons every 10 seconds
+        // Poll for summons every 20 seconds (socket remains primary realtime path)
         const interval = setInterval(() => {
             if (authUser?.id) {
                 fetchState();
             }
-        }, 10000);
+        }, 20000);
 
         return () => clearInterval(interval);
     }, [authUser?.id, fetchState, fetchUsers]);
@@ -97,54 +102,58 @@ const MainLayout = () => {
 
     return (
         <div className="min-h-screen min-h-[100dvh] flex flex-col font-sans">
-            {/* Main Scrollable Content - with safe area for Dynamic Island/notch */}
-            <main ref={mainRef} className="flex-1 overflow-y-auto safe-top relative" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
-                <div
-                    className="px-4 py-5 pb-20 max-w-lg mx-auto"
-                    style={contentBottomPadding ? { paddingBottom: contentBottomPadding } : undefined}
-                >
-                    <AnimatePresence mode="wait">
-                        <Motion.div
-                            key={location.pathname}
-                            initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: prefersReducedMotion ? 0 : -10 }}
-                            transition={{ duration: prefersReducedMotion ? 0.1 : 0.2, ease: "easeOut" }}
-                        >
-                            <Outlet />
-                        </Motion.div>
-                    </AnimatePresence>
-                </div>
-            </main>
+            {/* Keep dock/page-switch motion intact regardless of global perf profile. */}
+            <MotionConfig reducedMotion="never">
+                {/* Main Scrollable Content - with safe area for Dynamic Island/notch */}
+                <main ref={mainRef} className="flex-1 overflow-y-auto safe-top relative" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
+                    <div
+                        className="px-4 py-5 pb-20 max-w-lg mx-auto"
+                        style={contentBottomPadding ? { paddingBottom: contentBottomPadding } : undefined}
+                    >
+                        <AnimatePresence mode="wait">
+                            <Motion.div
+                                key={location.pathname}
+                                className="app-route-surface"
+                                initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: prefersReducedMotion ? 0 : -10 }}
+                                transition={{ duration: prefersReducedMotion ? 0.1 : 0.2, ease: "easeOut" }}
+                            >
+                                <Outlet />
+                            </Motion.div>
+                        </AnimatePresence>
+                    </div>
+                </main>
 
-            {/* Bottom Tab Bar */}
-            <Motion.nav
-                initial={{ y: prefersReducedMotion ? 0 : 100 }}
-                animate={{ y: dockVisible ? 0 : 120, opacity: dockVisible ? 1 : 0 }}
-                transition={prefersReducedMotion
-                    ? { duration: 0.1 }
-                    : { delay: 0.1, type: "spring", stiffness: 300, damping: 30 }}
-                className={clsx(
-                    "fixed bottom-0 left-1/2 -translate-x-1/2 z-40 w-full max-w-lg border-t border-court-tan/30 shadow-soft-lg pb-2 rounded-t-2xl",
-                    prefersReducedMotion
-                        ? "bg-white/95 backdrop-blur-none"
-                        : "bg-white/82 backdrop-blur-md"
-                )}
-                style={{ pointerEvents: dockVisible ? 'auto' : 'none' }}
-            >
-                <div className="flex items-center justify-around h-18 px-2">
-                    <TabItem to="/" icon={<Home size={26} />} label={t('nav.home')} prefersReducedMotion={prefersReducedMotion} />
-                    <TabItem
-                        to="/courtroom"
-                        icon={<Gavel size={26} />}
-                        label={t('nav.court')}
-                        isAlerting={isCourtAlerting}
-                        prefersReducedMotion={prefersReducedMotion}
-                    />
-                    <TabItem to="/calendar" icon={<Calendar size={26} />} label={t('nav.calendar')} prefersReducedMotion={prefersReducedMotion} />
-                    <TabItem to="/profile" icon={<User size={26} />} label={t('nav.profile')} prefersReducedMotion={prefersReducedMotion} />
-                </div>
-            </Motion.nav>
+                {/* Bottom Tab Bar */}
+                <Motion.nav
+                    initial={{ y: prefersReducedMotion ? 0 : 100 }}
+                    animate={{ y: dockVisible ? 0 : 120, opacity: dockVisible ? 1 : 0 }}
+                    transition={prefersReducedMotion
+                        ? { duration: 0.1 }
+                        : { delay: 0.1, type: "spring", stiffness: 300, damping: 30 }}
+                    className={clsx(
+                        "fixed bottom-0 left-1/2 -translate-x-1/2 z-40 w-full max-w-lg border-t border-court-tan/30 shadow-soft-lg pb-2 rounded-t-2xl",
+                        prefersReducedMotion
+                            ? "bg-white/95 backdrop-blur-none"
+                            : "bg-white/84 backdrop-blur-sm"
+                    )}
+                    style={{ pointerEvents: dockVisible ? 'auto' : 'none' }}
+                >
+                    <div className="flex items-center justify-around h-18 px-2">
+                        <TabItem to="/" icon={<Home size={26} />} label={t('nav.home')} prefersReducedMotion={prefersReducedMotion} />
+                        <TabItem
+                            to="/courtroom"
+                            icon={<Gavel size={26} />}
+                            label={t('nav.court')}
+                            isAlerting={isCourtAlerting}
+                            prefersReducedMotion={prefersReducedMotion}
+                        />
+                        <TabItem to="/calendar" icon={<Calendar size={26} />} label={t('nav.calendar')} prefersReducedMotion={prefersReducedMotion} />
+                        <TabItem to="/profile" icon={<User size={26} />} label={t('nav.profile')} prefersReducedMotion={prefersReducedMotion} />
+                    </div>
+                </Motion.nav>
+            </MotionConfig>
 
             <LevelUpOverlay
                 levelUp={activeLevelUp}

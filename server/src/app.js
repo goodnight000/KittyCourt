@@ -24,7 +24,7 @@ if (fs.existsSync(serverEnvPath)) {
 
 // Import Supabase client
 const { isSupabaseConfigured } = require('./lib/supabase');
-const { isOpenRouterConfigured } = require('./lib/openrouter');
+const { buildHealthSnapshot } = require('./lib/health');
 const { corsMiddleware, securityHeaders } = require('./lib/security');
 const { initSentry, setupSentryErrorHandler, captureException } = require('./lib/sentry');
 const { isRedisConfigured } = require('./lib/redis');
@@ -51,6 +51,7 @@ const statsRoutes = require('./routes/stats');
 const accountRoutes = require('./routes/account');
 const profileRoutes = require('./routes/profile');
 const exportsRoutes = require('./routes/exports');
+const abuseRoutes = require('./routes/abuse');
 
 // Court architecture
 const courtRoutes = require('./routes/court');
@@ -247,6 +248,9 @@ app.use('/api/exports', exportsRoutes);
 // Account Routes (account deletion, etc.)
 app.use('/api/account', accountRoutes);
 
+// Abuse Challenge Routes
+app.use('/api/abuse', abuseRoutes);
+
 // Root endpoint - for easy verification
 app.get('/', (req, res) => {
     res.json({
@@ -260,14 +264,11 @@ app.get('/', (req, res) => {
     });
 });
 
-// Health check
-app.get('/api/health', (req, res) => {
-    res.json({
-        status: 'ok',
-        supabase: isSupabaseConfigured(),
-        openrouter: isOpenRouterConfigured(),
-        timestamp: new Date().toISOString()
-    });
+// Health check with dependency readiness/degradation details
+app.get('/api/health', async (req, res) => {
+    const snapshot = await buildHealthSnapshot({ memoryRuntimeConfig });
+    const { httpStatus, ...payload } = snapshot;
+    res.status(httpStatus).json(payload);
 });
 
 // Centralized error handling (CORS + unexpected errors)

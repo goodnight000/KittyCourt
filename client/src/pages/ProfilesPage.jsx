@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
     User, Heart, Settings, Lock, Crown, Sparkles, Zap, Gavel, Wand2, ImagePlus, Scale, Target
@@ -27,58 +27,93 @@ import useCalendarEvents from '../components/calendar/useCalendarEvents';
 import EmojiIcon from '../components/shared/EmojiIcon';
 import api from '../services/api';
 import { useI18n } from '../i18n';
+import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
+import { getRevenueCatPlanPricing } from '../lib/revenuecatPricing';
 
 const ProfilesPage = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const { t, language } = useI18n();
-    const { currentUser, users, fetchAppreciations } = useAppStore();
-    const { profile, signOut, refreshProfile, user: authUser } = useAuthStore();
-    const { partner: connectedPartner, hasPartner, disconnectStatus } = usePartnerStore();
-    const { isGold, usage, limits, getUsageDisplay, purchaseGold, restorePurchases, isLoading: subLoading } = useSubscriptionStore();
-    const { level, currentXP, xpForNextLevel, title, fetchLevel, shouldShowChallenges, shouldShowInsights, serverAvailable } = useLevelStore();
-    const { memories, deletedMemories, fetchMemories, serverAvailable: memoriesAvailable } = useMemoryStore();
-    const { insights, fetchInsights, serverAvailable: insightsAvailable } = useInsightsStore();
-    const { active: activeChallenges, completed: completedChallenges, available: availableChallenges, isLoading: challengesLoading, fetchChallenges } = useChallengeStore();
-    const latestInsight = insights?.[0] || null;
-    const showChallenges = shouldShowChallenges();
-    const showInsights = shouldShowInsights();
-    const insightsUnlocked = showInsights && isGold;
-    const needsGoldForInsights = showInsights && !isGold;
-    const partnerFromUsers = users?.find(u => u.id !== currentUser?.id);
-    const isXPEnabled = import.meta.env.VITE_XP_SYSTEM_ENABLED === 'true';
-    const unlockHint = t('profile.unlockHint');
-    const activeChallengeCount = activeChallenges?.length || 0;
-    const availableChallengeCount = availableChallenges?.length || 0;
-    const loveLanguages = [
-        { id: 'words', label: t('options.loveLanguage.words'), emoji: '💬' },
-        { id: 'acts', label: t('options.loveLanguage.acts'), emoji: '🤲' },
-        { id: 'gifts', label: t('options.loveLanguage.gifts'), emoji: '🎁' },
-        { id: 'time', label: t('options.loveLanguage.time'), emoji: '⏰' },
-        { id: 'touch', label: t('options.loveLanguage.touch'), emoji: '🤗' },
-    ];
-
-    // Use custom hook for profile data management
-    const { profileData, saveProfile } = useProfileData();
-
-    // Calendar events for milestones tracking (only user-created events, not defaults)
-    const { events: calendarEvents } = useCalendarEvents(t, language);
-    const userCreatedCalendarEvents = calendarEvents?.filter(e => !e.isDefault && !e.isPersonal) || [];
-
+    const prefersReducedMotion = usePrefersReducedMotion();
+    const currentUser = useAppStore((state) => state.currentUser);
+    const fetchAppreciations = useAppStore((state) => state.fetchAppreciations);
+    const profile = useAuthStore((state) => state.profile);
+    const signOut = useAuthStore((state) => state.signOut);
+    const authUser = useAuthStore((state) => state.user);
+    const connectedPartner = usePartnerStore((state) => state.partner);
+    const hasPartner = usePartnerStore((state) => state.hasPartner);
+    const disconnectStatus = usePartnerStore((state) => state.disconnectStatus);
+    const isGold = useSubscriptionStore((state) => state.isGold);
+    const getUsageDisplay = useSubscriptionStore((state) => state.getUsageDisplay);
+    const offerings = useSubscriptionStore((state) => state.offerings);
+    const level = useLevelStore((state) => state.level);
+    const currentXP = useLevelStore((state) => state.currentXP);
+    const xpForNextLevel = useLevelStore((state) => state.xpForNextLevel);
+    const title = useLevelStore((state) => state.title);
+    const fetchLevel = useLevelStore((state) => state.fetchLevel);
+    const shouldShowChallenges = useLevelStore((state) => state.shouldShowChallenges);
+    const shouldShowInsights = useLevelStore((state) => state.shouldShowInsights);
+    const serverAvailable = useLevelStore((state) => state.serverAvailable);
+    const memories = useMemoryStore((state) => state.memories);
+    const deletedMemories = useMemoryStore((state) => state.deletedMemories);
+    const fetchMemories = useMemoryStore((state) => state.fetchMemories);
+    const memoriesAvailable = useMemoryStore((state) => state.serverAvailable);
+    const insights = useInsightsStore((state) => state.insights);
+    const fetchInsights = useInsightsStore((state) => state.fetchInsights);
+    const insightsAvailable = useInsightsStore((state) => state.serverAvailable);
+    const activeChallenges = useChallengeStore((state) => state.active);
+    const completedChallenges = useChallengeStore((state) => state.completed);
+    const availableChallenges = useChallengeStore((state) => state.available);
+    const challengesLoading = useChallengeStore((state) => state.isLoading);
+    const fetchChallenges = useChallengeStore((state) => state.fetchChallenges);
     const [showEditModal, setShowEditModal] = useState(false);
-    const [activeTab, setActiveTab] = useState('me'); // 'me' or 'us'
+    const [activeTab, setActiveTab] = useState(() => (
+        location.state?.tab === 'us' || location.state?.tab === 'me'
+            ? location.state.tab
+            : 'me'
+    ));
     const [showPaywall, setShowPaywall] = useState(false);
     const [activeChallengeIndex, setActiveChallengeIndex] = useState(0);
     const [userStats, setUserStats] = useState(null);
     const challengeTrackRef = useRef(null);
     const challengeCardWidthRef = useRef(0);
+    const latestInsight = insights?.[0] || null;
+    const showChallenges = shouldShowChallenges();
+    const showInsights = shouldShowInsights();
+    const insightsUnlocked = showInsights && isGold;
+    const needsGoldForInsights = showInsights && !isGold;
+    const isXPEnabled = import.meta.env.VITE_XP_SYSTEM_ENABLED === 'true';
+    const unlockHint = t('profile.unlockHint');
+    const activeChallengeCount = activeChallenges?.length || 0;
+    const availableChallengeCount = availableChallenges?.length || 0;
+    const clampedActiveChallengeIndex = Math.min(
+        activeChallengeIndex,
+        Math.max(activeChallengeCount - 1, 0)
+    );
+    const loveLanguages = useMemo(() => [
+        { id: 'words', label: t('options.loveLanguage.words'), emoji: '💬' },
+        { id: 'acts', label: t('options.loveLanguage.acts'), emoji: '🤲' },
+        { id: 'gifts', label: t('options.loveLanguage.gifts'), emoji: '🎁' },
+        { id: 'time', label: t('options.loveLanguage.time'), emoji: '⏰' },
+        { id: 'touch', label: t('options.loveLanguage.touch'), emoji: '🤗' },
+    ], [t]);
+
+    // Use custom hook for profile data management
+    const { profileData, saveProfile } = useProfileData();
+
+    // Calendar events for milestones tracking (only user-created events, not defaults)
+    const { events: calendarEvents } = useCalendarEvents(t, language, { enabled: activeTab === 'us' });
+    const userCreatedCalendarEvents = useMemo(
+        () => (calendarEvents?.filter((event) => !event.isDefault && !event.isPersonal) || []),
+        [calendarEvents]
+    );
 
     useEffect(() => {
         fetchAppreciations();
         if (hasPartner) {
             fetchLevel();
         }
-    }, [fetchAppreciations, hasPartner, fetchLevel, language]);
+    }, [fetchAppreciations, hasPartner, fetchLevel]);
 
     // Fetch unified stats from /api/stats with caching
     useEffect(() => {
@@ -122,28 +157,30 @@ const ProfilesPage = () => {
     }, [authUser?.id]);
 
     useEffect(() => {
-        if (!hasPartner || !memoriesAvailable) return;
+        if (activeTab !== 'us' || !hasPartner || !memoriesAvailable) return;
         fetchMemories();
-    }, [fetchMemories, hasPartner, memoriesAvailable]);
+    }, [activeTab, fetchMemories, hasPartner, memoriesAvailable]);
 
     useEffect(() => {
-        if (!hasPartner || !isXPEnabled || !serverAvailable || !insightsAvailable || !showInsights || !isGold) return;
+        if (
+            activeTab !== 'us'
+            || !hasPartner
+            || !isXPEnabled
+            || !serverAvailable
+            || !insightsAvailable
+            || !showInsights
+            || !isGold
+        ) return;
         fetchInsights();
-    }, [fetchInsights, hasPartner, insightsAvailable, isXPEnabled, serverAvailable, showInsights, isGold]);
+    }, [activeTab, fetchInsights, hasPartner, insightsAvailable, isXPEnabled, serverAvailable, showInsights, isGold]);
 
     useEffect(() => {
-        if (location.state?.tab === 'us' || location.state?.tab === 'me') {
-            setActiveTab(location.state.tab);
-        }
-    }, [location.state?.tab]);
-
-    useEffect(() => {
-        if (!hasPartner || !showChallenges) return;
+        if (activeTab !== 'us' || !hasPartner || !showChallenges) return;
         fetchChallenges();
-    }, [fetchChallenges, hasPartner, showChallenges]);
+    }, [activeTab, fetchChallenges, hasPartner, showChallenges]);
 
     useEffect(() => {
-        setActiveChallengeIndex(0);
+        challengeCardWidthRef.current = 0;
         if (challengeTrackRef.current) {
             challengeTrackRef.current.scrollTo({ left: 0, behavior: 'auto' });
         }
@@ -162,7 +199,7 @@ const ProfilesPage = () => {
         const gap = 12;
         const index = Math.round(container.scrollLeft / (cardWidth + gap));
         const clampedIndex = Math.min(Math.max(index, 0), activeChallengeCount - 1);
-        if (clampedIndex !== activeChallengeIndex) {
+        if (clampedIndex !== clampedActiveChallengeIndex) {
             setActiveChallengeIndex(clampedIndex);
         }
     };
@@ -176,14 +213,29 @@ const ProfilesPage = () => {
     const partnerQuestionsAnswered = 0; // Deprecated - use couple stats if needed
 
     // Get love language
-    const selectedLoveLanguage = loveLanguages.find(l => l.id === profileData.loveLanguage);
+    const selectedLoveLanguage = useMemo(
+        () => loveLanguages.find((languageOption) => languageOption.id === profileData.loveLanguage),
+        [loveLanguages, profileData.loveLanguage]
+    );
+    const pricing = useMemo(
+        () => getRevenueCatPlanPricing({
+            offerings,
+            language,
+            fallbackMonthly: null,
+            fallbackYearlyMonthly: null,
+        }),
+        [offerings, language]
+    );
+    const upgradePriceLabel = pricing.monthlyPrice
+        ? t('paywall.cta.price', { price: pricing.monthlyPrice })
+        : t('profilePage.subscription.price');
 
     return (
         <div className="relative min-h-screen pb-6 overflow-hidden">
             {/* Background gradient */}
             <div className="fixed inset-0 pointer-events-none">
-                <div className="absolute -top-20 -right-20 h-64 w-64 rounded-full bg-amber-200/30 blur-3xl" />
-                <div className="absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-rose-200/25 blur-3xl" />
+                <div className={`absolute -top-20 -right-20 h-64 w-64 rounded-full bg-amber-200/30 ${prefersReducedMotion ? 'blur-xl opacity-70' : 'blur-2xl'}`} />
+                <div className={`absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-rose-200/25 ${prefersReducedMotion ? 'blur-xl opacity-70' : 'blur-2xl'}`} />
             </div>
             <div className="relative space-y-6">
 
@@ -194,14 +246,14 @@ const ProfilesPage = () => {
                         </p>
                         <h1 className="text-2xl font-display font-bold text-neutral-800">{t('profilePage.header.title')}</h1>
                     </div>
-                    <motion.button
+                    <Motion.button
                         whileTap={{ scale: 0.95 }}
                         onClick={() => navigate('/settings')}
                         className="grid h-11 w-11 place-items-center rounded-2xl border border-white/80 bg-white/80 shadow-soft"
                         aria-label={t('profilePage.header.settingsAria')}
                     >
                         <Settings className="w-5 h-5 text-neutral-600" />
-                    </motion.button>
+                    </Motion.button>
                 </header>
 
                 {/* Tab Switcher */}
@@ -212,10 +264,14 @@ const ProfilesPage = () => {
                             }`}
                     >
                         {activeTab === 'me' && (
-                            <motion.span
-                                layoutId="profileTab"
-                                className="absolute inset-0 rounded-full border border-amber-200/70 bg-amber-100/80 shadow-soft"
-                            />
+                            prefersReducedMotion ? (
+                                <span className="absolute inset-0 rounded-full border border-amber-200/70 bg-amber-100/80 shadow-soft" />
+                            ) : (
+                                <Motion.span
+                                    layoutId="profileTab"
+                                    className="absolute inset-0 rounded-full border border-amber-200/70 bg-amber-100/80 shadow-soft"
+                                />
+                            )
                         )}
                         <span className="relative z-10 flex items-center justify-center gap-2">
                             <User className="w-4 h-4" />
@@ -231,10 +287,14 @@ const ProfilesPage = () => {
                             }`}
                     >
                         {activeTab === 'us' && (
-                            <motion.span
-                                layoutId="profileTab"
-                                className="absolute inset-0 rounded-full border border-amber-200/70 bg-amber-100/80 shadow-soft"
-                            />
+                            prefersReducedMotion ? (
+                                <span className="absolute inset-0 rounded-full border border-amber-200/70 bg-amber-100/80 shadow-soft" />
+                            ) : (
+                                <Motion.span
+                                    layoutId="profileTab"
+                                    className="absolute inset-0 rounded-full border border-amber-200/70 bg-amber-100/80 shadow-soft"
+                                />
+                            )
                         )}
                         <span className="relative z-10 flex items-center justify-center gap-2">
                             {!hasPartner && <Lock className="w-3.5 h-3.5" />}
@@ -243,13 +303,13 @@ const ProfilesPage = () => {
                     </button>
                 </div>
 
-                <AnimatePresence mode="wait">
+                <AnimatePresence mode={prefersReducedMotion ? 'sync' : 'wait'}>
                     {activeTab === 'me' ? (
-                        <motion.div
+                        <Motion.div
                             key="me"
-                            initial={{ opacity: 0, x: -20 }}
+                            initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, x: -20 }}
                             animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: 20 }}
+                            exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, x: 20 }}
                             className="space-y-4"
                         >
                             {/* Profile Card with Stats */}
@@ -265,7 +325,7 @@ const ProfilesPage = () => {
                             />
 
                             {/* Subscription Card */}
-                            <motion.div
+                            <Motion.div
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.28 }}
@@ -335,7 +395,7 @@ const ProfilesPage = () => {
                                 </div>
 
                                 {!isGold && (
-                                    <motion.button
+                                    <Motion.button
                                         whileTap={{ scale: 0.98 }}
                                         onClick={() => setShowPaywall(true)}
                                         className="relative w-full overflow-hidden rounded-3xl border border-amber-200/70 bg-white/85 px-4 py-3 text-left shadow-soft"
@@ -355,12 +415,12 @@ const ProfilesPage = () => {
                                             </div>
                                             <div className="flex flex-col items-end gap-1">
                                                 <div className="rounded-full border border-amber-200/70 bg-amber-100/70 px-3 py-1 text-xs font-bold text-amber-700">
-                                                    {t('profilePage.subscription.price')}
+                                                    {upgradePriceLabel}
                                                 </div>
                                                 <div className="text-[10px] text-neutral-500">{t('profilePage.subscription.ctaHint')}</div>
                                             </div>
                                         </div>
-                                    </motion.button>
+                                    </Motion.button>
                                 )}
 
                                 {isGold && (
@@ -368,7 +428,7 @@ const ProfilesPage = () => {
                                         {t('profilePage.subscription.thanks')}
                                     </p>
                                 )}
-                            </motion.div>
+                            </Motion.div>
 
                             {/* Partner Connection */}
                             {!hasPartner && disconnectStatus?.status === 'disconnected' && (
@@ -381,20 +441,20 @@ const ProfilesPage = () => {
                                 loveLanguages={loveLanguages}
                             />
 
-                        </motion.div>
+                        </Motion.div>
                     ) : (
-                        <motion.div
+                        <Motion.div
                             key="us"
-                            initial={{ opacity: 0, x: 20 }}
+                            initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, x: 20 }}
                             animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: -20 }}
+                            exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, x: -20 }}
                             className="space-y-4"
                         >
                             {/* Relationship Card */}
-                            <motion.div className="glass-card relative overflow-hidden p-5 text-center">
+                            <Motion.div className="glass-card relative overflow-hidden p-5 text-center">
                                 <div className="absolute inset-0 pointer-events-none">
                                     <div className="absolute -top-10 -right-8 h-24 w-24 rounded-full bg-amber-200/35 blur-2xl" />
-                                    <div className="absolute -bottom-12 -left-10 h-28 w-28 rounded-full bg-rose-200/30 blur-3xl" />
+                                    <div className="absolute -bottom-12 -left-10 h-28 w-28 rounded-full bg-rose-200/30 blur-2xl" />
                                 </div>
                                 <div className="relative space-y-4">
                                     <div className="flex items-center justify-center gap-4">
@@ -403,13 +463,13 @@ const ProfilesPage = () => {
                                             name={profileData.nickname || currentUser?.name}
                                             size="lg"
                                         />
-                                        <motion.div
-                                            animate={{ scale: [1, 1.2, 1] }}
-                                            transition={{ duration: 1.5, repeat: Infinity }}
+                                        <Motion.div
+                                            animate={prefersReducedMotion ? undefined : { scale: [1, 1.2, 1] }}
+                                            transition={prefersReducedMotion ? undefined : { duration: 1.5, repeat: Infinity }}
                                             className="rounded-full border border-rose-200/70 bg-rose-100/70 px-3 py-1"
                                         >
                                             <Heart className="w-5 h-5 text-rose-500 fill-rose-500" />
-                                        </motion.div>
+                                        </Motion.div>
                                         <ProfilePicture
                                             avatarUrl={connectedPartner?.avatar_url}
                                             name={connectedPartner?.display_name}
@@ -438,7 +498,7 @@ const ProfilesPage = () => {
                                         </p>
                                     )}
                                 </div>
-                            </motion.div>
+                            </Motion.div>
 
                             {/* Level Progress - Our Story */}
                             {isXPEnabled && (
@@ -472,14 +532,14 @@ const ProfilesPage = () => {
                                                 <p className="text-xs text-neutral-500">{t('profilePage.memories.subtitle')}</p>
                                             </div>
                                         </div>
-                                        <motion.button
+                                        <Motion.button
                                             whileTap={{ scale: 0.96 }}
                                             onClick={() => navigate('/memories')}
                                             className={`text-xs font-bold text-rose-600 rounded-full border border-rose-200/70 bg-rose-50/70 px-3 py-1 ${memoriesAvailable ? '' : 'opacity-60 cursor-not-allowed'}`}
                                             disabled={!memoriesAvailable}
                                         >
                                             {t('profilePage.memories.viewAll')}
-                                        </motion.button>
+                                        </Motion.button>
                                     </div>
 
                                     {!memoriesAvailable ? (
@@ -497,13 +557,13 @@ const ProfilesPage = () => {
                                             )}
 
                                             {memories.length === 0 ? (
-                                                <motion.button
+                                                <Motion.button
                                                     whileTap={{ scale: 0.98 }}
                                                     onClick={() => navigate('/memories')}
                                                     className="w-full py-3 rounded-2xl border border-rose-200/70 bg-white/80 text-sm font-semibold text-rose-600"
                                                 >
                                                     {t('profilePage.memories.emptyCta')}
-                                                </motion.button>
+                                                </Motion.button>
                                             ) : (
                                                 <div className="grid grid-cols-2 gap-3">
                                                     {memories.slice(0, 4).map((memory) => (
@@ -544,13 +604,13 @@ const ProfilesPage = () => {
                                                 </div>
                                             </div>
                                             {showChallenges && (
-                                                <motion.button
+                                                <Motion.button
                                                     whileTap={{ scale: 0.96 }}
                                                     onClick={() => navigate('/challenges')}
                                                     className="text-xs font-bold text-amber-700 rounded-full border border-amber-200/70 bg-amber-100/70 px-3 py-1"
                                                 >
                                                     {t('profilePage.challenges.view')}
-                                                </motion.button>
+                                                </Motion.button>
                                             )}
                                         </div>
 
@@ -589,17 +649,17 @@ const ProfilesPage = () => {
                                                                 const rewardXP = challenge.rewardXP || 0;
                                                                 const daysLeft = challenge.daysLeft ?? challenge.daysRemaining ?? 7;
                                                                 const emoji = challenge.emoji;
-                                                                const isActive = index === activeChallengeIndex;
+                                                                const isActive = index === clampedActiveChallengeIndex;
 
                                                                 return (
-                                                                    <motion.button
+                                                                    <Motion.button
                                                                         key={challenge.id || `${challenge.title}-${index}`}
                                                                         type="button"
                                                                         data-challenge-card
                                                                         onClick={() => navigate('/challenges')}
                                                                         className="snap-center shrink-0 w-[250px] rounded-[28px] border border-white/80 bg-white/85 p-4 text-left shadow-soft relative overflow-hidden"
-                                                                        animate={{ scale: isActive ? 1.02 : 0.97, y: isActive ? -6 : 0 }}
-                                                                        transition={{ type: 'spring', stiffness: 320, damping: 18, bounce: 0.4 }}
+                                                                        animate={prefersReducedMotion ? undefined : { scale: isActive ? 1.02 : 0.97, y: isActive ? -6 : 0 }}
+                                                                        transition={prefersReducedMotion ? { duration: 0.12 } : { type: 'spring', stiffness: 320, damping: 18, bounce: 0.4 }}
                                                                     >
                                                                         <div className="absolute inset-0 pointer-events-none">
                                                                             <div className="absolute -top-8 -right-6 h-16 w-16 rounded-full bg-amber-200/35 blur-2xl" />
@@ -633,10 +693,11 @@ const ProfilesPage = () => {
                                                                                     <span className="font-semibold text-amber-700">{t('profilePage.challenges.reward', { xp: rewardXP })}</span>
                                                                                 </div>
                                                                                 <div className="h-2.5 rounded-full bg-white/80 shadow-inner-soft overflow-hidden">
-                                                                                    <motion.div
-                                                                                        initial={{ width: 0 }}
-                                                                                        animate={{ width: `${progress}%` }}
+                                                                                    <Motion.div
+                                                                                        initial={false}
+                                                                                        animate={{ scaleX: progress / 100 }}
                                                                                         transition={{ duration: 0.6, ease: 'easeOut' }}
+                                                                                        style={{ transformOrigin: 'left center' }}
                                                                                         className="h-full rounded-full bg-gradient-to-r from-[#C9A227] to-[#8B7019]"
                                                                                     />
                                                                                 </div>
@@ -650,7 +711,7 @@ const ProfilesPage = () => {
                                                                                 </div>
                                                                             </div>
                                                                         </div>
-                                                                    </motion.button>
+                                                                    </Motion.button>
                                                                 );
                                                             })}
                                                         </div>
@@ -660,7 +721,7 @@ const ProfilesPage = () => {
                                                                 {activeChallenges.map((_, index) => (
                                                                     <span
                                                                         key={`challenge-dot-${index}`}
-                                                                        className={`h-1.5 w-1.5 rounded-full transition ${index === activeChallengeIndex
+                                                                        className={`h-1.5 w-1.5 rounded-full transition ${index === clampedActiveChallengeIndex
                                                                             ? 'bg-amber-500 shadow-[0_0_10px_rgba(251,146,60,0.6)]'
                                                                             : 'bg-amber-200/70'
                                                                             }`}
@@ -735,22 +796,22 @@ const ProfilesPage = () => {
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 {insightsUnlocked && (
-                                                    <motion.button
+                                                    <Motion.button
                                                         whileTap={{ scale: 0.96 }}
                                                         onClick={() => navigate('/insights')}
                                                         className="text-xs font-bold text-sky-700 rounded-full border border-sky-200/70 bg-sky-100/70 px-3 py-1"
                                                     >
                                                         {t('profilePage.insights.viewAll')}
-                                                    </motion.button>
+                                                    </Motion.button>
                                                 )}
                                                 {needsGoldForInsights && (
-                                                    <motion.button
+                                                    <Motion.button
                                                         whileTap={{ scale: 0.96 }}
                                                         onClick={() => setShowPaywall(true)}
                                                         className="text-xs font-bold text-sky-700 rounded-full border border-sky-200/70 bg-sky-100/70 px-3 py-1"
                                                     >
                                                         {t('profilePage.insights.unlockGold')}
-                                                    </motion.button>
+                                                    </Motion.button>
                                                 )}
                                             </div>
                                         </div>
@@ -818,7 +879,7 @@ const ProfilesPage = () => {
                                     calendarEventsCount: userCreatedCalendarEvents?.length || 0,
                                 }}
                             />
-                        </motion.div>
+                        </Motion.div>
                     )}
                 </AnimatePresence>
             </div>
@@ -870,7 +931,7 @@ const StatBar = ({ label, value, max, color }) => {
                 <span className="font-bold text-neutral-700">{value}</span>
             </div>
             <div className="h-2 bg-white/80 rounded-full overflow-hidden shadow-inner-soft">
-                <motion.div
+                <Motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${percentage}%` }}
                     transition={{ duration: 0.8, ease: "easeOut" }}

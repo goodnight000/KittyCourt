@@ -34,6 +34,8 @@ const PRODUCT_PERIOD_DAYS = new Map([
     ['prodaa5384f89b', 365],
 ]);
 const isProd = process.env.NODE_ENV === 'production';
+const allowDevSubscriptionBypass = process.env.ALLOW_DEV_SUBSCRIPTION_BYPASS === 'true';
+const enableDebugGrant = process.env.ENABLE_DEBUG_SUBSCRIPTION_GRANT === 'true';
 
 const syncRateLimiter = createRateLimiter({
     windowMs: 60 * 1000,
@@ -256,7 +258,7 @@ router.post('/sync', syncRateLimiter, async (req, res) => {
             const status = resolvePauseGoldStatus(response.subscriber);
             tier = status.tier;
             expiresAt = status.expiresAt;
-        } else if (!isProd) {
+        } else if (!isProd && allowDevSubscriptionBypass) {
             const { tier: requestedTier, productId } = req.body || {};
             if (!requestedTier || !['pause_gold', 'free'].includes(requestedTier)) {
                 return res.status(400).json({ error: 'Invalid tier' });
@@ -275,7 +277,11 @@ router.post('/sync', syncRateLimiter, async (req, res) => {
 
             tier = requestedTier;
         } else {
-            return res.status(503).json({ error: 'RevenueCat not configured' });
+            return res.status(503).json({
+                error: isProd
+                    ? 'RevenueCat not configured'
+                    : 'RevenueCat not configured and dev bypass disabled',
+            });
         }
 
         const supabase = getSupabase();
@@ -325,8 +331,8 @@ router.post('/sync', syncRateLimiter, async (req, res) => {
  */
 router.post('/debug-grant', async (req, res) => {
     try {
-        if (isProd) {
-            return res.status(403).json({ error: 'Not available in production' });
+        if (isProd || !enableDebugGrant) {
+            return res.status(403).json({ error: 'Not available' });
         }
 
         if (!isSupabaseConfigured()) {

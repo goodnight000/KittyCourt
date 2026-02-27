@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { MotionConfig } from 'framer-motion';
 
 // Layout
 import MainLayout from './layouts/MainLayout';
@@ -29,12 +30,16 @@ const MemoriesPage = lazy(() => import('./pages/MemoriesPage'));
 const InsightsPage = lazy(() => import('./pages/InsightsPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const FeedbackPage = lazy(() => import('./pages/FeedbackPage'));
+const DemoScreenshotsPage = lazy(() => import('./pages/DemoScreenshotsPage'));
 
 // Components
 import PartnerRequestModal from './components/PartnerRequestModal';
 import GoldWelcomeModal from './components/GoldWelcomeModal';
 import LoadingScreen from './components/LoadingScreen';
 import ErrorBoundary from './components/ErrorBoundary';
+import ConnectivityBanner from './components/ConnectivityBanner';
+import useUiPerfProfile from './hooks/useUiPerfProfile';
+import { isNativeIOS } from './utils/platform';
 
 // Store
 import useAuthStore from './store/useAuthStore';
@@ -48,6 +53,7 @@ import useInsightsStore from './store/useInsightsStore';
 import useMemoryStore from './store/useMemoryStore';
 import useUpsellStore from './store/useUpsellStore';
 import useSubscriptionStore from './store/useSubscriptionStore';
+import useConnectivityStore from './store/useConnectivityStore';
 import { startAuthLifecycle } from './services/authLifecycle';
 import { startCacheLifecycle } from './services/cacheLifecycle';
 import { eventBus, EVENTS } from './lib/eventBus';
@@ -106,6 +112,7 @@ const AppRoutes = () => {
     useEffect(() => {
         const stop = startAuthLifecycle();
         const stopCache = startCacheLifecycle();
+        const stopConnectivity = useConnectivityStore.getState().startMonitoring();
         startNativeOAuthListener();
 
         // Initialize RevenueCat SDK (only works on native platforms)
@@ -126,6 +133,8 @@ const AppRoutes = () => {
         return () => {
             stop?.();
             stopCache?.();
+            stopConnectivity?.();
+            useConnectivityStore.getState().stopMonitoring();
             // Cleanup all stores (event bus listeners, pending timeouts, subscriptions)
             useAuthStore.getState().cleanup?.();
             usePartnerStore.getState().cleanup?.();
@@ -181,6 +190,50 @@ const AppRoutes = () => {
         if (!isAuthenticated) return;
         checkEntitlement();
     }, [checkEntitlement, hasPartner, isAuthenticated]);
+
+    useEffect(() => {
+        if (!isAuthenticated || !onboardingComplete) return;
+
+        let cancelled = false;
+        let idleId = null;
+        let timeoutId = null;
+
+        const prefetchLikelyRoutes = () => {
+            Promise.allSettled([
+                import('./pages/CalendarPage'),
+                import('./pages/ProfilesPage'),
+                import('./pages/HistoryPage'),
+                import('./pages/AppreciationsPage'),
+                import('./components/calendar/UpcomingEvents'),
+                import('./components/calendar/EventForm'),
+                import('./components/calendar/EventDetailsModal'),
+                import('./components/calendar/EventPlanningDialog'),
+            ]).catch(() => {
+                // Best-effort prefetch only.
+            });
+        };
+
+        const runPrefetch = () => {
+            if (cancelled) return;
+            prefetchLikelyRoutes();
+        };
+
+        if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+            idleId = window.requestIdleCallback(runPrefetch, { timeout: 1800 });
+        } else {
+            timeoutId = setTimeout(runPrefetch, 700);
+        }
+
+        return () => {
+            cancelled = true;
+            if (idleId !== null && typeof window !== 'undefined' && 'cancelIdleCallback' in window) {
+                window.cancelIdleCallback(idleId);
+            }
+            if (timeoutId !== null) {
+                clearTimeout(timeoutId);
+            }
+        };
+    }, [isAuthenticated, onboardingComplete]);
 
     useEffect(() => {
         const unsubscribe = eventBus.on(EVENTS.SUBSCRIPTION_GOLD_UNLOCKED, (payload) => {
@@ -248,6 +301,7 @@ const AppRoutes = () => {
 
     return (
         <>
+            <ConnectivityBanner />
             {/* Partner Request Modal - shown globally when there are pending requests */}
             {isAuthenticated && pendingRequests?.length > 0 && <PartnerRequestModal />}
             <GoldWelcomeModal
@@ -295,6 +349,11 @@ const AppRoutes = () => {
                                 wrap(<ConnectPartnerPage />, 'Unable to load partner connection')
                 } />
 
+                {/* Demo screenshots route (dev only) */}
+                {import.meta.env.DEV && (
+                    <Route path="/demo-screenshots" element={<DemoScreenshotsPage />} />
+                )}
+
                 {/* Protected App Routes - accessible without partner (features restricted) */}
                 <Route path="/" element={
                     <ProtectedRoute>
@@ -324,11 +383,103 @@ const AppRoutes = () => {
     );
 };
 
+const IOS_BALANCED_TRANSITION_MS = 220;
+const PERF_CLASS_NAMES = ['app-perf-lite', 'app-perf-balanced', 'app-perf-full'];
+const IOS_FLAT_BG_CLASS = 'ios-flat-bg';
+
+const clearPerfClasses = () => {
+    if (typeof document === 'undefined') return;
+    PERF_CLASS_NAMES.forEach((className) => {
+        document.body.classList.remove(className);
+    });
+};
+
+const setIosFlatBgClass = (enabled) => {
+    if (typeof document === 'undefined') return;
+    document.documentElement.classList.toggle(IOS_FLAT_BG_CLASS, enabled);
+    document.body.classList.toggle(IOS_FLAT_BG_CLASS, enabled);
+};
+
+const RoutePerfManager = ({ profile, prefersReducedMotion }) => {
+    const location = useLocation();
+    const settleTimerRef = useRef(null);
+
+    useEffect(() => {
+        if (typeof document === 'undefined') {
+            return undefined;
+        }
+
+        if (settleTimerRef.current) {
+            clearTimeout(settleTimerRef.current);
+            settleTimerRef.current = null;
+        }
+
+        clearPerfClasses();
+
+        if (prefersReducedMotion || profile === 'performance') {
+            document.body.classList.add('app-perf-lite');
+            return undefined;
+        }
+
+        if (profile === 'balanced' && isNativeIOS()) {
+            document.body.classList.add('app-perf-lite');
+            settleTimerRef.current = setTimeout(() => {
+                clearPerfClasses();
+                document.body.classList.add('app-perf-balanced');
+                settleTimerRef.current = null;
+            }, IOS_BALANCED_TRANSITION_MS);
+            return () => {
+                if (settleTimerRef.current) {
+                    clearTimeout(settleTimerRef.current);
+                    settleTimerRef.current = null;
+                }
+            };
+        }
+
+        if (profile === 'balanced') {
+            document.body.classList.add('app-perf-balanced');
+        } else {
+            document.body.classList.add('app-perf-full');
+        }
+
+        return undefined;
+    }, [location.key, prefersReducedMotion, profile]);
+
+    useEffect(() => () => {
+        if (settleTimerRef.current) {
+            clearTimeout(settleTimerRef.current);
+            settleTimerRef.current = null;
+        }
+        clearPerfClasses();
+    }, []);
+
+    return null;
+};
+
+const IOSBackgroundModeManager = () => {
+    useEffect(() => {
+        const enableFlatBackground = isNativeIOS();
+        setIosFlatBgClass(enableFlatBackground);
+
+        return () => {
+            setIosFlatBgClass(false);
+        };
+    }, []);
+
+    return null;
+};
+
 function App() {
+    const { profile, prefersReducedMotion } = useUiPerfProfile();
+
     return (
-        <BrowserRouter>
-            <AppRoutes />
-        </BrowserRouter>
+        <MotionConfig reducedMotion={prefersReducedMotion || profile === 'performance' ? 'always' : 'user'}>
+            <BrowserRouter>
+                <IOSBackgroundModeManager />
+                <RoutePerfManager profile={profile} prefersReducedMotion={prefersReducedMotion} />
+                <AppRoutes />
+            </BrowserRouter>
+        </MotionConfig>
     );
 }
 

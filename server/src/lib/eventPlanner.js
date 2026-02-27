@@ -9,6 +9,7 @@
 
 const { createChatCompletion, isOpenRouterConfigured } = require('./openrouter');
 const { generateEmbedding, isEmbeddingsConfigured } = require('./embeddings');
+const { createUsageTelemetryRecorder } = require('./abuse/abuseRepository');
 const {
     isSupabaseConfigured,
     getUserProfile,
@@ -335,7 +336,7 @@ function buildFallbackPlan({ style = 'cozy', language } = {}) {
     };
 }
 
-async function retrievePartnerRagContext({ partnerId, event, language }) {
+async function retrievePartnerRagContext({ partnerId, event, language, onTelemetry, telemetryContext = {} }) {
     let partnerProfile = {};
     if (isSupabaseConfigured()) {
         partnerProfile = await getUserProfile(partnerId);
@@ -357,7 +358,13 @@ async function retrievePartnerRagContext({ partnerId, event, language }) {
     }
 
     const normalizedLanguage = normalizeLanguage(language) || 'en';
-    const queryEmbedding = await generateEmbedding(buildQueryText({ event }));
+    const queryEmbedding = await generateEmbedding(buildQueryText({ event }), {
+        onTelemetry,
+        telemetryContext: {
+            endpoint: 'calendar.plan-event.embedding',
+            ...(telemetryContext || {}),
+        },
+    });
     let retrieved = await retrieveRelevantMemoriesV2(
         queryEmbedding,
         [partnerId],
@@ -419,6 +426,11 @@ async function generateEventPlan({
         emoji: String(event.emoji || '✨'),
         notes: event.notes ? String(event.notes) : '',
     };
+    const onTelemetry = createUsageTelemetryRecorder({
+        userId,
+        feature: 'plan_event',
+        partnerId,
+    });
 
     const dUntil = daysUntil(normalizedEvent.date);
     const styleGuidance = getStyleGuidance(style);
@@ -430,6 +442,11 @@ async function generateEventPlan({
         partnerId,
         event: normalizedEvent,
         language: normalizedLanguage,
+        onTelemetry,
+        telemetryContext: {
+            style: style || 'cozy',
+            language: normalizedLanguage,
+        },
     });
 
     if (!isOpenRouterConfigured()) {
@@ -501,6 +518,13 @@ async function generateEventPlan({
                 temperature: attempt === 1 ? CONFIG.temperature : 0.4,
                 maxTokens: CONFIG.maxTokens,
                 jsonSchema: EVENT_PLAN_JSON_SCHEMA,
+                onTelemetry,
+                telemetryContext: {
+                    endpoint: 'calendar.plan-event',
+                    attempt,
+                    style: style || 'cozy',
+                    language: normalizedLanguage,
+                },
             });
 
             const choice = response?.choices?.[0] || {};

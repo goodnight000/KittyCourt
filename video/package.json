@@ -1,0 +1,24 @@
+{
+  "name": "pause-appstore-video",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "studio": "remotion studio",
+    "render": "remotion render AppStoreVideo out/appstore-video.mp4",
+    "render:gif": "remotion render AppStoreVideo out/appstore-video.gif",
+    "capture": "node scripts/capture-screenshots.mjs"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.261",
+    "@remotion/google-fonts": "4.0.261",
+    "@remotion/transitions": "4.0.261",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "remotion": "4.0.261"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "playwright": "^1.58.2",
+    "typescript": "^5.7.0"
+  }
+}

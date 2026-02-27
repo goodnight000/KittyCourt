@@ -1,0 +1,18 @@
+export const COLORS = {
+  gold: "#D4AF37",
+  goldLight: "#E6CFA3",
+  goldDark: "#B8972E",
+  brown: "#4A3728",
+  brownLight: "#6B5344",
+  brownDark: "#2D221A",
+  cream: "#FFFBF5",
+  tan: "#E6D5C3",
+  ivory: "#FFFEF8",
+  maroon: "#8B4513",
+  maroonLight: "#A0522D",
+  blush: "#FFB6C1",
+  lavender: "#C9B1FF",
+  white: "#FFFFFF",
+  peach: "#FFCBA4",
+  mint: "#B2DFDB",
+} as const;

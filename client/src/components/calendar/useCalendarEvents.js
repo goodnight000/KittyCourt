@@ -65,6 +65,25 @@ const dedupeEvents = (events) => {
     });
 };
 
+const normalizeAndDedupeEvents = (payload) => dedupeEvents(normalizeEventsResponse(payload));
+
+const getEventIdentity = (event) => {
+    if (event?.id) return `id:${event.id}`;
+    return `key:${getEventKey(event)}`;
+};
+
+const areEventsEquivalent = (left, right) => {
+    if (left === right) return true;
+    if (!Array.isArray(left) || !Array.isArray(right)) return false;
+    if (left.length !== right.length) return false;
+    for (let i = 0; i < left.length; i += 1) {
+        if (getEventIdentity(left[i]) !== getEventIdentity(right[i])) {
+            return false;
+        }
+    }
+    return true;
+};
+
 const getPersonalEvents = (profile, connectedPartner, myId, partnerId, myDisplayName, partnerDisplayName, t) => {
     const personalEvents = [];
     const currentYear = new Date().getFullYear();
@@ -142,15 +161,19 @@ const getPersonalEvents = (profile, connectedPartner, myId, partnerId, myDisplay
  * Custom hook for managing calendar events data and operations
  * @param {Function} t - Translation function from useI18n
  * @param {string} language - Current language code (e.g., 'en', 'zh-Hans')
+ * @param {Object} options - Hook options
+ * @param {boolean} options.enabled - Whether to fetch and subscribe to events
  * @returns {Object} Calendar events state and operations
  */
-export default function useCalendarEvents(t, language = 'en') {
-    const { user: authUser, profile } = useAuthStore();
-    const { partner: connectedPartner } = usePartnerStore();
+export default function useCalendarEvents(t, language = 'en', options = {}) {
+    const authUser = useAuthStore((state) => state.user);
+    const profile = useAuthStore((state) => state.profile);
+    const connectedPartner = usePartnerStore((state) => state.partner);
     const [dbEvents, setDbEvents] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const isMounted = useRef(true);
     const fetchTimerRef = useRef(null);
+    const enabled = options?.enabled !== false;
 
     // Build stable user IDs (only change when actual IDs change)
     const myId = authUser?.id;
@@ -210,10 +233,20 @@ export default function useCalendarEvents(t, language = 'en') {
         ];
     }, [dbEvents, defaultEvents, personalEvents]);
 
-    const fetchEvents = useCallback(async ({ force = false } = {}) => {
+    const setDbEventsIfChanged = useCallback((nextEvents) => {
+        const normalized = normalizeAndDedupeEvents(nextEvents);
+        setDbEvents((prev) => (areEventsEquivalent(prev, normalized) ? prev : normalized));
+    }, []);
+
+    const fetchEvents = useCallback(async ({ force = false, showLoading = true } = {}) => {
         if (!isMounted.current) return;
+        if (!enabled) {
+            setDbEventsIfChanged([]);
+            setIsLoading(false);
+            return;
+        }
         if (!myId) {
-            setDbEvents([]);
+            setDbEventsIfChanged([]);
             setIsLoading(false);
             return;
         }
@@ -223,7 +256,9 @@ export default function useCalendarEvents(t, language = 'en') {
             && window.__navDebugTarget === '/calendar';
 
         try {
-            setIsLoading(true);
+            if (showLoading) {
+                setIsLoading(true);
+            }
             if (shouldLog) {
                 const label = `[calendar] fetch events ${Date.now()}`;
                 fetchTimerRef.current = label;
@@ -232,9 +267,8 @@ export default function useCalendarEvents(t, language = 'en') {
             const cacheStore = useCacheStore.getState();
             if (!cacheKeyValue) {
                 const response = await api.get('/calendar/events');
-                const nextDbEvents = dedupeEvents(normalizeEventsResponse(response.data));
                 if (isMounted.current) {
-                    setDbEvents(nextDbEvents);
+                    setDbEventsIfChanged(response.data);
                 }
                 return;
             }
@@ -242,10 +276,10 @@ export default function useCalendarEvents(t, language = 'en') {
             if (force) {
                 const fresh = await cacheStore.fetchAndCache(cacheKeyValue, async () => {
                     const response = await api.get('/calendar/events');
-                    return dedupeEvents(normalizeEventsResponse(response.data));
+                    return normalizeAndDedupeEvents(response.data);
                 }, CACHE_POLICY.CALENDAR_EVENTS);
                 if (!isMounted.current) return;
-                setDbEvents(dedupeEvents(fresh));
+                setDbEventsIfChanged(fresh);
                 return;
             }
 
@@ -253,18 +287,18 @@ export default function useCalendarEvents(t, language = 'en') {
                 key: cacheKeyValue,
                 fetcher: async () => {
                     const response = await api.get('/calendar/events');
-                    return dedupeEvents(normalizeEventsResponse(response.data));
+                    return normalizeAndDedupeEvents(response.data);
                 },
                 ...CACHE_POLICY.CALENDAR_EVENTS,
             });
 
             if (!isMounted.current) return;
-            setDbEvents(dedupeEvents(normalizeEventsResponse(data)));
+            setDbEventsIfChanged(data);
 
             if (promise) {
                 promise.then((fresh) => {
                     if (!isMounted.current) return;
-                    setDbEvents(dedupeEvents(normalizeEventsResponse(fresh)));
+                    setDbEventsIfChanged(fresh);
                 }).catch(() => {});
             }
         } catch (error) {
@@ -280,15 +314,34 @@ export default function useCalendarEvents(t, language = 'en') {
                 setIsLoading(false);
             }
         }
-    }, [cacheKeyValue, myId]);
+    }, [cacheKeyValue, enabled, myId, setDbEventsIfChanged]);
 
     // Fetch on mount and when identity changes
     useEffect(() => {
         isMounted.current = true;
 
+        if (!enabled) {
+            setDbEventsIfChanged([]);
+            setIsLoading(false);
+            return () => {
+                isMounted.current = false;
+            };
+        }
+
         // Only fetch if we have a user ID
         if (myId) {
-            fetchEvents();
+            let hasWarmCache = false;
+            if (cacheKeyValue) {
+                const cached = useCacheStore.getState().getCached(cacheKeyValue);
+                const normalizedCached = normalizeAndDedupeEvents(cached);
+                if (normalizedCached.length > 0) {
+                    hasWarmCache = true;
+                    setDbEventsIfChanged(normalizedCached);
+                    setIsLoading(false);
+                }
+            }
+
+            fetchEvents({ showLoading: !hasWarmCache });
         } else {
             setIsLoading(false);
         }
@@ -296,17 +349,18 @@ export default function useCalendarEvents(t, language = 'en') {
         return () => {
             isMounted.current = false;
         };
-    }, [fetchEvents, myId]);
+    }, [cacheKeyValue, enabled, fetchEvents, myId, setDbEventsIfChanged]);
 
     useEffect(() => {
+        if (!enabled) return;
         if (!cacheKeyValue) return;
         const cacheStore = useCacheStore.getState();
         const unsubscribe = cacheStore.subscribeKey(cacheKeyValue, (next) => {
             if (!isMounted.current) return;
-            setDbEvents(dedupeEvents(normalizeEventsResponse(next)));
+            setDbEventsIfChanged(next);
         });
         return unsubscribe;
-    }, [cacheKeyValue]);
+    }, [cacheKeyValue, enabled, setDbEventsIfChanged]);
 
     const addEvent = useCallback(async (eventData) => {
         try {

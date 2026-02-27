@@ -14,6 +14,7 @@ const { requireSupabase, getPartnerIdForUser } = require('./auth');
 const { resolveLanguageFromHeader, getUserPreferredLanguage } = require('./language');
 const { safeErrorMessage } = require('./shared/errorUtils');
 const { hasAiConsent } = require('./aiConsent');
+const { evaluateAbuseRisk, applyAbuseDelay } = require('./abuse/abuseGuardrails');
 
 /**
  * WebSocket Rate Limiter
@@ -105,6 +106,37 @@ function handleRateLimitExceeded(socket, event, ack, retryAfterMs) {
     if (typeof ack === 'function') {
         ack({ ok: false, error: 'RATE_LIMIT_EXCEEDED', retryAfterMs });
     }
+}
+
+async function enforceAbuseGuardrail(socket, endpointKey, payload, ack, context = {}) {
+    const result = await evaluateAbuseRisk({
+        userId: socket.userId,
+        endpointKey,
+        payload,
+        context,
+    });
+
+    if (!result.allowed) {
+        const retryAfterMs = result.retryAfterMs || 0;
+        socket.emit('court:error', {
+            message: result.message || 'Request temporarily blocked for safety.',
+            code: result.code || 'ABUSE_GUARDRAIL_BLOCKED',
+            retryAfterMs,
+            challenge: result.challenge || null,
+        });
+        if (typeof ack === 'function') {
+            ack({
+                ok: false,
+                error: result.code || 'ABUSE_GUARDRAIL_BLOCKED',
+                retryAfterMs,
+                challenge: result.challenge || null,
+            });
+        }
+        return false;
+    }
+
+    await applyAbuseDelay(result.delayMs);
+    return true;
 }
 
 class CourtWebSocketService {
@@ -212,7 +244,7 @@ class CourtWebSocketService {
             // === Court Actions ===
 
             // Serve partner
-            socket.on('court:serve', async ({ partnerId, coupleId, judgeType }, ack) => {
+            socket.on('court:serve', async ({ partnerId, coupleId, judgeType, challengeToken }, ack) => {
                 try {
                     if (!socket.userId) throw new Error('Not registered');
 
@@ -221,6 +253,15 @@ class CourtWebSocketService {
                     if (!rateCheck.allowed) {
                         return handleRateLimitExceeded(socket, 'court:serve', ack, rateCheck.retryAfterMs);
                     }
+
+                    const abuseAllowed = await enforceAbuseGuardrail(socket, 'court_serve', {
+                        partnerId,
+                        coupleId,
+                        judgeType: judgeType || 'swift',
+                    }, ack, {
+                        challengeToken,
+                    });
+                    if (!abuseAllowed) return;
 
                     if (!partnerId) throw new Error('partnerId required');
                     const supabase = isSupabaseConfigured() ? requireSupabase() : null;
@@ -401,7 +442,7 @@ class CourtWebSocketService {
             });
 
             // Submit addendum
-            socket.on('court:submit_addendum', async ({ text }, ack) => {
+            socket.on('court:submit_addendum', async ({ text, challengeToken }, ack) => {
                 try {
                     if (!socket.userId) throw new Error('Not registered');
 
@@ -410,6 +451,13 @@ class CourtWebSocketService {
                     if (!rateCheck.allowed) {
                         return handleRateLimitExceeded(socket, 'court:submit_addendum', ack, rateCheck.retryAfterMs);
                     }
+
+                    const abuseAllowed = await enforceAbuseGuardrail(socket, 'court_submit_addendum', {
+                        text: text || '',
+                    }, ack, {
+                        challengeToken,
+                    });
+                    if (!abuseAllowed) return;
 
                     if (!(await hasAiConsent(socket.userId))) {
                         socket.emit('court:error', { message: 'AI consent required to continue.', code: 'AI_CONSENT_REQUIRED' });
@@ -503,7 +551,7 @@ class CourtWebSocketService {
             });
 
             // Request hybrid resolution
-            socket.on('court:resolution_hybrid', async (ack) => {
+            socket.on('court:resolution_hybrid', async ({ challengeToken } = {}, ack) => {
                 try {
                     if (!socket.userId) throw new Error('Not registered');
 
@@ -512,6 +560,15 @@ class CourtWebSocketService {
                     if (!rateCheck.allowed) {
                         return handleRateLimitExceeded(socket, 'court:resolution_hybrid', ack, rateCheck.retryAfterMs);
                     }
+
+                    const guardrailState = courtSessionManager.getStateForUser(socket.userId);
+                    const abuseAllowed = await enforceAbuseGuardrail(socket, 'court_resolution_hybrid', {
+                        phase: guardrailState?.phase || null,
+                        caseId: guardrailState?.session?.caseId || null,
+                    }, ack, {
+                        challengeToken,
+                    });
+                    if (!abuseAllowed) return;
 
                     if (!(await hasAiConsent(socket.userId))) {
                         socket.emit('court:error', { message: 'AI consent required to continue.', code: 'AI_CONSENT_REQUIRED' });

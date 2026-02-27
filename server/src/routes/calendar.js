@@ -14,6 +14,7 @@ const { recordChallengeAction, CHALLENGE_ACTIONS } = require('../lib/challengeSe
 const { resolveRequestLanguage } = require('../lib/language');
 const { safeErrorMessage } = require('../lib/shared/errorUtils');
 const { processSecureInput, securityConfig, llmSecurityMiddleware } = require('../lib/security/index');
+const { evaluateAbuseRisk, applyAbuseDelay } = require('../lib/abuse/abuseGuardrails');
 const { sendError } = require('../lib/http');
 
 // UUID validation regex
@@ -475,6 +476,7 @@ router.post('/plan-event', requirePartner, llmSecurityMiddleware('eventPlanner')
             eventType,
             eventDate,
             eventKey,
+            challengeToken: challengeTokenFromBody,
         } = body;
 
         const { userId: viewerId, partnerId, supabase } = req;
@@ -496,6 +498,44 @@ router.post('/plan-event', requirePartner, llmSecurityMiddleware('eventPlanner')
         if (partnerIdFromClient && String(partnerIdFromClient) !== String(partnerId)) {
             return sendError(res, 400, 'INVALID_INPUT', 'Invalid partnerId for current user');
         }
+        const challengeToken =
+            req.headers['x-abuse-challenge-token']
+            || challengeTokenFromBody
+            || req.body?.challengeToken
+            || null;
+
+        const abuseCheck = await evaluateAbuseRisk({
+            userId: viewerId,
+            endpointKey: 'plan_event',
+            payload: {
+                event: normalizedEvent,
+                style: style || 'cozy',
+                eventKey: eventKey || null,
+                securityFlags: securityContext?.flaggedFields?.length || 0,
+            },
+            context: {
+                challengeToken,
+            },
+        });
+
+        if (!abuseCheck.allowed) {
+            if (abuseCheck.code === 'ABUSE_CHALLENGE_REQUIRED') {
+                return res.status(429).json({
+                    errorCode: abuseCheck.code,
+                    error: abuseCheck.message || 'Challenge required.',
+                    retryAfterMs: abuseCheck.retryAfterMs || 0,
+                    challenge: abuseCheck.challenge || null,
+                });
+            }
+            return sendError(
+                res,
+                429,
+                abuseCheck.code || 'ABUSE_GUARDRAIL_BLOCKED',
+                abuseCheck.message || 'Request temporarily blocked for safety.'
+            );
+        }
+
+        await applyAbuseDelay(abuseCheck.delayMs);
 
         const usage = await canUseFeature({ userId: viewerId, type: 'plan' });
         if (!usage.allowed) {
@@ -540,11 +580,15 @@ router.post('/plan-event', requirePartner, llmSecurityMiddleware('eventPlanner')
             result.meta = { ...(result.meta || {}), planId: null, eventKey: eventKey || null };
         }
 
-        // Record usage for a successful plan generation (best-effort).
+        // Record usage for a successful plan generation (fail closed).
+        // If metering is unavailable, do not return the generated plan.
         if (result?.meta?.fallback === false) {
-            incrementUsage({ userId: viewerId, type: 'plan' }).catch((e) => {
-                console.warn('[Planner] Failed to increment plan usage:', e?.message || e);
-            });
+            try {
+                await incrementUsage({ userId: viewerId, type: 'plan' });
+            } catch (e) {
+                console.error('[Planner] Failed to increment plan usage:', e?.message || e);
+                return sendError(res, 503, 'USAGE_METERING_FAILED', 'Unable to record usage right now. Please retry.');
+            }
         }
 
         return res.json(result);
