@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Clock, AlertTriangle } from 'lucide-react';
 import { useI18n } from '../../i18n';
+import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 
 /**
  * Countdown Timer Display
@@ -20,6 +21,7 @@ export default function TimeoutDisplay({
     className = ''
 }) {
     const { t } = useI18n();
+    const prefersReducedMotion = usePrefersReducedMotion();
     if (!timeFormatted || timeFormatted === '00:00') return null;
     const displayLabel = label || t('court.timeout.label');
 
@@ -49,13 +51,13 @@ export default function TimeoutDisplay({
             animate={{
                 opacity: 1,
                 scale: 1,
-                ...(urgency === 'critical' && {
+                ...(urgency === 'critical' && !prefersReducedMotion && {
                     scale: [1, 1.02, 1],
                 })
             }}
             transition={{
                 duration: 0.3,
-                ...(urgency === 'critical' && {
+                ...(urgency === 'critical' && !prefersReducedMotion && {
                     scale: {
                         duration: 1,
                         repeat: Infinity,

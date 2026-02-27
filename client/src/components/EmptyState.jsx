@@ -40,20 +40,20 @@ const EmptyState = ({
             )}
         >
             <motion.div
-                animate={{ y: [0, -8, 0] }}
-                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                animate={prefersReducedMotion ? {} : { y: [0, -8, 0] }}
+                transition={prefersReducedMotion ? { duration: 0 } : { duration: 3, repeat: Infinity, ease: "easeInOut" }}
                 className="relative mb-6"
             >
                 <div className="w-24 h-24 bg-gradient-to-br from-court-cream to-court-tan rounded-3xl flex items-center justify-center border-4 border-white shadow-soft-lg">
                     <Cat className="w-12 h-12 text-amber-700" />
                 </div>
-                
+
                 <motion.div
-                    animate={{ 
+                    animate={prefersReducedMotion ? {} : {
                         y: [0, -5, 0],
                         opacity: [0.5, 1, 0.5],
                     }}
-                    transition={{ duration: 2, repeat: Infinity }}
+                    transition={prefersReducedMotion ? { duration: 0 } : { duration: 2, repeat: Infinity }}
                     className="absolute -top-2 -right-2 text-xl"
                 >
                     {React.createElement(cat.accent, { className: 'w-5 h-5 text-amber-500' })}
