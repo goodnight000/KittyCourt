@@ -41,3 +41,8 @@ npm-debug.log*
 plans/
 reviews/
 
+# Video generated output (large binaries)
+video/out/
+video/public/assets/*.png
+video/public/assets/*.jpg
+video/public/assets/*.mp4
