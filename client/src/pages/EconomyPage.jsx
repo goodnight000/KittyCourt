@@ -56,6 +56,7 @@ export default function EconomyPage() {
     const [redeemingId, setRedeemingId] = useState(null);
     const [showSuccess, setShowSuccess] = useState(false);
     const [successMessage, setSuccessMessage] = useState('');
+    const [kibbleError, setKibbleError] = useState(null);
     const [partnerRewards, setPartnerRewards] = useState([]);
     const [myRewards, setMyRewards] = useState([]);
     const [pendingRedemptions, setPendingRedemptions] = useState([]);
@@ -111,7 +112,11 @@ export default function EconomyPage() {
     }
 
     const handleRedeem = async (coupon) => {
-        if (myKibbleBalance < coupon.cost) { alert(t('economy.errors.notEnoughKibble')); return; }
+        if (myKibbleBalance < coupon.cost) {
+            setKibbleError(t('economy.errors.notEnoughKibble'));
+            setTimeout(() => setKibbleError(null), 3000);
+            return;
+        }
         setRedeemingId(coupon.id);
         try {
             await redeemCoupon(coupon);
@@ -189,6 +194,20 @@ export default function EconomyPage() {
                         >
                             <Check className="w-4 h-4" />
                             {successMessage}
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+                <AnimatePresence>
+                    {kibbleError && (
+                        <motion.div
+                            initial={{ opacity: 0, y: -20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            role="alert"
+                            className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[60] glass-card px-4 py-2 text-xs font-semibold text-rose-700 flex items-center gap-2"
+                        >
+                            <X className="w-4 h-4" />
+                            {kibbleError}
                         </motion.div>
                     )}
                 </AnimatePresence>

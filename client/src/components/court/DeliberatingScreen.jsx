@@ -78,7 +78,7 @@ const DeliberatingScreen = ({ isLoading = true, judgeAvatar }) => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={fadeTransition}
-            className="fixed inset-0 z-[35] pointer-events-none bg-gradient-to-b from-court-ivory/95 via-court-cream/80 to-court-tan/40 flex items-center justify-center p-4"
+            className="fixed inset-0 z-[45] pointer-events-none bg-gradient-to-b from-court-ivory/95 via-court-cream/80 to-court-tan/40 flex items-center justify-center p-4"
         >
             <div className="w-full max-w-md">
                 {/* Ambient animated background accents (inside overlay, no extra colors) */}

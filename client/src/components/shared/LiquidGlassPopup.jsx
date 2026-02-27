@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import { useId, useMemo } from 'react';
+import { useI18n } from '../../i18n';
 
 /**
  * Default configuration for liquid glass effect
@@ -51,6 +52,7 @@ export default function LiquidGlassPopup({
   closeOnBackdropClick = true,
   config = {},
 }) {
+  const { t } = useI18n();
   const filterId = useId();
   const mergedConfig = useMemo(() => ({ ...DEFAULT_CONFIG, ...config }), [config]);
 
@@ -182,7 +184,7 @@ export default function LiquidGlassPopup({
                           whileTap={{ scale: 0.9 }}
                           onClick={onClose}
                           className="p-2 rounded-full bg-white/30 hover:bg-white/40 transition-colors ml-auto"
-                          aria-label="Close popup"
+                          aria-label={t('common.close')}
                           style={{
                             boxShadow: 'inset 0 0 8px -2px rgba(255,255,255,0.5)',
                           }}

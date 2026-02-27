@@ -134,7 +134,6 @@ const AppRoutes = () => {
             stop?.();
             stopCache?.();
             stopConnectivity?.();
-            useConnectivityStore.getState().stopMonitoring();
             // Cleanup all stores (event bus listeners, pending timeouts, subscriptions)
             useAuthStore.getState().cleanup?.();
             usePartnerStore.getState().cleanup?.();

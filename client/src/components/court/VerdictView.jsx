@@ -5,6 +5,7 @@ import {
     Plus, Check, ChevronRight, Heart, Lightbulb, Clock
 } from 'lucide-react';
 import { useI18n } from '../../i18n';
+import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 
 /**
  * VerdictView - Displays the selected judge's verdict
@@ -27,6 +28,7 @@ const VerdictView = ({
     judgeName
 }) => {
     const { t } = useI18n();
+    const prefersReducedMotion = usePrefersReducedMotion();
     const resolvedJudgeName = judgeName || t('court.judges.swift.name');
     const avatarSrc = judgeAvatar || '/assets/avatars/judge_whiskers.png';
     const isUserA = isInitiator;
@@ -53,8 +55,8 @@ const VerdictView = ({
                 </div>
 
                 <motion.div
-                    animate={{ rotate: [-3, 3, -3] }}
-                    transition={{ duration: 2.4, repeat: Infinity }}
+                    animate={prefersReducedMotion ? {} : { rotate: [-3, 3, -3] }}
+                    transition={prefersReducedMotion ? { duration: 0 } : { duration: 2.4, repeat: Infinity }}
                     className="w-28 h-28 rounded-[2rem] mx-auto mb-2 shadow-2xl overflow-hidden border-4 border-court-gold"
                 >
                     <img
@@ -312,8 +314,8 @@ const VerdictView = ({
                             className="glass-card p-4 bg-gradient-to-br from-amber-50 to-white text-center border border-amber-100/60"
                         >
                             <motion.div
-                                animate={{ scale: [1, 1.1, 1] }}
-                                transition={{ duration: 1.5, repeat: Infinity }}
+                                animate={prefersReducedMotion ? {} : { scale: [1, 1.1, 1] }}
+                                transition={prefersReducedMotion ? { duration: 0 } : { duration: 1.5, repeat: Infinity }}
                                 className="flex items-center justify-center mb-2"
                             >
                                 <Clock className="w-5 h-5 text-court-gold" />

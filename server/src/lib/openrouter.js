@@ -276,7 +276,8 @@ async function createChatCompletion({
                 continue;
             }
 
-            throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
+            console.error('[OpenRouter] API error:', response.status, errorText);
+            throw new Error('AI service temporarily unavailable');
         }
 
         // Success - clear rate limit state for this model
@@ -351,8 +352,8 @@ async function createModeration(text) {
         }
 
         if (!response.ok) {
-            console.error('[OpenRouter] Moderation API error, returning safe');
-            return { results: [{ flagged: false, categories: {} }] };
+            console.error('[Moderation] API returned non-OK status:', response.status);
+            return { results: [{ flagged: true, categories: {}, category_scores: {} }] };
         }
 
         return await response.json();

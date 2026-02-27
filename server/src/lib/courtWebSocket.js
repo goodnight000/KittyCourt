@@ -209,6 +209,14 @@ class CourtWebSocketService {
                         return;
                     }
 
+                    const supabaseConfigured = !!(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY);
+
+                    // Only allow client-provided userId when Supabase is not configured at all
+                    if (supabaseConfigured) {
+                        socket.emit('court:error', { message: 'Authentication required' });
+                        return;
+                    }
+
                     // Development mode: check if strict auth is required
                     if (process.env.REQUIRE_AUTH_IN_DEV === 'true') {
                         socket.emit('court:error', { message: 'Authentication required' });

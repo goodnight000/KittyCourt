@@ -151,21 +151,12 @@ async function runVerdictPipeline(session, deps) {
             session.timeoutId = null;
         }
 
-        // Record usage
+        // Record usage (non-fatal — verdict already generated)
         try {
             await incrementUsage({ userId: session.creatorId, type: usageType });
-        } catch (e) {
-            console.error('[Court] Failed to increment usage:', e?.message || e);
-            session.verdict = {
-                status: 'error',
-                error: 'Unable to record usage right now. Please try again.'
-            };
-            session.resolvedAt = Date.now();
-            session.phase = PHASE.VERDICT;
-            session.phaseStartedAt = Date.now();
-            await dbCheckpoint(session, 'usage_increment_failed');
-            notifyBoth(session);
-            return;
+        } catch (usageErr) {
+            console.error('[VerdictGenerator] Usage tracking failed (non-fatal):', usageErr.message);
+            // Continue — verdict already generated, don't penalize user for metering failure
         }
 
         // Transition to PRIMING phase

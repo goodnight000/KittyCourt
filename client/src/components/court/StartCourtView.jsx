@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Scale, Gavel, Bell, ChevronRight, History, Star } from 'lucide-react';
 import { useI18n } from '../../i18n';
+import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 
 /**
  * StartCourtView - Entry point for starting a new court session
@@ -10,6 +11,7 @@ import { useI18n } from '../../i18n';
  */
 const StartCourtView = ({ onServe, navigate }) => {
     const { t } = useI18n();
+    const prefersReducedMotion = usePrefersReducedMotion();
 
     // Floating decorative elements for visual delight
     const floatingElements = [
@@ -31,12 +33,12 @@ const StartCourtView = ({ onServe, navigate }) => {
             {floatingElements.map((el, i) => (
                 <motion.span
                     key={i}
-                    animate={{
+                    animate={prefersReducedMotion ? {} : {
                         y: [0, -8, 0],
                         rotate: [0, 5, -5, 0],
                         opacity: [0.4, 0.7, 0.4]
                     }}
-                    transition={{
+                    transition={prefersReducedMotion ? { duration: 0 } : {
                         duration: 4 + i * 0.5,
                         repeat: Infinity,
                         delay: el.delay,
@@ -56,16 +58,16 @@ const StartCourtView = ({ onServe, navigate }) => {
                 className="relative text-center z-10"
             >
                 <motion.div
-                    animate={{ y: [0, -5, 0] }}
-                    transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+                    animate={prefersReducedMotion ? {} : { y: [0, -5, 0] }}
+                    transition={prefersReducedMotion ? { duration: 0 } : { duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
                     className="relative w-20 h-20 bg-gradient-to-br from-court-gold/20 to-court-tan rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-lg"
                 >
                     {/* Inner glow ring */}
                     <div className="absolute inset-0 rounded-3xl ring-1 ring-court-gold/20" />
                     {/* Outer ambient glow */}
                     <motion.div
-                        animate={{ opacity: [0.3, 0.5, 0.3], scale: [1, 1.05, 1] }}
-                        transition={{ duration: 3, repeat: Infinity }}
+                        animate={prefersReducedMotion ? {} : { opacity: [0.3, 0.5, 0.3], scale: [1, 1.05, 1] }}
+                        transition={prefersReducedMotion ? { duration: 0 } : { duration: 3, repeat: Infinity }}
                         className="absolute -inset-2 bg-court-gold/10 rounded-[28px] blur-xl"
                     />
                     <Scale className="w-10 h-10 text-court-gold relative z-10" />

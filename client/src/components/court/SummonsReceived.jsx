@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Gavel, Star, Heart, FileText } from 'lucide-react';
 import { useI18n } from '../../i18n';
 import ButtonLoader from '../shared/ButtonLoader';
+import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 
 /**
  * SummonsReceived - Premium Court Invitation Experience
@@ -27,6 +28,7 @@ const floatingElements = [
 
 const SummonsReceived = ({ session, senderName, onJoin, isSubmitting }) => {
     const { t } = useI18n();
+    const prefersReducedMotion = usePrefersReducedMotion();
     const displaySenderName = senderName || t('common.yourPartner');
 
     return (
@@ -40,12 +42,12 @@ const SummonsReceived = ({ session, senderName, onJoin, isSubmitting }) => {
             {floatingElements.map((el, i) => (
                 <motion.span
                     key={i}
-                    animate={{
+                    animate={prefersReducedMotion ? {} : {
                         y: [0, -10, 0],
                         opacity: [0.4, 0.9, 0.4],
                         scale: [0.9, 1.15, 0.9],
                     }}
-                    transition={{
+                    transition={prefersReducedMotion ? { duration: 0 } : {
                         duration: 3 + Math.random() * 2,
                         delay: el.delay,
                         repeat: Infinity,
@@ -77,11 +79,11 @@ const SummonsReceived = ({ session, senderName, onJoin, isSubmitting }) => {
                 {/* Scroll icon with ceremonial styling */}
                 <motion.div
                     initial={{ rotate: -2, scale: 0.98 }}
-                    animate={{
+                    animate={prefersReducedMotion ? { rotate: 0, scale: 1 } : {
                         rotate: [-2, 2, -2],
                         scale: [0.98, 1.02, 0.98],
                     }}
-                    transition={{
+                    transition={prefersReducedMotion ? { duration: 0 } : {
                         duration: 3.6,
                         repeat: Infinity,
                         ease: "easeInOut"
@@ -90,11 +92,11 @@ const SummonsReceived = ({ session, senderName, onJoin, isSubmitting }) => {
                 >
                     {/* Outer glow ring */}
                     <motion.div
-                        animate={{
+                        animate={prefersReducedMotion ? {} : {
                             scale: [1, 1.1, 1],
                             opacity: [0.3, 0.6, 0.3]
                         }}
-                        transition={{ duration: 2, repeat: Infinity }}
+                        transition={prefersReducedMotion ? { duration: 0 } : { duration: 2, repeat: Infinity }}
                         className="absolute -inset-4 bg-gradient-to-br from-court-gold/30 via-lavender-200/20 to-blush-200/25 rounded-full blur-xl"
                     />
 
@@ -105,8 +107,8 @@ const SummonsReceived = ({ session, senderName, onJoin, isSubmitting }) => {
 
                         {/* Accent */}
                         <motion.div
-                            animate={{ rotate: [0, 12, -12, 0], opacity: [0.5, 1, 0.5] }}
-                            transition={{ duration: 2.6, repeat: Infinity }}
+                            animate={prefersReducedMotion ? {} : { rotate: [0, 12, -12, 0], opacity: [0.5, 1, 0.5] }}
+                            transition={prefersReducedMotion ? { duration: 0 } : { duration: 2.6, repeat: Infinity }}
                             className="absolute -top-1 -right-1"
                         >
                             <Star className="w-5 h-5 text-court-gold" />
@@ -166,8 +168,8 @@ const SummonsReceived = ({ session, senderName, onJoin, isSubmitting }) => {
                 >
                     {/* Button shimmer effect */}
                     <motion.div
-                        animate={{ x: ['-100%', '200%'] }}
-                        transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+                        animate={prefersReducedMotion ? {} : { x: ['-100%', '200%'] }}
+                        transition={prefersReducedMotion ? { duration: 0 } : { duration: 2, repeat: Infinity, repeatDelay: 3 }}
                         className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12"
                     />
 

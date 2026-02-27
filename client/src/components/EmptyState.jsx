@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Cat, Clock, Heart, Moon, Search, Star } from 'lucide-react';
 import clsx from 'clsx';
+import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
 
 /**
  * EmptyState - Cute empty state component with cat illustrations
@@ -18,6 +19,7 @@ const EmptyState = ({
     action,
     className = '',
 }) => {
+    const prefersReducedMotion = usePrefersReducedMotion();
     const cats = {
         sleeping: { accent: Moon },
         searching: { accent: Search },
@@ -42,7 +44,7 @@ const EmptyState = ({
                 transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
                 className="relative mb-6"
             >
-                <div className="w-24 h-24 bg-gradient-to-br from-lavender-100 to-pink-100 rounded-3xl flex items-center justify-center border-4 border-white shadow-soft-lg">
+                <div className="w-24 h-24 bg-gradient-to-br from-court-cream to-court-tan rounded-3xl flex items-center justify-center border-4 border-white shadow-soft-lg">
                     <Cat className="w-12 h-12 text-amber-700" />
                 </div>
                 
@@ -58,11 +60,11 @@ const EmptyState = ({
                 </motion.div>
             </motion.div>
 
-            <h3 className="text-lg font-display font-bold text-neutral-700 mb-2">
+            <h3 className="text-lg font-display font-bold text-court-brown mb-2">
                 {title}
             </h3>
             
-            <p className="text-sm text-neutral-500 max-w-xs mb-4">
+            <p className="text-sm text-court-brownLight max-w-xs mb-4">
                 {description}
             </p>
 

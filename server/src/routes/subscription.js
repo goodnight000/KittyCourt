@@ -37,6 +37,12 @@ const isProd = process.env.NODE_ENV === 'production';
 const allowDevSubscriptionBypass = process.env.ALLOW_DEV_SUBSCRIPTION_BYPASS === 'true';
 const enableDebugGrant = process.env.ENABLE_DEBUG_SUBSCRIPTION_GRANT === 'true';
 
+const debugGrantLimiter = createRateLimiter({
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 5,
+    keyGenerator: (req) => req.headers.authorization || req.ip || 'unknown',
+});
+
 const syncRateLimiter = createRateLimiter({
     windowMs: 60 * 1000,
     max: 10,
@@ -329,7 +335,7 @@ router.post('/sync', syncRateLimiter, async (req, res) => {
  * Debug endpoint to force Gold status (non-production only)
  * Bypasses RevenueCat entirely for testing purposes
  */
-router.post('/debug-grant', async (req, res) => {
+router.post('/debug-grant', debugGrantLimiter, async (req, res) => {
     try {
         if (isProd || !enableDebugGrant) {
             return res.status(403).json({ error: 'Not available' });

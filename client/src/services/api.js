@@ -104,6 +104,8 @@ export const normalizeApiError = (error) => {
     };
 };
 
+let lastRefreshAttempt = 0;
+
 const api = axios.create({
     baseURL: API_BASE_URL,
     timeout: REQUEST_TIMEOUT_MS,
@@ -122,7 +124,10 @@ api.interceptors.request.use(async (config) => {
             config.headers = config.headers || {};
             config.headers.Authorization = `Bearer ${token}`;
         } else {
-            // Session missing - try to refresh before giving up
+            // Session missing - try to refresh before giving up (debounced)
+            const now = Date.now();
+            if (now - lastRefreshAttempt < 1000) return config;
+            lastRefreshAttempt = now;
             const { data: refreshData } = await supabase.auth.refreshSession();
             const refreshedToken = refreshData?.session?.access_token;
             if (refreshedToken) {

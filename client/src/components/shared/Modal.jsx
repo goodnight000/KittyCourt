@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
+import { useI18n } from '../../i18n';
 
 /**
  * Reusable modal wrapper with animation and accessibility
@@ -28,6 +29,7 @@ export default function Modal({
   closeOnBackdropClick = true
 }) {
   const prefersReducedMotion = usePrefersReducedMotion()
+  const { t } = useI18n()
   const sizeClasses = {
     sm: 'max-w-md',
     md: 'max-w-lg',
@@ -89,7 +91,7 @@ export default function Modal({
                     <button
                       onClick={onClose}
                       className="p-2 hover:bg-court-tan/50 rounded-full transition-colors ml-auto"
-                      aria-label="Close modal"
+                      aria-label={t('common.close')}
                     >
                       <X size={20} className="text-court-brown" />
                     </button>

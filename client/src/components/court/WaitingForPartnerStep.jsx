@@ -2,9 +2,11 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Clock, Users } from 'lucide-react';
 import { useI18n } from '../../i18n';
+import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 
 const WaitingForPartnerStep = ({ title, subtitle, partnerName }) => {
     const { t } = useI18n();
+    const prefersReducedMotion = usePrefersReducedMotion();
     const displayPartnerName = partnerName || t('common.yourPartner');
     return (
         <div className="max-w-md mx-auto space-y-4 pb-4 pt-2">
@@ -17,8 +19,8 @@ const WaitingForPartnerStep = ({ title, subtitle, partnerName }) => {
                 <div className="absolute -bottom-16 -left-12 w-36 h-36 rounded-full bg-lavender-200/20 blur-2xl" />
                 <div className="bg-gradient-to-r from-court-gold via-court-goldDark to-court-brown p-3 text-center">
                     <motion.div
-                        animate={{ scale: [1, 1.08, 1] }}
-                        transition={{ duration: 2, repeat: Infinity }}
+                        animate={prefersReducedMotion ? {} : { scale: [1, 1.08, 1] }}
+                        transition={prefersReducedMotion ? { duration: 0 } : { duration: 2, repeat: Infinity }}
                         className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-white/15"
                     >
                         <Clock className="w-5 h-5 text-white" />
@@ -30,17 +32,17 @@ const WaitingForPartnerStep = ({ title, subtitle, partnerName }) => {
                 <div className="p-4 text-center space-y-4">
                     <div className="relative w-20 h-20 mx-auto">
                         <motion.div
-                            animate={{ scale: [1, 1.2, 1], opacity: [0.25, 0.55, 0.25] }}
-                            transition={{ duration: 2, repeat: Infinity }}
+                            animate={prefersReducedMotion ? {} : { scale: [1, 1.2, 1], opacity: [0.25, 0.55, 0.25] }}
+                            transition={prefersReducedMotion ? { duration: 0 } : { duration: 2, repeat: Infinity }}
                             className="absolute inset-0 rounded-full border-4 border-court-gold/30"
                         />
                         <motion.div
-                            animate={{ rotate: 360 }}
-                            transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
+                            animate={prefersReducedMotion ? {} : { rotate: 360 }}
+                            transition={prefersReducedMotion ? { duration: 0 } : { duration: 8, repeat: Infinity, ease: 'linear' }}
                             className="absolute inset-2 rounded-full border-2 border-dashed border-court-gold/50"
                         />
                         <div className="absolute inset-3 bg-gradient-to-br from-court-cream to-white rounded-full flex items-center justify-center shadow-lg">
-                            <motion.div animate={{ y: [0, -3, 0] }} transition={{ duration: 1.5, repeat: Infinity }}>
+                            <motion.div animate={prefersReducedMotion ? {} : { y: [0, -3, 0] }} transition={prefersReducedMotion ? { duration: 0 } : { duration: 1.5, repeat: Infinity }}>
                                 <Clock className="w-6 h-6 text-court-gold" />
                             </motion.div>
                         </div>

@@ -3,9 +3,11 @@ import { motion } from 'framer-motion';
 import { Users, Star, Heart, Leaf, ArrowRight, Clock } from 'lucide-react';
 import { useI18n } from '../../i18n';
 import JourneyProgress from './JourneyProgress';
+import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 
 const JointMenuPage = ({ jointMenu, myName, partnerName, isCreator, onReady, isSubmitting }) => {
     const { t } = useI18n();
+    const prefersReducedMotion = usePrefersReducedMotion();
     const displayPartnerName = partnerName || t('common.partner');
     const displayMyName = myName || t('common.you');
     if (!jointMenu) {
@@ -24,14 +26,14 @@ const JointMenuPage = ({ jointMenu, myName, partnerName, isCreator, onReady, isS
         <div className="max-w-2xl mx-auto space-y-5 pb-6 relative">
             <motion.div
                 aria-hidden
-                animate={{ opacity: [0.25, 0.45, 0.25], y: [0, -6, 0] }}
-                transition={{ duration: 5.5, repeat: Infinity, ease: 'easeInOut' }}
+                animate={prefersReducedMotion ? {} : { opacity: [0.25, 0.45, 0.25], y: [0, -6, 0] }}
+                transition={prefersReducedMotion ? { duration: 0 } : { duration: 5.5, repeat: Infinity, ease: 'easeInOut' }}
                 className="absolute -top-12 -right-8 w-32 h-32 rounded-full bg-court-gold/15 blur-2xl pointer-events-none"
             />
             <motion.div
                 aria-hidden
-                animate={{ opacity: [0.2, 0.4, 0.2], scale: [1, 1.05, 1] }}
-                transition={{ duration: 6.2, repeat: Infinity, ease: 'easeInOut' }}
+                animate={prefersReducedMotion ? {} : { opacity: [0.2, 0.4, 0.2], scale: [1, 1.05, 1] }}
+                transition={prefersReducedMotion ? { duration: 0 } : { duration: 6.2, repeat: Infinity, ease: 'easeInOut' }}
                 className="absolute top-1/3 -left-10 w-36 h-36 rounded-full bg-mint-200/20 blur-2xl pointer-events-none"
             />
             <JourneyProgress currentStep={2} />
@@ -190,8 +192,8 @@ const JointMenuPage = ({ jointMenu, myName, partnerName, isCreator, onReady, isS
             >
                 {isSubmitting ? (
                     <motion.div
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                        animate={prefersReducedMotion ? {} : { rotate: 360 }}
+                        transition={prefersReducedMotion ? { duration: 0 } : { duration: 1, repeat: Infinity, ease: 'linear' }}
                         className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
                     />
                 ) : (
