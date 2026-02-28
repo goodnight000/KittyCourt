@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Scale, FileText, Heart, Users, CheckCircle, Check } from 'lucide-react';
+import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 
 const JOURNEY_STEPS = [
   { key: 'evidence', icon: FileText, label: 'Evidence' },
@@ -20,6 +21,7 @@ const JourneyProgress = ({
   resolutionComplete,
   t
 }) => {
+  const prefersReducedMotion = usePrefersReducedMotion();
   const checkStepComplete = (key) => {
     switch (key) {
       case 'evidence':
@@ -83,7 +85,7 @@ const JourneyProgress = ({
                     )}
 
                     {/* Completion ring animation */}
-                    {isComplete && (
+                    {isComplete && !prefersReducedMotion && (
                       <motion.div
                         initial={{ scale: 1, opacity: 0.6 }}
                         animate={{ scale: 1.4, opacity: 0 }}

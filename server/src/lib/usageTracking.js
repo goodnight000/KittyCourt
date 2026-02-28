@@ -2,6 +2,9 @@ const { getSupabase, isSupabaseConfigured } = require('./supabase');
 
 const VALID_TYPES = new Set(['classic', 'swift', 'wise', 'plan']);
 
+// Once-only flag to avoid log spam when the atomic RPC is not installed.
+let warnedAboutMissingRpc = false;
+
 function getCurrentPeriodStartUTC() {
     const now = new Date();
     const year = now.getUTCFullYear();
@@ -32,6 +35,12 @@ async function incrementUsage({ userId, type, periodStart = null }) {
     }
 
     // Fallback: non-atomic update (still better than nothing if RPC isn't installed yet).
+    // WARNING: This read-then-upsert has a race condition under concurrent requests.
+    // Install the increment_usage RPC (see supabase/migrations) for atomic, production-safe behavior.
+    if (!warnedAboutMissingRpc) {
+        console.warn('[UsageTracking] increment_usage RPC not installed - using non-atomic fallback. Install the RPC for production use.');
+        warnedAboutMissingRpc = true;
+    }
     const { data: record, error: fetchError } = await supabase
         .from('usage_tracking')
         .select('*')

@@ -13,6 +13,7 @@ import {
 import api from '../services/api';
 import BackButton from '../components/shared/BackButton';
 import { getJudgeMetadata } from '../lib/judgeMetadata';
+import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
 
 /**
  * Subtle page backdrop with gradient orbs
@@ -94,6 +95,7 @@ const HORSEMAN_LABELS = {
 const CaseDetailPage = () => {
     const navigate = useNavigate();
     const { caseId } = useParams();
+    const prefersReducedMotion = usePrefersReducedMotion();
     const [caseData, setCaseData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [selectedVerdictIndex, setSelectedVerdictIndex] = useState(0);
@@ -143,8 +145,8 @@ const CaseDetailPage = () => {
         return (
             <div className="flex items-center justify-center min-h-[60vh]">
                 <Motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                    animate={prefersReducedMotion ? undefined : { rotate: 360 }}
+                    transition={prefersReducedMotion ? undefined : { duration: 1, repeat: Infinity, ease: "linear" }}
                     className="w-10 h-10 border-3 border-court-tan border-t-court-gold rounded-full"
                 />
             </div>

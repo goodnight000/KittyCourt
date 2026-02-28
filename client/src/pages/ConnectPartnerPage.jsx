@@ -22,6 +22,7 @@ import { useI18n } from '../i18n';
 import DisconnectNotice from '../components/DisconnectNotice';
 import StandardButton from '../components/shared/StandardButton';
 import ButtonLoader from '../components/shared/ButtonLoader';
+import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
 
 const ConnectPartnerPage = () => {
     const navigate = useNavigate();
@@ -29,7 +30,6 @@ const ConnectPartnerPage = () => {
     const {
         profile,
         signOut,
-        refreshProfile,
     } = useAuthStore();
     const {
         hasPartner,
@@ -37,9 +37,9 @@ const ConnectPartnerPage = () => {
         sendPartnerRequestByCode,
         cancelSentRequest,
         sentRequest,
-        refreshPendingRequests
     } = usePartnerStore();
 
+    const prefersReducedMotion = usePrefersReducedMotion();
     const [copied, setCopied] = useState(false);
     const [partnerCode, setPartnerCode] = useState('');
     const [activeTab, setActiveTab] = useState('share'); // 'share' or 'enter'
@@ -66,17 +66,6 @@ const ConnectPartnerPage = () => {
             navigate('/');
         }
     }, [hasPartner, navigate]);
-
-    // Check for pending requests and profile updates periodically
-    useEffect(() => {
-        const interval = setInterval(async () => {
-            refreshPendingRequests();
-            // Also refresh profile to check if partner connected us
-            await refreshProfile();
-        }, 5000); // Check every 5 seconds
-
-        return () => clearInterval(interval);
-    }, [refreshPendingRequests, refreshProfile]);
 
     const handleCopyCode = async () => {
         if (profile?.partner_code) {
@@ -123,21 +112,21 @@ const ConnectPartnerPage = () => {
             {/* Floating decorations */}
             <div className="fixed inset-0 pointer-events-none overflow-hidden">
                 <motion.div
-                    animate={{ y: [0, -15, 0], x: [0, 10, 0] }}
+                    animate={prefersReducedMotion ? undefined : { y: [0, -15, 0], x: [0, 10, 0] }}
                     transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
                     className="absolute top-20 left-10 opacity-30"
                 >
                     <Heart className="w-10 h-10 text-rose-400 fill-rose-400" />
                 </motion.div>
                 <motion.div
-                    animate={{ y: [0, 10, 0], rotate: [0, 10, 0] }}
+                    animate={prefersReducedMotion ? undefined : { y: [0, 10, 0], rotate: [0, 10, 0] }}
                     transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 1 }}
                     className="absolute top-32 right-12 opacity-30"
                 >
                     <Cat className="w-8 h-8 text-amber-500" />
                 </motion.div>
                 <motion.div
-                    animate={{ y: [0, -10, 0] }}
+                    animate={prefersReducedMotion ? undefined : { y: [0, -10, 0] }}
                     transition={{ duration: 6, repeat: Infinity, ease: "easeInOut", delay: 2 }}
                     className="absolute bottom-40 left-1/4 opacity-30"
                 >
@@ -156,7 +145,7 @@ const ConnectPartnerPage = () => {
                     className="text-center"
                 >
                     <motion.div
-                        animate={{ scale: [1, 1.05, 1] }}
+                        animate={prefersReducedMotion ? undefined : { scale: [1, 1.05, 1] }}
                         transition={{ duration: 2, repeat: Infinity }}
                         className="w-20 h-20 mx-auto mb-4 rounded-2xl flex items-center justify-center shadow-lg"
                         style={{ background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' }}

@@ -146,6 +146,7 @@ const useCourtStore = create((set, get) => {
     settlementDeclinedNotice: null,
     hasUnreadVerdict: false,
     dismissedRatingSessionId: null,
+    partnerDisconnected: false,
     error: null,
 
     // === State Setters ===
@@ -216,7 +217,7 @@ const useCourtStore = create((set, get) => {
             // Detect deliberating
             isGeneratingVerdict: VIEW_PHASE.ANALYZING === myViewPhase,
             // UI-only animations never persist across sessions
-            ...(isSessionCleared || isNewSession ? { showOpeningAnimation: false, showCelebrationAnimation: false } : {}),
+            ...(isSessionCleared || isNewSession ? { showOpeningAnimation: false, showCelebrationAnimation: false, partnerDisconnected: false } : {}),
             // Clear stale local inputs when a session ends or a new session starts
             ...(isSessionCleared || isNewSession
                 ? { localEvidence: '', localFeelings: '', localNeeds: '', localAddendum: '' }
@@ -577,6 +578,7 @@ const useCourtStore = create((set, get) => {
             isGeneratingVerdict: false,
             showRatingPopup: false,
             showSettlementRequest: false,
+            partnerDisconnected: false,
             error: null
         });
     },
@@ -613,9 +615,24 @@ const useCourtStore = create((set, get) => {
         // Listen for partner connection - cache partner ID
         const unsubPartner = eventBus.on(EVENTS.PARTNER_CONNECTED, ({ partnerId }) => {
             if (import.meta.env.DEV) console.log('[CourtStore] Received PARTNER_CONNECTED event, caching partnerId:', partnerId);
-            set({ _authPartnerId: partnerId });
+            set({ _authPartnerId: partnerId, partnerDisconnected: false });
         });
         eventCleanupFns.push(unsubPartner);
+
+        // Listen for profile updates - capture partnerId and detect partner disconnect
+        const unsubProfile = eventBus.on(EVENTS.PROFILE_UPDATED, ({ partner, profile }) => {
+            const partnerId = partner?.id || profile?.partner_id || null;
+            // Always update the cached partner ID if we get a cleaner value from a full profile refresh
+            if (partnerId !== undefined) {
+                set({ _authPartnerId: partnerId });
+            }
+            // If partner is now gone and there's an active session, flag it
+            if (!partnerId && get().session) {
+                if (import.meta.env.DEV) console.log('[CourtStore] Partner disconnected while session active');
+                set({ partnerDisconnected: true });
+            }
+        });
+        eventCleanupFns.push(unsubProfile);
 
         if (import.meta.env.DEV) console.log('[CourtStore] Event bus listeners initialized');
     },

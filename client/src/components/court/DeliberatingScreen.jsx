@@ -40,6 +40,7 @@ const DeliberatingScreen = ({ isLoading = true, judgeAvatar }) => {
     const avatarSrc = judgeAvatar || '/assets/avatars/judge_whiskers.png';
     const [stepIndex, setStepIndex] = useState(0);
     const [quoteIndex, setQuoteIndex] = useState(0);
+    const [deliberationLong, setDeliberationLong] = useState(false);
     const localizedQuotes = t('court.deliberating.quotes');
     const localizedFallbackQuotes = t('court.deliberating.fallbackQuotes', { returnObjects: true });
     const fallbackQuotes = Array.isArray(localizedFallbackQuotes) && localizedFallbackQuotes.length
@@ -64,6 +65,17 @@ const DeliberatingScreen = ({ isLoading = true, judgeAvatar }) => {
         }, 6000);
         return () => clearInterval(t);
     }, [isLoading, prefersReducedMotion, quotes.length]);
+
+    // Show a "taking longer than usual" message after 30 seconds in ANALYZING phase.
+    useEffect(() => {
+        if (!isLoading) {
+            setDeliberationLong(false);
+            return;
+        }
+        setDeliberationLong(false);
+        const timer = setTimeout(() => setDeliberationLong(true), 30000);
+        return () => clearTimeout(timer);
+    }, [isLoading]);
 
     const activeStep = useMemo(() => STEPS[stepIndex], [stepIndex]);
 
@@ -325,6 +337,20 @@ const DeliberatingScreen = ({ isLoading = true, judgeAvatar }) => {
                                     )
                                 ))}
                             </div>
+
+                            <AnimatePresence>
+                                {deliberationLong && (
+                                    <Motion.p
+                                        initial={{ opacity: 0, y: 4 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0 }}
+                                        transition={{ duration: 0.4 }}
+                                        className="mt-4 text-xs text-court-brownLight/70 text-center italic"
+                                    >
+                                        This is taking longer than usual. Hang tight...
+                                    </Motion.p>
+                                )}
+                            </AnimatePresence>
                         </div>
                     </div>
                 </div>

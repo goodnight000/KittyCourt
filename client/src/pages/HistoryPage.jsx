@@ -9,6 +9,7 @@ import { Scale, ChevronRight, Calendar, AlertTriangle, Zap, Cloud, FileText } fr
 import BackButton from '../components/shared/BackButton';
 import { useI18n } from '../i18n';
 import { formatDate } from '../utils/helpers';
+import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
 
 /**
  * Severity level configuration for the colored stripe and icon
@@ -58,6 +59,7 @@ const HistoryPage = () => {
     const { caseHistory, fetchCaseHistory } = useAppStore();
     const { hasPartner } = usePartnerStore();
     const { t, language } = useI18n();
+    const prefersReducedMotion = usePrefersReducedMotion();
 
     useEffect(() => {
         if (hasPartner) {
@@ -128,8 +130,8 @@ const HistoryPage = () => {
                         className="glass-card p-8 text-center"
                     >
                         <motion.div
-                            animate={{ y: [0, -5, 0] }}
-                            transition={{ duration: 2, repeat: Infinity }}
+                            animate={prefersReducedMotion ? undefined : { y: [0, -5, 0] }}
+                            transition={prefersReducedMotion ? undefined : { duration: 2, repeat: Infinity }}
                             className="w-20 h-20 bg-gradient-to-br from-amber-100 to-rose-100 rounded-3xl flex items-center justify-center mx-auto mb-4"
                         >
                             <Scale className="w-10 h-10 text-amber-600" />

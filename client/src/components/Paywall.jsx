@@ -294,7 +294,7 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-50 flex flex-col overflow-hidden"
+                    className="fixed inset-0 z-[60] flex flex-col overflow-hidden"
                     style={{
                         background: 'linear-gradient(180deg, #FFF9F0 0%, #F5EDE0 50%, #E8DCCB 100%)',
                     }}
@@ -721,7 +721,7 @@ const Paywall = ({ isOpen, onClose, triggerReason = null }) => {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.5 }}
-                        className="fixed bottom-0 left-0 right-0 z-50 px-6 pb-6 pt-4"
+                        className="fixed bottom-0 left-0 right-0 z-[60] px-6 pb-6 pt-4"
                         style={{
                             background: 'linear-gradient(to top, rgba(248, 238, 223, 1) 0%, rgba(248, 238, 223, 0.95) 70%, transparent 100%)',
                         }}

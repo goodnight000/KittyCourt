@@ -11,6 +11,7 @@ import { useI18n } from '../i18n';
 import BackButton from '../components/shared/BackButton';
 import StandardButton from '../components/shared/StandardButton';
 import EmojiIcon from '../components/shared/EmojiIcon';
+import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
 
 const getDefaultRewards = (t) => ([
     { id: 1, title: t('economy.defaults.footMassage.title'), subtitle: t('economy.defaults.footMassage.subtitle'), cost: 50, icon: "🦶", color: "pink" },
@@ -42,6 +43,7 @@ const storeRewards = (userId, rewards) => {
 export default function EconomyPage() {
     const navigate = useNavigate();
     const { t, language } = useI18n();
+    const prefersReducedMotion = usePrefersReducedMotion();
     const { currentUser, redeemCoupon } = useAppStore();
     const { user: authUser, profile } = useAuthStore();
     const { hasPartner, partner: connectedPartner } = usePartnerStore();
@@ -235,8 +237,8 @@ export default function EconomyPage() {
                             <p className="text-xs text-neutral-500 mt-1">{t('economy.balance.subtitle')}</p>
                         </div>
                         <motion.div
-                            animate={{ rotate: [0, 8, -8, 0] }}
-                            transition={{ duration: 2.2, repeat: Infinity }}
+                            animate={prefersReducedMotion ? undefined : { rotate: [0, 8, -8, 0] }}
+                            transition={prefersReducedMotion ? undefined : { duration: 2.2, repeat: Infinity }}
                             className="text-4xl"
                         >
                             <ShoppingBag className="w-9 h-9 text-amber-500" />
@@ -267,8 +269,8 @@ export default function EconomyPage() {
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                                 <motion.div
-                                    animate={{ scale: [1, 1.2, 1] }}
-                                    transition={{ duration: 1.4, repeat: Infinity }}
+                                    animate={prefersReducedMotion ? undefined : { scale: [1, 1.2, 1] }}
+                                    transition={prefersReducedMotion ? undefined : { duration: 1.4, repeat: Infinity }}
                                 >
                                     <Bell className="w-4 h-4 text-amber-500" />
                                 </motion.div>
@@ -312,8 +314,8 @@ export default function EconomyPage() {
                                         >
                                             {fulfillingId === redemption.id ? (
                                                 <motion.div
-                                                    animate={{ rotate: 360 }}
-                                                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                                    animate={prefersReducedMotion ? undefined : { rotate: 360 }}
+                                                    transition={prefersReducedMotion ? undefined : { duration: 1, repeat: Infinity, ease: "linear" }}
                                                     className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
                                                 />
                                             ) : (
@@ -439,6 +441,7 @@ export default function EconomyPage() {
 
 function CouponCard({ coupon, delay, onRedeem, isRedeeming, canAfford }) {
     const { t } = useI18n();
+    const prefersReducedMotion = usePrefersReducedMotion();
     const colorMap = {
         pink: {
             bg: 'from-rose-50 via-white to-amber-50/60',
@@ -492,8 +495,8 @@ function CouponCard({ coupon, delay, onRedeem, isRedeeming, canAfford }) {
             {isRedeeming && (
                 <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
                     <motion.div
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                        animate={prefersReducedMotion ? undefined : { rotate: 360 }}
+                        transition={prefersReducedMotion ? undefined : { duration: 1, repeat: Infinity, ease: "linear" }}
                         className="w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full"
                     />
                 </div>

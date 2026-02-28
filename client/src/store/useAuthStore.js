@@ -294,12 +294,19 @@ const useAuthStore = create(
                     set({ isLoading: true });
 
                     if (useAuthStore.persist?.hasHydrated && !useAuthStore.persist.hasHydrated()) {
-                        await new Promise((resolve) => {
-                            const unsub = useAuthStore.persist.onFinishHydration(() => {
-                                unsub();
-                                resolve();
-                            });
-                        });
+                        try {
+                            await Promise.race([
+                                new Promise((resolve) => {
+                                    const unsub = useAuthStore.persist.onFinishHydration(() => {
+                                        unsub();
+                                        resolve();
+                                    });
+                                }),
+                                new Promise((_, reject) => setTimeout(() => reject(new Error('Hydration timeout')), 5000))
+                            ]);
+                        } catch (e) {
+                            console.warn('[Auth] Persist hydration timed out, continuing with defaults:', e);
+                        }
                     }
 
                     startSupabaseAuthListener();

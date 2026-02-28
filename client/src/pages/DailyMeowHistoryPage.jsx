@@ -11,6 +11,7 @@ import api from '../services/api';
 import RequirePartner from '../components/RequirePartner';
 import BackButton from '../components/shared/BackButton';
 import { useI18n } from '../i18n';
+import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
 
 // Mood options with custom images (matching DailyMeowPage.jsx)
 const MOOD_OPTIONS = [
@@ -53,6 +54,7 @@ const DailyMeowHistoryPage = () => {
     const { t, language } = useI18n();
     const { user: authUser, profile } = useAuthStore();
     const { partner: connectedPartner } = usePartnerStore();
+    const prefersReducedMotion = usePrefersReducedMotion();
 
     const myId = authUser?.id;
     const partnerId = connectedPartner?.id;
@@ -449,8 +451,8 @@ const DailyMeowHistoryPage = () => {
                 ) : loading ? (
                     <div className="flex items-center justify-center py-12">
                         <Motion.div
-                            animate={{ rotate: 360 }}
-                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                            animate={prefersReducedMotion ? undefined : { rotate: 360 }}
+                            transition={prefersReducedMotion ? undefined : { duration: 1, repeat: Infinity, ease: "linear" }}
                             className="w-8 h-8 border-2 border-amber-400 border-t-transparent rounded-full"
                         />
                     </div>

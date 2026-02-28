@@ -6,6 +6,7 @@ import useAuthStore from '../store/useAuthStore';
 import usePartnerStore from '../store/usePartnerStore';
 import { useI18n } from '../i18n';
 import StandardButton from './shared/StandardButton';
+import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
 
 /**
  * Wrapper component that shows a "Connect with Partner" overlay
@@ -21,6 +22,7 @@ const RequirePartner = ({ children, feature, description }) => {
     const { profile } = useAuthStore();
     const { hasPartner } = usePartnerStore();
     const { t } = useI18n();
+    const prefersReducedMotion = usePrefersReducedMotion();
 
     // If connected, show the actual content
     if (hasPartner) {
@@ -48,8 +50,8 @@ const RequirePartner = ({ children, feature, description }) => {
                     {/* Header */}
                     <div className="bg-gradient-to-br from-pink-400 to-pink-500 p-6 text-center">
                         <motion.div
-                            animate={{ scale: [1, 1.05, 1] }}
-                            transition={{ duration: 2, repeat: Infinity }}
+                            animate={prefersReducedMotion ? undefined : { scale: [1, 1.05, 1] }}
+                            transition={prefersReducedMotion ? undefined : { duration: 2, repeat: Infinity }}
                             className="w-16 h-16 mx-auto rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center mb-3"
                         >
                             <Lock className="w-8 h-8 text-white" />

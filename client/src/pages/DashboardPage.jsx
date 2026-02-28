@@ -12,6 +12,7 @@ import ProfilePicture from '../components/ProfilePicture';
 import DisconnectNotice from '../components/DisconnectNotice';
 import StandardButton from '../components/shared/StandardButton';
 import { useI18n } from '../i18n';
+import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
 
 const DashboardPage = () => {
     const navigate = useNavigate();
@@ -19,6 +20,7 @@ const DashboardPage = () => {
     const { currentUser, logGoodDeed } = useAppStore();
     const { profile, user: authUser } = useAuthStore();
     const { hasPartner, partner: connectedPartner, disconnectStatus, disconnectStatusLoaded } = usePartnerStore();
+    const prefersReducedMotion = usePrefersReducedMotion();
     const [showGoodDeedModal, setShowGoodDeedModal] = useState(false);
     const [questionStreak, setQuestionStreak] = useState(0);
     const [todaysQuestion, setTodaysQuestion] = useState(null);
@@ -506,16 +508,16 @@ const DashboardPage = () => {
                                                     <span className="inline-flex items-center">
                                                         {t('dashboard.dailyQuestion.waiting')}
                                                         <Motion.span
-                                                            animate={{ opacity: [0, 1, 0] }}
-                                                            transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                                                            animate={prefersReducedMotion ? undefined : { opacity: [0, 1, 0] }}
+                                                            transition={prefersReducedMotion ? undefined : { duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
                                                         >.</Motion.span>
                                                         <Motion.span
-                                                            animate={{ opacity: [0, 1, 0] }}
-                                                            transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut", delay: 0.2 }}
+                                                            animate={prefersReducedMotion ? undefined : { opacity: [0, 1, 0] }}
+                                                            transition={prefersReducedMotion ? undefined : { duration: 1.5, repeat: Infinity, ease: "easeInOut", delay: 0.2 }}
                                                         >.</Motion.span>
                                                         <Motion.span
-                                                            animate={{ opacity: [0, 1, 0] }}
-                                                            transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut", delay: 0.4 }}
+                                                            animate={prefersReducedMotion ? undefined : { opacity: [0, 1, 0] }}
+                                                            transition={prefersReducedMotion ? undefined : { duration: 1.5, repeat: Infinity, ease: "easeInOut", delay: 0.4 }}
                                                         >.</Motion.span>
                                                     </span>
                                                 )}
@@ -709,8 +711,8 @@ const DashboardPage = () => {
                                         >
                                             {isSubmitting ? (
                                                 <Motion.div
-                                                    animate={{ rotate: 360 }}
-                                                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                                    animate={prefersReducedMotion ? undefined : { rotate: 360 }}
+                                                    transition={prefersReducedMotion ? undefined : { duration: 1, repeat: Infinity, ease: "linear" }}
                                                     className="w-5 h-5 border-2 border-amber-600 border-t-transparent rounded-full"
                                                 />
                                             ) : (

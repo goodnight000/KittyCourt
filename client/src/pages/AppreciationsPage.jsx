@@ -10,6 +10,7 @@ import RequirePartner from '../components/RequirePartner';
 import api from '../services/api';
 import { useI18n } from '../i18n';
 import BackButton from '../components/shared/BackButton';
+import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
 
 const AppreciationsPage = () => {
     const navigate = useNavigate();
@@ -18,6 +19,7 @@ const AppreciationsPage = () => {
     const { hasPartner, partner: connectedPartner } = usePartnerStore();
     const { t, language } = useI18n();
     const [totalAppreciations, setTotalAppreciations] = useState(null);
+    const prefersReducedMotion = usePrefersReducedMotion();
     
     // Get partner info from auth store
     const partnerName = connectedPartner?.display_name || connectedPartner?.name || t('appreciations.partnerFallback');
@@ -192,9 +194,9 @@ const AppreciationsPage = () => {
                             {t('appreciations.summary.from', { name: partnerName })}
                         </p>
                     </div>
-                    <motion.div 
-                        animate={{ scale: [1, 1.1, 1] }}
-                        transition={{ duration: 2, repeat: Infinity }}
+                    <motion.div
+                        animate={prefersReducedMotion ? undefined : { scale: [1, 1.1, 1] }}
+                        transition={prefersReducedMotion ? undefined : { duration: 2, repeat: Infinity }}
                         className="relative"
                     >
                         <div className="absolute -inset-2 rounded-[28px] bg-gradient-to-br from-rose-200/35 via-white/40 to-amber-200/35 blur-xl opacity-70" />
@@ -214,8 +216,8 @@ const AppreciationsPage = () => {
                         className="glass-card p-8 text-center"
                     >
                         <motion.div
-                            animate={{ y: [0, -5, 0] }}
-                            transition={{ duration: 2, repeat: Infinity }}
+                            animate={prefersReducedMotion ? undefined : { y: [0, -5, 0] }}
+                            transition={prefersReducedMotion ? undefined : { duration: 2, repeat: Infinity }}
                             className="w-20 h-20 bg-gradient-to-br from-rose-100 to-amber-100 rounded-3xl flex items-center justify-center mx-auto mb-4"
                         >
                             <Heart className="w-10 h-10 text-rose-400" />

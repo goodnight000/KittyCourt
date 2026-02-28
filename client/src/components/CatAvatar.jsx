@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Cat, Eye, Moon, Zap, HelpCircle, Heart, Crown } from 'lucide-react';
 import clsx from 'clsx';
+import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
 
 /**
  * CatAvatar - Cute animated cat avatar with various moods
@@ -18,6 +19,7 @@ const CatAvatar = ({
     animate = true,
     className = '',
 }) => {
+    const prefersReducedMotion = usePrefersReducedMotion();
     const moods = {
         happy: Cat,
         judging: Eye,
@@ -48,8 +50,8 @@ const CatAvatar = ({
         xl: 'text-3xl -top-5',
     };
 
-    const Wrapper = animate ? motion.div : 'div';
-    const animationProps = animate ? {
+    const Wrapper = animate && !prefersReducedMotion ? motion.div : 'div';
+    const animationProps = animate && !prefersReducedMotion ? {
         animate: { y: [0, -8, 0] },
         transition: { duration: 3, repeat: Infinity, ease: "easeInOut" }
     } : {};
@@ -77,8 +79,8 @@ const CatAvatar = ({
             
             {crown && (
                 <motion.div
-                    animate={{ rotate: [-5, 5, -5] }}
-                    transition={{ duration: 2, repeat: Infinity }}
+                    animate={prefersReducedMotion ? undefined : { rotate: [-5, 5, -5] }}
+                    transition={prefersReducedMotion ? undefined : { duration: 2, repeat: Infinity }}
                     className={clsx(
                         'absolute left-1/2 -translate-x-1/2',
                         crownSizes[size]

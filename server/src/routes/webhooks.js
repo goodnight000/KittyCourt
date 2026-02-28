@@ -12,6 +12,7 @@ const { getSupabase, isSupabaseConfigured } = require('../lib/supabase');
 const { getPartnerIdForUser } = require('../lib/auth');
 const { safeErrorMessage } = require('../lib/shared/errorUtils');
 const { sendError } = require('../lib/http');
+const { getRedisClient } = require('../lib/redis');
 
 const REVENUECAT_WEBHOOK_TOKEN = process.env.REVENUECAT_WEBHOOK_TOKEN || '';
 const REVENUECAT_WEBHOOK_SECRET = process.env.REVENUECAT_WEBHOOK_SECRET || ''; // For HMAC verification
@@ -20,10 +21,11 @@ const PAUSE_GOLD_ENTITLEMENTS = new Set(['pause_gold', 'pause gold']);
 
 // Replay attack prevention configuration
 const WEBHOOK_TIMESTAMP_TOLERANCE_MS = 5 * 60 * 1000; // 5 minutes tolerance for timestamp validation
-const processedEventIds = new Map(); // In-memory store for event deduplication
-const EVENT_ID_TTL_MS = 24 * 60 * 60 * 1000; // Keep event IDs for 24 hours
+const processedEventIds = new Map(); // In-memory fallback store for event deduplication (lost on restart)
+const EVENT_ID_TTL_MS = 24 * 60 * 60 * 1000; // Keep event IDs for 24 hours (in-memory fallback only)
 
-// Clean up old event IDs periodically (every hour)
+// Cleanup interval for in-memory fallback store (every hour)
+// Redis TTL handles expiration automatically when Redis is available.
 setInterval(() => {
     const now = Date.now();
     for (const [eventId, timestamp] of processedEventIds.entries()) {
@@ -34,23 +36,44 @@ setInterval(() => {
 }, 60 * 60 * 1000);
 
 /**
- * Check if an event has already been processed (replay attack prevention)
+ * Check if an event has already been processed (replay attack prevention).
+ * Prefers Redis for durability across restarts; falls back to in-memory Map.
  * @param {string} eventId - Unique event identifier
- * @returns {boolean} - True if event was already processed
+ * @returns {Promise<boolean>} - True if event was already processed
  */
-function isEventAlreadyProcessed(eventId) {
+async function isEventAlreadyProcessed(eventId) {
     if (!eventId) return false;
+    const redis = getRedisClient();
+    if (redis) {
+        try {
+            const val = await redis.get('webhook:event:' + eventId);
+            return val !== null;
+        } catch (err) {
+            console.error('[Webhook] Redis error checking event dedup, falling back to memory:', err?.message);
+        }
+    }
+    // Fallback to in-memory Map when Redis is not available
     return processedEventIds.has(eventId);
 }
 
 /**
- * Mark an event as processed
+ * Mark an event as processed to prevent replay attacks.
+ * Prefers Redis (with 24hr TTL); falls back to in-memory Map.
  * @param {string} eventId - Unique event identifier
  */
-function markEventProcessed(eventId) {
-    if (eventId) {
-        processedEventIds.set(eventId, Date.now());
+async function markEventProcessed(eventId) {
+    if (!eventId) return;
+    const redis = getRedisClient();
+    if (redis) {
+        try {
+            await redis.set('webhook:event:' + eventId, '1', 'EX', 86400);
+            return;
+        } catch (err) {
+            console.error('[Webhook] Redis error marking event processed, falling back to memory:', err?.message);
+        }
     }
+    // Fallback to in-memory Map when Redis is not available
+    processedEventIds.set(eventId, Date.now());
 }
 
 /**
@@ -271,7 +294,7 @@ router.post('/revenuecat', async (req, res) => {
         const entitlementIds = event.event?.entitlement_ids || [];
 
         // Replay attack prevention: Check event ID deduplication
-        if (eventId && isEventAlreadyProcessed(eventId)) {
+        if (eventId && await isEventAlreadyProcessed(eventId)) {
             console.warn('[Webhook] Replay attack prevented: duplicate event ID', eventId);
             return res.status(200).json({ received: true, processed: false, reason: 'duplicate_event' });
         }
@@ -388,7 +411,7 @@ router.post('/revenuecat', async (req, res) => {
         }
 
         // Mark event as processed to prevent replay attacks
-        markEventProcessed(eventId);
+        await markEventProcessed(eventId);
 
         res.status(200).json({ received: true, processed: true });
     } catch (error) {

@@ -40,11 +40,12 @@ router.post('/transaction', async (req, res) => {
 
         if (insertError) throw insertError;
 
-        // Calculate new balance from all transactions
+        // Calculate new balance from all transactions (amount-only projection reduces payload)
         const { data: allTransactions } = await supabase
             .from('transactions')
             .select('amount')
-            .eq('user_id', viewerId);
+            .eq('user_id', viewerId)
+            .limit(10000); // Safety guard against unbounded queries
 
         const newBalance = (allTransactions || []).reduce((sum, t) => sum + t.amount, 0);
 
@@ -68,8 +69,9 @@ router.get('/balance/:userId', async (req, res) => {
 
         const { data: transactions } = await supabase
             .from('transactions')
-            .select('amount')
-            .eq('user_id', viewerId);
+            .select('amount') // amount-only projection reduces payload
+            .eq('user_id', viewerId)
+            .limit(10000); // Safety guard against unbounded queries
 
         const balance = (transactions || []).reduce((sum, t) => sum + t.amount, 0);
 

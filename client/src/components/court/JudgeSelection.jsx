@@ -7,6 +7,7 @@ import { useI18n } from '../../i18n';
 import StandardButton from '../shared/StandardButton';
 import ButtonLoader from '../shared/ButtonLoader';
 import { JUDGE_OPTIONS } from '../../lib/judgeMetadata';
+import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 
 // Floating decorative elements for premium ambiance
 // Duration is pre-computed to avoid Math.random() during render
@@ -33,6 +34,7 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
     const [ctaPulse, setCtaPulse] = useState(false);
     const [isServing, setIsServing] = useState(false);
     const { t } = useI18n();
+    const prefersReducedMotion = usePrefersReducedMotion();
 
     const { canUseJudge, getUsageDisplay, isGold, fetchUsage } = useSubscriptionStore();
 
@@ -144,7 +146,7 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
                         <div className="absolute top-1/3 left-1/4 w-40 h-40 rounded-full bg-blush-200/10 blur-3xl pointer-events-none" />
 
                         {/* Floating decorative elements */}
-                        {floatingElements.map((el, i) => {
+                        {!prefersReducedMotion && floatingElements.map((el, i) => {
                             const Icon = el.Icon;
                             return (
                             <Motion.span
@@ -200,8 +202,8 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
                             <div className="relative text-center mb-4 pt-2">
                                 {/* Ceremonial gavel icon */}
                                 <Motion.div
-                                    animate={{ rotate: [-3, 3, -3] }}
-                                    transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+                                    animate={prefersReducedMotion ? undefined : { rotate: [-3, 3, -3] }}
+                                    transition={prefersReducedMotion ? undefined : { duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
                                     className="inline-flex items-center justify-center w-12 h-12 mb-3
                                         bg-gradient-to-br from-court-gold/20 via-court-goldLight/10 to-transparent
                                         rounded-full border border-court-gold/20"
@@ -261,12 +263,14 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
                                                         transition={{ type: 'spring', stiffness: 240, damping: 24 }}
                                                         className={`absolute inset-0 rounded-2xl border-2 ${judge.borderColor} pointer-events-none`}
                                                     />
+                                                    {!prefersReducedMotion && (
                                                     <Motion.div
                                                         initial={{ opacity: 0 }}
                                                         animate={{ opacity: [0.35, 0.6, 0.35], scale: [1, 1.02, 1] }}
                                                         transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
                                                         className={`absolute inset-0 rounded-2xl ${judge.accentColor}/10 pointer-events-none`}
                                                     />
+                                                    )}
                                                 </>
                                             )}
                                             <div className="flex items-center gap-4">
@@ -384,7 +388,7 @@ const JudgeSelection = ({ isOpen, onClose, onServe }) => {
                                     />
                                 )}
                                 {/* Button shimmer effect when active */}
-                                {canServe && (
+                                {canServe && !prefersReducedMotion && (
                                     <Motion.div
                                         animate={{ x: ['-100%', '200%'] }}
                                         transition={{ duration: 2.5, repeat: Infinity, repeatDelay: 4 }}

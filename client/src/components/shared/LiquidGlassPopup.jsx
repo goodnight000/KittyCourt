@@ -107,7 +107,7 @@ export default function LiquidGlassPopup({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             onClick={handleBackdropClick}
-            className="fixed inset-0 bg-black/20 z-50"
+            className="fixed inset-0 bg-black/20 z-[60]"
             aria-hidden="true"
           />
 

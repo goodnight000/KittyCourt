@@ -1,12 +1,14 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import EmojiIcon from './shared/EmojiIcon';
+import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
 
 /**
  * FloatingDecorations - Cute floating decorative elements
  * Add personality and warmth to any page
  */
 const FloatingDecorations = ({ variant = 'default' }) => {
+    const prefersReducedMotion = usePrefersReducedMotion();
     const decorations = {
         default: ['✨', '💫', '⭐', '🌸'],
         love: ['💕', '💗', '💖', '✨'],
@@ -22,17 +24,17 @@ const FloatingDecorations = ({ variant = 'default' }) => {
             {items.map((emoji, index) => (
                 <motion.div
                     key={index}
-                    initial={{ 
+                    initial={{
                         opacity: 0,
                         x: `${20 + (index * 20)}%`,
                         y: `${10 + (index * 25)}%`,
                     }}
-                    animate={{ 
+                    animate={prefersReducedMotion ? { opacity: 0.3 } : {
                         opacity: [0.2, 0.5, 0.2],
                         y: [`${10 + (index * 25)}%`, `${5 + (index * 25)}%`, `${10 + (index * 25)}%`],
                         rotate: [0, 10, -10, 0],
                     }}
-                    transition={{
+                    transition={prefersReducedMotion ? undefined : {
                         duration: 5 + index,
                         repeat: Infinity,
                         ease: "easeInOut",
@@ -77,6 +79,7 @@ export const PawPrints = ({ count = 5 }) => {
  * Sparkle - Single animated sparkle
  */
 export const Sparkle = ({ delay = 0, size = 'md', className = '' }) => {
+    const prefersReducedMotion = usePrefersReducedMotion();
     const sizes = {
         sm: 'w-2 h-2',
         md: 'w-3 h-3',
@@ -85,12 +88,12 @@ export const Sparkle = ({ delay = 0, size = 'md', className = '' }) => {
 
     return (
         <motion.div
-            animate={{
+            animate={prefersReducedMotion ? undefined : {
                 scale: [1, 1.5, 1],
                 opacity: [0.5, 1, 0.5],
                 rotate: [0, 180, 360],
             }}
-            transition={{
+            transition={prefersReducedMotion ? undefined : {
                 duration: 2,
                 repeat: Infinity,
                 delay,
@@ -106,14 +109,15 @@ export const Sparkle = ({ delay = 0, size = 'md', className = '' }) => {
  * HeartBubble - Floating heart bubble
  */
 export const HeartBubble = ({ delay = 0 }) => {
+    const prefersReducedMotion = usePrefersReducedMotion();
     return (
         <motion.div
             initial={{ y: 0, opacity: 0 }}
-            animate={{ 
+            animate={prefersReducedMotion ? { opacity: 0.7 } : {
                 y: -100,
                 opacity: [0, 1, 0],
             }}
-            transition={{
+            transition={prefersReducedMotion ? undefined : {
                 duration: 3,
                 repeat: Infinity,
                 delay,

@@ -82,7 +82,7 @@ const CourtAtRest = ({ onServe, navigate }) => {
             />
 
             {/* Floating Decorative Elements - Inside this container */}
-            {floatingElements.map((el, i) => (
+            {!prefersReducedMotion && floatingElements.map((el, i) => (
                 <motion.span
                     key={i}
                     animate={{
@@ -93,7 +93,7 @@ const CourtAtRest = ({ onServe, navigate }) => {
                     transition={{
                         duration: 3 + Math.random() * 2,
                         delay: el.delay,
-                        repeat: prefersReducedMotion ? 0 : Infinity,
+                        repeat: Infinity,
                         ease: "easeInOut",
                     }}
                     className={`absolute ${el.color} drop-shadow-sm pointer-events-none`}

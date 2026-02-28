@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Heart } from 'lucide-react';
+import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 
 /**
  * Resolution banner with dramatic reveal animation
@@ -10,6 +11,7 @@ import { Heart } from 'lucide-react';
  * @param {Function} props.t - Translation function
  */
 const ResolutionBanner = ({ resolution, t }) => {
+  const prefersReducedMotion = usePrefersReducedMotion();
   if (!resolution) return null;
 
   return (
@@ -31,8 +33,8 @@ const ResolutionBanner = ({ resolution, t }) => {
         <div className="flex items-start gap-4">
           {/* Heart icon with pulse */}
           <motion.div
-            animate={{ scale: [1, 1.1, 1] }}
-            transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+            animate={prefersReducedMotion ? undefined : { scale: [1, 1.1, 1] }}
+            transition={prefersReducedMotion ? undefined : { duration: 2, repeat: Infinity, ease: 'easeInOut' }}
             className="w-12 h-12 rounded-2xl bg-gradient-to-br from-rose-400 to-pink-500 flex items-center justify-center shadow-lg shadow-rose-500/30 flex-shrink-0"
           >
             <Heart className="w-6 h-6 text-white" fill="white" />

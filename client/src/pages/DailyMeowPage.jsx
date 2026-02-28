@@ -444,7 +444,7 @@ const DailyMeowPage = () => {
                         initial={{ opacity: 0, y: -20, scale: 0.95 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -20, scale: 0.95 }}
-                        className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 glass-card px-5 py-3 text-emerald-700 font-semibold flex items-center gap-2"
+                        className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[60] glass-card px-5 py-3 text-emerald-700 font-semibold flex items-center gap-2"
                     >
                         <Check className="w-5 h-5" />
                         <span className="font-medium">{t('dailyMeow.toast.saved')}</span>

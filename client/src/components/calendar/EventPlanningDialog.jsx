@@ -7,6 +7,7 @@ import api from '../../services/api';
 import useUiStore from '../../store/useUiStore';
 import EmojiIcon from '../shared/EmojiIcon';
 import ButtonLoader from '../shared/ButtonLoader';
+import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 
 const STYLE_OPTIONS = [
     { id: 'cozy', labelKey: 'calendar.planning.styles.cozy', descKey: 'calendar.planning.styles.cozyDesc', emoji: '🕯️' },
@@ -59,6 +60,7 @@ const CollapsibleSection = ({ title, icon: Icon, isOpen, onToggle, children }) =
  * Stepped loading with personality messages
  */
 const PlanLoadingScreen = ({ stepIndex, t }) => {
+    const prefersReducedMotion = usePrefersReducedMotion();
     const step = LOADING_STEPS[stepIndex] || LOADING_STEPS[0];
     const colorClasses = {
         gold: { bg: 'from-court-gold/20 to-court-cream', text: 'text-court-gold' },
@@ -79,8 +81,8 @@ const PlanLoadingScreen = ({ stepIndex, t }) => {
                     className="flex flex-col items-center"
                 >
                     <Motion.div
-                        animate={{ y: [0, -6, 0] }}
-                        transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+                        animate={prefersReducedMotion ? undefined : { y: [0, -6, 0] }}
+                        transition={prefersReducedMotion ? undefined : { duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
                         className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${colors.bg} flex items-center justify-center shadow-soft border border-white/60`}
                     >
                         <step.Icon className={`w-8 h-8 ${colors.text}`} />

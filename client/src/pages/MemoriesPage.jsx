@@ -99,8 +99,18 @@ const MemoriesPage = () => {
     setCaption('')
     setMemoryDate('')
     setFile(null)
-    setFilePreview(null)
+    setFilePreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev)
+      return null
+    })
   }
+
+  useEffect(() => {
+    return () => {
+      if (filePreview) URL.revokeObjectURL(filePreview)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     if (!hasPartner || !memoriesAvailable) return
@@ -154,7 +164,10 @@ const MemoriesPage = () => {
     const nextFile = event.target.files?.[0]
     if (!nextFile) return
     setFile(nextFile)
-    setFilePreview(URL.createObjectURL(nextFile))
+    setFilePreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev)
+      return URL.createObjectURL(nextFile)
+    })
   }
 
   const handleUpload = async () => {
@@ -443,7 +456,7 @@ const MemoriesPage = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-end bg-neutral-900/40 backdrop-blur-sm"
+            className="fixed inset-0 z-[60] flex items-end bg-neutral-900/40 backdrop-blur-sm"
           >
             <motion.div
               initial={{ y: 40 }}
@@ -540,7 +553,7 @@ const MemoriesPage = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-end bg-neutral-900/45 backdrop-blur-sm"
+            className="fixed inset-0 z-[60] flex items-end bg-neutral-900/45 backdrop-blur-sm"
           >
             <motion.div
               initial={{ y: 40 }}

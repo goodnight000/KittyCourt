@@ -117,8 +117,8 @@ const LevelUpOverlay = ({ levelUp, onComplete }) => {
 
                         <motion.div
                             className="absolute left-1/2 top-1/2 h-72 w-72 -translate-x-1/2 -translate-y-1/2"
-                            animate={{ rotate: -360 }}
-                            transition={{ duration: 40, repeat: Infinity, ease: 'linear' }}
+                            animate={prefersReducedMotion ? undefined : { rotate: -360 }}
+                            transition={prefersReducedMotion ? undefined : { duration: 40, repeat: Infinity, ease: 'linear' }}
                         >
                             {RAYS.map((deg) => (
                                 <div
@@ -132,7 +132,7 @@ const LevelUpOverlay = ({ levelUp, onComplete }) => {
                             ))}
                         </motion.div>
 
-                        {PULSE_RINGS.map((ring) => (
+                        {!prefersReducedMotion && PULSE_RINGS.map((ring) => (
                             <motion.div
                                 key={ring}
                                 className="absolute left-1/2 top-1/2 h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full border border-court-gold/35"
@@ -223,8 +223,8 @@ const LevelUpOverlay = ({ levelUp, onComplete }) => {
                         >
                             <motion.span
                                 className="absolute inset-y-0 -left-20 w-24 bg-white/40 blur-md"
-                                animate={{ x: ['-120%', '140%'] }}
-                                transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
+                                animate={prefersReducedMotion ? undefined : { x: ['-120%', '140%'] }}
+                                transition={prefersReducedMotion ? undefined : { duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
                             />
                             <span className="relative">{t('levelUp.continue')}</span>
                         </button>

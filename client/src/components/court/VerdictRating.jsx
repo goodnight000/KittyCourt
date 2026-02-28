@@ -205,8 +205,8 @@ export default function VerdictRating({ onRate, onSkip }) {
                                         {isSubmitting ? (
                                             <span className="flex items-center justify-center gap-2">
                                                 <Motion.div
-                                                    animate={{ rotate: 360 }}
-                                                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                                                    animate={prefersReducedMotion ? undefined : { rotate: 360 }}
+                                                    transition={prefersReducedMotion ? undefined : { duration: 1, repeat: Infinity, ease: 'linear' }}
                                                     className="w-4 h-4 border-2 border-court-gold/40 border-t-court-gold rounded-full"
                                                 />
                                                 {t('court.rating.submitting')}

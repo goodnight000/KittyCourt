@@ -39,15 +39,15 @@ const SummonsReceived = ({ session, senderName, onJoin, isSubmitting }) => {
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 rounded-full bg-blush-200/10 blur-3xl pointer-events-none" />
 
             {/* Floating decorative elements */}
-            {floatingElements.map((el, i) => (
+            {!prefersReducedMotion && floatingElements.map((el, i) => (
                 <motion.span
                     key={i}
-                    animate={prefersReducedMotion ? {} : {
+                    animate={{
                         y: [0, -10, 0],
                         opacity: [0.4, 0.9, 0.4],
                         scale: [0.9, 1.15, 0.9],
                     }}
-                    transition={prefersReducedMotion ? { duration: 0 } : {
+                    transition={{
                         duration: 3 + Math.random() * 2,
                         delay: el.delay,
                         repeat: Infinity,
@@ -79,11 +79,11 @@ const SummonsReceived = ({ session, senderName, onJoin, isSubmitting }) => {
                 {/* Scroll icon with ceremonial styling */}
                 <motion.div
                     initial={{ rotate: -2, scale: 0.98 }}
-                    animate={prefersReducedMotion ? { rotate: 0, scale: 1 } : {
+                    animate={prefersReducedMotion ? undefined : {
                         rotate: [-2, 2, -2],
                         scale: [0.98, 1.02, 0.98],
                     }}
-                    transition={prefersReducedMotion ? { duration: 0 } : {
+                    transition={prefersReducedMotion ? undefined : {
                         duration: 3.6,
                         repeat: Infinity,
                         ease: "easeInOut"
@@ -92,11 +92,11 @@ const SummonsReceived = ({ session, senderName, onJoin, isSubmitting }) => {
                 >
                     {/* Outer glow ring */}
                     <motion.div
-                        animate={prefersReducedMotion ? {} : {
+                        animate={prefersReducedMotion ? undefined : {
                             scale: [1, 1.1, 1],
                             opacity: [0.3, 0.6, 0.3]
                         }}
-                        transition={prefersReducedMotion ? { duration: 0 } : { duration: 2, repeat: Infinity }}
+                        transition={prefersReducedMotion ? undefined : { duration: 2, repeat: Infinity }}
                         className="absolute -inset-4 bg-gradient-to-br from-court-gold/30 via-lavender-200/20 to-blush-200/25 rounded-full blur-xl"
                     />
 
@@ -107,8 +107,8 @@ const SummonsReceived = ({ session, senderName, onJoin, isSubmitting }) => {
 
                         {/* Accent */}
                         <motion.div
-                            animate={prefersReducedMotion ? {} : { rotate: [0, 12, -12, 0], opacity: [0.5, 1, 0.5] }}
-                            transition={prefersReducedMotion ? { duration: 0 } : { duration: 2.6, repeat: Infinity }}
+                            animate={prefersReducedMotion ? undefined : { rotate: [0, 12, -12, 0], opacity: [0.5, 1, 0.5] }}
+                            transition={prefersReducedMotion ? undefined : { duration: 2.6, repeat: Infinity }}
                             className="absolute -top-1 -right-1"
                         >
                             <Star className="w-5 h-5 text-court-gold" />
@@ -168,8 +168,8 @@ const SummonsReceived = ({ session, senderName, onJoin, isSubmitting }) => {
                 >
                     {/* Button shimmer effect */}
                     <motion.div
-                        animate={prefersReducedMotion ? {} : { x: ['-100%', '200%'] }}
-                        transition={prefersReducedMotion ? { duration: 0 } : { duration: 2, repeat: Infinity, repeatDelay: 3 }}
+                        animate={prefersReducedMotion ? undefined : { x: ['-100%', '200%'] }}
+                        transition={prefersReducedMotion ? undefined : { duration: 2, repeat: Infinity, repeatDelay: 3 }}
                         className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12"
                     />
 

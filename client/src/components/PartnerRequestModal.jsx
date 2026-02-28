@@ -7,10 +7,12 @@ import Paywall from './Paywall';
 import ProfilePicture from './ProfilePicture';
 import StandardButton from './shared/StandardButton';
 import { useI18n } from '../i18n';
+import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
 
 const PartnerRequestModal = () => {
     const { pendingRequests, acceptRequest, rejectRequest } = usePartnerStore();
     const { t } = useI18n();
+    const prefersReducedMotion = usePrefersReducedMotion();
     const [processingId, setProcessingId] = useState(null);
     const [action, setAction] = useState(null); // 'accept' or 'reject'
     const [showAnniversaryStep, setShowAnniversaryStep] = useState(false);
@@ -109,8 +111,8 @@ const PartnerRequestModal = () => {
                     {/* Header - court-themed palette */}
                     <div className="relative bg-gradient-to-br from-court-gold to-court-goldDark p-6 text-center">
                         <motion.div
-                            animate={{ scale: [1, 1.1, 1] }}
-                            transition={{ duration: 1.5, repeat: Infinity }}
+                            animate={prefersReducedMotion ? undefined : { scale: [1, 1.1, 1] }}
+                            transition={prefersReducedMotion ? undefined : { duration: 1.5, repeat: Infinity }}
                             className="w-16 h-16 mx-auto rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center mb-3"
                         >
                             {showAnniversaryStep ? (
