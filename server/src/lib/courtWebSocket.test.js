@@ -1,75 +1,12 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { createServer } from 'node:http';
 import { once } from 'node:events';
 import { io as ioClient } from 'socket.io-client';
-import { createRequire } from 'node:module';
 
-const require = createRequire(import.meta.url);
-
-const mocks = vi.hoisted(() => {
-    const courtSessionManager = {
-        setWebSocketService: vi.fn(),
-        getStateForUser: vi.fn(() => ({ phase: 'READY' })),
-        serve: vi.fn().mockResolvedValue(),
-        accept: vi.fn().mockResolvedValue(),
-        cancel: vi.fn().mockResolvedValue(),
-        dismiss: vi.fn().mockResolvedValue(),
-        submitEvidence: vi.fn().mockResolvedValue(),
-        acceptVerdict: vi.fn().mockResolvedValue(),
-        requestSettlement: vi.fn(),
-        acceptSettlement: vi.fn().mockResolvedValue(),
-        declineSettlement: vi.fn(),
-        submitAddendum: vi.fn().mockResolvedValue(),
-        markPrimingComplete: vi.fn().mockResolvedValue(),
-        markJointReady: vi.fn().mockResolvedValue(),
-        submitResolutionPick: vi.fn().mockResolvedValue(),
-        acceptPartnerResolution: vi.fn().mockResolvedValue(),
-        requestHybridResolution: vi.fn().mockResolvedValue(),
-    };
-
-    return {
-        courtSessionManager,
-        isSupabaseConfigured: vi.fn(() => false),
-        requireSupabase: vi.fn(),
-        getPartnerIdForUser: vi.fn(async () => 'partner-1'),
-        resolveLanguageFromHeader: vi.fn(async () => 'en'),
-        getUserPreferredLanguage: vi.fn(async () => 'en'),
-        processSecureInput: vi.fn((input) => ({ safe: true, input })),
-        securityConfig: {
-            fieldLimits: {
-                cameraFacts: 500,
-                theStoryIamTellingMyself: 500,
-                unmetNeeds: 500,
-            },
-        },
-        logSecurityEvent: vi.fn(),
-        createSocketCorsOptions: vi.fn(() => ({ origin: '*' })),
-    };
-});
-
-vi.mock('./courtSessionManager', () => ({
-    courtSessionManager: mocks.courtSessionManager,
-    VIEW_PHASE: { IDLE: 'IDLE' },
-}));
-vi.mock('./security', () => ({
-    createSocketCorsOptions: mocks.createSocketCorsOptions,
-}));
-vi.mock('./security/index', () => ({
-    processSecureInput: mocks.processSecureInput,
-    securityConfig: mocks.securityConfig,
-    logSecurityEvent: mocks.logSecurityEvent,
-}));
-vi.mock('./supabase', () => ({
-    isSupabaseConfigured: mocks.isSupabaseConfigured,
-}));
-vi.mock('./auth', () => ({
-    requireSupabase: mocks.requireSupabase,
-    getPartnerIdForUser: mocks.getPartnerIdForUser,
-}));
-vi.mock('./language', () => ({
-    resolveLanguageFromHeader: mocks.resolveLanguageFromHeader,
-    getUserPreferredLanguage: mocks.getUserPreferredLanguage,
-}));
+// NOTE: courtWebSocket.js is a CommonJS module that uses require() internally.
+// vitest's vi.mock() does not intercept CJS require() calls from within CJS modules.
+// Therefore, the real dependencies are loaded. The tests are designed to work with
+// the real module code, using environment variables to control behavior where needed.
 
 const emitWithAck = (socket, event, payload) => (
     new Promise((resolve) => {
@@ -81,21 +18,15 @@ const emitWithAck = (socket, event, payload) => (
     })
 );
 
-const createTestServer = async ({ supabaseConfigured = false } = {}) => {
-    mocks.isSupabaseConfigured.mockReturnValue(supabaseConfigured);
+const createTestServer = async () => {
     const httpServer = createServer();
     await new Promise((resolve) => httpServer.listen(0, resolve));
     const port = httpServer.address().port;
 
-    // Clear require cache to ensure fresh module load with updated mocks
-    const modulePath = require.resolve('./courtWebSocket');
-    delete require.cache[modulePath];
-
-    const courtWebSocket = require('./courtWebSocket');
-    if (courtWebSocket.io) {
-        courtWebSocket.io.close();
-    }
-    courtWebSocket.userSockets?.clear?.();
+    // Dynamic import to get a fresh module. The CJS singleton is reused across tests
+    // in the same module, but createCourtWebSocketService gives a fresh instance.
+    const { createCourtWebSocketService } = await import('./courtWebSocket');
+    const courtWebSocket = createCourtWebSocketService();
     courtWebSocket.initialize(httpServer);
 
     const cleanup = async () => {
@@ -164,20 +95,39 @@ describe('courtWebSocket', () => {
         await cleanup();
     });
 
-    // TODO: Fix test infrastructure - vi.mock with hoisted mocks doesn't properly
-    // intercept CommonJS requires. The actual auth check is correctly implemented.
-    it.skip('rejects connections without auth when Supabase is configured', { timeout: 10000 }, async () => {
-        const { port, cleanup } = await createTestServer({ supabaseConfigured: true });
+    it('rejects connections without auth when Supabase is configured', { timeout: 10000 }, async () => {
+        // Set env vars so the real isSupabaseConfigured() returns true.
+        // This triggers the auth middleware which rejects connections without a token.
+        const origUrl = process.env.SUPABASE_URL;
+        const origKey = process.env.SUPABASE_SERVICE_KEY;
+        process.env.SUPABASE_URL = 'https://fake.supabase.co';
+        process.env.SUPABASE_SERVICE_KEY = 'fake-key';
 
-        const socket = ioClient(`http://localhost:${port}`, {
-            transports: ['websocket'],
-            reconnection: false,
-        });
+        try {
+            const { port, cleanup } = await createTestServer();
 
-        const [err] = await once(socket, 'connect_error');
-        expect(err.message).toBe('Unauthorized');
+            const socket = ioClient(`http://localhost:${port}`, {
+                transports: ['websocket'],
+                reconnection: false,
+            });
 
-        socket.disconnect();
-        await cleanup();
+            const [err] = await once(socket, 'connect_error');
+            expect(err.message).toContain('Unauthorized');
+
+            socket.disconnect();
+            await cleanup();
+        } finally {
+            // Restore env vars
+            if (origUrl === undefined) {
+                delete process.env.SUPABASE_URL;
+            } else {
+                process.env.SUPABASE_URL = origUrl;
+            }
+            if (origKey === undefined) {
+                delete process.env.SUPABASE_SERVICE_KEY;
+            } else {
+                process.env.SUPABASE_SERVICE_KEY = origKey;
+            }
+        }
     });
 });

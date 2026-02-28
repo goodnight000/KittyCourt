@@ -9,12 +9,14 @@ vi.mock('../../store/useCacheStore', () => {
     const getOrFetch = vi.fn(async ({ fetcher }) => ({ data: await fetcher(), promise: null }));
     const fetchAndCache = vi.fn(async () => []);
     const setCache = vi.fn();
+    const getCached = vi.fn(() => undefined);
     return {
         default: {
             getState: () => ({
                 getOrFetch,
                 fetchAndCache,
                 setCache,
+                getCached,
                 subscribeKey: vi.fn(() => vi.fn()),
             }),
         },
@@ -22,17 +24,23 @@ vi.mock('../../store/useCacheStore', () => {
         cacheKey: { calendarEvents: vi.fn(() => 'calendar:events:user') },
     };
 });
-vi.mock('../../store/useAuthStore', () => ({
-    default: vi.fn(() => ({
+vi.mock('../../store/useAuthStore', () => {
+    const state = {
         user: { id: 'user-1' },
         profile: { display_name: 'Test User', id: 'user-1' },
-    })),
-}));
-vi.mock('../../store/usePartnerStore', () => ({
-    default: vi.fn(() => ({
+    };
+    return {
+        default: vi.fn((selector) => (typeof selector === 'function' ? selector(state) : state)),
+    };
+});
+vi.mock('../../store/usePartnerStore', () => {
+    const state = {
         partner: { display_name: 'Partner User', id: 'user-2' },
-    })),
-}));
+    };
+    return {
+        default: vi.fn((selector) => (typeof selector === 'function' ? selector(state) : state)),
+    };
+});
 
 describe('useCalendarEvents', () => {
     const mockT = vi.fn((key, params) => {
