@@ -2,6 +2,7 @@
  * Insights Routes
  */
 
+const crypto = require('crypto');
 const express = require('express');
 const router = express.Router();
 const { requirePartner } = require('../middleware/requirePartner');
@@ -150,7 +151,8 @@ router.post('/process-daily', async (req, res) => {
 
         if (secret) {
             const provided = req.headers['x-cron-secret'];
-            if (provided !== secret) {
+            if (!provided || Buffer.byteLength(provided) !== Buffer.byteLength(secret) ||
+                !crypto.timingSafeEqual(Buffer.from(provided), Buffer.from(secret))) {
                 return sendError(res, 403, 'FORBIDDEN', 'Invalid cron secret');
             }
         } else if (isProd) {

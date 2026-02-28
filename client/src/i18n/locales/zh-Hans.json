@@ -630,7 +630,8 @@
       "accepted": "你已接受！",
       "waitingForPartner": "等待 {name}...",
       "history": "历史记录",
-      "judgeAlt": "{judgeName}"
+      "judgeAlt": "{judgeName}",
+      "aiDisclaimer": "此裁决由AI生成，不构成专业建议。"
     },
     "atRest": {
       "avatarAlt": "打盹中的胡子大人",
@@ -1014,7 +1015,8 @@
       "label": "我同意由 AI 协助我的 Pause 体验。",
       "description": "我们会用你提交的内容来提供应用内裁决与洞察，不会出售你的个人数据。",
       "privacyPrefix": "继续即表示你同意我们的",
-      "privacyAnd": "和"
+      "privacyAnd": "和",
+      "therapyDisclaimer": "Pause 不能替代专业的关系咨询或治疗。"
     },
     "name": {
       "placeholder": "你的名字或昵称",
@@ -2217,7 +2219,13 @@
       "title": "法律与关于",
       "terms": "条款与条件",
       "privacy": "隐私政策",
-      "version": "应用版本"
+      "version": "应用版本",
+      "disclaimer": "Pause 仅供娱乐和教育目的。它不能替代专业的关系咨询、治疗或医疗建议。如果您正处于危机中，请联系持证专业人士。",
+      "aiDisclosure": "裁决和洞察由人工智能生成，不代表持证治疗师或咨询师的意见。"
+    },
+    "subscription": {
+      "manage": "管理订阅",
+      "manageDescription": "更改或取消您的订阅"
     },
     "howItWorks": {
       "title": "审判流程",

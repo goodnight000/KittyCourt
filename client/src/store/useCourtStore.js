@@ -16,6 +16,21 @@ import useCacheStore, { cacheKey } from './useCacheStore';
 
 const isOnline = () => typeof navigator !== 'undefined' && navigator.onLine;
 
+const DRAFT_KEY = 'pause-court-draft';
+
+const saveDraft = (get) => {
+    const { localEvidence, localFeelings, localNeeds } = get();
+    if (localEvidence || localFeelings || localNeeds) {
+        try {
+            localStorage.setItem(DRAFT_KEY, JSON.stringify({ localEvidence, localFeelings, localNeeds }));
+        } catch (_e) { /* quota exceeded - best effort */ }
+    } else {
+        try {
+            localStorage.removeItem(DRAFT_KEY);
+        } catch (_e) { /* best effort */ }
+    }
+};
+
 // View phases (must match server)
 export const VIEW_PHASE = {
     IDLE: 'IDLE',
@@ -135,10 +150,29 @@ const useCourtStore = create((set, get) => {
 
     // === State Setters ===
 
-    setLocalEvidence: (text) => set({ localEvidence: text }),
-    setLocalFeelings: (text) => set({ localFeelings: text }),
-    setLocalNeeds: (text) => set({ localNeeds: text }),
+    setLocalEvidence: (text) => { set({ localEvidence: text }); saveDraft(get); },
+    setLocalFeelings: (text) => { set({ localFeelings: text }); saveDraft(get); },
+    setLocalNeeds: (text) => { set({ localNeeds: text }); saveDraft(get); },
     setLocalAddendum: (text) => set({ localAddendum: text }),
+
+    loadDraft: () => {
+        try {
+            const raw = localStorage.getItem(DRAFT_KEY);
+            if (!raw) return;
+            const { localEvidence, localFeelings, localNeeds } = JSON.parse(raw);
+            set({
+                localEvidence: localEvidence || '',
+                localFeelings: localFeelings || '',
+                localNeeds: localNeeds || ''
+            });
+        } catch (_e) { /* malformed JSON or no access - best effort */ }
+    },
+
+    clearDraft: () => {
+        try {
+            localStorage.removeItem(DRAFT_KEY);
+        } catch (_e) { /* best effort */ }
+    },
     setShowOpeningAnimation: (show) => set({ showOpeningAnimation: show }),
     setShowCelebrationAnimation: (show) => set({ showCelebrationAnimation: show }),
     setShowRatingPopup: (show) => set({ showRatingPopup: show }),
@@ -298,6 +332,7 @@ const useCourtStore = create((set, get) => {
 
         if (shouldClearBefore) {
             set({ localEvidence: '', localFeelings: '', localNeeds: '' });
+            get().clearDraft();
         }
 
         await createCourtAction({
@@ -307,6 +342,7 @@ const useCourtStore = create((set, get) => {
 
         if (!shouldClearBefore) {
             set({ localEvidence: '', localFeelings: '', localNeeds: '' });
+            get().clearDraft();
         }
 
         set({ isSubmitting: false });
@@ -528,6 +564,7 @@ const useCourtStore = create((set, get) => {
      * Reset to idle state
      */
     reset: () => {
+        get().clearDraft();
         set({
             phase: 'IDLE',
             myViewPhase: VIEW_PHASE.IDLE,

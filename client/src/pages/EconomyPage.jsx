@@ -27,7 +27,11 @@ const COLOR_OPTIONS = ["pink", "violet", "amber", "green", "orange"];
 const getStoredRewards = (userId, fallbackRewards) => {
     const key = `catjudge_rewards_${userId}`;
     const stored = localStorage.getItem(key);
-    return stored ? JSON.parse(stored) : fallbackRewards;
+    try {
+        return stored ? JSON.parse(stored) : fallbackRewards;
+    } catch {
+        return fallbackRewards;
+    }
 };
 
 const storeRewards = (userId, rewards) => {

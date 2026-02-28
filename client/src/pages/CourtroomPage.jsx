@@ -147,6 +147,23 @@ export default function CourtroomPageV2() {
         }
     }, [authUser?.id, session, isConnected, fetchState]);
 
+    // Load any saved draft on mount so evidence fields survive a refresh.
+    useEffect(() => {
+        useCourtStore.getState().loadDraft();
+    }, []);
+
+    // Warn the user before unloading if they have unsaved evidence text.
+    useEffect(() => {
+        const handler = (e) => {
+            const { localEvidence: ev, localFeelings: fe, localNeeds: ne } = useCourtStore.getState();
+            if (ev?.trim() || fe?.trim() || ne?.trim()) {
+                e.preventDefault();
+            }
+        };
+        window.addEventListener('beforeunload', handler);
+        return () => window.removeEventListener('beforeunload', handler);
+    }, []);
+
     // Opening animation: play when transitioning from PENDING → EVIDENCE.
     const prevViewPhaseRef = useRef(myViewPhase);
     useEffect(() => {

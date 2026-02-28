@@ -244,6 +244,11 @@ const VerdictView = ({
                 </motion.div>
             )}
 
+            {/* AI Disclosure */}
+            <p className="text-xs text-neutral-400 text-center mt-2">
+                {t('court.verdict.aiDisclaimer')}
+            </p>
+
             {/* Four Horsemen Detected */}
             {analysis && (analysis.userA_Horsemen?.length > 0 || analysis.userB_Horsemen?.length > 0) && (
                 <motion.div

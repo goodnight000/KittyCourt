@@ -1014,6 +1014,11 @@ const CaseDetailPage = () => {
                             </div>
                         )}
 
+                        {/* AI Disclosure */}
+                        <p className="text-xs text-neutral-400 text-center mt-2">
+                            {t('court.verdict.aiDisclaimer')}
+                        </p>
+
                         {/* Legacy format fallbacks */}
                         {!currentVerdict.theSummary && !currentVerdict.theRuling_ThePurr && (
                             <>

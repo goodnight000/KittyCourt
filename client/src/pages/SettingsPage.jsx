@@ -3,10 +3,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
     Mail, Shield, Bell, Globe, HelpCircle, FileText,
-    ChevronRight, AlertTriangle, ExternalLink, Heart, Download, X
+    ChevronRight, AlertTriangle, ExternalLink, Heart, Download, X, Star
 } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
 import useAuthStore from '../store/useAuthStore';
 import usePartnerStore from '../store/usePartnerStore';
+import useSubscriptionStore from '../store/useSubscriptionStore';
 import { translate, useI18n } from '../i18n';
 import { SUPPORTED_LANGUAGE_CONFIG } from '../i18n/languageConfig';
 import OptionsStep from '../components/onboarding/OptionsStep';
@@ -86,6 +88,7 @@ const SettingsPage = () => {
     const { t, language, setLanguage, supportedLanguages } = useI18n();
     const { user, profile, refreshProfile } = useAuthStore();
     const { hasPartner } = usePartnerStore();
+    const { isGold } = useSubscriptionStore();
 
     const [showDisconnectModal, setShowDisconnectModal] = useState(false);
     const [showLanguagePicker, setShowLanguagePicker] = useState(false);
@@ -317,6 +320,18 @@ const SettingsPage = () => {
             setExportError(error?.response?.data?.error || t('settings.export.requestError', 'Failed to request export'));
         } finally {
             setExportSubmitting(false);
+        }
+    };
+
+    const handleManageSubscription = async () => {
+        const url = Capacitor.getPlatform() === 'android'
+            ? 'https://play.google.com/store/account/subscriptions'
+            : 'https://apps.apple.com/account/subscriptions';
+        if (Capacitor.isNativePlatform()) {
+            const { Browser } = await import('@capacitor/browser');
+            await Browser.open({ url });
+        } else {
+            window.open(url, '_blank');
         }
     };
 
@@ -583,7 +598,37 @@ const SettingsPage = () => {
                         <span className="text-sm text-neutral-600">{t('settings.legal.version')}</span>
                         <span className="text-sm font-mono text-neutral-500">1.0.0</span>
                     </div>
+
+                    <div className="px-3 pt-2 space-y-1.5">
+                        <p className="text-[11px] text-neutral-400 leading-relaxed">
+                            {t('settings.legal.disclaimer')}
+                        </p>
+                        <p className="text-[11px] text-neutral-400 leading-relaxed">
+                            {t('settings.legal.aiDisclosure')}
+                        </p>
+                    </div>
                 </section>
+
+                {/* Manage Subscription (Gold only) */}
+                {isGold && (
+                    <section className="glass-card p-4 space-y-3">
+                        <h2 className="text-sm font-bold text-neutral-700 flex items-center gap-2">
+                            <Star className="w-4 h-4 text-amber-600" />
+                            {t('settings.subscription.manage')}
+                        </h2>
+                        <p className="text-xs text-neutral-500">
+                            {t('settings.subscription.manageDescription')}
+                        </p>
+                        <motion.button
+                            whileTap={{ scale: 0.98 }}
+                            onClick={handleManageSubscription}
+                            className="w-full flex items-center justify-between py-3 px-3 rounded-2xl border border-white/80 bg-white/70"
+                        >
+                            <span className="text-sm text-neutral-700">{t('settings.subscription.manage')}</span>
+                            <ExternalLink className="w-4 h-4 text-neutral-500" />
+                        </motion.button>
+                    </section>
+                )}
 
                 {/* Danger Zone */}
                 <section className="glass-card p-4 space-y-3 border border-rose-200/50">

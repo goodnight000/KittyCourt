@@ -9,6 +9,8 @@
  */
 
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import { quotaSafeLocalStorage } from './quotaSafeStorage';
 import api from '../services/api';
 
 /**
@@ -68,7 +70,9 @@ export const JUDGE_NAME_MAP = {
     wise: 'Whiskers',
 };
 
-const useSubscriptionStore = create((set, get) => ({
+const useSubscriptionStore = create(
+    persist(
+        (set, get) => ({
     // Subscription state
     isGold: false,
     isLoading: true,
@@ -601,6 +605,7 @@ const useSubscriptionStore = create((set, get) => ({
      * @private
      */
     _forceGold: async () => {
+        if (!import.meta.env.DEV) return;
         try {
             // Use debug endpoint that bypasses RevenueCat
             await api.post('/subscription/debug-grant');
@@ -615,6 +620,16 @@ const useSubscriptionStore = create((set, get) => ({
             console.error('[SubscriptionStore] Debug: Failed to force Gold:', error);
         }
     },
-}));
+        }),
+        {
+            name: 'pause-subscription',
+            storage: createJSONStorage(() => quotaSafeLocalStorage),
+            partialize: (state) => ({
+                isGold: state.isGold,
+                currentPlan: state.currentPlan,
+            }),
+        }
+    )
+);
 
 export default useSubscriptionStore;

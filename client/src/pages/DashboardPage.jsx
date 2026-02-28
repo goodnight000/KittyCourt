@@ -147,8 +147,12 @@ const DashboardPage = () => {
         if (!anniversaryDate) {
             const currentUserProfile = localStorage.getItem(`catjudge_profile_${currentUser?.id}`);
             if (currentUserProfile) {
-                const parsed = JSON.parse(currentUserProfile);
-                if (parsed.anniversaryDate) anniversaryDate = parsed.anniversaryDate;
+                try {
+                    const parsed = JSON.parse(currentUserProfile);
+                    if (parsed.anniversaryDate) anniversaryDate = parsed.anniversaryDate;
+                } catch {
+                    // ignore
+                }
             }
         }
 
@@ -165,20 +169,6 @@ const DashboardPage = () => {
 
     const handleLogGoodDeed = async () => {
         if (!goodDeedText.trim()) return;
-
-        // Debug: Secret code to grant Gold status for testing
-        if (goodDeedText === 'iaeyrghkbflikheawbrjgjheinkjs') {
-            setIsSubmitting(true);
-            await useSubscriptionStore.getState()._forceGold();
-            setIsSubmitting(false);
-            setShowSuccess(true);
-            setGoodDeedText('');
-            setTimeout(() => {
-                setShowSuccess(false);
-                setShowGoodDeedModal(false);
-            }, 1500);
-            return;
-        }
 
         setIsSubmitting(true);
         try {

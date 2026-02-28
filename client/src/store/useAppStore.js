@@ -143,9 +143,14 @@ const useAppStore = create(
 
             // Load a specific case from history (for viewing/adding addendums)
             loadCase: (caseItem) => {
-                const verdict = typeof caseItem.verdict === 'string'
-                    ? JSON.parse(caseItem.verdict)
-                    : caseItem.verdict;
+                let verdict = caseItem.verdict;
+                if (typeof caseItem.verdict === 'string') {
+                    try {
+                        verdict = JSON.parse(caseItem.verdict);
+                    } catch {
+                        verdict = null;
+                    }
+                }
 
                 // This updates useCourtStore's session for viewing
                 useCourtStore.setState({

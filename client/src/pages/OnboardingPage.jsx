@@ -796,6 +796,10 @@ function AIConsentStep({ agreed, onToggle }) {
                 </a>
                 .
             </p>
+
+            <p className="text-xs text-neutral-400 text-center leading-relaxed">
+                {t('onboarding.consent.therapyDisclaimer')}
+            </p>
         </Motion.div>
     );
 }
