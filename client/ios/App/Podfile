@@ -33,6 +33,22 @@ post_install do |installer|
   installer.pods_project.targets.each do |target|
     target.build_configurations.each do |config|
       config.build_settings['CODE_SIGNING_ALLOWED'] = 'NO'
+      # Suppress deprecation warnings from all pods (including local Capacitor pods)
+      config.build_settings['GCC_WARN_ABOUT_DEPRECATED_FUNCTIONS'] = 'NO'
+      config.build_settings['CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS'] = 'NO'
+      existing = config.build_settings['OTHER_CFLAGS'] || '$(inherited)'
+      unless existing.include?('-Wno-deprecated-declarations')
+        config.build_settings['OTHER_CFLAGS'] = "#{existing} -Wno-deprecated-declarations"
+      end
+    end
+  end
+
+  # Fix "[CP] Embed Pods Frameworks" warning about missing output files
+  installer.pods_project.targets.each do |target|
+    target.build_phases.each do |phase|
+      if phase.respond_to?(:name) && phase.name == '[CP] Embed Pods Frameworks'
+        phase.always_out_of_date = "1"
+      end
     end
   end
 end
