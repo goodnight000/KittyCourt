@@ -105,7 +105,7 @@ const MainLayout = () => {
         <div className="min-h-screen min-h-[100dvh] flex flex-col font-sans">
             <MotionConfig reducedMotion={prefersReducedMotion ? 'always' : 'never'}>
                 {/* Main Scrollable Content - with safe area for Dynamic Island/notch */}
-                <main ref={mainRef} className="flex-1 overflow-y-auto safe-top relative" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
+                <main ref={mainRef} className="flex-1 overflow-y-auto safe-top relative app-background" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
                     <div
                         className="px-4 py-5 pb-20 max-w-lg mx-auto"
                         style={contentBottomPadding ? { paddingBottom: contentBottomPadding } : undefined}

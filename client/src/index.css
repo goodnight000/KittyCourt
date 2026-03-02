@@ -32,8 +32,9 @@ html {
 
 html,
 body {
-  background: var(--app-bg);
   background-color: var(--app-bg-solid);
+  background-image: url('/textures/parchment-grain.png');
+  background-blend-mode: multiply;
 }
 
 body {
@@ -50,37 +51,17 @@ body {
 
 body::before,
 body::after {
-  content: "";
-  position: fixed;
-  pointer-events: none;
-  border-radius: 9999px;
-  filter: blur(44px);
-  z-index: 0;
+  content: none;
+  display: none;
 }
 
-body::before {
-  top: -5rem;
-  right: -5rem;
-  width: 16rem;
-  height: 16rem;
-  background: rgba(253, 230, 138, 0.3);
-}
-
-body::after {
-  bottom: -8rem;
-  left: -5rem;
-  width: 18rem;
-  height: 18rem;
-  background: rgba(251, 207, 232, 0.25);
-}
-
-/* iOS perf mode: force a single-color app background and remove body glow layers */
+/* iOS perf mode: drop gradient, keep cheap repeating tile for texture */
 html.ios-flat-bg,
 body.ios-flat-bg {
   --app-bg: var(--app-bg-solid);
-  background: var(--app-bg-solid) !important;
   background-color: var(--app-bg-solid) !important;
-  background-image: none !important;
+  background-image: url('/textures/parchment-grain.png') !important;
+  background-blend-mode: multiply !important;
 }
 
 body.ios-flat-bg::before,
@@ -90,9 +71,9 @@ body.ios-flat-bg::after {
 }
 
 body.ios-flat-bg .app-background {
-  background: var(--app-bg-solid) !important;
   background-color: var(--app-bg-solid) !important;
-  background-image: none !important;
+  background-image: url('/textures/parchment-grain.png') !important;
+  background-blend-mode: multiply !important;
 }
 
 /* Flatten page surfaces only (keep element effects like card blur/gradients). */
@@ -134,8 +115,9 @@ body.ios-flat-bg .app-route-surface > * > .pointer-events-none.absolute {
 }
 
 .app-background {
-  background: var(--app-bg);
   background-color: var(--app-bg-solid);
+  background-image: url('/textures/parchment-grain.png');
+  background-blend-mode: multiply;
 }
 
 ::selection {
@@ -315,11 +297,6 @@ input[type='date']::-webkit-date-and-time-value {
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
-  }
-
-  body::before,
-  body::after {
-    display: none;
   }
 
   .glass-card,
