@@ -5,22 +5,31 @@ import { Heart, X, Check, Lock, BookOpen, Flame, ArrowRight } from 'lucide-react
 import useAppStore from '../store/useAppStore';
 import useAuthStore from '../store/useAuthStore';
 import usePartnerStore from '../store/usePartnerStore';
-import useSubscriptionStore from '../store/useSubscriptionStore';
 import useCacheStore, { CACHE_POLICY, cacheKey } from '../store/useCacheStore';
 import api from '../services/api';
 import ProfilePicture from '../components/ProfilePicture';
 import DisconnectNotice from '../components/DisconnectNotice';
 import StandardButton from '../components/shared/StandardButton';
 import { useI18n } from '../i18n';
-import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
+import useUiPerfProfile from '../hooks/useUiPerfProfile';
+import useStagedMount from '../hooks/useStagedMount';
+import { isNativeIOS } from '../utils/platform';
 
 const DashboardPage = () => {
     const navigate = useNavigate();
     const { t, language } = useI18n();
-    const { currentUser, logGoodDeed } = useAppStore();
-    const { profile, user: authUser } = useAuthStore();
-    const { hasPartner, partner: connectedPartner, disconnectStatus, disconnectStatusLoaded } = usePartnerStore();
-    const prefersReducedMotion = usePrefersReducedMotion();
+    const currentUser = useAppStore((state) => state.currentUser);
+    const logGoodDeed = useAppStore((state) => state.logGoodDeed);
+    const profile = useAuthStore((state) => state.profile);
+    const authUser = useAuthStore((state) => state.user);
+    const hasPartner = usePartnerStore((state) => state.hasPartner);
+    const connectedPartner = usePartnerStore((state) => state.partner);
+    const disconnectStatus = usePartnerStore((state) => state.disconnectStatus);
+    const disconnectStatusLoaded = usePartnerStore((state) => state.disconnectStatusLoaded);
+    const { prefersReducedMotion } = useUiPerfProfile();
+    const shouldReduceFx = prefersReducedMotion;
+    const deferHeavyUi = isNativeIOS() && !prefersReducedMotion;
+    const showDeferredSections = useStagedMount({ enabled: deferHeavyUi, delay: 240 });
     const [showGoodDeedModal, setShowGoodDeedModal] = useState(false);
     const [questionStreak, setQuestionStreak] = useState(0);
     const [todaysQuestion, setTodaysQuestion] = useState(null);
@@ -260,8 +269,8 @@ const DashboardPage = () => {
                     className="glass-card relative overflow-hidden p-5"
                 >
                     <div className="absolute inset-0 pointer-events-none">
-                        <div className="absolute -top-16 -right-10 h-32 w-32 rounded-full bg-rose-200/40 blur-3xl" />
-                        <div className="absolute -bottom-12 -left-10 h-36 w-36 rounded-full bg-amber-200/35 blur-3xl" />
+                        <div className={`absolute -top-16 -right-10 h-32 w-32 rounded-full bg-rose-200/40 ${shouldReduceFx ? 'blur-xl' : 'blur-3xl'}`} />
+                        <div className={`absolute -bottom-12 -left-10 h-36 w-36 rounded-full bg-amber-200/35 ${shouldReduceFx ? 'blur-xl' : 'blur-3xl'}`} />
                         <div
                             className="absolute inset-0 opacity-40"
                             style={{
@@ -365,7 +374,7 @@ const DashboardPage = () => {
                 <Motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 }}
+                    transition={shouldReduceFx ? { duration: 0.12 } : { delay: 0.1 }}
                     whileTap={{ scale: 0.995 }}
                     onClick={() => navigate(hasPartner ? '/daily-meow' : '/connect')}
                     onKeyDown={(e) => e.key === 'Enter' && navigate(hasPartner ? '/daily-meow' : '/connect')}
@@ -436,7 +445,7 @@ const DashboardPage = () => {
                                 <p className="text-xs text-neutral-600 max-w-sm mx-auto">
                                     {disconnectMessage}
                                 </p>
-                                <motion.button
+                                <Motion.button
                                     whileTap={{ scale: 0.98 }}
                                     onClick={() => navigate('/connect')}
                                     aria-label={t('disconnectNotice.cta')}
@@ -444,7 +453,7 @@ const DashboardPage = () => {
                                 >
                                     {t('disconnectNotice.cta')}
                                     <ArrowRight className="w-4 h-4" />
-                                </motion.button>
+                                </Motion.button>
                             </>
                         ) : (
                             <>
@@ -508,16 +517,16 @@ const DashboardPage = () => {
                                                     <span className="inline-flex items-center">
                                                         {t('dashboard.dailyQuestion.waiting')}
                                                         <Motion.span
-                                                            animate={prefersReducedMotion ? undefined : { opacity: [0, 1, 0] }}
-                                                            transition={prefersReducedMotion ? undefined : { duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                                                            animate={shouldReduceFx ? undefined : { opacity: [0, 1, 0] }}
+                                                            transition={shouldReduceFx ? undefined : { duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
                                                         >.</Motion.span>
                                                         <Motion.span
-                                                            animate={prefersReducedMotion ? undefined : { opacity: [0, 1, 0] }}
-                                                            transition={prefersReducedMotion ? undefined : { duration: 1.5, repeat: Infinity, ease: "easeInOut", delay: 0.2 }}
+                                                            animate={shouldReduceFx ? undefined : { opacity: [0, 1, 0] }}
+                                                            transition={shouldReduceFx ? undefined : { duration: 1.5, repeat: Infinity, ease: "easeInOut", delay: 0.2 }}
                                                         >.</Motion.span>
                                                         <Motion.span
-                                                            animate={prefersReducedMotion ? undefined : { opacity: [0, 1, 0] }}
-                                                            transition={prefersReducedMotion ? undefined : { duration: 1.5, repeat: Infinity, ease: "easeInOut", delay: 0.4 }}
+                                                            animate={shouldReduceFx ? undefined : { opacity: [0, 1, 0] }}
+                                                            transition={shouldReduceFx ? undefined : { duration: 1.5, repeat: Infinity, ease: "easeInOut", delay: 0.4 }}
                                                         >.</Motion.span>
                                                     </span>
                                                 )}
@@ -537,67 +546,88 @@ const DashboardPage = () => {
                     </div>
                 </Motion.div>
 
-                {/* Quick Actions - Story Shelf */}
-                <div className="space-y-3">
-                    <div className="px-1">
-                        <h3 className="font-bold text-neutral-700 text-sm">{t('dashboard.quickActions.title')}</h3>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                        {quickActions.map((action) => (
-                            <ActionTile
-                                key={action.key}
-                                icon={action.icon}
-                                label={action.label}
-                                detail={action.detail}
-                                locked={action.locked}
-                                accent={action.accent}
-                                onClick={action.onClick}
-                            />
-                        ))}
-                    </div>
-                </div>
-
-                {/* Question Archives - Immersive Banner */}
-                <Motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => navigate(hasPartner ? '/daily-meow/history' : '/connect')}
-                    onKeyDown={(e) => e.key === 'Enter' && navigate(hasPartner ? '/daily-meow/history' : '/connect')}
-                    role="button"
-                    tabIndex={0}
-                    aria-label={t('dashboard.archive.title')}
-                    className="glass-card relative overflow-hidden cursor-pointer border border-amber-200/60"
-                >
-                    <div className="absolute inset-0 pointer-events-none">
-                        <div className="absolute -top-10 -right-8 h-24 w-24 rounded-full bg-amber-200/35 blur-2xl" />
-                        <div className="absolute -bottom-12 -left-10 h-28 w-28 rounded-full bg-rose-200/30 blur-3xl" />
-                        <div
-                            className="absolute inset-0 opacity-40"
-                            style={{ backgroundImage: 'linear-gradient(130deg, rgba(255,255,255,0.7) 0%, transparent 60%)' }}
-                        />
-                    </div>
-                    <div className="relative flex items-center gap-4 p-3">
-                        <div className="w-12 h-12 bg-gradient-to-br from-amber-100 to-amber-200 rounded-xl flex items-center justify-center shadow-soft border border-amber-200/50">
-                            <BookOpen className="w-6 h-6 text-amber-600" />
-                        </div>
-                        <div className="flex-1">
-                            <div className="text-[10px] uppercase tracking-[0.35em] text-neutral-500 font-semibold">
-                                {t('dashboard.archive.kicker')}
+                {showDeferredSections ? (
+                    <>
+                        {/* Quick Actions - Story Shelf */}
+                        <div className="space-y-3">
+                            <div className="px-1">
+                                <h3 className="font-bold text-neutral-700 text-sm">{t('dashboard.quickActions.title')}</h3>
                             </div>
-                            <h3 className="font-bold text-neutral-800 text-sm">{t('dashboard.archive.title')}</h3>
-                            <p className="text-neutral-500 text-xs mt-0.5">{t('dashboard.archive.subtitle')}</p>
-                        </div>
-                        {!hasPartner && (
-                            <div className="w-7 h-7 rounded-full bg-neutral-100 border border-neutral-200 flex items-center justify-center">
-                                <Lock className="w-3.5 h-3.5 text-neutral-500" />
+
+                            <div className="grid grid-cols-2 gap-3">
+                                {quickActions.map((action) => (
+                                    <ActionTile
+                                        key={action.key}
+                                        icon={action.icon}
+                                        label={action.label}
+                                        detail={action.detail}
+                                        locked={action.locked}
+                                        accent={action.accent}
+                                        onClick={action.onClick}
+                                        reduceFx={shouldReduceFx}
+                                    />
+                                ))}
                             </div>
-                        )}
-                        {hasPartner && <ArrowRight className="w-5 h-5 text-neutral-500" />}
-                    </div>
-                </Motion.div>
+                        </div>
+
+                        {/* Question Archives - Immersive Banner */}
+                        <Motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={shouldReduceFx ? { duration: 0.12 } : { delay: 0.2 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => navigate(hasPartner ? '/daily-meow/history' : '/connect')}
+                            onKeyDown={(e) => e.key === 'Enter' && navigate(hasPartner ? '/daily-meow/history' : '/connect')}
+                            role="button"
+                            tabIndex={0}
+                            aria-label={t('dashboard.archive.title')}
+                            className="glass-card relative overflow-hidden cursor-pointer border border-amber-200/60"
+                        >
+                            <div className="absolute inset-0 pointer-events-none">
+                                <div className="absolute -top-10 -right-8 h-24 w-24 rounded-full bg-amber-200/35 blur-2xl" />
+                                <div className={`absolute -bottom-12 -left-10 h-28 w-28 rounded-full bg-rose-200/30 ${shouldReduceFx ? 'blur-xl' : 'blur-3xl'}`} />
+                                <div
+                                    className="absolute inset-0 opacity-40"
+                                    style={{ backgroundImage: 'linear-gradient(130deg, rgba(255,255,255,0.7) 0%, transparent 60%)' }}
+                                />
+                            </div>
+                            <div className="relative flex items-center gap-4 p-3">
+                                <div className="w-12 h-12 bg-gradient-to-br from-amber-100 to-amber-200 rounded-xl flex items-center justify-center shadow-soft border border-amber-200/50">
+                                    <BookOpen className="w-6 h-6 text-amber-600" />
+                                </div>
+                                <div className="flex-1">
+                                    <div className="text-[10px] uppercase tracking-[0.35em] text-neutral-500 font-semibold">
+                                        {t('dashboard.archive.kicker')}
+                                    </div>
+                                    <h3 className="font-bold text-neutral-800 text-sm">{t('dashboard.archive.title')}</h3>
+                                    <p className="text-neutral-500 text-xs mt-0.5">{t('dashboard.archive.subtitle')}</p>
+                                </div>
+                                {!hasPartner && (
+                                    <div className="w-7 h-7 rounded-full bg-neutral-100 border border-neutral-200 flex items-center justify-center">
+                                        <Lock className="w-3.5 h-3.5 text-neutral-500" />
+                                    </div>
+                                )}
+                                {hasPartner && <ArrowRight className="w-5 h-5 text-neutral-500" />}
+                            </div>
+                        </Motion.div>
+                    </>
+                ) : (
+                    <>
+                        <div className="space-y-3">
+                            <div className="h-4 w-32 rounded-full bg-neutral-200/70 mx-1 animate-pulse" />
+                            <div className="grid grid-cols-2 gap-3">
+                                {[1, 2, 3, 4].map((item) => (
+                                    <div key={item} className="h-28 rounded-[24px] border border-white/80 bg-white/75 shadow-soft animate-pulse" />
+                                ))}
+                            </div>
+                        </div>
+                        <div className="glass-card border border-amber-200/60 p-4 animate-pulse">
+                            <div className="h-3 w-24 rounded-full bg-neutral-200/70 mb-2" />
+                            <div className="h-4 w-44 rounded-full bg-neutral-200/70 mb-2" />
+                            <div className="h-3 w-56 rounded-full bg-neutral-200/60" />
+                        </div>
+                    </>
+                )}
 
                 {/* Good Deed Modal */}
                 <AnimatePresence>
@@ -606,7 +636,7 @@ const DashboardPage = () => {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] flex items-end justify-center p-4 pb-20"
+                            className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40 backdrop-blur-sm px-3 pb-[calc(var(--app-safe-bottom)+10px)]"
                             onClick={() => setShowGoodDeedModal(false)}
                         >
                             <Motion.div
@@ -614,11 +644,11 @@ const DashboardPage = () => {
                                 animate={{ y: 0, opacity: 1 }}
                                 exit={{ y: 100, opacity: 0 }}
                                 onClick={(e) => e.stopPropagation()}
-                                className="relative overflow-hidden bg-white/95 rounded-[32px] w-full max-w-md p-5 space-y-4 shadow-soft-lg border border-white/80"
+                                className="relative mx-auto w-full max-w-lg max-h-[calc(100vh-var(--app-safe-bottom)-12px)] overflow-y-auto rounded-[32px] border border-white/80 bg-white/95 p-5 shadow-soft-lg space-y-4"
                             >
                                 <div className="absolute inset-0 pointer-events-none">
-                                    <div className="absolute -top-12 -right-6 h-28 w-28 rounded-full bg-rose-200/40 blur-3xl" />
-                                    <div className="absolute -bottom-10 -left-8 h-24 w-24 rounded-full bg-amber-200/30 blur-3xl" />
+                                    <div className={`absolute -top-12 -right-6 h-28 w-28 rounded-full bg-rose-200/40 ${shouldReduceFx ? 'blur-xl' : 'blur-3xl'}`} />
+                                    <div className={`absolute -bottom-10 -left-8 h-24 w-24 rounded-full bg-amber-200/30 ${shouldReduceFx ? 'blur-xl' : 'blur-3xl'}`} />
                                     <div
                                         className="absolute inset-0 opacity-40"
                                         style={{
@@ -711,8 +741,8 @@ const DashboardPage = () => {
                                         >
                                             {isSubmitting ? (
                                                 <Motion.div
-                                                    animate={prefersReducedMotion ? undefined : { rotate: 360 }}
-                                                    transition={prefersReducedMotion ? undefined : { duration: 1, repeat: Infinity, ease: "linear" }}
+                                                    animate={shouldReduceFx ? undefined : { rotate: 360 }}
+                                                    transition={shouldReduceFx ? undefined : { duration: 1, repeat: Infinity, ease: "linear" }}
                                                     className="w-5 h-5 border-2 border-amber-600 border-t-transparent rounded-full"
                                                 />
                                             ) : (
@@ -768,18 +798,18 @@ const ACTION_STYLES = {
     },
 };
 
-const ActionTile = ({ icon, label, detail, locked, accent, onClick }) => {
+const ActionTile = React.memo(({ icon, label, detail, locked, accent, onClick, reduceFx }) => {
     const palette = ACTION_STYLES[accent] || ACTION_STYLES.rose;
 
     return (
         <Motion.button
-            whileTap={{ scale: 0.97 }}
+            whileTap={reduceFx ? undefined : { scale: 0.97 }}
             onClick={onClick}
             className={`relative overflow-hidden rounded-[24px] border ${palette.border} bg-gradient-to-br ${palette.bg} p-4 text-left shadow-soft transition min-h-[120px]`}
         >
             {/* Decorative glow */}
-            <div className={`absolute -top-10 -right-8 h-20 w-20 rounded-full blur-2xl ${palette.glow}`} />
-            <div className={`absolute -bottom-6 -left-4 h-12 w-12 rounded-full blur-xl ${palette.glow} opacity-50`} />
+            <div className={`absolute -top-10 -right-8 h-20 w-20 rounded-full ${reduceFx ? 'blur-lg' : 'blur-2xl'} ${palette.glow}`} />
+            <div className={`absolute -bottom-6 -left-4 h-12 w-12 rounded-full ${reduceFx ? 'blur-sm' : 'blur-xl'} ${palette.glow} opacity-50`} />
 
             {/* Lock indicator */}
             {locked && (
@@ -807,6 +837,6 @@ const ActionTile = ({ icon, label, detail, locked, accent, onClick }) => {
             </div>
         </Motion.button>
     );
-};
+});
 
 export default DashboardPage;

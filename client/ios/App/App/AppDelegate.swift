@@ -73,5 +73,11 @@ class PauseBridgeViewController: CAPBridgeViewController {
         guard let scrollView = webView?.scrollView else { return }
         scrollView.bounces = true
         scrollView.alwaysBounceVertical = true
+
+        // Match overscroll color to app background (#FAF7F2)
+        let appBg = UIColor(red: 250/255, green: 247/255, blue: 242/255, alpha: 1)
+        webView?.backgroundColor = appBg
+        webView?.isOpaque = false
+        scrollView.backgroundColor = appBg
     }
 }

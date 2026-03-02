@@ -77,7 +77,7 @@ const ProtectedRoute = ({ children }) => {
     }
 
     if (!isAuthenticated) {
-        return <Navigate to="/welcome" state={{ from: location }} replace />;
+        return <Navigate to={onboardingComplete ? '/signin' : '/welcome'} state={{ from: location }} replace />;
     }
 
     // If authenticated but onboarding not complete, redirect to onboarding
@@ -203,6 +203,10 @@ const AppRoutes = () => {
                 import('./pages/ProfilesPage'),
                 import('./pages/HistoryPage'),
                 import('./pages/AppreciationsPage'),
+                import('./pages/EconomyPage'),
+                import('./pages/ChallengesPage'),
+                import('./pages/InsightsPage'),
+                import('./pages/MemoriesPage'),
                 import('./components/calendar/UpcomingEvents'),
                 import('./components/calendar/EventForm'),
                 import('./components/calendar/EventDetailsModal'),

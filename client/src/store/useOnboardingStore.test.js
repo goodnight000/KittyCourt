@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   getUser: vi.fn(async () => ({ data: { user: null } })),
@@ -16,6 +16,7 @@ vi.mock('../services/supabase', () => ({
 }))
 
 import useOnboardingStore from './useOnboardingStore'
+import { eventBus, EVENTS } from '../lib/eventBus'
 
 describe('useOnboardingStore', () => {
   it('starts with onboarding incomplete', () => {
@@ -61,5 +62,50 @@ describe('useOnboardingStore', () => {
     })
 
     vi.useRealTimers()
+  })
+
+  describe('AUTH_LOGOUT handling', () => {
+    beforeEach(() => {
+      // Initialize event bus listeners
+      useOnboardingStore.getState().init()
+    })
+
+    it('does NOT reset onboardingComplete on AUTH_LOGOUT when it was true', () => {
+      useOnboardingStore.setState({ onboardingComplete: true })
+
+      eventBus.emit(EVENTS.AUTH_LOGOUT, { userId: null, source: 'auth' })
+
+      expect(useOnboardingStore.getState().onboardingComplete).toBe(true)
+    })
+
+    it('resets transient fields on AUTH_LOGOUT', () => {
+      useOnboardingStore.setState({
+        onboardingComplete: true,
+        _authUserId: 'user-1',
+        _authProfile: { id: 'user-1' },
+        onboardingData: { displayName: 'Test' },
+        onboardingStep: 3,
+      })
+
+      eventBus.emit(EVENTS.AUTH_LOGOUT, { userId: null, source: 'auth' })
+
+      const state = useOnboardingStore.getState()
+      expect(state._authUserId).toBeNull()
+      expect(state._authProfile).toBeNull()
+      expect(state.onboardingData).toEqual({})
+      expect(state.onboardingStep).toBe(0)
+    })
+
+    it('AUTH_LOGIN with onboarding_complete:false correctly sets onboardingComplete=false', () => {
+      useOnboardingStore.setState({ onboardingComplete: true })
+
+      eventBus.emit(EVENTS.AUTH_LOGIN, {
+        userId: 'new-user',
+        profile: { id: 'new-user', onboarding_complete: false },
+        source: 'auth',
+      })
+
+      expect(useOnboardingStore.getState().onboardingComplete).toBe(false)
+    })
   })
 })

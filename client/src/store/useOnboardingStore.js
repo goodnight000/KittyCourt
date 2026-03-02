@@ -52,7 +52,12 @@ const useOnboardingStore = create(
           })
 
           const unsubLogout = eventBus.on(EVENTS.AUTH_LOGOUT, () => {
-            set({ ...initialState })
+            set({
+              onboardingStep: 0,
+              onboardingData: {},
+              _authUserId: null,
+              _authProfile: null,
+            })
           })
 
           eventCleanupFns.push(unsubLogin, unsubProfile, unsubLanguage, unsubLogout)

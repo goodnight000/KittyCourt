@@ -15,7 +15,9 @@ import usePartnerStore from '../store/usePartnerStore';
 import { useI18n } from '../i18n';
 import BackButton from '../components/shared/BackButton';
 import StandardButton from '../components/shared/StandardButton';
-import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
+import useUiPerfProfile from '../hooks/useUiPerfProfile';
+import useStagedMount from '../hooks/useStagedMount';
+import { isNativeIOS } from '../utils/platform';
 
 // Loading skeleton component
 const ChallengeSkeleton = () => (
@@ -41,24 +43,29 @@ const ChallengeBackdrop = ({ prefersReducedMotion = false }) => (
 const ChallengesPage = () => {
     const navigate = useNavigate();
     const { t, language } = useI18n();
-    const prefersReducedMotion = usePrefersReducedMotion();
+    const { prefersReducedMotion } = useUiPerfProfile();
+    const shouldReduceFx = prefersReducedMotion;
     const handleBack = () => navigate('/profile', { state: { tab: 'us' } });
-    const { user } = useAuthStore();
-    const { hasPartner } = usePartnerStore();
-    const { level, shouldShowChallenges, fetchLevel } = useLevelStore();
-    const {
-        active,
-        completed,
-        isLoading,
-        error,
-        errorCode,
-        fetchChallenges,
-        skipChallenge,
-        completeChallenge,
-        confirmChallenge,
-        clearError
-    } = useChallengeStore();
+    const user = useAuthStore((state) => state.user);
+    const hasPartner = usePartnerStore((state) => state.hasPartner);
+    const level = useLevelStore((state) => state.level);
+    const shouldShowChallenges = useLevelStore((state) => state.shouldShowChallenges);
+    const fetchLevel = useLevelStore((state) => state.fetchLevel);
+    const active = useChallengeStore((state) => state.active);
+    const completed = useChallengeStore((state) => state.completed);
+    const isLoading = useChallengeStore((state) => state.isLoading);
+    const error = useChallengeStore((state) => state.error);
+    const errorCode = useChallengeStore((state) => state.errorCode);
+    const fetchChallenges = useChallengeStore((state) => state.fetchChallenges);
+    const skipChallenge = useChallengeStore((state) => state.skipChallenge);
+    const completeChallenge = useChallengeStore((state) => state.completeChallenge);
+    const confirmChallenge = useChallengeStore((state) => state.confirmChallenge);
+    const clearError = useChallengeStore((state) => state.clearError);
     const [showCompleted, setShowCompleted] = useState(false);
+    const showChallengeLists = useStagedMount({
+        enabled: isNativeIOS() && !prefersReducedMotion,
+        delay: 230
+    });
     const currentUserId = user?.id || null;
     const challengeStats = useMemo(() => {
         const sumXP = (list) => list.reduce((total, challenge) => total + (challenge.rewardXP || 0), 0);
@@ -119,7 +126,7 @@ const ChallengesPage = () => {
     if (!shouldShowChallenges()) {
         return (
             <div className="relative min-h-screen overflow-hidden pb-6">
-                <ChallengeBackdrop prefersReducedMotion={prefersReducedMotion} />
+                <ChallengeBackdrop prefersReducedMotion={shouldReduceFx} />
                 <div className="relative">
                     <Motion.button
                         whileTap={{ scale: 0.95 }}
@@ -131,7 +138,7 @@ const ChallengesPage = () => {
                     </Motion.button>
 
                     <Motion.div
-                        initial={prefersReducedMotion ? false : { opacity: 0, y: 20 }}
+                        initial={shouldReduceFx ? false : { opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         className="mt-10 glass-card text-center px-6 py-8"
                     >
@@ -159,7 +166,7 @@ const ChallengesPage = () => {
 
     return (
         <div className="relative min-h-screen overflow-hidden pb-6">
-            <ChallengeBackdrop prefersReducedMotion={prefersReducedMotion} />
+            <ChallengeBackdrop prefersReducedMotion={shouldReduceFx} />
             <div className="relative space-y-6">
                 <header className="flex items-start gap-3">
                     <BackButton onClick={handleBack} ariaLabel={t('common.back')} />
@@ -177,13 +184,13 @@ const ChallengesPage = () => {
                 </header>
 
                 <Motion.section
-                    initial={prefersReducedMotion ? false : { opacity: 0, y: 12 }}
+                    initial={shouldReduceFx ? false : { opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="glass-card relative overflow-hidden"
                 >
                     <div className="absolute inset-0 pointer-events-none">
-                        <div className={`absolute -top-10 -right-8 h-20 w-20 rounded-full bg-amber-200/35 ${prefersReducedMotion ? 'blur-xl' : 'blur-2xl'}`} />
-                        <div className={`absolute -bottom-12 -left-10 h-24 w-24 rounded-full bg-rose-200/30 ${prefersReducedMotion ? 'blur-xl' : 'blur-2xl'}`} />
+                        <div className={`absolute -top-10 -right-8 h-20 w-20 rounded-full bg-amber-200/35 ${shouldReduceFx ? 'blur-xl' : 'blur-2xl'}`} />
+                        <div className={`absolute -bottom-12 -left-10 h-24 w-24 rounded-full bg-rose-200/30 ${shouldReduceFx ? 'blur-xl' : 'blur-2xl'}`} />
                     </div>
                     <div className="relative space-y-4">
                         <div className="flex flex-wrap items-center justify-between gap-4">
@@ -270,7 +277,14 @@ const ChallengesPage = () => {
                     </div>
                 )}
 
-                {!isLoading && active.length > 0 && (
+                {!isLoading && !showChallengeLists && (
+                    <div className="space-y-3">
+                        <ChallengeSkeleton />
+                        <ChallengeSkeleton />
+                    </div>
+                )}
+
+                {showChallengeLists && !isLoading && active.length > 0 && (
                     <section className="space-y-3">
                         <div className="flex items-center justify-between gap-3">
                             <div>
@@ -327,10 +341,10 @@ const ChallengesPage = () => {
                     </section>
                 )}
 
-                {!isLoading && completed.length > 0 && (
+                {showChallengeLists && !isLoading && completed.length > 0 && (
                     <section className="glass-card space-y-3">
                         <Motion.button
-                            whileTap={{ scale: 0.98 }}
+                            whileTap={shouldReduceFx ? undefined : { scale: 0.98 }}
                             onClick={() => setShowCompleted(!showCompleted)}
                             className="flex w-full items-center justify-between text-neutral-600"
                         >
@@ -352,10 +366,10 @@ const ChallengesPage = () => {
                         <AnimatePresence initial={false}>
                             {showCompleted && (
                                 <Motion.div
-                                    initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: -6, scaleY: 0.97 }}
-                                    animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: 0, scaleY: 1 }}
-                                    exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: -6, scaleY: 0.97 }}
-                                    transition={{ duration: prefersReducedMotion ? 0.14 : 0.22, ease: 'easeOut' }}
+                                    initial={shouldReduceFx ? { opacity: 0 } : { opacity: 0, y: -6, scaleY: 0.97 }}
+                                    animate={shouldReduceFx ? { opacity: 1 } : { opacity: 1, y: 0, scaleY: 1 }}
+                                    exit={shouldReduceFx ? { opacity: 0 } : { opacity: 0, y: -6, scaleY: 0.97 }}
+                                    transition={{ duration: shouldReduceFx ? 0.14 : 0.22, ease: 'easeOut' }}
                                     className="space-y-3 overflow-hidden origin-top"
                                 >
                                     {completed.map((challenge) => (
@@ -372,7 +386,7 @@ const ChallengesPage = () => {
                     </section>
                 )}
 
-                {!isLoading && !errorMessage && active.length === 0 && (
+                {showChallengeLists && !isLoading && !errorMessage && active.length === 0 && (
                     <Motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}

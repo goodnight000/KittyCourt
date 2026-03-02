@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useI18n } from '../i18n';
-import EmojiIcon from './shared/EmojiIcon';
 import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
 
 /**
@@ -69,42 +68,80 @@ const Heart = ({ className = "" }) => (
     </svg>
 );
 
-// Cute cat face SVG
-const CatFace = ({ className = "" }) => (
-    <svg viewBox="0 0 120 100" className={className} fill="currentColor">
+// Judge Whiskers — orange cat with wig, robe, and gavel
+const JudgeWhiskers = ({ className = "" }) => (
+    <svg viewBox="0 0 140 160" className={className} data-testid="judge-whiskers-svg">
+        {/* Judge's robe (black) */}
+        <path d="M30 105 Q30 95 45 90 L70 88 L95 90 Q110 95 110 105 L115 155 Q115 160 110 160 L30 160 Q25 160 25 155 Z" fill="#1a1a1a" />
+        {/* White V-collar */}
+        <path d="M55 90 L70 115 L85 90" fill="none" stroke="white" strokeWidth="4" strokeLinejoin="round" />
+        {/* White shirt visible in V */}
+        <path d="M57 92 L70 112 L83 92 Z" fill="white" opacity="0.9" />
+
+        {/* Judge's wig (white/grey curls) */}
+        <ellipse cx="70" cy="30" rx="40" ry="22" fill="#e8e0d0" />
+        {/* Wig curls - top */}
+        <circle cx="42" cy="22" r="10" fill="#f0ebe0" />
+        <circle cx="58" cy="16" r="9" fill="#ece7db" />
+        <circle cx="75" cy="14" r="10" fill="#f0ebe0" />
+        <circle cx="92" cy="18" r="9" fill="#ece7db" />
+        <circle cx="100" cy="28" r="8" fill="#f0ebe0" />
+        <circle cx="38" cy="32" r="8" fill="#ece7db" />
+        {/* Wig side curls */}
+        <ellipse cx="32" cy="48" rx="8" ry="12" fill="#e8e0d0" />
+        <ellipse cx="108" cy="48" rx="8" ry="12" fill="#e8e0d0" />
+        <circle cx="30" cy="58" r="7" fill="#f0ebe0" />
+        <circle cx="110" cy="58" r="7" fill="#f0ebe0" />
+
+        {/* Cat head (orange/tan) */}
+        <ellipse cx="70" cy="55" rx="35" ry="30" fill="#e8975d" />
         {/* Ears */}
-        <path d="M15 45 L25 5 L45 35 Z" />
-        <path d="M105 45 L95 5 L75 35 Z" />
+        <path d="M38 35 L42 12 L55 30 Z" fill="#e8975d" />
+        <path d="M102 35 L98 12 L85 30 Z" fill="#e8975d" />
         {/* Inner ears */}
-        <path d="M22 38 L28 12 L40 32 Z" fill="currentColor" opacity="0.4" />
-        <path d="M98 38 L92 12 L80 32 Z" fill="currentColor" opacity="0.4" />
-        {/* Head */}
-        <ellipse cx="60" cy="60" rx="45" ry="38" />
-        {/* Eyes */}
-        <ellipse cx="42" cy="52" rx="8" ry="10" fill="white" />
-        <ellipse cx="78" cy="52" rx="8" ry="10" fill="white" />
-        <ellipse cx="43" cy="54" rx="4" ry="5" fill="#2d2d2d" />
-        <ellipse cx="79" cy="54" rx="4" ry="5" fill="#2d2d2d" />
-        <ellipse cx="44" cy="52" rx="1.5" ry="2" fill="white" />
-        <ellipse cx="80" cy="52" rx="1.5" ry="2" fill="white" />
+        <path d="M42 32 L44 18 L52 30 Z" fill="#f0b088" />
+        <path d="M98 32 L96 18 L88 30 Z" fill="#f0b088" />
+        {/* Lighter face patch */}
+        <ellipse cx="70" cy="62" rx="22" ry="18" fill="#f0b088" />
+
+        {/* Eyes — serious expression */}
+        <ellipse cx="56" cy="50" rx="6" ry="7" fill="white" />
+        <ellipse cx="84" cy="50" rx="6" ry="7" fill="white" />
+        <ellipse cx="57" cy="51" rx="3.5" ry="4.5" fill="#3a2a1a" />
+        <ellipse cx="85" cy="51" rx="3.5" ry="4.5" fill="#3a2a1a" />
+        <ellipse cx="58" cy="49" rx="1.5" ry="2" fill="white" />
+        <ellipse cx="86" cy="49" rx="1.5" ry="2" fill="white" />
+        {/* Slight frown / serious brow lines */}
+        <line x1="49" y1="42" x2="58" y2="43" stroke="#8b5e3c" strokeWidth="2" strokeLinecap="round" />
+        <line x1="91" y1="42" x2="82" y2="43" stroke="#8b5e3c" strokeWidth="2" strokeLinecap="round" />
+
         {/* Nose */}
-        <ellipse cx="60" cy="68" rx="5" ry="4" fill="#f8a5b6" />
+        <ellipse cx="70" cy="60" rx="4" ry="3" fill="#f8a5b6" />
         {/* Mouth */}
-        <path d="M60 72 Q55 78 48 75" fill="none" stroke="#2d2d2d" strokeWidth="2" strokeLinecap="round" />
-        <path d="M60 72 Q65 78 72 75" fill="none" stroke="#2d2d2d" strokeWidth="2" strokeLinecap="round" />
+        <path d="M70 63 Q66 68 60 66" fill="none" stroke="#5a3825" strokeWidth="1.5" strokeLinecap="round" />
+        <path d="M70 63 Q74 68 80 66" fill="none" stroke="#5a3825" strokeWidth="1.5" strokeLinecap="round" />
+
         {/* Whiskers */}
-        <line x1="20" y1="60" x2="38" y2="62" stroke="#2d2d2d" strokeWidth="1.5" strokeLinecap="round" />
-        <line x1="18" y1="68" x2="37" y2="68" stroke="#2d2d2d" strokeWidth="1.5" strokeLinecap="round" />
-        <line x1="82" y1="62" x2="100" y2="60" stroke="#2d2d2d" strokeWidth="1.5" strokeLinecap="round" />
-        <line x1="83" y1="68" x2="102" y2="68" stroke="#2d2d2d" strokeWidth="1.5" strokeLinecap="round" />
+        <line x1="30" y1="55" x2="48" y2="57" stroke="#5a3825" strokeWidth="1.2" strokeLinecap="round" />
+        <line x1="28" y1="62" x2="47" y2="62" stroke="#5a3825" strokeWidth="1.2" strokeLinecap="round" />
+        <line x1="92" y1="57" x2="110" y2="55" stroke="#5a3825" strokeWidth="1.2" strokeLinecap="round" />
+        <line x1="93" y1="62" x2="112" y2="62" stroke="#5a3825" strokeWidth="1.2" strokeLinecap="round" />
+
+        {/* Gavel in right hand */}
+        <g className="judge-gavel">
+            {/* Handle */}
+            <rect x="108" y="120" width="4" height="28" rx="2" fill="#8b6914" transform="rotate(-25 110 134)" />
+            {/* Head */}
+            <rect x="98" y="112" width="20" height="10" rx="3" fill="#6b4f10" transform="rotate(-25 108 117)" />
+        </g>
     </svg>
 );
 
 const FALLBACK_MESSAGES = [
-    { text: 'Warming up the courtroom...', Icon: PawPrint },
-    { text: 'Stretching our whiskers...', Icon: Sparkle },
-    { text: 'Preparing pawsitive vibes...', Icon: Heart },
-    { text: 'Almost ready, meow!', Icon: CatFace },
+    { text: 'Warming up the courtroom...' },
+    { text: 'Stretching our whiskers...' },
+    { text: 'Preparing pawsitive vibes...' },
+    { text: 'Almost ready, meow!' },
 ];
 
 // Animated paw that walks
@@ -190,12 +227,7 @@ const LoadingScreen = ({
     const [messageIndex, setMessageIndex] = useState(0);
     const localizedMessages = t('loadingScreen.messages');
     const messagePool = Array.isArray(localizedMessages) && localizedMessages.length
-        ? localizedMessages.map((msg) => ({
-            ...msg,
-            Icon: (props) => (
-                <EmojiIcon emoji={msg.emoji} className={props.className} />
-            ),
-        }))
+        ? localizedMessages
         : FALLBACK_MESSAGES;
 
     useEffect(() => {
@@ -222,7 +254,7 @@ const LoadingScreen = ({
     };
 
     const currentMessage = message
-        ? { text: message, Icon: PawPrint }
+        ? { text: message }
         : messagePool[messageIndex % messagePool.length];
 
     return (
@@ -284,7 +316,7 @@ const LoadingScreen = ({
 
             {/* Main content */}
             <div className="relative z-10 text-center px-8 flex flex-col items-center">
-                {/* Animated cat face - no box, just the cute face */}
+                {/* Animated Judge Whiskers */}
                 <motion.div
                     animate={prefersReducedMotion ? undefined : {
                         y: [0, -12, 0],
@@ -299,7 +331,8 @@ const LoadingScreen = ({
                 >
                     <motion.div
                         animate={prefersReducedMotion ? undefined : {
-                            scale: [1, 1.05, 1],
+                            scale: [1, 1.03, 1],
+                            rotate: [0, 4, -2, 4, 0],
                         }}
                         transition={prefersReducedMotion ? undefined : {
                             duration: 2,
@@ -307,7 +340,7 @@ const LoadingScreen = ({
                             ease: "easeInOut"
                         }}
                     >
-                        <CatFace className="w-32 h-32 text-amber-700 drop-shadow-lg" />
+                        <JudgeWhiskers className="w-36 h-40 drop-shadow-lg" />
                     </motion.div>
                 </motion.div>
 
@@ -346,16 +379,6 @@ const LoadingScreen = ({
                         <h2 className="text-xl font-bold text-amber-900 tracking-wide">
                             {currentMessage.text}
                         </h2>
-                        <motion.div
-                            animate={prefersReducedMotion ? undefined : {
-                                scale: [1, 1.3, 1],
-                                rotate: [0, 10, -10, 0]
-                            }}
-                            transition={prefersReducedMotion ? undefined : { duration: 2, repeat: Infinity }}
-                            className="flex items-center justify-center"
-                        >
-                            <currentMessage.Icon className="w-7 h-7 text-amber-600/80" />
-                        </motion.div>
                     </motion.div>
                 </AnimatePresence>
 

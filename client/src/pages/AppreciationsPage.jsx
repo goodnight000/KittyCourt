@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion as Motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Heart, Calendar, HeartHandshake } from 'lucide-react';
 import useAppStore from '../store/useAppStore';
@@ -10,16 +10,25 @@ import RequirePartner from '../components/RequirePartner';
 import api from '../services/api';
 import { useI18n } from '../i18n';
 import BackButton from '../components/shared/BackButton';
-import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
+import useUiPerfProfile from '../hooks/useUiPerfProfile';
+import useStagedMount from '../hooks/useStagedMount';
+import { isNativeIOS } from '../utils/platform';
 
 const AppreciationsPage = () => {
     const navigate = useNavigate();
-    const { appreciations, fetchAppreciations } = useAppStore();
-    const { user: authUser } = useAuthStore();
-    const { hasPartner, partner: connectedPartner } = usePartnerStore();
+    const appreciations = useAppStore((state) => state.appreciations);
+    const fetchAppreciations = useAppStore((state) => state.fetchAppreciations);
+    const authUser = useAuthStore((state) => state.user);
+    const hasPartner = usePartnerStore((state) => state.hasPartner);
+    const connectedPartner = usePartnerStore((state) => state.partner);
     const { t, language } = useI18n();
     const [totalAppreciations, setTotalAppreciations] = useState(null);
-    const prefersReducedMotion = usePrefersReducedMotion();
+    const { prefersReducedMotion } = useUiPerfProfile();
+    const shouldReduceFx = prefersReducedMotion;
+    const showAppreciationList = useStagedMount({
+        enabled: isNativeIOS() && !prefersReducedMotion && appreciations.length > 0,
+        delay: 220
+    });
     
     // Get partner info from auth store
     const partnerName = connectedPartner?.display_name || connectedPartner?.name || t('appreciations.partnerFallback');
@@ -114,18 +123,6 @@ const AppreciationsPage = () => {
         });
     };
 
-    const formatFullDate = (dateString) => {
-        const date = new Date(dateString);
-        return date.toLocaleDateString(language, { 
-            weekday: 'short',
-            month: 'short', 
-            day: 'numeric',
-            year: 'numeric',
-            hour: 'numeric',
-            minute: '2-digit'
-        });
-    };
-
     // Group appreciations by date
     const groupByDate = (items) => {
         const groups = {};
@@ -139,6 +136,7 @@ const AppreciationsPage = () => {
 
     const groupedAppreciations = groupByDate(appreciations);
     const dateGroups = Object.keys(groupedAppreciations).sort((a, b) => new Date(b) - new Date(a));
+    const shouldAnimateRows = !shouldReduceFx && appreciations.length <= 16;
 
     const formatGroupDate = (dateString) => {
         const date = new Date(dateString);
@@ -153,7 +151,7 @@ const AppreciationsPage = () => {
 
     return (
         <div className="relative min-h-screen overflow-hidden pb-6">
-            <AppreciationBackdrop />
+            <AppreciationBackdrop reduceFx={shouldReduceFx} />
             <div className="relative space-y-6">
             {/* Header */}
             <div className="flex items-start gap-3">
@@ -170,14 +168,14 @@ const AppreciationsPage = () => {
             </div>
 
             {/* Summary Card */}
-            <motion.div
-                initial={{ opacity: 0, y: 10 }}
+            <Motion.div
+                initial={shouldReduceFx ? false : { opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="glass-card relative overflow-hidden p-5"
             >
                 <div className="absolute inset-0 pointer-events-none">
-                    <div className="absolute -top-10 -right-8 h-24 w-24 rounded-full bg-rose-200/35 blur-2xl" />
-                    <div className="absolute -bottom-12 -left-8 h-28 w-28 rounded-full bg-amber-200/35 blur-3xl" />
+                    <div className={`absolute -top-10 -right-8 h-24 w-24 rounded-full bg-rose-200/35 ${shouldReduceFx ? 'blur-lg' : 'blur-2xl'}`} />
+                    <div className={`absolute -bottom-12 -left-8 h-28 w-28 rounded-full bg-amber-200/35 ${shouldReduceFx ? 'blur-xl' : 'blur-3xl'}`} />
                 </div>
                 <div className="flex items-center justify-between">
                     <div>
@@ -194,34 +192,44 @@ const AppreciationsPage = () => {
                             {t('appreciations.summary.from', { name: partnerName })}
                         </p>
                     </div>
-                    <motion.div
-                        animate={prefersReducedMotion ? undefined : { scale: [1, 1.1, 1] }}
-                        transition={prefersReducedMotion ? undefined : { duration: 2, repeat: Infinity }}
+                    <Motion.div
+                        animate={shouldReduceFx ? undefined : { scale: [1, 1.1, 1] }}
+                        transition={shouldReduceFx ? undefined : { duration: 2, repeat: Infinity }}
                         className="relative"
                     >
                         <div className="absolute -inset-2 rounded-[28px] bg-gradient-to-br from-rose-200/35 via-white/40 to-amber-200/35 blur-xl opacity-70" />
                         <div className="relative h-16 w-16 rounded-[22px] bg-gradient-to-br from-rose-50 via-white to-amber-50 border border-white/80 shadow-soft grid place-items-center">
                             <HeartHandshake className="w-8 h-8 text-rose-500" />
                         </div>
-                    </motion.div>
+                    </Motion.div>
                 </div>
-            </motion.div>
+            </Motion.div>
 
             {/* Appreciations List */}
             <div className="space-y-4">
-                {appreciations.length === 0 ? (
-                    <motion.div
+                {!showAppreciationList && appreciations.length > 0 ? (
+                    <div className="space-y-3">
+                        {[1, 2, 3].map((item) => (
+                            <div key={item} className="glass-card p-4 border border-white/80 animate-pulse">
+                                <div className="h-3 w-28 rounded-full bg-neutral-200/70 mb-2" />
+                                <div className="h-4 w-52 rounded-full bg-neutral-200/70 mb-3" />
+                                <div className="h-16 rounded-2xl bg-neutral-100/80 border border-neutral-200/80" />
+                            </div>
+                        ))}
+                    </div>
+                ) : appreciations.length === 0 ? (
+                    <Motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         className="glass-card p-8 text-center"
                     >
-                        <motion.div
+                        <Motion.div
                             animate={prefersReducedMotion ? undefined : { y: [0, -5, 0] }}
                             transition={prefersReducedMotion ? undefined : { duration: 2, repeat: Infinity }}
                             className="w-20 h-20 bg-gradient-to-br from-rose-100 to-amber-100 rounded-3xl flex items-center justify-center mx-auto mb-4"
                         >
                             <Heart className="w-10 h-10 text-rose-400" />
-                        </motion.div>
+                        </Motion.div>
                         <h3 className="font-bold text-neutral-700 mb-2">{t('appreciations.empty.title')}</h3>
                         <p className="text-neutral-500 text-sm mb-1">
                             {t('appreciations.empty.line1', { name: partnerName })}
@@ -229,15 +237,15 @@ const AppreciationsPage = () => {
                         <p className="text-neutral-500 text-sm">
                             {t('appreciations.empty.line2')}
                         </p>
-                    </motion.div>
+                    </Motion.div>
                 ) : (
                     dateGroups.map((dateKey, groupIndex) => (
                         <div key={dateKey} className="space-y-2">
                             {/* Date Header */}
-                            <motion.div
-                                initial={{ opacity: 0, x: -10 }}
+                            <Motion.div
+                                initial={shouldAnimateRows ? { opacity: 0, x: -10 } : false}
                                 animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: groupIndex * 0.05 }}
+                                transition={shouldAnimateRows ? { delay: Math.min(groupIndex * 0.03, 0.15) } : { duration: 0.1 }}
                                 className="flex items-center gap-2 px-1"
                             >
                                 <Calendar className="w-3.5 h-3.5 text-amber-500" />
@@ -245,20 +253,20 @@ const AppreciationsPage = () => {
                                     {formatGroupDate(dateKey)}
                                 </span>
                                 <div className="flex-1 h-px bg-amber-100/80" />
-                            </motion.div>
+                            </Motion.div>
 
                             {/* Appreciations for this date */}
                             <div className="space-y-2">
                                 {groupedAppreciations[dateKey].map((appreciation, index) => (
-                                    <motion.div
+                                    <Motion.div
                                         key={appreciation.id}
-                                        initial={{ opacity: 0, y: 10 }}
+                                        initial={shouldAnimateRows ? { opacity: 0, y: 10 } : false}
                                         animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: (groupIndex * 0.05) + (index * 0.03) }}
-                                        className="glass-card relative overflow-hidden p-4"
+                                        transition={shouldAnimateRows ? { delay: Math.min((groupIndex * 0.03) + (index * 0.02), 0.2) } : { duration: 0.1 }}
+                                        className="glass-card relative overflow-hidden p-4 perf-content-auto-compact contain-paint"
                                     >
                                         <div className="absolute inset-0 pointer-events-none">
-                                            <div className="absolute -top-8 -right-6 h-16 w-16 rounded-full bg-rose-200/30 blur-2xl" />
+                                            <div className={`absolute -top-8 -right-6 h-16 w-16 rounded-full bg-rose-200/30 ${shouldReduceFx ? 'blur-lg' : 'blur-2xl'}`} />
                                         </div>
                                         <div className="flex items-start gap-3">
                                             {/* Heart Icon */}
@@ -283,7 +291,7 @@ const AppreciationsPage = () => {
                                                 </div>
                                             </div>
                                         </div>
-                                    </motion.div>
+                                    </Motion.div>
                                 ))}
                             </div>
                         </div>
@@ -295,10 +303,10 @@ const AppreciationsPage = () => {
     );
 };
 
-const AppreciationBackdrop = () => (
+const AppreciationBackdrop = ({ reduceFx }) => (
     <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute -top-20 -right-20 h-64 w-64 rounded-full bg-amber-200/30 blur-3xl" />
-        <div className="absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-rose-200/25 blur-3xl" />
+        <div className={`absolute -top-20 -right-20 h-64 w-64 rounded-full bg-amber-200/30 ${reduceFx ? 'blur-xl' : 'blur-3xl'}`} />
+        <div className={`absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-rose-200/25 ${reduceFx ? 'blur-xl' : 'blur-3xl'}`} />
     </div>
 );
 

@@ -1,15 +1,16 @@
 import React, { useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion as Motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import useAppStore from '../store/useAppStore';
-import useAuthStore from '../store/useAuthStore';
 import usePartnerStore from '../store/usePartnerStore';
 import RequirePartner from '../components/RequirePartner';
 import { Scale, ChevronRight, Calendar, AlertTriangle, Zap, Cloud, FileText } from 'lucide-react';
 import BackButton from '../components/shared/BackButton';
 import { useI18n } from '../i18n';
 import { formatDate } from '../utils/helpers';
-import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
+import useUiPerfProfile from '../hooks/useUiPerfProfile';
+import useStagedMount from '../hooks/useStagedMount';
+import { isNativeIOS } from '../utils/platform';
 
 /**
  * Severity level configuration for the colored stripe and icon
@@ -56,10 +57,17 @@ const HORSEMAN_LABELS = {
 
 const HistoryPage = () => {
     const navigate = useNavigate();
-    const { caseHistory, fetchCaseHistory } = useAppStore();
-    const { hasPartner } = usePartnerStore();
+    const caseHistory = useAppStore((state) => state.caseHistory);
+    const fetchCaseHistory = useAppStore((state) => state.fetchCaseHistory);
+    const hasPartner = usePartnerStore((state) => state.hasPartner);
     const { t, language } = useI18n();
-    const prefersReducedMotion = usePrefersReducedMotion();
+    const { prefersReducedMotion } = useUiPerfProfile();
+    const shouldReduceFx = prefersReducedMotion;
+    const showHistoryList = useStagedMount({
+        enabled: isNativeIOS() && !prefersReducedMotion && caseHistory.length > 0,
+        delay: 220
+    });
+    const shouldAnimateCards = !shouldReduceFx && caseHistory.length <= 12;
 
     useEffect(() => {
         if (hasPartner) {
@@ -90,7 +98,7 @@ const HistoryPage = () => {
         if (!value) return null;
         try {
             return typeof value === 'string' ? JSON.parse(value) : value;
-        } catch (_err) {
+        } catch {
             return null;
         }
     };
@@ -105,8 +113,8 @@ const HistoryPage = () => {
         <div className="relative min-h-screen overflow-hidden pb-6">
             {/* Background gradient */}
             <div className="fixed inset-0 pointer-events-none">
-                <div className="absolute -top-20 -right-20 h-64 w-64 rounded-full bg-amber-200/30 blur-3xl" />
-                <div className="absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-rose-200/25 blur-3xl" />
+                <div className={`absolute -top-20 -right-20 h-64 w-64 rounded-full bg-amber-200/30 ${shouldReduceFx ? 'blur-xl' : 'blur-3xl'}`} />
+                <div className={`absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-rose-200/25 ${shouldReduceFx ? 'blur-xl' : 'blur-3xl'}`} />
             </div>
             <div className="relative space-y-6">
             {/* Header */}
@@ -124,28 +132,38 @@ const HistoryPage = () => {
             {/* Cases List */}
             <div className="space-y-3">
                 {caseHistory.length === 0 ? (
-                    <motion.div
+                    <Motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         className="glass-card p-8 text-center"
                     >
-                        <motion.div
+                        <Motion.div
                             animate={prefersReducedMotion ? undefined : { y: [0, -5, 0] }}
                             transition={prefersReducedMotion ? undefined : { duration: 2, repeat: Infinity }}
                             className="w-20 h-20 bg-gradient-to-br from-amber-100 to-rose-100 rounded-3xl flex items-center justify-center mx-auto mb-4"
                         >
                             <Scale className="w-10 h-10 text-amber-600" />
-                        </motion.div>
+                        </Motion.div>
                         <h3 className="font-bold text-neutral-700 mb-2">{t('cases.history.empty.title')}</h3>
                         <p className="text-neutral-500 text-sm mb-4">{t('cases.history.empty.subtitle')}</p>
-                        <motion.button
+                        <Motion.button
                             whileTap={{ scale: 0.98 }}
                             onClick={() => navigate('/courtroom')}
                             className="rounded-2xl border border-amber-200/70 bg-white/90 px-5 py-3 text-sm font-bold text-amber-700 shadow-soft"
                         >
                             {t('cases.history.empty.cta')}
-                        </motion.button>
-                    </motion.div>
+                        </Motion.button>
+                    </Motion.div>
+                ) : !showHistoryList ? (
+                    <div className="space-y-3">
+                        {[1, 2, 3].map((item) => (
+                            <div key={item} className="glass-card p-4 border border-white/80 animate-pulse">
+                                <div className="h-3 w-28 rounded-full bg-neutral-200/70 mb-2" />
+                                <div className="h-4 w-52 rounded-full bg-neutral-200/70 mb-3" />
+                                <div className="h-20 rounded-2xl bg-neutral-100/80 border border-neutral-200/80" />
+                            </div>
+                        ))}
+                    </div>
                 ) : (
                     caseHistory.map((caseItem, index) => {
                         // Get severity config (fallback to friction if not set)
@@ -166,14 +184,14 @@ const HistoryPage = () => {
                             : caseItem.primaryHissTag;
 
                         return (
-                            <motion.button
+                            <Motion.button
                                 key={caseItem.id}
-                                initial={{ opacity: 0, y: 20 }}
+                                initial={shouldAnimateCards ? { opacity: 0, y: 20 } : false}
                                 animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: index * 0.05 }}
+                                transition={shouldAnimateCards ? { delay: Math.min(index * 0.04, 0.24) } : { duration: 0.12 }}
                                 whileTap={{ scale: 0.98 }}
                                 onClick={() => navigate(`/history/${caseItem.id}`)}
-                                className="w-full glass-card relative overflow-hidden text-left p-4 space-y-3"
+                                className="w-full glass-card relative overflow-hidden text-left p-4 space-y-3 perf-content-auto-compact contain-paint"
                             >
                                 <div className="absolute inset-0 pointer-events-none">
                                     <div className="absolute -top-8 -right-6 h-16 w-16 rounded-full bg-amber-200/30 blur-2xl" />
@@ -241,7 +259,7 @@ const HistoryPage = () => {
                                     <span className="px-2 py-0.5 rounded-full bg-court-cream/60 border border-court-tan/30">{t('cases.history.flow.prime')}</span>
                                     <span className="px-2 py-0.5 rounded-full bg-court-cream/60 border border-court-tan/30">{t('cases.history.flow.resolve')}</span>
                                 </div>
-                            </motion.button>
+                            </Motion.button>
                         );
                     })
                 )}

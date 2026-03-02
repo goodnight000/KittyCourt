@@ -68,6 +68,7 @@ const handleSignedOut = (set, get) => {
         session: null,
         profile: null,
         isAuthenticated: false,
+        isDegradedAuth: false,
         hasCheckedAuth: true, // Keep true after signout (auth was checked, user is signed out)
         preferredLanguage: DEFAULT_LANGUAGE,
         isLoading: false
@@ -125,6 +126,7 @@ const handleSignedIn = async (set, get, sessionUser, session) => {
             user: sessionUser,
             session,
             isAuthenticated: true,
+            isDegradedAuth: false,
             hasCheckedAuth: true,
             isLoading: false,
             preferredLanguage: cachedLanguage,
@@ -153,7 +155,8 @@ const handleSignedIn = async (set, get, sessionUser, session) => {
     set({
         user: sessionUser,
         session,
-        isAuthenticated: true
+        isAuthenticated: true,
+        isDegradedAuth: false,
     });
 
     try {
@@ -262,6 +265,7 @@ const useAuthStore = create(
             profile: null,
             isLoading: true,
             isAuthenticated: false,
+            isDegradedAuth: false,
             hasCheckedAuth: false, // Tracks if initial auth check completed (not persisted)
             preferredLanguage: DEFAULT_LANGUAGE,
 
@@ -328,16 +332,24 @@ const useAuthStore = create(
                         // handleSignedIn sets hasCheckedAuth and isLoading atomically
                         await get().handleSupabaseAuthEvent('INITIAL_SESSION', session);
                     } else {
-                        // No session - set all state atomically including hasCheckedAuth
-                        set({
-                            user: null,
-                            session: null,
-                            profile: null,
-                            isAuthenticated: false,
-                            hasCheckedAuth: true,
-                            preferredLanguage: DEFAULT_LANGUAGE,
-                            isLoading: false
-                        });
+                        // No session — check if we have a persisted profile (offline / degraded)
+                        const persistedProfile = get().profile;
+                        if (persistedProfile?.id) {
+                            // Degraded auth: user sees app but network features won't work
+                            set({ isAuthenticated: true, isDegradedAuth: true, hasCheckedAuth: true, isLoading: false });
+                        } else {
+                            // No session and no persisted profile
+                            set({
+                                user: null,
+                                session: null,
+                                profile: null,
+                                isAuthenticated: false,
+                                isDegradedAuth: false,
+                                hasCheckedAuth: true,
+                                preferredLanguage: DEFAULT_LANGUAGE,
+                                isLoading: false
+                            });
+                        }
                     }
                 })().catch((error) => {
                     console.error('[Auth] Initialization error:', error);
@@ -543,6 +555,7 @@ const useAuthStore = create(
                     session: null,
                     profile: null,
                     isAuthenticated: false,
+                    isDegradedAuth: false,
                     hasCheckedAuth: true, // Keep true after signout (auth was checked, user is signed out)
                     preferredLanguage: DEFAULT_LANGUAGE,
                     isLoading: false

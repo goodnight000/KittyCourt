@@ -32,6 +32,7 @@ const MainLayout = () => {
     const { t } = useI18n();
     const { keyboardVisible, keyboardHeight } = useKeyboardAvoidance();
     const { prefersReducedMotion } = useUiPerfProfile();
+    const shouldReduceMotion = prefersReducedMotion;
     const isDockHidden = useUiStore((state) => state.dockHiddenCount > 0);
     const baseBottomPadding = 80;
     const dockVisible = !keyboardVisible && !isDockHidden;
@@ -85,14 +86,14 @@ const MainLayout = () => {
     if (!currentUser) return (
         <div className="min-h-screen flex items-center justify-center px-6">
             <Motion.div
-                initial={{ opacity: 0, scale: prefersReducedMotion ? 1 : 0.9 }}
+                initial={{ opacity: 0, scale: shouldReduceMotion ? 1 : 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={prefersReducedMotion ? { duration: 0.1 } : undefined}
+                transition={shouldReduceMotion ? { duration: 0.1 } : undefined}
                 className="text-center space-y-4"
             >
                 <Motion.div
-                    animate={prefersReducedMotion ? undefined : { rotate: 360 }}
-                    transition={prefersReducedMotion ? undefined : { duration: 2, repeat: Infinity, ease: "linear" }}
+                    animate={shouldReduceMotion ? undefined : { rotate: 360 }}
+                    transition={shouldReduceMotion ? undefined : { duration: 2, repeat: Infinity, ease: "linear" }}
                     className="w-12 h-12 mx-auto rounded-full border-3 border-court-tan border-t-court-gold"
                 />
                 <p className="text-court-brownLight font-medium">{t('common.loadingPause')}</p>
@@ -102,8 +103,7 @@ const MainLayout = () => {
 
     return (
         <div className="min-h-screen min-h-[100dvh] flex flex-col font-sans">
-            {/* Keep dock/page-switch motion intact regardless of global perf profile. */}
-            <MotionConfig reducedMotion="never">
+            <MotionConfig reducedMotion={prefersReducedMotion ? 'always' : 'never'}>
                 {/* Main Scrollable Content - with safe area for Dynamic Island/notch */}
                 <main ref={mainRef} className="flex-1 overflow-y-auto safe-top relative" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
                     <div
@@ -114,10 +114,10 @@ const MainLayout = () => {
                             <Motion.div
                                 key={location.pathname}
                                 className="app-route-surface"
-                                initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 10 }}
+                                initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 10 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: prefersReducedMotion ? 0 : -10 }}
-                                transition={{ duration: prefersReducedMotion ? 0.1 : 0.2, ease: "easeOut" }}
+                                exit={{ opacity: 0, y: shouldReduceMotion ? 0 : -10 }}
+                                transition={{ duration: shouldReduceMotion ? 0.1 : 0.2, ease: "easeOut" }}
                             >
                                 <Outlet />
                             </Motion.div>
@@ -127,30 +127,27 @@ const MainLayout = () => {
 
                 {/* Bottom Tab Bar */}
                 <Motion.nav
-                    initial={{ y: prefersReducedMotion ? 0 : 100 }}
+                    initial={{ y: shouldReduceMotion ? 0 : 100 }}
                     animate={{ y: dockVisible ? 0 : 120, opacity: dockVisible ? 1 : 0 }}
-                    transition={prefersReducedMotion
+                    transition={shouldReduceMotion
                         ? { duration: 0.1 }
                         : { delay: 0.1, type: "spring", stiffness: 300, damping: 30 }}
                     className={clsx(
-                        "fixed bottom-0 left-1/2 -translate-x-1/2 z-40 w-full max-w-lg border-t border-court-tan/30 shadow-soft-lg pb-2 rounded-t-2xl",
-                        prefersReducedMotion
-                            ? "bg-white/95 backdrop-blur-none"
-                            : "bg-white/84 backdrop-blur-sm"
+                        "fixed bottom-0 left-1/2 -translate-x-1/2 z-40 w-full max-w-lg border-t border-court-tan/30 shadow-soft-lg pb-2 rounded-t-2xl bg-white/84 backdrop-blur-sm"
                     )}
                     style={{ pointerEvents: dockVisible ? 'auto' : 'none' }}
                 >
                     <div className="flex items-center justify-around h-18 px-2">
-                        <TabItem to="/" icon={<Home size={26} />} label={t('nav.home')} prefersReducedMotion={prefersReducedMotion} />
+                        <TabItem to="/" icon={<Home size={26} />} label={t('nav.home')} prefersReducedMotion={shouldReduceMotion} />
                         <TabItem
                             to="/courtroom"
                             icon={<Gavel size={26} />}
                             label={t('nav.court')}
                             isAlerting={isCourtAlerting}
-                            prefersReducedMotion={prefersReducedMotion}
+                            prefersReducedMotion={shouldReduceMotion}
                         />
-                        <TabItem to="/calendar" icon={<Calendar size={26} />} label={t('nav.calendar')} prefersReducedMotion={prefersReducedMotion} />
-                        <TabItem to="/profile" icon={<User size={26} />} label={t('nav.profile')} prefersReducedMotion={prefersReducedMotion} />
+                        <TabItem to="/calendar" icon={<Calendar size={26} />} label={t('nav.calendar')} prefersReducedMotion={shouldReduceMotion} />
+                        <TabItem to="/profile" icon={<User size={26} />} label={t('nav.profile')} prefersReducedMotion={shouldReduceMotion} />
                     </div>
                 </Motion.nav>
             </MotionConfig>

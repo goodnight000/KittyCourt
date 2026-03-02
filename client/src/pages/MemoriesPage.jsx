@@ -2,7 +2,7 @@
  * MemoriesPage - Shared memory gallery.
  */
 import React, { useEffect, useMemo, useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion as Motion, AnimatePresence } from 'framer-motion'
 import { ArrowLeft, ImagePlus, Trash2, MessageCircle, Heart, X } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import useAuthStore from '../store/useAuthStore'
@@ -32,7 +32,7 @@ const DeletedMemoryCard = ({ deletedAt, onRestore, isRestoring }) => {
             })}
           </div>
         )}
-        <motion.button
+        <Motion.button
           whileTap={{ scale: 0.96 }}
           onClick={onRestore}
           disabled={isRestoring}
@@ -43,7 +43,7 @@ const DeletedMemoryCard = ({ deletedAt, onRestore, isRestoring }) => {
           ) : (
             t('memories.deleted.restore')
           )}
-        </motion.button>
+        </Motion.button>
       </div>
     </div>
   )
@@ -226,16 +226,16 @@ const MemoriesPage = () => {
                 <div className="absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-rose-200/25 blur-3xl" />
             </div>
         <div className="relative">
-          <motion.button
+          <Motion.button
             whileTap={{ scale: 0.95 }}
             onClick={handleBack}
             className="flex items-center gap-2 text-sm font-semibold text-neutral-600"
           >
             <ArrowLeft className="w-5 h-5" />
             <span>{t('common.back')}</span>
-          </motion.button>
+          </Motion.button>
 
-          <motion.div
+          <Motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="mt-10 glass-card text-center px-6 py-8"
@@ -249,14 +249,14 @@ const MemoriesPage = () => {
             <p className="mt-2 text-sm text-neutral-500">
               {t('memories.locked.subtitle')}
             </p>
-            <motion.button
+            <Motion.button
               whileTap={{ scale: 0.98 }}
               onClick={handleBack}
               className="mt-5 w-full rounded-2xl bg-gradient-to-r from-rose-500 to-amber-500 py-3 text-sm font-bold text-white shadow-soft"
             >
               {t('memories.locked.cta')}
-            </motion.button>
-          </motion.div>
+            </Motion.button>
+          </Motion.div>
         </div>
       </div>
     )
@@ -267,16 +267,16 @@ const MemoriesPage = () => {
       <div className="relative min-h-screen overflow-hidden pb-6">
         <MemoryBackdrop />
         <div className="relative">
-          <motion.button
+          <Motion.button
             whileTap={{ scale: 0.95 }}
             onClick={handleBack}
             className="flex items-center gap-2 text-sm font-semibold text-neutral-600"
           >
             <ArrowLeft className="w-5 h-5" />
             <span>{t('common.back')}</span>
-          </motion.button>
+          </Motion.button>
 
-          <motion.div
+          <Motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="mt-10 glass-card text-center px-6 py-8"
@@ -290,14 +290,14 @@ const MemoriesPage = () => {
             <p className="mt-2 text-sm text-neutral-500">
               {t('memories.unavailable.subtitle')}
             </p>
-            <motion.button
+            <Motion.button
               whileTap={{ scale: 0.98 }}
               onClick={handleBack}
               className="mt-5 w-full rounded-2xl bg-gradient-to-r from-rose-500 to-amber-500 py-3 text-sm font-bold text-white shadow-soft"
             >
               {t('memories.unavailable.cta')}
-            </motion.button>
-          </motion.div>
+            </Motion.button>
+          </Motion.div>
         </div>
       </div>
     )
@@ -326,7 +326,7 @@ const MemoriesPage = () => {
           </StandardButton>
         </header>
 
-        <motion.section
+        <Motion.section
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           className="glass-card relative overflow-hidden"
@@ -359,7 +359,7 @@ const MemoriesPage = () => {
               </div>
             </div>
           </div>
-        </motion.section>
+        </Motion.section>
 
         {translatedError && (
           <div className="rounded-2xl border border-rose-100/80 bg-rose-50/80 p-3 text-sm text-rose-600">
@@ -407,7 +407,7 @@ const MemoriesPage = () => {
         )}
 
         {!isLoading && memories.length === 0 && (
-          <motion.div
+          <Motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             className="glass-card text-center px-6 py-10"
@@ -428,13 +428,13 @@ const MemoriesPage = () => {
             >
               {t('memories.empty.cta')}
             </StandardButton>
-          </motion.div>
+          </Motion.div>
         )}
 
         {!isLoading && memories.length > 0 && (
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
             {memories.map((memory, index) => (
-              <motion.div
+              <Motion.div
                 key={memory.id}
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -444,7 +444,7 @@ const MemoriesPage = () => {
                   memory={memory}
                   onClick={() => setSelectedMemory(memory)}
                 />
-              </motion.div>
+              </Motion.div>
             ))}
           </div>
         )}
@@ -452,17 +452,17 @@ const MemoriesPage = () => {
 
       <AnimatePresence>
         {showUploader && (
-          <motion.div
+          <Motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] flex items-end bg-neutral-900/40 backdrop-blur-sm"
+            className="fixed inset-0 z-[60] flex items-end bg-neutral-900/40 backdrop-blur-sm px-3 pb-[calc(var(--app-safe-bottom)+10px)]"
           >
-            <motion.div
+            <Motion.div
               initial={{ y: 40 }}
               animate={{ y: 0 }}
               exit={{ y: 40 }}
-              className="w-full rounded-t-[32px] border border-white/80 bg-white/95 p-6 shadow-soft-lg"
+              className="mx-auto w-full max-w-lg max-h-[calc(100vh-var(--app-safe-bottom)-12px)] overflow-y-auto rounded-[32px] border border-white/80 bg-white/95 p-6 shadow-soft-lg"
             >
               <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-neutral-200" />
               <div className="flex items-start justify-between gap-3">
@@ -542,24 +542,24 @@ const MemoriesPage = () => {
                   )}
                 </StandardButton>
               </div>
-            </motion.div>
-          </motion.div>
+            </Motion.div>
+          </Motion.div>
         )}
       </AnimatePresence>
 
       <AnimatePresence>
         {selectedMemory && (
-          <motion.div
+          <Motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] flex items-end bg-neutral-900/45 backdrop-blur-sm"
+            className="fixed inset-0 z-[60] flex items-end bg-neutral-900/45 backdrop-blur-sm px-3 pb-[calc(var(--app-safe-bottom)+10px)]"
           >
-            <motion.div
+            <Motion.div
               initial={{ y: 40 }}
               animate={{ y: 0 }}
               exit={{ y: 40 }}
-              className="w-full max-h-[90vh] overflow-y-auto rounded-t-[32px] border border-white/80 bg-white/95 p-6 shadow-soft-lg"
+              className="mx-auto w-full max-w-lg max-h-[calc(100vh-var(--app-safe-bottom)-12px)] overflow-y-auto rounded-[32px] border border-white/80 bg-white/95 p-6 shadow-soft-lg"
             >
               <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-neutral-200" />
               <div className="flex items-start justify-between gap-3">
@@ -604,7 +604,7 @@ const MemoriesPage = () => {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {REACTION_OPTIONS.map((emoji) => (
-                    <motion.button
+                    <Motion.button
                       key={emoji}
                       whileTap={{ scale: 0.9 }}
                       onClick={() => handleReaction(emoji)}
@@ -615,7 +615,7 @@ const MemoriesPage = () => {
                       }`}
                     >
                       <EmojiIcon emoji={emoji} className="w-4 h-4" />
-                    </motion.button>
+                    </Motion.button>
                   ))}
                 </div>
 
@@ -671,7 +671,7 @@ const MemoriesPage = () => {
                     className="flex-1 rounded-2xl border border-white/80 bg-white/80 px-3 py-2 text-sm shadow-inner-soft"
                     placeholder={t('memories.viewer.commentPlaceholder')}
                   />
-                  <motion.button
+                  <Motion.button
                     whileTap={{ scale: 0.95 }}
                     onClick={handleComment}
                     disabled={commentSubmitting || !commentText.trim()}
@@ -682,12 +682,12 @@ const MemoriesPage = () => {
                     ) : (
                       t('memories.viewer.send')
                     )}
-                  </motion.button>
+                  </Motion.button>
                 </div>
               </div>
 
               {selectedMemory.uploadedBy === user?.id && (
-                <motion.button
+                <Motion.button
                   whileTap={{ scale: 0.96 }}
                   onClick={handleDelete}
                   disabled={isDeletingMemory}
@@ -698,10 +698,10 @@ const MemoriesPage = () => {
                   ) : (
                     t('memories.viewer.delete')
                   )}
-                </motion.button>
+                </Motion.button>
               )}
-            </motion.div>
-          </motion.div>
+            </Motion.div>
+          </Motion.div>
         )}
       </AnimatePresence>
     </div>

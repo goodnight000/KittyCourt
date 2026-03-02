@@ -170,7 +170,7 @@ const SignInPage = () => {
                     className="w-20 h-20 mx-auto mb-4 rounded-2xl flex items-center justify-center shadow-lg"
                     style={{ background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' }}
                 >
-                    <Cat className="w-10 h-10 text-white" />
+                    <img src="/assets/logo.png" alt="Pause logo" className="w-full h-full object-contain p-1" />
                 </Motion.div>
                 <h1 className="text-3xl font-bold text-gradient font-display">{t('signIn.brand')}</h1>
                 <p className="text-neutral-500 mt-2">{t('signIn.subtitle')}</p>

@@ -27,14 +27,16 @@ import useCalendarEvents from '../components/calendar/useCalendarEvents';
 import EmojiIcon from '../components/shared/EmojiIcon';
 import api from '../services/api';
 import { useI18n } from '../i18n';
-import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
+import useUiPerfProfile from '../hooks/useUiPerfProfile';
+import useStagedMount from '../hooks/useStagedMount';
 import { getRevenueCatPlanPricing } from '../lib/revenuecatPricing';
+import { isNativeIOS } from '../utils/platform';
 
 const ProfilesPage = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const { t, language } = useI18n();
-    const prefersReducedMotion = usePrefersReducedMotion();
+    const { prefersReducedMotion } = useUiPerfProfile();
     const currentUser = useAppStore((state) => state.currentUser);
     const fetchAppreciations = useAppStore((state) => state.fetchAppreciations);
     const profile = useAuthStore((state) => state.profile);
@@ -72,10 +74,16 @@ const ProfilesPage = () => {
             ? location.state.tab
             : 'me'
     ));
+    const showProfileSecondary = useStagedMount({
+        enabled: isNativeIOS() && !prefersReducedMotion,
+        delay: 240,
+        resetKey: activeTab
+    });
     const [showPaywall, setShowPaywall] = useState(false);
     const [activeChallengeIndex, setActiveChallengeIndex] = useState(0);
     const [userStats, setUserStats] = useState(null);
     const challengeTrackRef = useRef(null);
+    const challengeScrollRafRef = useRef(0);
     const challengeCardWidthRef = useRef(0);
     const latestInsight = insights?.[0] || null;
     const showChallenges = shouldShowChallenges();
@@ -186,22 +194,32 @@ const ProfilesPage = () => {
         }
     }, [activeChallengeCount]);
 
+    useEffect(() => () => {
+        if (challengeScrollRafRef.current) {
+            cancelAnimationFrame(challengeScrollRafRef.current);
+        }
+    }, []);
+
     const handleChallengeScroll = () => {
-        if (!challengeTrackRef.current || activeChallengeCount === 0) return;
-        const container = challengeTrackRef.current;
-        if (!challengeCardWidthRef.current) {
-            const firstCard = container.querySelector('[data-challenge-card]');
-            if (firstCard) {
-                challengeCardWidthRef.current = firstCard.getBoundingClientRect().width;
+        if (!challengeTrackRef.current || activeChallengeCount === 0 || challengeScrollRafRef.current) return;
+        challengeScrollRafRef.current = requestAnimationFrame(() => {
+            challengeScrollRafRef.current = 0;
+            const container = challengeTrackRef.current;
+            if (!container) return;
+            if (!challengeCardWidthRef.current) {
+                const firstCard = container.querySelector('[data-challenge-card]');
+                if (firstCard) {
+                    challengeCardWidthRef.current = firstCard.getBoundingClientRect().width;
+                }
             }
-        }
-        const cardWidth = challengeCardWidthRef.current || 240;
-        const gap = 12;
-        const index = Math.round(container.scrollLeft / (cardWidth + gap));
-        const clampedIndex = Math.min(Math.max(index, 0), activeChallengeCount - 1);
-        if (clampedIndex !== clampedActiveChallengeIndex) {
-            setActiveChallengeIndex(clampedIndex);
-        }
+            const cardWidth = challengeCardWidthRef.current || 240;
+            const gap = 12;
+            const index = Math.round(container.scrollLeft / (cardWidth + gap));
+            const clampedIndex = Math.min(Math.max(index, 0), activeChallengeCount - 1);
+            if (clampedIndex !== clampedActiveChallengeIndex) {
+                setActiveChallengeIndex(clampedIndex);
+            }
+        });
     };
 
 
@@ -324,122 +342,137 @@ const ProfilesPage = () => {
                                 questionsAnswered={userStats?.questions_completed ?? questionsAnswered}
                             />
 
-                            {/* Subscription Card */}
-                            <Motion.div
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.28 }}
-                                className={`glass-card relative overflow-hidden p-5 ${isGold
-                                    ? 'border border-amber-200/70'
-                                    : 'border border-white/80'
-                                    }`}
-                            >
-                                <div className="absolute inset-0 pointer-events-none">
-                                    <div className="absolute -top-8 -right-6 h-20 w-20 rounded-full bg-amber-200/35 blur-2xl" />
-                                    <div className="absolute -bottom-10 -left-8 h-24 w-24 rounded-full bg-rose-200/30 blur-2xl" />
-                                </div>
-                                <div className="relative flex items-center gap-3 mb-4">
-                                    <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${isGold
-                                        ? 'bg-gradient-to-br from-[#C9A227] to-[#8B7019]'
-                                        : 'bg-gradient-to-br from-neutral-300 to-neutral-400'
-                                        }`}>
-                                        <Crown className="w-6 h-6 text-white" />
-                                    </div>
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-2">
-                                            <h3 className="font-display font-bold text-neutral-800">
-                                                {isGold ? t('profilePage.subscription.goldPlan') : t('profilePage.subscription.freePlan')}
-                                            </h3>
-                                            {isGold && <Sparkles className="w-4 h-4 text-amber-500" />}
-                                        </div>
-                                        <p className="text-xs text-neutral-500">
-                                            {isGold ? t('profilePage.subscription.goldSubtitle') : t('profilePage.subscription.freeSubtitle')}
-                                        </p>
-                                    </div>
-                                </div>
-
-                                {/* Usage Stats */}
-                                <div className="space-y-2 mb-4">
-                                    <div className="flex items-center justify-between text-sm">
-                                        <span className="flex items-center gap-2 text-neutral-600">
-                                            <Scale className="w-4 h-4 text-amber-600" />
-                                            {t('profilePage.subscription.judgeMochi')}
-                                        </span>
-                                        <span className="font-medium text-neutral-700">{getUsageDisplay('classic', t)}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between text-sm">
-                                        <span className="flex items-center gap-2 text-neutral-600">
-                                            <Zap className="w-4 h-4 text-amber-600" />
-                                            {t('profilePage.subscription.judgeDash')}
-                                        </span>
-                                        <span className="font-medium text-neutral-700">{getUsageDisplay('swift', t)}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between text-sm">
-                                        <span className="flex items-center gap-2 text-neutral-600">
-                                            <Gavel className="w-4 h-4 text-amber-600" />
-                                            {t('profilePage.subscription.judgeWhiskers')}
-                                        </span>
-                                        <span className={`font-medium ${isGold ? 'text-neutral-700' : 'text-neutral-500'}`}>
-                                            {isGold ? getUsageDisplay('wise', t) : t('profilePage.subscription.goldOnly')}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center justify-between text-sm">
-                                        <span className="flex items-center gap-2 text-neutral-600">
-                                            <Wand2 className="w-4 h-4 text-amber-600" />
-                                            {t('profilePage.subscription.helpMePlan')}
-                                        </span>
-                                        <span className={`font-medium ${isGold ? 'text-neutral-700' : 'text-neutral-500'}`}>
-                                            {isGold ? t('profilePage.subscription.unlimited') : t('profilePage.subscription.goldOnly')}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                {!isGold && (
-                                    <Motion.button
-                                        whileTap={{ scale: 0.98 }}
-                                        onClick={() => setShowPaywall(true)}
-                                        className="relative w-full overflow-hidden rounded-3xl border border-amber-200/70 bg-white/85 px-4 py-3 text-left shadow-soft"
+                            {showProfileSecondary ? (
+                                <>
+                                    {/* Subscription Card */}
+                                    <Motion.div
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: 0.28 }}
+                                        className={`glass-card relative overflow-hidden p-5 ${isGold
+                                            ? 'border border-amber-200/70'
+                                            : 'border border-white/80'
+                                            }`}
                                     >
-                                        <div className="absolute inset-x-6 top-0 h-1 bg-gradient-to-r from-transparent via-amber-300/70 to-transparent" />
-                                        <div className="absolute -top-6 -right-4 h-16 w-16 rounded-full bg-amber-200/35 blur-2xl" />
-                                        <div className="relative flex items-center gap-3">
-                                            <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-amber-200/70 bg-amber-100/70">
-                                                <Crown className="w-5 h-5 text-amber-700" />
+                                        <div className="absolute inset-0 pointer-events-none">
+                                            <div className="absolute -top-8 -right-6 h-20 w-20 rounded-full bg-amber-200/35 blur-2xl" />
+                                            <div className="absolute -bottom-10 -left-8 h-24 w-24 rounded-full bg-rose-200/30 blur-2xl" />
+                                        </div>
+                                        <div className="relative flex items-center gap-3 mb-4">
+                                            <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${isGold
+                                                ? 'bg-gradient-to-br from-[#C9A227] to-[#8B7019]'
+                                                : 'bg-gradient-to-br from-neutral-300 to-neutral-400'
+                                                }`}>
+                                                <Crown className="w-6 h-6 text-white" />
                                             </div>
                                             <div className="flex-1">
-                                                <div className="text-[10px] font-semibold uppercase tracking-[0.3em] text-amber-500">
-                                                    {t('profilePage.subscription.upgradeKicker')}
+                                                <div className="flex items-center gap-2">
+                                                    <h3 className="font-display font-bold text-neutral-800">
+                                                        {isGold ? t('profilePage.subscription.goldPlan') : t('profilePage.subscription.freePlan')}
+                                                    </h3>
+                                                    {isGold && <Sparkles className="w-4 h-4 text-amber-500" />}
                                                 </div>
-                                                <div className="text-sm font-bold text-neutral-800">{t('profilePage.subscription.upgradeTitle')}</div>
-                                                <div className="text-xs text-neutral-500">{t('profilePage.subscription.upgradeSubtitle')}</div>
-                                            </div>
-                                            <div className="flex flex-col items-end gap-1">
-                                                <div className="rounded-full border border-amber-200/70 bg-amber-100/70 px-3 py-1 text-xs font-bold text-amber-700">
-                                                    {upgradePriceLabel}
-                                                </div>
-                                                <div className="text-[10px] text-neutral-500">{t('profilePage.subscription.ctaHint')}</div>
+                                                <p className="text-xs text-neutral-500">
+                                                    {isGold ? t('profilePage.subscription.goldSubtitle') : t('profilePage.subscription.freeSubtitle')}
+                                                </p>
                                             </div>
                                         </div>
-                                    </Motion.button>
-                                )}
 
-                                {isGold && (
-                                    <p className="text-center text-xs text-neutral-500">
-                                        {t('profilePage.subscription.thanks')}
-                                    </p>
-                                )}
-                            </Motion.div>
+                                        {/* Usage Stats */}
+                                        <div className="space-y-2 mb-4">
+                                            <div className="flex items-center justify-between text-sm">
+                                                <span className="flex items-center gap-2 text-neutral-600">
+                                                    <Scale className="w-4 h-4 text-amber-600" />
+                                                    {t('profilePage.subscription.judgeMochi')}
+                                                </span>
+                                                <span className="font-medium text-neutral-700">{getUsageDisplay('classic', t)}</span>
+                                            </div>
+                                            <div className="flex items-center justify-between text-sm">
+                                                <span className="flex items-center gap-2 text-neutral-600">
+                                                    <Zap className="w-4 h-4 text-amber-600" />
+                                                    {t('profilePage.subscription.judgeDash')}
+                                                </span>
+                                                <span className="font-medium text-neutral-700">{getUsageDisplay('swift', t)}</span>
+                                            </div>
+                                            <div className="flex items-center justify-between text-sm">
+                                                <span className="flex items-center gap-2 text-neutral-600">
+                                                    <Gavel className="w-4 h-4 text-amber-600" />
+                                                    {t('profilePage.subscription.judgeWhiskers')}
+                                                </span>
+                                                <span className={`font-medium ${isGold ? 'text-neutral-700' : 'text-neutral-500'}`}>
+                                                    {isGold ? getUsageDisplay('wise', t) : t('profilePage.subscription.goldOnly')}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center justify-between text-sm">
+                                                <span className="flex items-center gap-2 text-neutral-600">
+                                                    <Wand2 className="w-4 h-4 text-amber-600" />
+                                                    {t('profilePage.subscription.helpMePlan')}
+                                                </span>
+                                                <span className={`font-medium ${isGold ? 'text-neutral-700' : 'text-neutral-500'}`}>
+                                                    {isGold ? t('profilePage.subscription.unlimited') : t('profilePage.subscription.goldOnly')}
+                                                </span>
+                                            </div>
+                                        </div>
 
-                            {/* Partner Connection */}
-                            {!hasPartner && disconnectStatus?.status === 'disconnected' && (
-                                <DisconnectNotice disconnectStatus={disconnectStatus} />
+                                        {!isGold && (
+                                            <Motion.button
+                                                whileTap={{ scale: 0.98 }}
+                                                onClick={() => setShowPaywall(true)}
+                                                className="relative w-full overflow-hidden rounded-3xl border border-amber-200/70 bg-white/85 px-4 py-3 text-left shadow-soft"
+                                            >
+                                                <div className="absolute inset-x-6 top-0 h-1 bg-gradient-to-r from-transparent via-amber-300/70 to-transparent" />
+                                                <div className="absolute -top-6 -right-4 h-16 w-16 rounded-full bg-amber-200/35 blur-2xl" />
+                                                <div className="relative flex items-center gap-3">
+                                                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-amber-200/70 bg-amber-100/70">
+                                                        <Crown className="w-5 h-5 text-amber-700" />
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <div className="text-[10px] font-semibold uppercase tracking-[0.3em] text-amber-500">
+                                                            {t('profilePage.subscription.upgradeKicker')}
+                                                        </div>
+                                                        <div className="text-sm font-bold text-neutral-800">{t('profilePage.subscription.upgradeTitle')}</div>
+                                                        <div className="text-xs text-neutral-500">{t('profilePage.subscription.upgradeSubtitle')}</div>
+                                                    </div>
+                                                    <div className="flex flex-col items-end gap-1">
+                                                        <div className="rounded-full border border-amber-200/70 bg-amber-100/70 px-3 py-1 text-xs font-bold text-amber-700">
+                                                            {upgradePriceLabel}
+                                                        </div>
+                                                        <div className="text-[10px] text-neutral-500">{t('profilePage.subscription.ctaHint')}</div>
+                                                    </div>
+                                                </div>
+                                            </Motion.button>
+                                        )}
+
+                                        {isGold && (
+                                            <p className="text-center text-xs text-neutral-500">
+                                                {t('profilePage.subscription.thanks')}
+                                            </p>
+                                        )}
+                                    </Motion.div>
+
+                                    {/* Partner Connection */}
+                                    {!hasPartner && disconnectStatus?.status === 'disconnected' && (
+                                        <DisconnectNotice disconnectStatus={disconnectStatus} />
+                                    )}
+                                    <PartnerConnection
+                                        hasPartner={hasPartner}
+                                        profile={profile}
+                                        partner={connectedPartner}
+                                        loveLanguages={loveLanguages}
+                                    />
+                                </>
+                            ) : (
+                                <div className="space-y-3">
+                                    <div className="glass-card border border-white/80 p-5 animate-pulse">
+                                        <div className="h-4 w-40 rounded-full bg-neutral-200/70 mb-3" />
+                                        <div className="h-20 rounded-2xl bg-neutral-100/80 border border-neutral-200/80" />
+                                    </div>
+                                    <div className="glass-card border border-white/80 p-5 animate-pulse">
+                                        <div className="h-4 w-32 rounded-full bg-neutral-200/70 mb-3" />
+                                        <div className="h-16 rounded-2xl bg-neutral-100/80 border border-neutral-200/80" />
+                                    </div>
+                                </div>
                             )}
-                            <PartnerConnection
-                                hasPartner={hasPartner}
-                                profile={profile}
-                                partner={connectedPartner}
-                                loveLanguages={loveLanguages}
-                            />
 
                         </Motion.div>
                     ) : (
@@ -511,88 +544,90 @@ const ProfilesPage = () => {
                                 />
                             )}
 
-                            {/* Memories Preview */}
-                            <div className="glass-card p-4 space-y-4 relative overflow-hidden border border-rose-200/70">
-                                <div className="absolute inset-0 pointer-events-none">
-                                    <div className="absolute -top-10 -right-8 h-28 w-28 rounded-full bg-rose-200/45 blur-2xl" />
-                                    <div className="absolute -bottom-12 -left-8 h-32 w-32 rounded-full bg-amber-200/35 blur-2xl" />
-                                    <div
-                                        className="absolute inset-0 opacity-30"
-                                        style={{ backgroundImage: 'linear-gradient(140deg, rgba(255,255,255,0.7) 0%, transparent 50%)' }}
-                                    />
-                                </div>
-                                <div className="relative space-y-4">
-                                    <div className="flex items-start justify-between gap-3">
-                                        <div className="flex items-center gap-3">
-                                            <div className="h-10 w-10 rounded-2xl bg-rose-100/80 border border-rose-200/60 flex items-center justify-center">
-                                                <ImagePlus className="w-4 h-4 text-rose-600" />
-                                            </div>
-                                            <div>
-                                                <h3 className="font-display font-bold text-neutral-800">{t('profilePage.memories.title')}</h3>
-                                                <p className="text-xs text-neutral-500">{t('profilePage.memories.subtitle')}</p>
-                                            </div>
+                            {showProfileSecondary ? (
+                                <>
+                                    {/* Memories Preview */}
+                                    <div className="glass-card p-4 space-y-4 relative overflow-hidden border border-rose-200/70">
+                                        <div className="absolute inset-0 pointer-events-none">
+                                            <div className="absolute -top-10 -right-8 h-28 w-28 rounded-full bg-rose-200/45 blur-2xl" />
+                                            <div className="absolute -bottom-12 -left-8 h-32 w-32 rounded-full bg-amber-200/35 blur-2xl" />
+                                            <div
+                                                className="absolute inset-0 opacity-30"
+                                                style={{ backgroundImage: 'linear-gradient(140deg, rgba(255,255,255,0.7) 0%, transparent 50%)' }}
+                                            />
                                         </div>
-                                        <Motion.button
-                                            whileTap={{ scale: 0.96 }}
-                                            onClick={() => navigate('/memories')}
-                                            className={`text-xs font-bold text-rose-600 rounded-full border border-rose-200/70 bg-rose-50/70 px-3 py-1 ${memoriesAvailable ? '' : 'opacity-60 cursor-not-allowed'}`}
-                                            disabled={!memoriesAvailable}
-                                        >
-                                            {t('profilePage.memories.viewAll')}
-                                        </Motion.button>
-                                    </div>
-
-                                    {!memoriesAvailable ? (
-                                        <div className="rounded-2xl border border-dashed border-rose-200/70 bg-rose-50/70 px-3 py-3 text-xs text-rose-600">
-                                            {t('profilePage.memories.unavailable')}
-                                        </div>
-                                    ) : (
-                                        <>
-                                            {deletedMemories?.length > 0 && (
-                                                <div className="text-xs text-rose-600 bg-rose-50 border border-rose-100 rounded-2xl px-3 py-2">
-                                                    {deletedMemories.length === 1
-                                                        ? t('profilePage.memories.restoreOne', { count: deletedMemories.length })
-                                                        : t('profilePage.memories.restoreOther', { count: deletedMemories.length })}
+                                        <div className="relative space-y-4">
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="h-10 w-10 rounded-2xl bg-rose-100/80 border border-rose-200/60 flex items-center justify-center">
+                                                        <ImagePlus className="w-4 h-4 text-rose-600" />
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="font-display font-bold text-neutral-800">{t('profilePage.memories.title')}</h3>
+                                                        <p className="text-xs text-neutral-500">{t('profilePage.memories.subtitle')}</p>
+                                                    </div>
                                                 </div>
-                                            )}
-
-                                            {memories.length === 0 ? (
                                                 <Motion.button
-                                                    whileTap={{ scale: 0.98 }}
+                                                    whileTap={{ scale: 0.96 }}
                                                     onClick={() => navigate('/memories')}
-                                                    className="w-full py-3 rounded-2xl border border-rose-200/70 bg-white/80 text-sm font-semibold text-rose-600"
+                                                    className={`text-xs font-bold text-rose-600 rounded-full border border-rose-200/70 bg-rose-50/70 px-3 py-1 ${memoriesAvailable ? '' : 'opacity-60 cursor-not-allowed'}`}
+                                                    disabled={!memoriesAvailable}
                                                 >
-                                                    {t('profilePage.memories.emptyCta')}
+                                                    {t('profilePage.memories.viewAll')}
                                                 </Motion.button>
-                                            ) : (
-                                                <div className="grid grid-cols-2 gap-3">
-                                                    {memories.slice(0, 4).map((memory) => (
-                                                        <MemoryCard
-                                                            key={memory.id}
-                                                            memory={memory}
-                                                            showMeta={false}
-                                                            onClick={() => navigate('/memories')}
-                                                        />
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </>
-                                    )}
-                                </div>
-                            </div>
+                                            </div>
 
-                            {/* Challenges Preview */}
-                            {isXPEnabled && (
-                                <div className="glass-card p-4 space-y-4 relative overflow-hidden border border-amber-200/70">
-                                    <div className="absolute inset-0 pointer-events-none">
-                                        <div className="absolute -top-10 -right-8 h-28 w-28 rounded-full bg-amber-200/40 blur-2xl" />
-                                        <div className="absolute -bottom-12 -left-8 h-32 w-32 rounded-full bg-rose-200/30 blur-2xl" />
-                                        <div
-                                            className="absolute inset-0 opacity-30"
-                                            style={{ backgroundImage: 'linear-gradient(130deg, rgba(255,255,255,0.7) 0%, transparent 55%)' }}
-                                        />
+                                            {!memoriesAvailable ? (
+                                                <div className="rounded-2xl border border-dashed border-rose-200/70 bg-rose-50/70 px-3 py-3 text-xs text-rose-600">
+                                                    {t('profilePage.memories.unavailable')}
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    {deletedMemories?.length > 0 && (
+                                                        <div className="text-xs text-rose-600 bg-rose-50 border border-rose-100 rounded-2xl px-3 py-2">
+                                                            {deletedMemories.length === 1
+                                                                ? t('profilePage.memories.restoreOne', { count: deletedMemories.length })
+                                                                : t('profilePage.memories.restoreOther', { count: deletedMemories.length })}
+                                                        </div>
+                                                    )}
+
+                                                    {memories.length === 0 ? (
+                                                        <Motion.button
+                                                            whileTap={{ scale: 0.98 }}
+                                                            onClick={() => navigate('/memories')}
+                                                            className="w-full py-3 rounded-2xl border border-rose-200/70 bg-white/80 text-sm font-semibold text-rose-600"
+                                                        >
+                                                            {t('profilePage.memories.emptyCta')}
+                                                        </Motion.button>
+                                                    ) : (
+                                                        <div className="grid grid-cols-2 gap-3">
+                                                            {memories.slice(0, 4).map((memory) => (
+                                                                <MemoryCard
+                                                                    key={memory.id}
+                                                                    memory={memory}
+                                                                    showMeta={false}
+                                                                    onClick={() => navigate('/memories')}
+                                                                />
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </>
+                                            )}
+                                        </div>
                                     </div>
-                                    <div className="relative space-y-4">
+
+                                    {/* Challenges Preview */}
+                                    {isXPEnabled && (
+                                        <div className="glass-card p-4 space-y-4 relative overflow-hidden border border-amber-200/70">
+                                            <div className="absolute inset-0 pointer-events-none">
+                                                <div className="absolute -top-10 -right-8 h-28 w-28 rounded-full bg-amber-200/40 blur-2xl" />
+                                                <div className="absolute -bottom-12 -left-8 h-32 w-32 rounded-full bg-rose-200/30 blur-2xl" />
+                                                <div
+                                                    className="absolute inset-0 opacity-30"
+                                                    style={{ backgroundImage: 'linear-gradient(130deg, rgba(255,255,255,0.7) 0%, transparent 55%)' }}
+                                                />
+                                            </div>
+                                            <div className="relative space-y-4">
                                         <div className="flex items-start justify-between gap-3">
                                             <div className="flex items-center gap-3">
                                                 <div className="h-10 w-10 rounded-2xl bg-amber-100/80 border border-amber-200/60 flex items-center justify-center">
@@ -768,13 +803,13 @@ const ProfilesPage = () => {
                                                 </div>
                                             </div>
                                         )}
-                                    </div>
-                                </div>
-                            )}
+                                            </div>
+                                        </div>
+                                    )}
 
-                            {/* AI Insights Preview */}
-                            {isXPEnabled && (
-                                <div className="glass-card p-4 space-y-4 relative overflow-hidden border border-sky-200/70">
+                                    {/* AI Insights Preview */}
+                                    {isXPEnabled && (
+                                        <div className="glass-card p-4 space-y-4 relative overflow-hidden border border-sky-200/70">
                                     <div className="absolute inset-0 pointer-events-none">
                                         <div className="absolute -top-10 -right-8 h-28 w-28 rounded-full bg-sky-200/35 blur-2xl" />
                                         <div className="absolute -bottom-12 -left-8 h-32 w-32 rounded-full bg-teal-200/30 blur-2xl" />
@@ -863,22 +898,33 @@ const ProfilesPage = () => {
                                                 )}
                                             </div>
                                         )}
-                                    </div>
+                                        </div>
+                                        </div>
+                                    )}
+
+                                    {/* Milestones */}
+                                    <MilestonesSection
+                                        stats={{
+                                            totalCases: userStats?.cases_resolved ?? totalCases,
+                                            totalAppreciations,
+                                            questionsAnswered: userStats?.questions_completed ?? questionsAnswered,
+                                            partnerQuestionsAnswered,
+                                            memoriesCount: memories?.length || 0,
+                                            challengesCompleted: completedChallenges?.length || 0,
+                                            calendarEventsCount: userCreatedCalendarEvents?.length || 0,
+                                        }}
+                                    />
+                                </>
+                            ) : (
+                                <div className="space-y-3">
+                                    {[1, 2, 3].map((item) => (
+                                        <div key={item} className="glass-card border border-white/80 p-4 animate-pulse">
+                                            <div className="h-3 w-36 rounded-full bg-neutral-200/70 mb-3" />
+                                            <div className="h-20 rounded-2xl bg-neutral-100/80 border border-neutral-200/80" />
+                                        </div>
+                                    ))}
                                 </div>
                             )}
-
-                            {/* Milestones */}
-                            <MilestonesSection
-                                stats={{
-                                    totalCases: userStats?.cases_resolved ?? totalCases,
-                                    totalAppreciations,
-                                    questionsAnswered: userStats?.questions_completed ?? questionsAnswered,
-                                    partnerQuestionsAnswered,
-                                    memoriesCount: memories?.length || 0,
-                                    challengesCompleted: completedChallenges?.length || 0,
-                                    calendarEventsCount: userCreatedCalendarEvents?.length || 0,
-                                }}
-                            />
                         </Motion.div>
                     )}
                 </AnimatePresence>

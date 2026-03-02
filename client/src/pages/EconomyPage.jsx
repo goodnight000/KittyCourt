@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { Bell, Check, CheckCircle2, Edit3, Plus, ShoppingBag, Star, Trash2, X } from 'lucide-react';
 import useAppStore from '../store/useAppStore';
 import useAuthStore from '../store/useAuthStore';
@@ -11,7 +11,9 @@ import { useI18n } from '../i18n';
 import BackButton from '../components/shared/BackButton';
 import StandardButton from '../components/shared/StandardButton';
 import EmojiIcon from '../components/shared/EmojiIcon';
-import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
+import useUiPerfProfile from '../hooks/useUiPerfProfile';
+import useStagedMount from '../hooks/useStagedMount';
+import { isNativeIOS } from '../utils/platform';
 
 const getDefaultRewards = (t) => ([
     { id: 1, title: t('economy.defaults.footMassage.title'), subtitle: t('economy.defaults.footMassage.subtitle'), cost: 50, icon: "🦶", color: "pink" },
@@ -43,15 +45,19 @@ const storeRewards = (userId, rewards) => {
 export default function EconomyPage() {
     const navigate = useNavigate();
     const { t, language } = useI18n();
-    const prefersReducedMotion = usePrefersReducedMotion();
-    const { currentUser, redeemCoupon } = useAppStore();
-    const { user: authUser, profile } = useAuthStore();
-    const { hasPartner, partner: connectedPartner } = usePartnerStore();
+    const { prefersReducedMotion } = useUiPerfProfile();
+    const shouldReduceFx = prefersReducedMotion;
+    const deferHeavyUi = isNativeIOS() && !prefersReducedMotion;
+    const showMarketSections = useStagedMount({ enabled: deferHeavyUi, delay: 250 });
+    const currentUser = useAppStore((state) => state.currentUser);
+    const redeemCoupon = useAppStore((state) => state.redeemCoupon);
+    const authUser = useAuthStore((state) => state.user);
+    const hasPartner = usePartnerStore((state) => state.hasPartner);
+    const connectedPartner = usePartnerStore((state) => state.partner);
     
     // Use auth store for user/partner info
     const myId = authUser?.id || currentUser?.id;
     const partnerId = connectedPartner?.id;
-    const myDisplayName = profile?.display_name || profile?.name || t('common.you');
     const partnerDisplayName = connectedPartner?.display_name || connectedPartner?.name || t('common.yourPartner');
     const myKibbleBalance = currentUser?.kibbleBalance || 0;
 
@@ -67,11 +73,19 @@ export default function EconomyPage() {
     const [myRewards, setMyRewards] = useState([]);
     const [pendingRedemptions, setPendingRedemptions] = useState([]);
     const [fulfillingId, setFulfillingId] = useState(null);
+    const shouldAnimatePending = !shouldReduceFx && pendingRedemptions.length <= 8;
+    const shouldAnimateRewardCards = !shouldReduceFx && partnerRewards.length <= 12;
+    const shouldAnimateMyRewards = !shouldReduceFx && myRewards.length <= 14;
 
     // Load rewards and pending redemptions
     useEffect(() => {
-        if (partnerId) setPartnerRewards(getStoredRewards(partnerId, defaultRewards));
-        if (myId) setMyRewards(getStoredRewards(myId, defaultRewards));
+        let frameId = null;
+        if (typeof window !== 'undefined') {
+            frameId = window.requestAnimationFrame(() => {
+                if (partnerId) setPartnerRewards(getStoredRewards(partnerId, defaultRewards));
+                if (myId) setMyRewards(getStoredRewards(myId, defaultRewards));
+            });
+        }
         
         // Load pending redemptions (rewards partner redeemed from you)
         const loadPendingRedemptions = async () => {
@@ -96,6 +110,12 @@ export default function EconomyPage() {
             }
         };
         loadPendingRedemptions();
+
+        return () => {
+            if (frameId !== null && typeof window !== 'undefined') {
+                window.cancelAnimationFrame(frameId);
+            }
+        };
     }, [defaultRewards, myId, partnerId]);
 
     // Require partner for economy/shop
@@ -178,7 +198,7 @@ export default function EconomyPage() {
 
     return (
         <div className="relative min-h-screen overflow-hidden pb-6">
-            <MarketBackdrop />
+            <MarketBackdrop reduceFx={shouldReduceFx} />
             <div className="relative space-y-6">
                 <header className="flex items-center gap-3">
                     <BackButton onClick={() => navigate(-1)} ariaLabel={t('common.back')} />
@@ -192,7 +212,7 @@ export default function EconomyPage() {
                 </header>
                 <AnimatePresence>
                     {showSuccess && (
-                        <motion.div
+                        <Motion.div
                             initial={{ opacity: 0, y: -20 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -20 }}
@@ -200,12 +220,12 @@ export default function EconomyPage() {
                         >
                             <Check className="w-4 h-4" />
                             {successMessage}
-                        </motion.div>
+                        </Motion.div>
                     )}
                 </AnimatePresence>
                 <AnimatePresence>
                     {kibbleError && (
-                        <motion.div
+                        <Motion.div
                             initial={{ opacity: 0, y: -20 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -20 }}
@@ -214,14 +234,14 @@ export default function EconomyPage() {
                         >
                             <X className="w-4 h-4" />
                             {kibbleError}
-                        </motion.div>
+                        </Motion.div>
                     )}
                 </AnimatePresence>
 
-                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="glass-card relative overflow-hidden p-5">
+                <Motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="glass-card relative overflow-hidden p-5">
                     <div className="absolute inset-0 pointer-events-none">
-                        <div className="absolute -top-12 -right-10 h-28 w-28 rounded-full bg-amber-200/35 blur-3xl" />
-                        <div className="absolute -bottom-10 -left-10 h-32 w-32 rounded-full bg-rose-200/30 blur-3xl" />
+                        <div className={`absolute -top-12 -right-10 h-28 w-28 rounded-full bg-amber-200/35 ${shouldReduceFx ? 'blur-xl' : 'blur-3xl'}`} />
+                        <div className={`absolute -bottom-10 -left-10 h-32 w-32 rounded-full bg-rose-200/30 ${shouldReduceFx ? 'blur-xl' : 'blur-3xl'}`} />
                         <div
                             className="absolute inset-0 opacity-40"
                             style={{
@@ -236,13 +256,13 @@ export default function EconomyPage() {
                             <h2 className="text-xl font-display font-bold text-neutral-800 mt-2">{t('economy.balance.title')}</h2>
                             <p className="text-xs text-neutral-500 mt-1">{t('economy.balance.subtitle')}</p>
                         </div>
-                        <motion.div
-                            animate={prefersReducedMotion ? undefined : { rotate: [0, 8, -8, 0] }}
-                            transition={prefersReducedMotion ? undefined : { duration: 2.2, repeat: Infinity }}
+                        <Motion.div
+                            animate={shouldReduceFx ? undefined : { rotate: [0, 8, -8, 0] }}
+                            transition={shouldReduceFx ? undefined : { duration: 2.2, repeat: Infinity }}
                             className="text-4xl"
                         >
                             <ShoppingBag className="w-9 h-9 text-amber-500" />
-                        </motion.div>
+                        </Motion.div>
                     </div>
                     <div className="relative mt-4 grid grid-cols-2 gap-3">
                         <div className="rounded-2xl border border-amber-200/70 bg-white/85 px-3 py-3 text-left shadow-inner-soft">
@@ -256,174 +276,192 @@ export default function EconomyPage() {
                             <div className="text-[11px] text-neutral-500">{t('economy.partner.subtitle')}</div>
                         </div>
                     </div>
-                </motion.div>
+                </Motion.div>
 
-                {/* Pending Redemptions Notification */}
-                {pendingRedemptions.length > 0 && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.15 }}
-                        className="space-y-3"
-                    >
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <motion.div
-                                    animate={prefersReducedMotion ? undefined : { scale: [1, 1.2, 1] }}
-                                    transition={prefersReducedMotion ? undefined : { duration: 1.4, repeat: Infinity }}
-                                >
-                                    <Bell className="w-4 h-4 text-amber-500" />
-                                </motion.div>
-                                <h2 className="text-sm font-bold text-neutral-700">
-                                    {t('economy.pending.title', { name: partnerDisplayName })}
-                                </h2>
-                            </div>
-                            <span className="bg-amber-100 text-amber-700 text-xs font-bold px-2 py-0.5 rounded-full">
-                                {pendingRedemptions.length}
-                            </span>
-                        </div>
-                        <div className="space-y-2">
-                            {pendingRedemptions.map((redemption) => (
-                                <motion.div
-                                    key={redemption.id}
-                                    initial={{ opacity: 0, x: -10 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    className="glass-card p-4 border border-amber-200/60 relative overflow-hidden"
-                                >
-                                    <div className="absolute -top-8 -right-6 h-20 w-20 rounded-full bg-amber-200/35 blur-2xl" />
-                                    <div className="relative flex items-center justify-between gap-3">
-                                        <div className="flex-1">
-                                            <div className="flex items-center gap-2">
-                                                <EmojiIcon emoji="🎁" className="w-5 h-5 text-amber-600" />
-                                                <h3 className="font-bold text-neutral-800 text-sm">{redemption.reward_name}</h3>
-                                            </div>
-                                            {redemption.reward_description && (
-                                                <p className="text-neutral-500 text-xs mt-1 ml-7">{redemption.reward_description}</p>
-                                            )}
-                                            <p className="text-neutral-500 text-xs mt-1 ml-7">
-                                                {t('economy.pending.redeemedOn', {
-                                                    date: new Date(redemption.redeemed_at).toLocaleDateString(language)
-                                                })}
-                                            </p>
-                                        </div>
-                                        <motion.button
-                                            whileTap={{ scale: 0.96 }}
-                                            onClick={() => handleFulfillRedemption(redemption)}
-                                            disabled={fulfillingId === redemption.id}
-                                            className="flex items-center gap-1.5 px-3 py-2 bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-soft disabled:opacity-50"
+                {showMarketSections ? (
+                    <>
+                        {/* Pending Redemptions Notification */}
+                        {pendingRedemptions.length > 0 && (
+                            <Motion.div
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.15 }}
+                                className="space-y-3"
+                            >
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <Motion.div
+                                            animate={shouldReduceFx ? undefined : { scale: [1, 1.2, 1] }}
+                                            transition={shouldReduceFx ? undefined : { duration: 1.4, repeat: Infinity }}
                                         >
-                                            {fulfillingId === redemption.id ? (
-                                                <motion.div
-                                                    animate={prefersReducedMotion ? undefined : { rotate: 360 }}
-                                                    transition={prefersReducedMotion ? undefined : { duration: 1, repeat: Infinity, ease: "linear" }}
-                                                    className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
-                                                />
-                                            ) : (
-                                                <>
-                                                    <CheckCircle2 className="w-4 h-4" />
-                                                    {t('economy.pending.done')}
-                                                </>
-                                            )}
-                                        </motion.button>
+                                            <Bell className="w-4 h-4 text-amber-500" />
+                                        </Motion.div>
+                                        <h2 className="text-sm font-bold text-neutral-700">
+                                            {t('economy.pending.title', { name: partnerDisplayName })}
+                                        </h2>
                                     </div>
-                                </motion.div>
-                            ))}
-                        </div>
-                    </motion.div>
-                )}
+                                    <span className="bg-amber-100 text-amber-700 text-xs font-bold px-2 py-0.5 rounded-full">
+                                        {pendingRedemptions.length}
+                                    </span>
+                                </div>
+                                <div className="space-y-2">
+                                    {pendingRedemptions.map((redemption) => (
+                                        <Motion.div
+                                            key={redemption.id}
+                                            initial={shouldAnimatePending ? { opacity: 0, x: -10 } : false}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            transition={shouldAnimatePending ? { duration: 0.18 } : { duration: 0.1 }}
+                                            className="glass-card p-4 border border-amber-200/60 relative overflow-hidden perf-content-auto-compact contain-paint"
+                                        >
+                                            <div className="absolute -top-8 -right-6 h-20 w-20 rounded-full bg-amber-200/35 blur-2xl" />
+                                            <div className="relative flex items-center justify-between gap-3">
+                                                <div className="flex-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <EmojiIcon emoji="🎁" className="w-5 h-5 text-amber-600" />
+                                                        <h3 className="font-bold text-neutral-800 text-sm">{redemption.reward_name}</h3>
+                                                    </div>
+                                                    {redemption.reward_description && (
+                                                        <p className="text-neutral-500 text-xs mt-1 ml-7">{redemption.reward_description}</p>
+                                                    )}
+                                                    <p className="text-neutral-500 text-xs mt-1 ml-7">
+                                                        {t('economy.pending.redeemedOn', {
+                                                            date: new Date(redemption.redeemed_at).toLocaleDateString(language)
+                                                        })}
+                                                    </p>
+                                                </div>
+                                                <Motion.button
+                                                    whileTap={{ scale: 0.96 }}
+                                                    onClick={() => handleFulfillRedemption(redemption)}
+                                                    disabled={fulfillingId === redemption.id}
+                                                    className="flex items-center gap-1.5 px-3 py-2 bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-soft disabled:opacity-50"
+                                                >
+                                                    {fulfillingId === redemption.id ? (
+                                                        <Motion.div
+                                                            animate={shouldReduceFx ? undefined : { rotate: 360 }}
+                                                            transition={shouldReduceFx ? undefined : { duration: 1, repeat: Infinity, ease: "linear" }}
+                                                            className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
+                                                        />
+                                                    ) : (
+                                                        <>
+                                                            <CheckCircle2 className="w-4 h-4" />
+                                                            {t('economy.pending.done')}
+                                                        </>
+                                                    )}
+                                                </Motion.button>
+                                            </div>
+                                        </Motion.div>
+                                    ))}
+                                </div>
+                            </Motion.div>
+                        )}
 
-                <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <div className="text-[10px] uppercase tracking-[0.35em] text-neutral-500 font-semibold">{t('economy.redeem.kicker')}</div>
-                            <h2 className="text-base font-display font-bold text-neutral-800">
-                                {t('economy.redeem.title', { name: partnerDisplayName })}
-                            </h2>
-                        </div>
-                        <span className="text-[11px] font-semibold text-amber-700 bg-amber-100/70 px-3 py-1 rounded-full">
-                            {t('economy.redeem.count', { count: partnerRewards.length })}
-                        </span>
-                    </div>
-                    {partnerRewards.length === 0 ? (
-                        <div className="glass-card p-6 text-center border border-amber-200/60">
-                            <div className="flex justify-center mb-2">
-                                <EmojiIcon emoji="😿" className="w-7 h-7 text-amber-600" />
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <div className="text-[10px] uppercase tracking-[0.35em] text-neutral-500 font-semibold">{t('economy.redeem.kicker')}</div>
+                                    <h2 className="text-base font-display font-bold text-neutral-800">
+                                        {t('economy.redeem.title', { name: partnerDisplayName })}
+                                    </h2>
+                                </div>
+                                <span className="text-[11px] font-semibold text-amber-700 bg-amber-100/70 px-3 py-1 rounded-full">
+                                    {t('economy.redeem.count', { count: partnerRewards.length })}
+                                </span>
                             </div>
-                            <p className="text-neutral-600 text-sm font-medium">
-                                {t('economy.redeem.empty', { name: partnerDisplayName })}
-                            </p>
+                            {partnerRewards.length === 0 ? (
+                                <div className="glass-card p-6 text-center border border-amber-200/60">
+                                    <div className="flex justify-center mb-2">
+                                        <EmojiIcon emoji="😿" className="w-7 h-7 text-amber-600" />
+                                    </div>
+                                    <p className="text-neutral-600 text-sm font-medium">
+                                        {t('economy.redeem.empty', { name: partnerDisplayName })}
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-2 gap-3">
+                                    {partnerRewards.map((c, i) => (
+                                        <CouponCard
+                                            key={c.id}
+                                            coupon={c}
+                                            delay={i * 0.05}
+                                            onRedeem={handleRedeem}
+                                            isRedeeming={redeemingId === c.id}
+                                            canAfford={myKibbleBalance >= c.cost}
+                                            reduceFx={shouldReduceFx}
+                                            shouldAnimate={shouldAnimateRewardCards}
+                                        />
+                                    ))}
+                                </div>
+                            )}
                         </div>
-                    ) : (
-                        <div className="grid grid-cols-2 gap-3">
-                            {partnerRewards.map((c, i) => (
-                                <CouponCard
-                                    key={c.id}
-                                    coupon={c}
-                                    delay={i * 0.05}
-                                    onRedeem={handleRedeem}
-                                    isRedeeming={redeemingId === c.id}
-                                    canAfford={myKibbleBalance >= c.cost}
-                                />
-                            ))}
-                        </div>
-                    )}
-                </div>
 
-                <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <div className="text-[10px] uppercase tracking-[0.35em] text-neutral-500 font-semibold">{t('economy.myMenu.kicker')}</div>
-                            <h2 className="text-base font-display font-bold text-neutral-800">
-                                {t('economy.myMenu.title', { name: partnerDisplayName })}
-                            </h2>
-                        </div>
-                        <button
-                            onClick={() => { setEditingReward(null); setShowAddModal(true); }}
-                            className="flex items-center gap-1 px-3 py-1.5 bg-violet-100 text-violet-600 rounded-full text-xs font-bold border border-violet-200/70"
-                        >
-                            <Plus className="w-3 h-3" />
-                            {t('economy.myMenu.add')}
-                        </button>
-                    </div>
-                    {myRewards.length === 0 ? (
-                        <div className="glass-card p-6 text-center border border-violet-200/60">
-                            <div className="flex justify-center mb-2">
-                                <EmojiIcon emoji="🎁" className="w-7 h-7 text-violet-500" />
-                            </div>
-                            <p className="text-neutral-600 text-sm font-medium">
-                                {t('economy.myMenu.empty', { name: partnerDisplayName })}
-                            </p>
-                        </div>
-                    ) : (
-                        <div className="space-y-2">
-                            {myRewards.map((r) => (
-                                <motion.div
-                                    key={r.id}
-                                    initial={{ opacity: 0, x: -10 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    className="glass-card p-4 flex items-center gap-3 border border-white/80"
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <div className="text-[10px] uppercase tracking-[0.35em] text-neutral-500 font-semibold">{t('economy.myMenu.kicker')}</div>
+                                    <h2 className="text-base font-display font-bold text-neutral-800">
+                                        {t('economy.myMenu.title', { name: partnerDisplayName })}
+                                    </h2>
+                                </div>
+                                <button
+                                    onClick={() => { setEditingReward(null); setShowAddModal(true); }}
+                                    className="flex items-center gap-1 px-3 py-1.5 bg-violet-100 text-violet-600 rounded-full text-xs font-bold border border-violet-200/70"
                                 >
-                                    <div className="text-2xl">
-                                        <EmojiIcon emoji={r.icon} className="w-6 h-6 text-amber-600" />
+                                    <Plus className="w-3 h-3" />
+                                    {t('economy.myMenu.add')}
+                                </button>
+                            </div>
+                            {myRewards.length === 0 ? (
+                                <div className="glass-card p-6 text-center border border-violet-200/60">
+                                    <div className="flex justify-center mb-2">
+                                        <EmojiIcon emoji="🎁" className="w-7 h-7 text-violet-500" />
                                     </div>
-                                    <div className="flex-1">
-                                        <h3 className="font-bold text-neutral-800 text-sm">{r.title}</h3>
-                                        <p className="text-neutral-500 text-xs inline-flex flex-wrap items-center gap-1">
-                                            <span>{r.subtitle} • {r.cost}</span>
-                                            <EmojiIcon emoji="🪙" className="w-3.5 h-3.5 text-amber-500" />
-                                        </p>
-                                    </div>
-                                    <button onClick={() => { setEditingReward(r); setShowAddModal(true); }} className="p-2 text-neutral-500 hover:text-violet-500">
-                                        <Edit3 className="w-4 h-4" />
-                                    </button>
-                                    <button onClick={() => handleDeleteReward(r.id)} className="p-2 text-neutral-500 hover:text-rose-500">
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
-                                </motion.div>
-                            ))}
+                                    <p className="text-neutral-600 text-sm font-medium">
+                                        {t('economy.myMenu.empty', { name: partnerDisplayName })}
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="space-y-2">
+                                    {myRewards.map((r) => (
+                                        <Motion.div
+                                            key={r.id}
+                                            initial={shouldAnimateMyRewards ? { opacity: 0, x: -10 } : false}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            transition={shouldAnimateMyRewards ? { duration: 0.18 } : { duration: 0.1 }}
+                                            className="glass-card p-4 flex items-center gap-3 border border-white/80 perf-content-auto-compact contain-paint"
+                                        >
+                                            <div className="text-2xl">
+                                                <EmojiIcon emoji={r.icon} className="w-6 h-6 text-amber-600" />
+                                            </div>
+                                            <div className="flex-1">
+                                                <h3 className="font-bold text-neutral-800 text-sm">{r.title}</h3>
+                                                <p className="text-neutral-500 text-xs inline-flex flex-wrap items-center gap-1">
+                                                    <span>{r.subtitle} • {r.cost}</span>
+                                                    <EmojiIcon emoji="🪙" className="w-3.5 h-3.5 text-amber-500" />
+                                                </p>
+                                            </div>
+                                            <button onClick={() => { setEditingReward(r); setShowAddModal(true); }} className="p-2 text-neutral-500 hover:text-violet-500">
+                                                <Edit3 className="w-4 h-4" />
+                                            </button>
+                                            <button onClick={() => handleDeleteReward(r.id)} className="p-2 text-neutral-500 hover:text-rose-500">
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </Motion.div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
-                    )}
-                </div>
+                    </>
+                ) : (
+                    <div className="space-y-3">
+                        {[1, 2, 3].map((item) => (
+                            <div key={item} className="glass-card border border-white/80 p-4 animate-pulse">
+                                <div className="h-3 w-28 rounded-full bg-neutral-200/70 mb-2" />
+                                <div className="h-4 w-48 rounded-full bg-neutral-200/70 mb-3" />
+                                <div className="h-24 rounded-2xl bg-neutral-100/80 border border-neutral-200/80" />
+                            </div>
+                        ))}
+                    </div>
+                )}
 
                 <AnimatePresence>
                     {showAddModal && (
@@ -439,9 +477,8 @@ export default function EconomyPage() {
     );
 }
 
-function CouponCard({ coupon, delay, onRedeem, isRedeeming, canAfford }) {
+const CouponCard = React.memo(function CouponCard({ coupon, delay, onRedeem, isRedeeming, canAfford, reduceFx, shouldAnimate }) {
     const { t } = useI18n();
-    const prefersReducedMotion = usePrefersReducedMotion();
     const colorMap = {
         pink: {
             bg: 'from-rose-50 via-white to-amber-50/60',
@@ -481,22 +518,22 @@ function CouponCard({ coupon, delay, onRedeem, isRedeeming, canAfford }) {
     };
     const colors = colorMap[coupon.color] || colorMap.pink;
     return (
-        <motion.button
-            initial={{ opacity: 0, y: 10 }}
+        <Motion.button
+            initial={shouldAnimate ? { opacity: 0, y: 10 } : false}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay }}
+            transition={shouldAnimate ? { delay } : { duration: 0.1 }}
             whileTap={{ scale: canAfford ? 0.97 : 1 }}
             onClick={() => canAfford && onRedeem(coupon)}
             disabled={!canAfford || isRedeeming}
-            className={`relative overflow-hidden rounded-[28px] border ${colors.border} bg-gradient-to-br ${colors.bg} p-4 text-left shadow-soft transition ${!canAfford ? 'opacity-60' : 'active:bg-white/90'}`}
+            className={`relative overflow-hidden rounded-[28px] border ${colors.border} bg-gradient-to-br ${colors.bg} p-4 text-left shadow-soft transition perf-content-auto-compact contain-paint ${!canAfford ? 'opacity-60' : 'active:bg-white/90'}`}
         >
-            <div className={`absolute -top-10 -right-6 h-20 w-20 rounded-full blur-2xl ${colors.glow}`} />
-            <div className="absolute -bottom-10 -left-6 h-24 w-24 rounded-full bg-white/60 blur-2xl" />
+            <div className={`absolute -top-10 -right-6 h-20 w-20 rounded-full ${reduceFx ? 'blur-lg' : 'blur-2xl'} ${colors.glow}`} />
+            <div className={`absolute -bottom-10 -left-6 h-24 w-24 rounded-full bg-white/60 ${reduceFx ? 'blur-md' : 'blur-2xl'}`} />
             {isRedeeming && (
                 <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
-                    <motion.div
-                        animate={prefersReducedMotion ? undefined : { rotate: 360 }}
-                        transition={prefersReducedMotion ? undefined : { duration: 1, repeat: Infinity, ease: "linear" }}
+                    <Motion.div
+                        animate={reduceFx ? undefined : { rotate: 360 }}
+                        transition={reduceFx ? undefined : { duration: 1, repeat: Infinity, ease: "linear" }}
                         className="w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full"
                     />
                 </div>
@@ -524,9 +561,9 @@ function CouponCard({ coupon, delay, onRedeem, isRedeeming, canAfford }) {
                     </span>
                 </div>
             </div>
-        </motion.button>
+        </Motion.button>
     );
-}
+});
 
 function RewardModal({ reward, onSave, onClose }) {
     const { t } = useI18n();
@@ -549,14 +586,14 @@ function RewardModal({ reward, onSave, onClose }) {
     };
 
     return (
-        <motion.div
+        <Motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] flex items-end justify-center p-4 pb-20"
             onClick={onClose}
         >
-            <motion.div
+            <Motion.div
                 initial={{ y: 100, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 exit={{ y: 100, opacity: 0 }}
@@ -646,14 +683,14 @@ function RewardModal({ reward, onSave, onClose }) {
                     <Check className="w-4 h-4" />
                     {reward ? t('economy.rewardModal.save') : t('economy.rewardModal.add')}
                 </StandardButton>
-            </motion.div>
-        </motion.div>
+            </Motion.div>
+        </Motion.div>
     );
 }
 
-const MarketBackdrop = () => (
+const MarketBackdrop = ({ reduceFx }) => (
     <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute -top-20 -right-20 h-64 w-64 rounded-full bg-amber-200/30 blur-3xl" />
-        <div className="absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-rose-200/25 blur-3xl" />
+        <div className={`absolute -top-20 -right-20 h-64 w-64 rounded-full bg-amber-200/30 ${reduceFx ? 'blur-xl' : 'blur-3xl'}`} />
+        <div className={`absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-rose-200/25 ${reduceFx ? 'blur-xl' : 'blur-3xl'}`} />
     </div>
 );
