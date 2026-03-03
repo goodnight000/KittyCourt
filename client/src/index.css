@@ -30,18 +30,15 @@ html {
   -webkit-text-size-adjust: 100%;
 }
 
-html,
-body {
+html {
   background-color: var(--app-bg-solid);
-  background-image: url('/textures/parchment-grain.png');
-  background-blend-mode: multiply;
 }
 
 body {
   font-family: var(--font-sans);
   color: #4A3728;
   -webkit-font-smoothing: antialiased;
-  /* Premium warm cream/tan background inspired by Judge Whiskers */
+  background-color: transparent;
   min-height: 100vh;
   min-height: 100dvh;
   overflow-x: hidden;
@@ -49,38 +46,44 @@ body {
   z-index: 0;
 }
 
-body::before,
-body::after {
+body::before {
   content: none;
   display: none;
 }
 
-/* iOS perf mode: drop gradient, keep cheap repeating tile for texture */
-html.ios-flat-bg,
-body.ios-flat-bg {
-  --app-bg: var(--app-bg-solid);
-  background-color: var(--app-bg-solid) !important;
-  background-image: url('/textures/parchment-grain.png') !important;
-  background-blend-mode: multiply !important;
+/* Fixed texture layer — stays visible during iOS overscroll bounce */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-color: var(--app-bg-solid);
+  background-image: url('/textures/parchment-grain.png');
+  background-blend-mode: multiply;
+  z-index: -1;
+  pointer-events: none;
 }
 
-body.ios-flat-bg::before,
-body.ios-flat-bg::after {
+/* iOS perf mode: drop gradient, keep cheap repeating tile for texture */
+html.ios-flat-bg {
+  --app-bg: var(--app-bg-solid);
+  background-color: var(--app-bg-solid) !important;
+}
+
+body.ios-flat-bg::before {
   content: none;
   display: none;
 }
 
 body.ios-flat-bg .app-background {
   background-color: var(--app-bg-solid) !important;
-  background-image: url('/textures/parchment-grain.png') !important;
-  background-blend-mode: multiply !important;
+  background-image: none !important;
 }
 
 /* Flatten page surfaces only (keep element effects like card blur/gradients). */
 body.ios-flat-bg .min-h-screen,
 body.ios-flat-bg .min-h-\[100dvh\],
 body.ios-flat-bg .h-screen {
-  background-color: var(--app-bg-solid) !important;
+  background-color: transparent !important;
 }
 
 body.ios-flat-bg .min-h-screen[class*="bg-gradient"],
@@ -98,9 +101,9 @@ body.ios-flat-bg .h-screen[style*="radial-gradient"] {
   background-image: none !important;
 }
 
-/* Routed page roots: keep one plain background and strip page-level decorative overlays. */
+/* Routed page roots: strip page-level decorative overlays, let fixed texture show through. */
 body.ios-flat-bg .app-route-surface > * {
-  background-color: var(--app-bg-solid) !important;
+  background-color: transparent !important;
   background-image: none !important;
 }
 
@@ -115,9 +118,7 @@ body.ios-flat-bg .app-route-surface > * > .pointer-events-none.absolute {
 }
 
 .app-background {
-  background-color: var(--app-bg-solid);
-  background-image: url('/textures/parchment-grain.png');
-  background-blend-mode: multiply;
+  background-color: transparent;
 }
 
 ::selection {
@@ -210,6 +211,11 @@ input[type='date']::-webkit-date-and-time-value {
 }
 
 /* App-wide iOS/runtime perf mode */
+body.app-perf-lite::after {
+  background-image: none !important;
+  background-blend-mode: normal !important;
+}
+
 .app-perf-lite .glass-card,
 .app-perf-lite .glass-depth {
   backdrop-filter: none !important;

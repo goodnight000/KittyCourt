@@ -77,7 +77,7 @@ for (let y = 0; y < TILE; y++) {
 
         // Pure neutral grain — no color, just texture.
         // Near-white so multiply blend only subtly darkens grain areas.
-        const delta = (grain - 0.5) * 30; // ±15 levels — slightly stronger
+        const delta = (grain - 0.5) * 22; // ±11 levels — subtle warmth
         const v = Math.max(0, Math.min(255, Math.round(253 + delta)));
 
         const r = v;
