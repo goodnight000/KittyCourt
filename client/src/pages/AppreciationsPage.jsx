@@ -151,7 +151,6 @@ const AppreciationsPage = () => {
 
     return (
         <div className="relative min-h-screen overflow-hidden pb-6">
-            <AppreciationBackdrop reduceFx={shouldReduceFx} />
             <div className="relative space-y-6">
             {/* Header */}
             <div className="flex items-start gap-3">
@@ -173,10 +172,6 @@ const AppreciationsPage = () => {
                 animate={{ opacity: 1, y: 0 }}
                 className="glass-card relative overflow-hidden p-5"
             >
-                <div className="absolute inset-0 pointer-events-none">
-                    <div className={`absolute -top-10 -right-8 h-24 w-24 rounded-full bg-rose-200/35 ${shouldReduceFx ? 'blur-lg' : 'blur-2xl'}`} />
-                    <div className={`absolute -bottom-12 -left-8 h-28 w-28 rounded-full bg-amber-200/35 ${shouldReduceFx ? 'blur-xl' : 'blur-3xl'}`} />
-                </div>
                 <div className="flex items-center justify-between">
                     <div>
                         <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-neutral-500 mb-1">

@@ -132,7 +132,6 @@ const InsightsPage = () => {
   if (!showInsights) {
     return (
       <div className="relative min-h-screen overflow-hidden pb-6">
-        <InsightBackdrop reduceFx={shouldReduceFx} />
         <div className="relative">
           <Motion.button
             whileTap={{ scale: 0.95 }}

@@ -210,7 +210,6 @@ const CaseDetailPage = () => {
 
     return (
         <div className="space-y-5 pb-6">
-            <PageBackdrop />
 
             {/* Header with Back Button */}
             <Motion.div

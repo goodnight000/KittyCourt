@@ -268,10 +268,6 @@ const DailyMeowHistoryPage = () => {
                 transition={{ delay: 0.1 }}
             >
                 <div className="glass-card relative overflow-hidden p-4 flex items-center justify-between gap-3">
-                    <div className="absolute inset-0 pointer-events-none">
-                        <div className="absolute -top-8 -right-6 h-20 w-20 rounded-full bg-amber-200/30 blur-2xl" />
-                        <div className="absolute -bottom-10 -left-8 h-24 w-24 rounded-full bg-rose-200/25 blur-2xl" />
-                    </div>
                     <div className="min-w-0">
                         <div className="flex items-center gap-2">
                             <BookOpen className="w-4 h-4 text-amber-600" />

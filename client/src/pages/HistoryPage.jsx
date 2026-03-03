@@ -111,11 +111,6 @@ const HistoryPage = () => {
 
     return (
         <div className="relative min-h-screen overflow-hidden pb-6">
-            {/* Background gradient */}
-            <div className="fixed inset-0 pointer-events-none">
-                <div className={`absolute -top-20 -right-20 h-64 w-64 rounded-full bg-amber-200/30 ${shouldReduceFx ? 'blur-xl' : 'blur-3xl'}`} />
-                <div className={`absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-rose-200/25 ${shouldReduceFx ? 'blur-xl' : 'blur-3xl'}`} />
-            </div>
             <div className="relative space-y-6">
             {/* Header */}
             <div className="flex items-start gap-3">

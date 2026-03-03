@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { useI18n } from '../../i18n';
 import ButtonLoader from '../shared/ButtonLoader';
+import StandardButton from '../shared/StandardButton';
 
 const AuthStep = ({
     onGoogleSignUp,
@@ -17,12 +18,6 @@ const AuthStep = ({
     const [authPassword, setAuthPassword] = useState('');
     const [authConfirmPassword, setAuthConfirmPassword] = useState('');
     const [authShowPassword, setAuthShowPassword] = useState(false);
-
-    const goldButtonBase =
-        'relative overflow-hidden border border-[#E3D098] bg-gradient-to-br from-[#C9A227] via-[#B9911F] to-[#8B7019] shadow-[0_12px_24px_rgba(201,162,39,0.22)] hover:brightness-105';
-    const goldButtonShineStyle = {
-        background: 'radial-gradient(circle at 20% 20%, rgba(255,255,255,0.65), transparent 55%)'
-    };
 
     const handleEmailSubmit = (e) => {
         e?.preventDefault?.();
@@ -109,27 +104,24 @@ const AuthStep = ({
                     />
                 </div>
 
-                <Motion.button
-                    whileTap={{ scale: 0.98 }}
+                <StandardButton
+                    size="xl"
                     type="submit"
                     disabled={authSubmitting}
-                    className={`w-full py-4 rounded-2xl font-bold text-white flex items-center justify-center gap-2 transition-all disabled:opacity-50 ${goldButtonBase}`}
+                    className="w-full py-4"
                 >
-                    <span aria-hidden="true" className="absolute inset-0 opacity-60" style={goldButtonShineStyle} />
-                    <span className="relative z-10 flex items-center gap-2">
-                        {authSubmitting ? (
-                            <ButtonLoader
-                                size="sm"
-                                tone="white"
-                            />
-                        ) : (
-                            <>
-                                {t('onboarding.auth.createAccount')}
-                                <ArrowRight className="w-5 h-5" />
-                            </>
-                        )}
-                    </span>
-                </Motion.button>
+                    {authSubmitting ? (
+                        <ButtonLoader
+                            size="sm"
+                            tone="neutral"
+                        />
+                    ) : (
+                        <>
+                            {t('onboarding.auth.createAccount')}
+                            <ArrowRight className="w-5 h-5" />
+                        </>
+                    )}
+                </StandardButton>
             </form>
 
             <button

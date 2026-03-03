@@ -458,16 +458,6 @@ export default function CourtroomPageV2() {
             description={t('courtroom.requirePartnerDescription')}
         >
             <div className={`relative min-h-screen ${isIdleView ? '' : 'overflow-hidden'}`}>
-                {!isIdleView && (
-                    <>
-                        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(70%_55%_at_50%_0%,_rgba(212,175,55,0.18),_transparent_65%)]" />
-                        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(40%_40%_at_85%_20%,_rgba(244,182,155,0.18),_transparent_70%)]" />
-                        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(45%_40%_at_10%_85%,_rgba(209,198,236,0.18),_transparent_70%)]" />
-                        <div className="pointer-events-none absolute -top-24 -right-20 w-72 h-72 rounded-full bg-court-gold/20 blur-3xl" />
-                        <div className="pointer-events-none absolute -bottom-24 -left-20 w-80 h-80 rounded-full bg-lavender-200/25 blur-3xl" />
-                        <div className="pointer-events-none absolute inset-0 opacity-[0.08] bg-[linear-gradient(120deg,_rgba(74,55,40,0.35)_0%,_rgba(255,255,255,0)_55%,_rgba(74,55,40,0.25)_100%)]" />
-                    </>
-                )}
                 {showOpeningAnimation && (
                     <CourtOpeningAnimation
                         onComplete={() => setShowOpeningAnimation(false)}

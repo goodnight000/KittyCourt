@@ -268,17 +268,6 @@ const DashboardPage = () => {
                     animate={{ opacity: 1, y: 0 }}
                     className="glass-card relative overflow-hidden p-5"
                 >
-                    <div className="absolute inset-0 pointer-events-none">
-                        <div className={`absolute -top-16 -right-10 h-32 w-32 rounded-full bg-rose-200/40 ${shouldReduceFx ? 'blur-xl' : 'blur-3xl'}`} />
-                        <div className={`absolute -bottom-12 -left-10 h-36 w-36 rounded-full bg-amber-200/35 ${shouldReduceFx ? 'blur-xl' : 'blur-3xl'}`} />
-                        <div
-                            className="absolute inset-0 opacity-40"
-                            style={{
-                                backgroundImage:
-                                    'radial-gradient(circle at 15% 20%, rgba(255,255,255,0.75) 0%, transparent 55%), radial-gradient(circle at 85% 10%, rgba(255,235,210,0.7) 0%, transparent 60%)'
-                            }}
-                        />
-                    </div>
                     <div className="relative space-y-4">
                         <div className="flex items-start justify-between gap-4">
                             <div>
@@ -646,17 +635,6 @@ const DashboardPage = () => {
                                 onClick={(e) => e.stopPropagation()}
                                 className="relative mx-auto w-full max-w-lg max-h-[calc(100vh-var(--app-safe-bottom)-12px)] overflow-y-auto rounded-[32px] border border-white/80 bg-white/95 p-5 shadow-soft-lg space-y-4"
                             >
-                                <div className="absolute inset-0 pointer-events-none">
-                                    <div className={`absolute -top-12 -right-6 h-28 w-28 rounded-full bg-rose-200/40 ${shouldReduceFx ? 'blur-xl' : 'blur-3xl'}`} />
-                                    <div className={`absolute -bottom-10 -left-8 h-24 w-24 rounded-full bg-amber-200/30 ${shouldReduceFx ? 'blur-xl' : 'blur-3xl'}`} />
-                                    <div
-                                        className="absolute inset-0 opacity-40"
-                                        style={{
-                                            backgroundImage:
-                                                'radial-gradient(circle at 18% 20%, rgba(255,255,255,0.75) 0%, transparent 55%), radial-gradient(circle at 80% 10%, rgba(255,235,210,0.7) 0%, transparent 60%)'
-                                        }}
-                                    />
-                                </div>
                                 {showSuccess ? (
                                     <Motion.div
                                         initial={{ scale: 0.8 }}

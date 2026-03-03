@@ -126,7 +126,6 @@ const ChallengesPage = () => {
     if (!shouldShowChallenges()) {
         return (
             <div className="relative min-h-screen overflow-hidden pb-6">
-                <ChallengeBackdrop prefersReducedMotion={shouldReduceFx} />
                 <div className="relative">
                     <Motion.button
                         whileTap={{ scale: 0.95 }}

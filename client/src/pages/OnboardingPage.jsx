@@ -8,6 +8,7 @@ import useSubscriptionStore from '../store/useSubscriptionStore';
 import useUpsellStore from '../store/useUpsellStore';
 import { validateBirthdayDate, validateEmail } from '../utils/helpers';
 import Paywall from '../components/Paywall';
+import StandardButton from '../components/shared/StandardButton';
 import { useI18n } from '../i18n';
 import { DEFAULT_LANGUAGE, normalizeLanguage } from '../i18n/languageConfig';
 import OnboardingStep from '../components/onboarding/OnboardingStep';
@@ -208,12 +209,6 @@ const OnboardingPage = () => {
     const prefersReducedMotion = usePrefersReducedMotion();
     const logDebug = (...args) => {
         if (import.meta.env.DEV) console.log(...args);
-    };
-
-    const goldButtonBase =
-        'relative overflow-hidden border border-[#E3D098] bg-gradient-to-br from-[#C9A227] via-[#B9911F] to-[#8B7019] shadow-[0_12px_24px_rgba(201,162,39,0.22)] hover:brightness-105';
-    const goldButtonShineStyle = {
-        background: 'radial-gradient(circle at 20% 20%, rgba(255,255,255,0.65), transparent 55%)'
     };
 
     const translateValidationError = (validation) => {
@@ -615,7 +610,6 @@ const OnboardingPage = () => {
 
     return (
         <div className="relative min-h-screen overflow-hidden">
-            <OnboardingBackdrop />
             <div className="relative min-h-screen flex flex-col">
                 <Paywall
                     isOpen={showPaywall}
@@ -690,14 +684,12 @@ const OnboardingPage = () => {
                                 </Motion.button>
                             )}
 
-                            <Motion.button
-                                whileTap={{ scale: 0.97 }}
+                            <StandardButton
+                                size="xl"
                                 onClick={handleNext}
                                 disabled={!canProceed() || isSubmitting}
-                                className={`flex-1 py-3.5 rounded-2xl font-bold text-white flex items-center justify-center gap-2 transition-[transform,filter,opacity] disabled:opacity-50 ${goldButtonBase}`}
+                                className="flex-1 py-3.5"
                             >
-                                <span aria-hidden="true" className="absolute inset-0 opacity-60" style={goldButtonShineStyle} />
-                                <span className="relative z-10 flex items-center gap-2">
                                 {isSubmitting ? (
                                     <Motion.div
                                         animate={prefersReducedMotion ? undefined : { rotate: 360 }}
@@ -721,8 +713,7 @@ const OnboardingPage = () => {
                                         <ArrowRight className="w-5 h-5" />
                                     </>
                                 )}
-                                </span>
-                            </Motion.button>
+                            </StandardButton>
                         </div>
                     </div>
                 )}

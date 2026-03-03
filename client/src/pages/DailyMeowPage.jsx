@@ -431,11 +431,6 @@ const DailyMeowPage = () => {
 
     return (
         <div className="relative min-h-[calc(100dvh-120px)] flex flex-col overflow-hidden pb-6">
-            {/* Background gradient */}
-            <div className="fixed inset-0 pointer-events-none">
-                <div className="absolute -top-20 -right-20 h-64 w-64 rounded-full bg-amber-200/30 blur-2xl" />
-                <div className="absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-rose-200/25 blur-2xl" />
-            </div>
             <div className="relative flex-1 flex flex-col">
             {/* Success Toast */}
             <AnimatePresence>
@@ -510,17 +505,6 @@ const DailyMeowPage = () => {
                         animate={{ opacity: 1, y: 0 }}
                         className="glass-card relative overflow-hidden flex-1 flex flex-col"
                     >
-                        <div className="absolute inset-0 pointer-events-none">
-                            <div className="absolute -top-12 -right-8 h-28 w-28 rounded-full bg-amber-200/30 blur-2xl" />
-                            <div className="absolute -bottom-12 -left-8 h-32 w-32 rounded-full bg-rose-200/25 blur-2xl" />
-                            <div
-                                className="absolute inset-0 opacity-40"
-                                style={{
-                                    backgroundImage:
-                                        'radial-gradient(circle at 12% 10%, rgba(255,255,255,0.75) 0%, transparent 55%), radial-gradient(circle at 82% 12%, rgba(255,235,210,0.75) 0%, transparent 60%)'
-                                }}
-                            />
-                        </div>
                         <div className="relative flex-1 flex flex-col">
                         {/* Question Header */}
                         <div className="p-6 text-center border-b border-white/60">

@@ -265,7 +265,6 @@ const MemoriesPage = () => {
   if (!memoriesAvailable) {
     return (
       <div className="relative min-h-screen overflow-hidden pb-6">
-        <MemoryBackdrop />
         <div className="relative">
           <Motion.button
             whileTap={{ scale: 0.95 }}

@@ -5,18 +5,19 @@ import { useI18n } from '../../i18n';
 
 /**
  * PlanOnboardingTooltip Component
- * First-time tooltip explaining the AI planning feature
+ * First-time tooltip explaining the AI planning feature.
+ * Rendered inline (normal flow) above the plan button with an arrow pointing down.
  */
 const PlanOnboardingTooltip = ({ onDismiss }) => {
     const { t } = useI18n();
 
     return (
         <Motion.div
-            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+            initial={{ opacity: 0, y: 6, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+            exit={{ opacity: 0, y: 6, scale: 0.97 }}
             transition={{ duration: 0.2 }}
-            className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-10 w-64"
+            className="relative z-10 mb-2 mx-auto w-64"
         >
             <div className="glass-card p-3 rounded-2xl shadow-lg border border-white/60">
                 <div className="flex items-start gap-2">
@@ -39,8 +40,10 @@ const PlanOnboardingTooltip = ({ onDismiss }) => {
                     {t('calendar.planning.onboarding.dismiss')}
                 </button>
             </div>
-            {/* Arrow pointing down */}
-            <div className="absolute left-1/2 -translate-x-1/2 -bottom-1.5 w-3 h-3 bg-white/80 rotate-45 border-r border-b border-white/60" />
+            {/* Arrow pointing down toward the plan button */}
+            <div className="flex justify-center -mt-[1px]">
+                <div className="w-3 h-3 bg-white/80 rotate-45 border-r border-b border-white/60" />
+            </div>
         </Motion.div>
     );
 };

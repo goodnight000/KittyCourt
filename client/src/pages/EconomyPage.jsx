@@ -198,7 +198,6 @@ export default function EconomyPage() {
 
     return (
         <div className="relative min-h-screen overflow-hidden pb-6">
-            <MarketBackdrop reduceFx={shouldReduceFx} />
             <div className="relative space-y-6">
                 <header className="flex items-center gap-3">
                     <BackButton onClick={() => navigate(-1)} ariaLabel={t('common.back')} />
@@ -239,17 +238,6 @@ export default function EconomyPage() {
                 </AnimatePresence>
 
                 <Motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="glass-card relative overflow-hidden p-5">
-                    <div className="absolute inset-0 pointer-events-none">
-                        <div className={`absolute -top-12 -right-10 h-28 w-28 rounded-full bg-amber-200/35 ${shouldReduceFx ? 'blur-xl' : 'blur-3xl'}`} />
-                        <div className={`absolute -bottom-10 -left-10 h-32 w-32 rounded-full bg-rose-200/30 ${shouldReduceFx ? 'blur-xl' : 'blur-3xl'}`} />
-                        <div
-                            className="absolute inset-0 opacity-40"
-                            style={{
-                                backgroundImage:
-                                    'radial-gradient(circle at 15% 20%, rgba(255,255,255,0.7) 0%, transparent 55%), radial-gradient(circle at 80% 10%, rgba(255,235,210,0.7) 0%, transparent 60%)'
-                            }}
-                        />
-                    </div>
                     <div className="relative flex items-start justify-between gap-4">
                         <div>
                             <div className="text-[10px] uppercase tracking-[0.4em] text-neutral-500 font-semibold">{t('economy.balance.kicker')}</div>
