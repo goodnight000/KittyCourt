@@ -13,6 +13,7 @@ import api from '../services/api';
 import { subscribeToDailyAnswers, supabase } from '../services/supabase';
 import { useI18n } from '../i18n';
 import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
+import { HAPTIC_TYPES, triggerHaptic } from '../services/hapticsService';
 
 // 20 mood/feeling options with emojis - organized by positive/neutral/challenging
 const MOOD_OPTIONS = [
@@ -212,6 +213,7 @@ const DailyMeowPage = () => {
 
         const subscription = subscribeToDailyAnswers(assignmentId, (payload) => {
             if (import.meta.env.DEV) console.log('[DailyMeow] Partner answer received:', payload);
+            triggerHaptic(HAPTIC_TYPES.NUDGE, { prefersReducedMotion });
             // Refetch to get updated data including partner's answer
             fetchTodaysQuestion({ force: true });
         });
@@ -220,7 +222,7 @@ const DailyMeowPage = () => {
             if (import.meta.env.DEV) console.log('[DailyMeow] Cleaning up subscription');
             supabase.removeChannel(subscription);
         };
-    }, [todaysQuestion?.assignment_id, todaysQuestion?.my_answer, todaysQuestion?.partner_answer, fetchTodaysQuestion]);
+    }, [todaysQuestion?.assignment_id, todaysQuestion?.my_answer, todaysQuestion?.partner_answer, fetchTodaysQuestion, prefersReducedMotion]);
 
     // Require partner
     if (!hasPartner) {
@@ -295,6 +297,7 @@ const DailyMeowPage = () => {
 
             setShowSuccess(true);
             setTimeout(() => setShowSuccess(false), 2000);
+            triggerHaptic(HAPTIC_TYPES.SUCCESS, { prefersReducedMotion });
 
             // Bug 2 Fix: If both answered, update local state with partner's answer
             // The API now returns partner_answer, so we can display it immediately
@@ -339,6 +342,7 @@ const DailyMeowPage = () => {
         } catch (err) {
             console.error('Error submitting answer:', err);
             setError(t('dailyMeow.errors.submitFailed'));
+            triggerHaptic(HAPTIC_TYPES.ERROR, { prefersReducedMotion });
         } finally {
             setSubmitting(false);
         }

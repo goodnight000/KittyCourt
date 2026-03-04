@@ -83,6 +83,12 @@ const formatCustomOptionLabel = (value) => {
     return trimmed.replace(/\b\w/g, (char) => char.toUpperCase());
 };
 
+const AppleLogo = ({ className = 'w-4 h-4' }) => (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M16.365 1.43c0 1.14-.418 2.24-1.161 3.065-.78.855-2.073 1.514-3.178 1.428-.14-1.094.427-2.252 1.158-3.005.807-.84 2.186-1.451 3.181-1.488zm2.865 16.1c-.807 1.168-1.644 2.335-2.963 2.36-1.294.025-1.71-.768-3.19-.768-1.479 0-1.946.744-3.166.793-1.265.049-2.23-1.267-3.043-2.43-1.669-2.41-2.94-6.804-1.229-9.773.851-1.49 2.376-2.431 4.029-2.456 1.255-.024 2.439.842 3.191.842.752 0 2.165-1.04 3.651-.887.621.025 2.366.251 3.483 1.885-.091.056-2.08 1.216-2.059 3.629.022 2.882 2.523 3.841 2.548 3.853-.022.068-.402 1.378-1.252 2.952z" />
+    </svg>
+);
+
 const SettingsPage = () => {
     const navigate = useNavigate();
     const { t, language, setLanguage, supportedLanguages } = useI18n();
@@ -211,6 +217,7 @@ const SettingsPage = () => {
     const getLoginMethod = () => {
         const provider = user?.app_metadata?.provider;
         if (provider === 'google') return 'google';
+        if (provider === 'apple') return 'apple';
         return 'email';
     };
 
@@ -370,6 +377,7 @@ const SettingsPage = () => {
                                     <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
                                 </svg>
                             )}
+                            {loginMethod === 'apple' && <AppleLogo className="w-4 h-4 text-neutral-700" />}
                             {loginMethod === 'email' && <Mail className="w-4 h-4 text-neutral-500" />}
                             {t(`settings.account.${loginMethod}`)}
                         </span>

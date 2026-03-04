@@ -8,11 +8,18 @@ import StandardButton from '../components/shared/StandardButton';
 import ButtonLoader from '../components/shared/ButtonLoader';
 import { validateEmail } from '../utils/helpers';
 import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
+import { HAPTIC_TYPES, triggerHaptic } from '../services/hapticsService';
+
+const AppleLogo = ({ className = 'w-5 h-5' }) => (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M16.365 1.43c0 1.14-.418 2.24-1.161 3.065-.78.855-2.073 1.514-3.178 1.428-.14-1.094.427-2.252 1.158-3.005.807-.84 2.186-1.451 3.181-1.488zm2.865 16.1c-.807 1.168-1.644 2.335-2.963 2.36-1.294.025-1.71-.768-3.19-.768-1.479 0-1.946.744-3.166.793-1.265.049-2.23-1.267-3.043-2.43-1.669-2.41-2.94-6.804-1.229-9.773.851-1.49 2.376-2.431 4.029-2.456 1.255-.024 2.439.842 3.191.842.752 0 2.165-1.04 3.651-.887.621.025 2.366.251 3.483 1.885-.091.056-2.08 1.216-2.059 3.629.022 2.882 2.523 3.841 2.548 3.853-.022.068-.402 1.378-1.252 2.952z" />
+    </svg>
+);
 
 const SignUpPage = () => {
     const navigate = useNavigate();
     const { t } = useI18n();
-    const { signUp, signInWithGoogle } = useAuthStore();
+    const { signUp, signInWithGoogle, signInWithApple } = useAuthStore();
     const prefersReducedMotion = usePrefersReducedMotion();
 
     const [email, setEmail] = useState('');
@@ -22,6 +29,7 @@ const SignUpPage = () => {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [oauthProvider, setOauthProvider] = useState(null);
     const [emailConfirmationPending, setEmailConfirmationPending] = useState(null);
 
     const passwordRequirements = [
@@ -33,6 +41,7 @@ const SignUpPage = () => {
     const handleEmailSignUp = async (e) => {
         e.preventDefault();
         setError('');
+        setOauthProvider(null);
         setIsSubmitting(true);
         const trimmedEmail = email.trim();
 
@@ -68,16 +77,19 @@ const SignUpPage = () => {
             } else {
                 setError(error.message || t('signUp.errors.generic'));
             }
+            triggerHaptic(HAPTIC_TYPES.ERROR, { prefersReducedMotion });
             return;
         }
 
         if (needsEmailConfirmation) {
             // Show email confirmation pending UI
             setEmailConfirmationPending(signUpEmail);
+            triggerHaptic(HAPTIC_TYPES.SUCCESS, { prefersReducedMotion });
             return;
         }
 
         setSuccess(true);
+        triggerHaptic(HAPTIC_TYPES.SUCCESS, { prefersReducedMotion });
         // Force navigation to onboarding immediately to avoid any state race conditions
         navigate('/welcome');
     };
@@ -85,11 +97,33 @@ const SignUpPage = () => {
     const handleGoogleSignUp = async () => {
         setError('');
         setIsSubmitting(true);
+        setOauthProvider('google');
         const { error } = await signInWithGoogle();
         setIsSubmitting(false);
+        setOauthProvider(null);
         if (error) {
             setError(error.message || t('signUp.errors.generic'));
+            triggerHaptic(HAPTIC_TYPES.ERROR, { prefersReducedMotion });
+            return;
         }
+
+        triggerHaptic(HAPTIC_TYPES.SUCCESS, { prefersReducedMotion });
+    };
+
+    const handleAppleSignUp = async () => {
+        setError('');
+        setIsSubmitting(true);
+        setOauthProvider('apple');
+        const { error } = await signInWithApple();
+        setIsSubmitting(false);
+        setOauthProvider(null);
+        if (error) {
+            setError(error.message || t('signUp.errors.generic'));
+            triggerHaptic(HAPTIC_TYPES.ERROR, { prefersReducedMotion });
+            return;
+        }
+
+        triggerHaptic(HAPTIC_TYPES.SUCCESS, { prefersReducedMotion });
     };
 
     // Show email confirmation pending UI
@@ -226,15 +260,33 @@ const SignUpPage = () => {
                         </Motion.div>
                     )}
 
+                    {/* Apple Sign Up */}
+                    <Motion.button
+                        whileHover={prefersReducedMotion ? undefined : { scale: 1.02 }}
+                        whileTap={prefersReducedMotion ? undefined : { scale: 0.98 }}
+                        onClick={handleAppleSignUp}
+                        disabled={isSubmitting}
+                        className="w-full py-3.5 bg-neutral-900 border-2 border-neutral-900 rounded-2xl font-bold text-white flex items-center justify-center gap-3 hover:bg-black transition-all disabled:opacity-50"
+                    >
+                        {isSubmitting && oauthProvider === 'apple' ? (
+                            <ButtonLoader size="sm" tone="neutral" />
+                        ) : (
+                            <>
+                                <AppleLogo />
+                                {t('signUp.apple')}
+                            </>
+                        )}
+                    </Motion.button>
+
                     {/* Google Sign Up */}
                     <Motion.button
                         whileHover={prefersReducedMotion ? undefined : { scale: 1.02 }}
                         whileTap={prefersReducedMotion ? undefined : { scale: 0.98 }}
                         onClick={handleGoogleSignUp}
                         disabled={isSubmitting}
-                        className="w-full py-3.5 bg-white border-2 border-neutral-200 rounded-2xl font-bold text-neutral-700 flex items-center justify-center gap-3 hover:bg-neutral-50 hover:border-neutral-300 transition-all disabled:opacity-50"
+                        className="w-full mt-3 py-3.5 bg-white border-2 border-neutral-200 rounded-2xl font-bold text-neutral-700 flex items-center justify-center gap-3 hover:bg-neutral-50 hover:border-neutral-300 transition-all disabled:opacity-50"
                     >
-                        {isSubmitting ? (
+                        {isSubmitting && oauthProvider === 'google' ? (
                             <ButtonLoader size="sm" tone="neutral" />
                         ) : (
                             <>

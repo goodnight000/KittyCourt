@@ -6,6 +6,7 @@ import {
     signInWithEmail as supabaseSignInWithEmail,
     signUpWithEmail as supabaseSignUpWithEmail,
     signInWithGoogle as supabaseSignInWithGoogle,
+    signInWithApple as supabaseSignInWithApple,
     signOut as supabaseSignOut,
     getSession,
     upsertProfile,
@@ -434,16 +435,9 @@ const useAuthStore = create(
                         });
                     }
 
-                    set({
-                        user: data.user,
-                        session: data.session,
-                        profile,
-                        isAuthenticated: true,
-                        preferredLanguage: profile ? resolvePreferredLanguage(profile) : DEFAULT_LANGUAGE,
-                        isLoading: false
-                    });
-
-                    // Emit login event
+                    // Emit login event BEFORE setting auth state so dependent stores
+                    // (e.g. onboarding) update synchronously before isAuthenticated
+                    // triggers a re-render, preventing a flash of the onboarding page.
                     eventBus.emit(EVENTS.AUTH_LOGIN, {
                         userId: data.user.id,
                         profile,
@@ -453,6 +447,15 @@ const useAuthStore = create(
                         user: data.user,
                         preferredLanguage: profile ? resolvePreferredLanguage(profile) : get().preferredLanguage,
                         source: 'auth'
+                    });
+
+                    set({
+                        user: data.user,
+                        session: data.session,
+                        profile,
+                        isAuthenticated: true,
+                        preferredLanguage: profile ? resolvePreferredLanguage(profile) : DEFAULT_LANGUAGE,
+                        isLoading: false
                     });
 
                     // Warm cache in background (don't await)
@@ -524,6 +527,17 @@ const useAuthStore = create(
             // Note: Does NOT set global isLoading - OAuth redirects handle their own flow
             signInWithGoogle: async () => {
                 const { data, error } = await supabaseSignInWithGoogle();
+                if (error) {
+                    return { error };
+                }
+                // OAuth redirects, so we don't set state here
+                return { data };
+            },
+
+            // Sign in with Apple
+            // Note: Does NOT set global isLoading - OAuth redirects handle their own flow
+            signInWithApple: async () => {
+                const { data, error } = await supabaseSignInWithApple();
                 if (error) {
                     return { error };
                 }

@@ -184,6 +184,7 @@ const OnboardingPage = () => {
         profile,
         signUp,
         signInWithGoogle,
+        signInWithApple,
         preferredLanguage,
         setPreferredLanguage
     } = useAuthStore();
@@ -390,6 +391,16 @@ const OnboardingPage = () => {
         }
     };
 
+    const handleAppleSignUp = async () => {
+        setAuthError(null);
+        setAuthSubmitting(true);
+        const result = await signInWithApple();
+        setAuthSubmitting(false);
+        if (result?.error) {
+            setAuthError(t('onboarding.errors.appleFailed'));
+        }
+    };
+
     const handleEmailSignUp = async (email, password, confirmPassword) => {
         setAuthError(null);
         setAuthSubmitting(true);
@@ -526,6 +537,7 @@ const OnboardingPage = () => {
                 }
                 return (
                     <AuthStep
+                        onAppleSignUp={handleAppleSignUp}
                         onGoogleSignUp={handleGoogleSignUp}
                         onEmailSignUp={handleEmailSignUp}
                         authError={authError}

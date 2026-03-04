@@ -998,6 +998,7 @@
       "upgradeNote": "Gold 稍后再说，先免费体验~"
     },
     "auth": {
+      "continueWithApple": "使用 Apple 继续",
       "continueWithGoogle": "使用 Google 继续",
       "emailPlaceholder": "邮箱地址",
       "passwordPlaceholder": "设置密码",
@@ -1062,6 +1063,7 @@
     "errors": {
       "saveFailed": "保存资料失败，请再试一次。",
       "unexpected": "发生未知错误，请稍后再试。",
+      "appleFailed": "无法使用 Apple 继续。",
       "googleFailed": "无法使用 Google 继续。",
       "missingFields": "请填写所有字段。",
       "invalidEmail": "请输入有效的邮箱地址。",
@@ -2067,6 +2069,7 @@
   "signIn": {
     "brand": "Pause",
     "subtitle": "欢迎回来",
+    "apple": "使用 Apple 继续",
     "google": "使用 Google 继续",
     "emailPlaceholder": "邮箱",
     "passwordPlaceholder": "密码",
@@ -2116,6 +2119,7 @@
     "passwordPlaceholder": "创建密码",
     "confirmPlaceholder": "确认密码",
     "submit": "创建账号",
+    "apple": "使用 Apple 继续",
     "google": "使用 Google 继续",
     "requirements": {
       "length": "至少 8 位"
@@ -2150,6 +2154,7 @@
     "account": {
       "title": "账号",
       "loginMethod": "登录方式",
+      "apple": "Apple",
       "google": "Google",
       "email": "邮箱",
       "changePassword": "修改密码",

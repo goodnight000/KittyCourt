@@ -253,19 +253,20 @@ export const updatePassword = async (newPassword) => {
 };
 
 /**
- * Sign in with Google OAuth
+ * Sign in with OAuth provider
  */
-export const signInWithGoogle = async () => {
+const signInWithOAuthProvider = async (provider, label, extraOptions = {}) => {
     const redirectTo = Capacitor.isNativePlatform()
         ? `${NATIVE_OAUTH_SCHEME}://auth/callback`
         : `${window.location.origin}/auth/callback`
-    if (import.meta.env.DEV) console.log('[Auth] Google Sign-In Redirect URL:', redirectTo);
+    if (import.meta.env.DEV) console.log(`[Auth] ${label} Sign-In Redirect URL:`, redirectTo);
 
     const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
+        provider,
         options: {
             redirectTo,
             skipBrowserRedirect: Capacitor.isNativePlatform(),
+            ...extraOptions,
         },
     });
 
@@ -279,6 +280,20 @@ export const signInWithGoogle = async () => {
     }
     return { data, error };
 };
+
+/**
+ * Sign in with Google OAuth
+ */
+export const signInWithGoogle = async () => (
+    signInWithOAuthProvider('google', 'Google')
+);
+
+/**
+ * Sign in with Apple OAuth
+ */
+export const signInWithApple = async () => (
+    signInWithOAuthProvider('apple', 'Apple', { scopes: 'name email' })
+);
 
 /**
  * Sign out the current user

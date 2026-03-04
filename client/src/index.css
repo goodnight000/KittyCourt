@@ -75,7 +75,7 @@ body.ios-flat-bg::before {
 }
 
 body.ios-flat-bg .app-background {
-  background-color: var(--app-bg-solid) !important;
+  background-color: transparent !important;
   background-image: none !important;
 }
 
@@ -169,7 +169,15 @@ input[type='date']::-webkit-date-and-time-value {
   text-align: left;
 }
 
-/* Glass Card Component */
+/* Smaller password dots */
+.password-dots::-webkit-text-security {
+  font-size: 0.75em;
+}
+input[type='password'].password-dots {
+  font-size: 0.8rem;
+  letter-spacing: 0.15em;
+}
+
 /* Glass Card Component */
 .glass-card {
   background: rgba(255, 255, 255, 0.85);

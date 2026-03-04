@@ -1,6 +1,11 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import React from 'react';
+
+const mockSignIn = vi.fn();
+const mockSignInWithGoogle = vi.fn();
+const mockSignInWithApple = vi.fn();
 
 // Mock dependencies
 vi.mock('react-router-dom', () => ({
@@ -10,8 +15,9 @@ vi.mock('react-router-dom', () => ({
 
 vi.mock('../store/useAuthStore', () => ({
     default: () => ({
-        signIn: vi.fn(),
-        signInWithGoogle: vi.fn(),
+        signIn: mockSignIn,
+        signInWithGoogle: mockSignInWithGoogle,
+        signInWithApple: mockSignInWithApple,
     }),
 }));
 
@@ -37,6 +43,14 @@ vi.mock('../utils/helpers', () => ({
     validateEmail: (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email),
 }));
 
+vi.mock('../services/hapticsService', () => ({
+    HAPTIC_TYPES: {
+        SUCCESS: 'success',
+        ERROR: 'error',
+    },
+    triggerHaptic: vi.fn(),
+}));
+
 vi.mock('framer-motion', () => ({
     motion: new Proxy({}, {
         get: (_, tag) => {
@@ -58,6 +72,10 @@ vi.mock('framer-motion', () => ({
 import SignInPage from './SignInPage';
 
 describe('SignInPage', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
     it('renders app logo image, not the generic Cat icon', () => {
         render(<SignInPage />);
         const logo = screen.getByAltText('Pause logo');
@@ -71,5 +89,15 @@ describe('SignInPage', () => {
         const logo = screen.getByAltText('Pause logo');
         expect(logo).toHaveAttribute('src', '/assets/logo.png');
         expect(logo).toHaveAttribute('alt', 'Pause logo');
+    });
+
+    it('clicking Apple button triggers Apple sign-in action', async () => {
+        mockSignInWithApple.mockResolvedValue({ error: null });
+        const user = userEvent.setup();
+
+        render(<SignInPage />);
+        await user.click(screen.getByRole('button', { name: 'signIn.apple' }));
+
+        expect(mockSignInWithApple).toHaveBeenCalledTimes(1);
     });
 });

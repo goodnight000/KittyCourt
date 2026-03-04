@@ -6,7 +6,14 @@ import { useI18n } from '../../i18n';
 import ButtonLoader from '../shared/ButtonLoader';
 import StandardButton from '../shared/StandardButton';
 
+const AppleLogo = ({ className = 'w-5 h-5' }) => (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M16.365 1.43c0 1.14-.418 2.24-1.161 3.065-.78.855-2.073 1.514-3.178 1.428-.14-1.094.427-2.252 1.158-3.005.807-.84 2.186-1.451 3.181-1.488zm2.865 16.1c-.807 1.168-1.644 2.335-2.963 2.36-1.294.025-1.71-.768-3.19-.768-1.479 0-1.946.744-3.166.793-1.265.049-2.23-1.267-3.043-2.43-1.669-2.41-2.94-6.804-1.229-9.773.851-1.49 2.376-2.431 4.029-2.456 1.255-.024 2.439.842 3.191.842.752 0 2.165-1.04 3.651-.887.621.025 2.366.251 3.483 1.885-.091.056-2.08 1.216-2.059 3.629.022 2.882 2.523 3.841 2.548 3.853-.022.068-.402 1.378-1.252 2.952z" />
+    </svg>
+);
+
 const AuthStep = ({
+    onAppleSignUp,
     onGoogleSignUp,
     onEmailSignUp,
     authError = null,
@@ -35,6 +42,16 @@ const AuthStep = ({
                     {authError}
                 </div>
             )}
+
+            <Motion.button
+                whileTap={{ scale: 0.98 }}
+                onClick={onAppleSignUp}
+                disabled={authSubmitting}
+                className="w-full py-4 bg-neutral-900 border border-neutral-900 rounded-2xl font-bold text-white flex items-center justify-center gap-3 hover:bg-black transition-all disabled:opacity-50 shadow-soft"
+            >
+                <AppleLogo />
+                {t('onboarding.auth.continueWithApple')}
+            </Motion.button>
 
             <Motion.button
                 whileTap={{ scale: 0.98 }}

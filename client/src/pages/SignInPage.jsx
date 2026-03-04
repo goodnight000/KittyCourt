@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion as Motion } from 'framer-motion';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { AlertCircle, ArrowRight, Cat, Eye, EyeOff, Heart, Loader2, Lock, Mail, Scale, UserX } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 import { useI18n } from '../i18n';
@@ -8,6 +8,13 @@ import StandardButton from '../components/shared/StandardButton';
 import ButtonLoader from '../components/shared/ButtonLoader';
 import { validateEmail } from '../utils/helpers';
 import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
+import { HAPTIC_TYPES, triggerHaptic } from '../services/hapticsService';
+
+const AppleLogo = ({ className = 'w-5 h-5' }) => (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M16.365 1.43c0 1.14-.418 2.24-1.161 3.065-.78.855-2.073 1.514-3.178 1.428-.14-1.094.427-2.252 1.158-3.005.807-.84 2.186-1.451 3.181-1.488zm2.865 16.1c-.807 1.168-1.644 2.335-2.963 2.36-1.294.025-1.71-.768-3.19-.768-1.479 0-1.946.744-3.166.793-1.265.049-2.23-1.267-3.043-2.43-1.669-2.41-2.94-6.804-1.229-9.773.851-1.49 2.376-2.431 4.029-2.456 1.255-.024 2.439.842 3.191.842.752 0 2.165-1.04 3.651-.887.621.025 2.366.251 3.483 1.885-.091.056-2.08 1.216-2.059 3.629.022 2.882 2.523 3.841 2.548 3.853-.022.068-.402 1.378-1.252 2.952z" />
+    </svg>
+);
 
 // Helper to get user-friendly error messages
 const getErrorMessage = (error, t) => {
@@ -63,9 +70,8 @@ const getErrorMessage = (error, t) => {
 };
 
 const SignInPage = () => {
-    const navigate = useNavigate();
     const { t } = useI18n();
-    const { signIn, signInWithGoogle } = useAuthStore();
+    const { signIn, signInWithGoogle, signInWithApple } = useAuthStore();
     const prefersReducedMotion = usePrefersReducedMotion();
 
     const [email, setEmail] = useState('');
@@ -73,10 +79,12 @@ const SignInPage = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [oauthProvider, setOauthProvider] = useState(null);
 
     const handleEmailSignIn = async (e) => {
         e.preventDefault();
         setError(null);
+        setOauthProvider(null);
         setIsSubmitting(true);
         const trimmedEmail = email.trim();
 
@@ -103,29 +111,51 @@ const SignInPage = () => {
         if (import.meta.env.DEV) console.log('[SignInPage] Calling signIn...');
         const result = await signIn(trimmedEmail, password);
         if (import.meta.env.DEV) console.log('[SignInPage] signIn result:', result);
-        setIsSubmitting(false);
 
         if (result.error) {
+            setIsSubmitting(false);
             console.error('[SignInPage] Error:', result.error);
             setError(getErrorMessage(result.error, t));
-        } else {
-            if (import.meta.env.DEV) console.log('[SignInPage] Success! Navigating to /');
-            // Small delay to ensure state is fully propagated before navigation
-            setTimeout(() => {
-                if (import.meta.env.DEV) console.log('[SignInPage] Executing navigate...');
-                navigate('/');
-            }, 100);
+            triggerHaptic(HAPTIC_TYPES.ERROR, { prefersReducedMotion });
+            return;
         }
+
+        triggerHaptic(HAPTIC_TYPES.SUCCESS, { prefersReducedMotion });
+        // On success, keep isSubmitting true — the route guard on /signin
+        // will redirect to / once isAuthenticated is set, providing a
+        // smooth transition without flashing the onboarding page.
     };
 
     const handleGoogleSignIn = async () => {
         setError(null);
         setIsSubmitting(true);
+        setOauthProvider('google');
         const { error } = await signInWithGoogle();
         setIsSubmitting(false);
+        setOauthProvider(null);
         if (error) {
             setError(getErrorMessage(error, t));
+            triggerHaptic(HAPTIC_TYPES.ERROR, { prefersReducedMotion });
+            return;
         }
+
+        triggerHaptic(HAPTIC_TYPES.SUCCESS, { prefersReducedMotion });
+    };
+
+    const handleAppleSignIn = async () => {
+        setError(null);
+        setIsSubmitting(true);
+        setOauthProvider('apple');
+        const { error } = await signInWithApple();
+        setIsSubmitting(false);
+        setOauthProvider(null);
+        if (error) {
+            setError(getErrorMessage(error, t));
+            triggerHaptic(HAPTIC_TYPES.ERROR, { prefersReducedMotion });
+            return;
+        }
+
+        triggerHaptic(HAPTIC_TYPES.SUCCESS, { prefersReducedMotion });
     };
 
     const ErrorIcon = error?.icon || AlertCircle;
@@ -167,10 +197,9 @@ const SignInPage = () => {
                 <Motion.div
                     animate={prefersReducedMotion ? undefined : { y: [0, -8, 0] }}
                     transition={prefersReducedMotion ? undefined : { duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                    className="w-20 h-20 mx-auto mb-4 rounded-2xl flex items-center justify-center shadow-lg"
-                    style={{ background: 'linear-gradient(135deg, #C9A227 0%, #8B7019 100%)' }}
+                    className="w-20 h-20 mx-auto mb-4 rounded-2xl flex items-center justify-center"
                 >
-                    <img src="/assets/logo.png" alt="Pause logo" className="w-full h-full object-contain p-1" />
+                    <img src="/assets/logo.png" alt="Pause logo" className="w-full h-full object-contain" />
                 </Motion.div>
                 <h1 className="text-3xl font-bold text-gradient font-display">{t('signIn.brand')}</h1>
                 <p className="text-neutral-500 mt-2">{t('signIn.subtitle')}</p>
@@ -191,11 +220,11 @@ const SignInPage = () => {
                             animate={{ opacity: 1, y: 0 }}
                             transition={prefersReducedMotion ? { duration: 0.1 } : undefined}
                             role="alert"
-                            className="mb-6 p-4 bg-red-50 border border-red-100 rounded-2xl"
+                            className="mb-4 p-3 bg-red-50 border border-red-100 rounded-2xl"
                         >
-                            <div className="flex items-start gap-3">
-                                <div className="p-2 bg-red-100 rounded-xl shrink-0">
-                                    <ErrorIcon className="w-5 h-5 text-red-600" />
+                            <div className="flex items-start gap-2.5">
+                                <div className="p-1.5 bg-red-100 rounded-lg shrink-0">
+                                    <ErrorIcon className="w-4 h-4 text-red-600" />
                                 </div>
                                 <div className="flex-1">
                                     <p className="font-semibold text-red-700 text-sm">{error.title}</p>
@@ -203,13 +232,13 @@ const SignInPage = () => {
                                     {error.type === 'no_account' && (
                                         <Link
                                             to="/signup"
-                                            className="inline-flex items-center gap-1 text-sm font-medium text-court-brown hover:text-court-gold mt-2 transition-colors"
+                                            className="inline-flex items-center gap-1 text-sm font-medium text-court-brown hover:text-court-gold mt-1.5 transition-colors"
                                         >
                                             {t('signIn.actions.createAccount')} <ArrowRight className="w-3.5 h-3.5" />
                                         </Link>
                                     )}
                                     {error.type === 'invalid_credentials' && (
-                                        <div className="flex flex-wrap gap-3 mt-2">
+                                        <div className="flex flex-wrap gap-2 mt-1.5">
                                             <Link
                                                 to="/forgot-password"
                                                 className="inline-flex items-center gap-1 text-sm font-medium text-court-brown hover:text-court-gold transition-colors"
@@ -229,15 +258,33 @@ const SignInPage = () => {
                         </Motion.div>
                     )}
 
+                    {/* Apple Sign In */}
+                    <Motion.button
+                        whileHover={prefersReducedMotion ? undefined : { scale: 1.02 }}
+                        whileTap={prefersReducedMotion ? undefined : { scale: 0.98 }}
+                        onClick={handleAppleSignIn}
+                        disabled={isSubmitting}
+                        className="w-full py-3.5 bg-neutral-900 border-2 border-neutral-900 rounded-2xl font-bold text-white flex items-center justify-center gap-3 hover:bg-black transition-all disabled:opacity-50"
+                    >
+                        {isSubmitting && oauthProvider === 'apple' ? (
+                            <ButtonLoader size="sm" tone="neutral" />
+                        ) : (
+                            <>
+                                <AppleLogo />
+                                {t('signIn.apple')}
+                            </>
+                        )}
+                    </Motion.button>
+
                     {/* Google Sign In */}
                     <Motion.button
                         whileHover={prefersReducedMotion ? undefined : { scale: 1.02 }}
                         whileTap={prefersReducedMotion ? undefined : { scale: 0.98 }}
                         onClick={handleGoogleSignIn}
                         disabled={isSubmitting}
-                        className="w-full py-3.5 bg-white border-2 border-neutral-200 rounded-2xl font-bold text-neutral-700 flex items-center justify-center gap-3 hover:bg-neutral-50 hover:border-neutral-300 transition-all disabled:opacity-50"
+                        className="w-full mt-3 py-3.5 bg-white border-2 border-neutral-200 rounded-2xl font-bold text-neutral-700 flex items-center justify-center gap-3 hover:bg-neutral-50 hover:border-neutral-300 transition-all disabled:opacity-50"
                     >
-                        {isSubmitting ? (
+                        {isSubmitting && oauthProvider === 'google' ? (
                             <ButtonLoader size="sm" tone="neutral" />
                         ) : (
                             <>
@@ -283,7 +330,7 @@ const SignInPage = () => {
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 placeholder={t('signIn.passwordPlaceholder')}
-                                className="w-full pl-12 pr-12 py-3.5 bg-neutral-50 border border-neutral-200 rounded-2xl text-neutral-700 placeholder:text-neutral-500 focus:outline-none focus:border-court-gold focus:ring-2 focus:ring-court-gold/20 transition-all"
+                                className="w-full pl-12 pr-14 py-3.5 bg-neutral-50 border border-neutral-200 rounded-2xl text-neutral-700 placeholder:text-neutral-500 focus:outline-none focus:border-court-gold focus:ring-2 focus:ring-court-gold/20 transition-all password-dots"
                             />
                             <button
                                 type="button"

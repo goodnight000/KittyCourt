@@ -994,6 +994,7 @@
       "upgradeNote": "You can upgrade later - we'll offer Pause Gold at the end."
     },
     "auth": {
+      "continueWithApple": "Continue with Apple",
       "continueWithGoogle": "Continue with Google",
       "emailPlaceholder": "Email address",
       "passwordPlaceholder": "Create password",
@@ -1058,6 +1059,7 @@
     "errors": {
       "saveFailed": "Failed to save profile. Please try again.",
       "unexpected": "An unexpected error occurred. Please try again.",
+      "appleFailed": "Failed to continue with Apple.",
       "googleFailed": "Failed to continue with Google.",
       "missingFields": "Please fill in all fields",
       "invalidEmail": "Please enter a valid email address",
@@ -2063,6 +2065,7 @@
   "signIn": {
     "brand": "Pause",
     "subtitle": "Welcome back.",
+    "apple": "Continue with Apple",
     "google": "Continue with Google",
     "emailPlaceholder": "Email address",
     "passwordPlaceholder": "Password",
@@ -2112,6 +2115,7 @@
     "passwordPlaceholder": "Create password",
     "confirmPlaceholder": "Confirm password",
     "submit": "Create account",
+    "apple": "Continue with Apple",
     "google": "Continue with Google",
     "requirements": {
       "length": "At least 8 characters"
@@ -2146,6 +2150,7 @@
     "account": {
       "title": "Account",
       "loginMethod": "Login method",
+      "apple": "Apple",
       "google": "Google",
       "email": "Email",
       "changePassword": "Change password",

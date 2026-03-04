@@ -10,17 +10,22 @@ describe('useConnectivityStore', () => {
       lastHealthCheckAt: null,
       lastBackendError: null,
       monitorActive: false,
+      reconnectInProgress: false,
+      reconnectAttemptCount: 0,
     })
   })
 
   afterEach(() => {
+    useConnectivityStore.getState().cancelReconnectSequence?.()
     useConnectivityStore.getState().stopMonitoring()
     vi.unstubAllGlobals()
     vi.clearAllTimers()
     vi.useRealTimers()
   })
 
-  it('marks backend down on 503 health response', async () => {
+  it('delays backend-down state on 503 responses until reconnect retries are exhausted', async () => {
+    vi.useFakeTimers()
+
     const fetchMock = vi.fn(async () => ({
       ok: false,
       status: 503,
@@ -28,11 +33,23 @@ describe('useConnectivityStore', () => {
     }))
     vi.stubGlobal('fetch', fetchMock)
 
+    useConnectivityStore.setState({
+      isOnline: true,
+      backendStatus: 'healthy',
+      lastBackendError: null,
+    })
+
     await useConnectivityStore.getState().checkBackendHealth({ reason: 'test' })
 
-    const state = useConnectivityStore.getState()
-    expect(state.backendStatus).toBe('down')
-    expect(state.lastBackendError).toBe('http_503')
+    expect(useConnectivityStore.getState().backendStatus).toBe('healthy')
+
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      await vi.advanceTimersByTimeAsync(2000)
+    }
+
+    expect(useConnectivityStore.getState().backendStatus).toBe('down')
+    expect(useConnectivityStore.getState().lastBackendError).toBe('http_503')
+    expect(fetchMock).toHaveBeenCalledTimes(11)
   })
 
   it('marks backend healthy on successful health response', async () => {
@@ -44,6 +61,64 @@ describe('useConnectivityStore', () => {
 
     await useConnectivityStore.getState().checkBackendHealth({ reason: 'test' })
     expect(useConnectivityStore.getState().backendStatus).toBe('healthy')
+  })
+
+  it('retries every 2 seconds for 10 attempts before surfacing backend-down state', async () => {
+    vi.useFakeTimers()
+
+    const fetchMock = vi.fn(async () => {
+      throw new Error('Failed to fetch')
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    useConnectivityStore.setState({
+      isOnline: true,
+      backendStatus: 'healthy',
+      lastBackendError: null,
+    })
+
+    const checkPromise = useConnectivityStore.getState().checkBackendHealth({ reason: 'test' })
+    await checkPromise
+
+    // Initial failure should start reconnect attempts, not immediately show degraded/down UI.
+    expect(useConnectivityStore.getState().backendStatus).toBe('healthy')
+
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      await vi.advanceTimersByTimeAsync(2000)
+    }
+
+    expect(useConnectivityStore.getState().backendStatus).toBe('down')
+    expect(fetchMock).toHaveBeenCalledTimes(11)
+  })
+
+  it('applies the same delayed surfacing when API errors mark backend issues', async () => {
+    vi.useFakeTimers()
+
+    const fetchMock = vi.fn(async () => {
+      throw new Error('Failed to fetch')
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    useConnectivityStore.setState({
+      isOnline: true,
+      backendStatus: 'healthy',
+      lastBackendError: null,
+    })
+
+    useConnectivityStore.getState().markBackendIssue({
+      error: new Error('Network unavailable'),
+      source: 'api_error',
+    })
+
+    expect(useConnectivityStore.getState().backendStatus).toBe('healthy')
+    expect(useConnectivityStore.getState().reconnectInProgress).toBe(true)
+
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      await vi.advanceTimersByTimeAsync(2000)
+    }
+
+    expect(useConnectivityStore.getState().backendStatus).toBe('down')
+    expect(fetchMock).toHaveBeenCalledTimes(10)
   })
 
   it('schedules health checks every 15 seconds when backend is down', () => {

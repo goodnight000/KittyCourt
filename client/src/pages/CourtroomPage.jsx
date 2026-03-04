@@ -35,10 +35,13 @@ import {
     WaitingForPartnerStep
 } from '../components/court';
 import { useI18n } from '../i18n';
+import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
+import { HAPTIC_TYPES, triggerHaptic } from '../services/hapticsService';
 
 export default function CourtroomPageV2() {
     const navigate = useNavigate();
     const { t } = useI18n();
+    const prefersReducedMotion = usePrefersReducedMotion();
 
     const { user: authUser, profile } = useAuthStore();
     const { partner } = usePartnerStore();
@@ -260,11 +263,37 @@ export default function CourtroomPageV2() {
     const handleServe = async (judgeType = DEFAULT_JUDGE_ID) => {
         const partnerId = partner?.id;
         if (!partnerId) return;
-        await serve(partnerId, null, judgeType);
+        try {
+            await serve(partnerId, null, judgeType);
+            triggerHaptic(HAPTIC_TYPES.MEDIUM, { prefersReducedMotion });
+        } catch (error) {
+            triggerHaptic(HAPTIC_TYPES.ERROR, { prefersReducedMotion });
+            throw error;
+        }
     };
 
     const handleSubmitEvidence = async () => {
         await submitEvidence();
+    };
+
+    const handleConfirmResolution = async (...args) => {
+        try {
+            await submitResolutionPick(...args);
+            triggerHaptic(HAPTIC_TYPES.SUCCESS, { prefersReducedMotion });
+        } catch (error) {
+            triggerHaptic(HAPTIC_TYPES.ERROR, { prefersReducedMotion });
+            throw error;
+        }
+    };
+
+    const handleAcceptVerdict = async (...args) => {
+        try {
+            await acceptVerdict(...args);
+            triggerHaptic(HAPTIC_TYPES.HEAVY, { prefersReducedMotion });
+        } catch (error) {
+            triggerHaptic(HAPTIC_TYPES.ERROR, { prefersReducedMotion });
+            throw error;
+        }
     };
 
     const handleSubmitAddendum = async () => {
@@ -370,7 +399,7 @@ export default function CourtroomPageV2() {
                         myPick={myPick}
                         myName={myName}
                         partnerName={partnerName}
-                        onConfirm={submitResolutionPick}
+                        onConfirm={handleConfirmResolution}
                         isSubmitting={isSubmitting}
                         mode={myPick ? 'waiting' : 'select'}
                     />
@@ -382,7 +411,7 @@ export default function CourtroomPageV2() {
                         resolutions={resolutions}
                         myName={myName}
                         partnerName={partnerName}
-                        onConfirm={submitResolutionPick}
+                        onConfirm={handleConfirmResolution}
                         isSubmitting={isSubmitting}
                         mode="mismatch"
                         myOriginalPickId={myOriginalPickId}
@@ -400,7 +429,7 @@ export default function CourtroomPageV2() {
                         myPick={myPick}
                         myName={myName}
                         partnerName={partnerName}
-                        onConfirm={submitResolutionPick}
+                        onConfirm={handleConfirmResolution}
                         isSubmitting={isSubmitting}
                         mode="waiting"
                     />
@@ -433,7 +462,7 @@ export default function CourtroomPageV2() {
                         setShowAddendumModal={setShowAddendumModal}
                         resetCase={reset}
                         currentUser={null}
-                        onAcceptVerdict={acceptVerdict}
+                        onAcceptVerdict={handleAcceptVerdict}
                         isInitiator={isCreator}
                         addendumRemaining={addendumRemaining}
                         addendumLimit={addendumLimit}

@@ -18,6 +18,7 @@ import StandardButton from '../components/shared/StandardButton';
 import useUiPerfProfile from '../hooks/useUiPerfProfile';
 import useStagedMount from '../hooks/useStagedMount';
 import { isNativeIOS } from '../utils/platform';
+import { HAPTIC_TYPES, triggerHaptic } from '../services/hapticsService';
 
 // Loading skeleton component
 const ChallengeSkeleton = () => (
@@ -110,7 +111,13 @@ const ChallengesPage = () => {
     };
 
     const handleComplete = async (id) => {
-        await withPending(`complete:${id}`, () => completeChallenge(id));
+        try {
+            await withPending(`complete:${id}`, () => completeChallenge(id));
+            triggerHaptic(HAPTIC_TYPES.SUCCESS, { prefersReducedMotion });
+        } catch (error) {
+            triggerHaptic(HAPTIC_TYPES.ERROR, { prefersReducedMotion });
+            throw error;
+        }
     };
 
     const handleConfirm = async (id) => {

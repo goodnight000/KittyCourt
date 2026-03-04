@@ -36,6 +36,8 @@ npm-debug.log*
 # Temporary files
 *.tmp
 *.temp
+AuthKey_*.p8
+apple-client-secret*.txt
 
 # AI files
 plans/

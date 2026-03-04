@@ -21,6 +21,7 @@ vi.mock('../services/supabase', () => ({
     signInWithEmail: vi.fn(),
     signUpWithEmail: vi.fn(),
     signInWithGoogle: vi.fn(),
+    signInWithApple: vi.fn(),
     signOut: vi.fn(),
     getSession: vi.fn(() => Promise.resolve({ session: null, error: null })),
     getProfile: vi.fn(),

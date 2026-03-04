@@ -22,6 +22,7 @@ vi.mock('../services/supabase', () => ({
     signInWithEmail: vi.fn(),
     signUpWithEmail: vi.fn(),
     signInWithGoogle: vi.fn(),
+    signInWithApple: vi.fn(),
     signOut: vi.fn(),
     getSession: vi.fn(() => Promise.resolve({ session: null, error: null })),
     getProfile: vi.fn(),
@@ -134,6 +135,7 @@ describe('useAuthStore', () => {
             expect(typeof state.signIn).toBe('function');
             expect(typeof state.signUp).toBe('function');
             expect(typeof state.signInWithGoogle).toBe('function');
+            expect(typeof state.signInWithApple).toBe('function');
             expect(typeof state.signOut).toBe('function');
             expect(typeof state.refreshProfile).toBe('function');
             expect(typeof state.setPreferredLanguage).toBe('function');
@@ -282,6 +284,38 @@ describe('useAuthStore', () => {
 
             expect(result.error).toEqual(mockError);
             expect(useAuthStore.getState().isAuthenticated).toBe(false);
+        });
+    });
+
+    describe('signInWithApple()', () => {
+        it('should return data when Apple OAuth succeeds', async () => {
+            vi.useRealTimers();
+
+            const mockData = { url: 'https://appleid.apple.com/auth/authorize' };
+            supabaseMocks.signInWithApple.mockResolvedValue({
+                data: mockData,
+                error: null
+            });
+
+            const result = await useAuthStore.getState().signInWithApple();
+
+            expect(supabaseMocks.signInWithApple).toHaveBeenCalledTimes(1);
+            expect(result).toEqual({ data: mockData });
+        });
+
+        it('should return error when Apple OAuth fails', async () => {
+            vi.useRealTimers();
+
+            const mockError = { message: 'Apple OAuth failed' };
+            supabaseMocks.signInWithApple.mockResolvedValue({
+                data: null,
+                error: mockError
+            });
+
+            const result = await useAuthStore.getState().signInWithApple();
+
+            expect(supabaseMocks.signInWithApple).toHaveBeenCalledTimes(1);
+            expect(result).toEqual({ error: mockError });
         });
     });
 
